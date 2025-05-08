@@ -19,7 +19,7 @@ REGULATORY_BODIES = {
     "CMS": {
         "name": "Centers for Medicare & Medicaid Services",
         "url": "https://www.cms.gov",
-        "description": "Federal agency administering Medicare and Medicaid"
+        "description": "Federal agency administering healthcare insurance programs"
     },
     "HHS": {
         "name": "Department of Health and Human Services",

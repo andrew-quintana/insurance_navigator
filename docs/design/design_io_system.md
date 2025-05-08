@@ -3,8 +3,8 @@
 | Category   | Element                                         | Description                                                     |
 |:-----------|:------------------------------------------------|:----------------------------------------------------------------|
 | Inputs     | User-Submitted Insurance Documents              | Policies, PDFs, forms, preferences uploaded via UI              |
-| nan        | User Service Preferences                        | Service goals (e.g., “find cardiologist,” “schedule exam”)      |
-| nan        | Public CMS Data                                 | Medicare provider, plan, and coverage information               |
+| nan        | User Service Preferences                        | Service goals (e.g., "find cardiologist," "schedule exam")      |
+| nan        | Public Insurance Data                                 | Insurance provider, plan, and coverage information               |
 | nan        | HIPAA-Secured Historical Data                   | User history, prior guide versions, prior provider interactions |
 | nan        | Legal/Regulatory Updates                        | Real-time or periodic CMS policy changes                        |
 | Outputs    | Personalized Navigation Guide (PDF + UI Render) | Actionable instructions for accessing approved services         |
