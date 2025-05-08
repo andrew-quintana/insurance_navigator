@@ -1,29 +1,46 @@
-from typing import Dict, Any, List, Tuple, Optional
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from typing import Dict, Any, List, Tuple, Optional, Union
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, BaseMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from langchain_anthropic import ChatAnthropic
 from langchain_core.tools import BaseTool
+from langchain_core.memory import BaseMemory
+from langchain.memory import ConversationBufferMemory
+from langchain_core.runnables import RunnablePassthrough
 import os
 from dotenv import load_dotenv
+import json
+from datetime import datetime
 
 # Load environment variables
 load_dotenv()
 
 class BaseAgent:
-    def __init__(self, name: str, tools: Optional[List[BaseTool]] = None):
+    def __init__(
+        self, 
+        name: str, 
+        tools: Optional[List[BaseTool]] = None,
+        memory: Optional[BaseMemory] = None,
+        human_in_loop: bool = False
+    ):
         self.name = name
         self.llm = ChatAnthropic(
             model="claude-3-sonnet-20240229",
             temperature=0
         )
         self.tools = tools or []
+        self.memory = memory or ConversationBufferMemory(
+            memory_key="chat_history",
+            return_messages=True
+        )
+        self.human_in_loop = human_in_loop
+        self.state_history: List[Dict[str, Any]] = []
         
     def create_prompt(self, system_message: str) -> ChatPromptTemplate:
         """Create a chat prompt template with system message and tools."""
         messages = [
             ("system", system_message),
-            MessagesPlaceholder(variable_name="messages"),
+            MessagesPlaceholder(variable_name="chat_history"),
             ("human", "{input}")
         ]
         
@@ -35,13 +52,41 @@ class BaseAgent:
         return ChatPromptTemplate.from_messages(messages)
     
     def create_chain(self, prompt: ChatPromptTemplate) -> Any:
-        """Create a chain with the prompt and tools if available."""
-        chain = prompt | self.llm
+        """Create a chain with the prompt, tools, and memory."""
+        chain = (
+            RunnablePassthrough.assign(
+                chat_history=lambda x: self.memory.load_memory_variables({})["chat_history"]
+            )
+            | prompt
+            | self.llm
+        )
         
         if self.tools:
             chain = chain.bind_tools(self.tools)
             
         return chain | StrOutputParser()
+    
+    def save_state(self, state: Dict[str, Any]) -> None:
+        """Save the current state with timestamp."""
+        state_with_time = {
+            **state,
+            "timestamp": datetime.now().isoformat(),
+            "agent_name": self.name
+        }
+        self.state_history.append(state_with_time)
+        
+    def load_state(self, timestamp: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """Load a specific state by timestamp or return the latest."""
+        if not self.state_history:
+            return None
+            
+        if timestamp:
+            for state in reversed(self.state_history):
+                if state["timestamp"] == timestamp:
+                    return state
+            return None
+            
+        return self.state_history[-1]
     
     def run(self, prompt: ChatPromptTemplate, input_text: str, 
             messages: List[Tuple[str, str]] = None) -> str:
@@ -59,7 +104,47 @@ class BaseAgent:
                 elif role == "system":
                     message_history.append(SystemMessage(content=content))
         
-        return chain.invoke({
-            "messages": message_history,
+        # Save current state
+        current_state = {
+            "input": input_text,
+            "messages": [{"role": m.type, "content": m.content} for m in message_history]
+        }
+        self.save_state(current_state)
+        
+        # Get response
+        response = chain.invoke({
             "input": input_text
-        }) 
+        })
+        
+        # If human-in-the-loop is enabled, get human feedback
+        if self.human_in_loop:
+            print(f"\nAgent {self.name} response: {response}")
+            feedback = input("Human feedback (press Enter to accept, or type feedback): ")
+            if feedback.strip():
+                response = feedback
+                print(f"Using human feedback: {response}")
+        
+        # Save response to memory
+        self.memory.save_context(
+            {"input": input_text},
+            {"output": response}
+        )
+        
+        # Save final state
+        final_state = {
+            **current_state,
+            "response": response
+        }
+        self.save_state(final_state)
+        
+        return response
+    
+    def export_state_history(self, filepath: str) -> None:
+        """Export the state history to a JSON file."""
+        with open(filepath, 'w') as f:
+            json.dump(self.state_history, f, indent=2)
+            
+    def import_state_history(self, filepath: str) -> None:
+        """Import state history from a JSON file."""
+        with open(filepath, 'r') as f:
+            self.state_history = json.load(f) 
