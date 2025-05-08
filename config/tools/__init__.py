@@ -2,14 +2,12 @@ from typing import Dict, List, Optional
 from langchain_core.tools import BaseTool
 from .search_tools import get_search_tools
 from .database_tools import get_database_tools
-from .insurance_tools import get_insurance_tools
 
 def get_all_tools() -> Dict[str, List[BaseTool]]:
     """Get all available tools grouped by category."""
     return {
         "search": get_search_tools(),
-        "database": get_database_tools(),
-        "insurance": get_insurance_tools()
+        "database": get_database_tools()
     }
 
 def get_tools_by_category(categories: List[str]) -> List[BaseTool]:
