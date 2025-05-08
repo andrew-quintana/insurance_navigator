@@ -1,0 +1,14 @@
+{
+  "design_name": "Io Agent",
+  "design_entries": [
+    {
+      "category": "Inputs",
+      "element": "User-Submitted Insurance Documents",
+      "description": "Policies, PDFs, forms, preferences uploaded via UI"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "last_updated": "2025-05-08"
+  }
+}
