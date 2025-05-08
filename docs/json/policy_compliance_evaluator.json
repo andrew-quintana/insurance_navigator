@@ -1,0 +1,86 @@
+{
+  "agent_name": "Policy Compliance Evaluator",
+  "agent_type": "evaluator",
+  "fmea_entries": [
+    {
+      "function": "Evaluate compliance with policy",
+      "failure_mode": "Approves strategy that actually violates user's plan",
+      "effect": "User follows invalid path; regulatory breach",
+      "severity": 9,
+      "cause": "Incomplete or outdated coverage criteria in memory",
+      "occurrence": 4,
+      "current_controls": "Self-consistency chain + regulation RAG",
+      "detection": 4,
+      "rpn": 1296,
+      "recommended_action": "Add multi-source RAG and enforce timestamp threshold",
+      "risk_level": "critical",
+      "categories": ["compliance", "policy_evaluation", "regulatory"]
+    },
+    {
+      "function": "Evaluate against insurance rules",
+      "failure_mode": "Rejects a valid strategy as noncompliant",
+      "effect": "User is denied a service they should be eligible for",
+      "severity": 8,
+      "cause": "Policy logic is over-constrained or misinterpreted",
+      "occurrence": 4,
+      "current_controls": "Regulatory exception matcher and justification log",
+      "detection": 4,
+      "rpn": 1024,
+      "recommended_action": "Add semantic similarity layer to detect alternate eligibility phrasing",
+      "risk_level": "high",
+      "categories": ["compliance", "eligibility", "policy_evaluation"]
+    },
+    {
+      "function": "Retrieve rules from RAG",
+      "failure_mode": "Misses updates or fetches misaligned policy info",
+      "effect": "Evaluations made on invalid basis",
+      "severity": 7,
+      "cause": "RAG index or cache misalignment",
+      "occurrence": 5,
+      "current_controls": "Versioned document filter",
+      "detection": 3,
+      "rpn": 735,
+      "recommended_action": "Build live CMS endpoint monitor to push index updates automatically",
+      "risk_level": "high",
+      "categories": ["data_retrieval", "rag", "policy_updates"]
+    },
+    {
+      "function": "Output validity result",
+      "failure_mode": "Valid plan is marked rejected (or vice versa)",
+      "effect": "Incorrect downstream routing, guide failure",
+      "severity": 6,
+      "cause": "Misformatted or flipped flag; logic bug",
+      "occurrence": 3,
+      "current_controls": "Boolean validation schema + justification cross-check",
+      "detection": 2,
+      "rpn": 216,
+      "recommended_action": "Require consistency between flag and textual explanation",
+      "risk_level": "medium",
+      "categories": ["output_validation", "error_handling"]
+    },
+    {
+      "function": "Trigger retry",
+      "failure_mode": "Fails to send rejection result back to Strategy Agent",
+      "effect": "Loop stalls, system breaks or passes error downstream",
+      "severity": 6,
+      "cause": "Missing failure routing logic",
+      "occurrence": 3,
+      "current_controls": "Retry trigger threshold and fallback timer",
+      "detection": 3,
+      "rpn": 324,
+      "recommended_action": "Add explicit fail path node and result delivery validation",
+      "risk_level": "medium",
+      "categories": ["error_handling", "system_integration"]
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "last_updated": "2024-03-19",
+    "risk_levels": {
+      "critical": "RPN >= 1000",
+      "high": "RPN >= 500",
+      "medium": "RPN >= 200",
+      "low": "RPN < 200"
+    }
+  }
+} 
