@@ -1,103 +1,53 @@
-# Insurance Navigator
+# Medicare Navigator
 
-A HIPAA-aware, agent-based system for navigating insurance information and providing personalized guidance.
-
-## Project Structure
-
-```
-/agents/          # Agent implementations
-/tests/           # Test suites (unit, integration, system, security)
-/config/          # Configuration and tool definitions
-/utils/           # Utility functions and helpers
-/graph/           # LangGraph process chains
-/data/            # Data storage
-/ui/              # Frontend interface
-/docs/            # Documentation
-/logs/            # Logging directories
-```
+A comprehensive insurance policy analysis and navigation system that helps users understand and manage their Medicare coverage options.
 
 ## Features
 
-- Multi-agent system using LangGraph and LangChain
-- Regulatory compliance monitoring
-- Secure data handling
-- Comprehensive test suite with security checks
-- Modular and extensible architecture
+- Document parsing with LlamaParse integration
+- Vector storage for efficient document retrieval
+- Policy analysis and comparison
+- User-friendly interface for Medicare navigation
 
 ## Setup
 
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/insurance_navigator.git
-cd insurance_navigator
-```
-
-2. Create and activate a virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
+1. Clone the repository
+2. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
-
-4. Set up environment variables:
-Create a `.env` file with the following variables:
-```
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
-SUPABASE_URL=your_supabase_url_here
-SUPABASE_KEY=your_supabase_key_here
-ENVIRONMENT=development
-DEBUG=True
-LOG_LEVEL=INFO
+3. Set up environment variables:
+```bash
+cp .env.template .env
+# Edit .env with your API keys
 ```
 
 ## Development
 
-### Running Tests
-The project uses a tiered testing approach:
-```bash
-# Run all tests
-./tests/run_tests.py
+- Python 3.9+
+- Uses pytest for testing
+- Follows PEP 8 style guide
 
-# Run specific test levels
-./tests/run_tests.py unit
-./tests/run_tests.py integration
-./tests/run_tests.py system
-./tests/run_tests.py security
+## Testing
+
+Run tests with:
+```bash
+python -m pytest
 ```
 
-### Development Server
-```bash
-uvicorn main:app --reload
+## Project Structure
+
 ```
-
-## Security
-
-This project implements comprehensive security measures:
-- Regular security scanning
-- Encryption pattern detection
-- Credential management
-- HIPAA compliance checks
-- Secure data handling
-
-## Documentation
-
-- Process maps and system architecture: `/docs/`
-- Agent specifications: `/agents/`
-- Testing documentation: `/tests/`
-- Configuration: `/config/`
-
-## Contributing
-
-1. Create a feature branch: `git checkout -b feature/your-feature`
-2. Run tests: `./tests/run_tests.py`
-3. Commit changes: `git commit -m "feat: your feature description"`
-4. Push to branch: `git push origin feature/your-feature`
-5. Create a Pull Request
+medicare_navigator/
+├── config/           # Configuration and setup
+├── agents/           # AI agents for policy analysis
+├── tests/           # Test suites
+│   ├── config/      # Configuration tests
+│   ├── agents/      # Agent tests
+│   └── data/        # Test data
+└── docs/            # Documentation
+```
 
 ## License
 
-[License information to be added] 
+MIT License 
