@@ -10,7 +10,6 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -27,6 +26,41 @@ wheels/
 .installed.cfg
 *.egg
 
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment variables
+.env
+.env.*
+!.env.template
+
+# Logs
+logs/
+*.log
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Documentation
+docs/_build/
+
+# macOS
+.DS_Store
+
+# Project specific
+vector_store/
+parsed_documents/
+
 # Node
 node_modules/
 npm-debug.log*
@@ -34,12 +68,6 @@ yarn-debug.log*
 yarn-error.log*
 .next/
 out/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
 
 # OS
 .DS_Store
