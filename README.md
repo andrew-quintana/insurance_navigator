@@ -1,6 +1,6 @@
-# Medicare Navigator
+# Insurance Navigator
 
-A HIPAA-aware, agent-based system for navigating Medicare information and providing personalized guidance.
+A HIPAA-aware, agent-based system for navigating insurance information and providing personalized guidance.
 
 ## Project Structure
 
@@ -28,8 +28,8 @@ A HIPAA-aware, agent-based system for navigating Medicare information and provid
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/medicare_navigator.git
-cd medicare_navigator
+git clone https://github.com/yourusername/insurance_navigator.git
+cd insurance_navigator
 ```
 
 2. Create and activate a virtual environment:
