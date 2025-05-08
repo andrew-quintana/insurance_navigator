@@ -11,6 +11,7 @@ import os
 from dotenv import load_dotenv
 import json
 from datetime import datetime
+from utils.logging import AgentLogger, PromptLogger
 
 # Load environment variables
 load_dotenv()
@@ -36,6 +37,10 @@ class BaseAgent:
         self.human_in_loop = human_in_loop
         self.state_history: List[Dict[str, Any]] = []
         
+        # Initialize loggers
+        self.agent_logger = AgentLogger(name)
+        self.prompt_logger = PromptLogger(name)
+        
     def create_prompt(self, system_message: str) -> ChatPromptTemplate:
         """Create a chat prompt template with system message and tools."""
         messages = [
@@ -49,7 +54,15 @@ class BaseAgent:
             tool_descriptions = "\n".join([f"- {tool.name}: {tool.description}" for tool in self.tools])
             messages[0] = ("system", f"{system_message}\n\nAvailable tools:\n{tool_descriptions}")
             
-        return ChatPromptTemplate.from_messages(messages)
+        prompt = ChatPromptTemplate.from_messages(messages)
+        
+        # Log prompt creation
+        self.prompt_logger.log_prompt(
+            prompt_template=str(prompt),
+            variables={"system_message": system_message, "tools": [t.name for t in self.tools]}
+        )
+        
+        return prompt
     
     def create_chain(self, prompt: ChatPromptTemplate) -> Any:
         """Create a chain with the prompt, tools, and memory."""
@@ -91,53 +104,74 @@ class BaseAgent:
     def run(self, prompt: ChatPromptTemplate, input_text: str, 
             messages: List[Tuple[str, str]] = None) -> str:
         """Run the agent with the given input and message history."""
-        chain = self.create_chain(prompt)
-        
-        # Convert message history to LangChain message format
-        message_history = []
-        if messages:
-            for role, content in messages:
-                if role == "human":
-                    message_history.append(HumanMessage(content=content))
-                elif role == "ai":
-                    message_history.append(AIMessage(content=content))
-                elif role == "system":
-                    message_history.append(SystemMessage(content=content))
-        
-        # Save current state
-        current_state = {
-            "input": input_text,
-            "messages": [{"role": m.type, "content": m.content} for m in message_history]
-        }
-        self.save_state(current_state)
-        
-        # Get response
-        response = chain.invoke({
-            "input": input_text
-        })
-        
-        # If human-in-the-loop is enabled, get human feedback
-        if self.human_in_loop:
-            print(f"\nAgent {self.name} response: {response}")
-            feedback = input("Human feedback (press Enter to accept, or type feedback): ")
-            if feedback.strip():
-                response = feedback
-                print(f"Using human feedback: {response}")
-        
-        # Save response to memory
-        self.memory.save_context(
-            {"input": input_text},
-            {"output": response}
-        )
-        
-        # Save final state
-        final_state = {
-            **current_state,
-            "response": response
-        }
-        self.save_state(final_state)
-        
-        return response
+        try:
+            chain = self.create_chain(prompt)
+            
+            # Convert message history to LangChain message format
+            message_history = []
+            if messages:
+                for role, content in messages:
+                    if role == "human":
+                        message_history.append(HumanMessage(content=content))
+                    elif role == "ai":
+                        message_history.append(AIMessage(content=content))
+                    elif role == "system":
+                        message_history.append(SystemMessage(content=content))
+            
+            # Save current state
+            current_state = {
+                "input": input_text,
+                "messages": [{"role": m.type, "content": m.content} for m in message_history]
+            }
+            self.save_state(current_state)
+            
+            # Get response
+            response = chain.invoke({
+                "input": input_text
+            })
+            
+            # If human-in-the-loop is enabled, get human feedback
+            if self.human_in_loop:
+                print(f"\nAgent {self.name} response: {response}")
+                feedback = input("Human feedback (press Enter to accept, or type feedback): ")
+                if feedback.strip():
+                    response = feedback
+                    print(f"Using human feedback: {response}")
+            
+            # Save response to memory
+            self.memory.save_context(
+                {"input": input_text},
+                {"output": response}
+            )
+            
+            # Save final state
+            final_state = {
+                **current_state,
+                "response": response
+            }
+            self.save_state(final_state)
+            
+            # Log successful interaction
+            self.agent_logger.log_interaction(
+                input_text=input_text,
+                response=response,
+                tools_used=[t.name for t in self.tools],
+                state=final_state
+            )
+            
+            return response
+            
+        except Exception as e:
+            # Log error
+            self.agent_logger.log_error(
+                error=e,
+                context={
+                    "input": input_text,
+                    "messages": messages,
+                    "tools": [t.name for t in self.tools]
+                }
+            )
+            raise
     
     def export_state_history(self, filepath: str) -> None:
         """Export the state history to a JSON file."""
