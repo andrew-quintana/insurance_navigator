@@ -12,6 +12,7 @@ import logging
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from agents.prompt_security import PromptSecurityAgent, SecurityCheck
+from agents.base_agent import BaseAgent
 
 # Disable logging for tests
 logging.disable(logging.CRITICAL)
@@ -35,10 +36,25 @@ class TestPromptSecurityAgent(unittest.TestCase):
     
     def setUp(self):
         """Set up test environment."""
-        # Create a simple agent with minimal initialization
+        # Create a simple agent without calling the full __init__ method
         self.agent = PromptSecurityAgent.__new__(PromptSecurityAgent)
         
-        # Set up the regex patterns manually
+        # Set up the required attributes manually
+        self.agent.name = "prompt_security"
+        self.agent.llm = MockLLM()
+        self.agent.logger = MagicMock()
+        self.agent.metrics = {
+            "requests": 0,
+            "errors": 0,
+            "total_time": 0,
+            "avg_time": 0,
+        }
+        
+        # Mock the chain to avoid needing actual API keys
+        self.agent.chain = MagicMock()
+        self.agent.parser = MagicMock()
+        
+        # Set up the regex patterns
         self.agent.injection_patterns = [
             r"ignore previous instructions",
             r"disregard (all|previous|your) instructions",
@@ -150,6 +166,47 @@ class TestPromptSecurityAgent(unittest.TestCase):
         self.assertEqual(expected_result["threat_severity"], 8)
         self.assertNotEqual(expected_result["sanitized_input"], unsafe_input)
         self.assertGreaterEqual(expected_result["confidence"], 0.9)
+    
+    def test_check_input_with_mock_chain(self):
+        """Test check_input with a mocked chain that returns a SecurityCheck result."""
+        # Create a mock for the chain.invoke method
+        mock_security_check = SecurityCheck(
+            is_safe=True,
+            threat_detected=False,
+            threat_type=None,
+            threat_severity=None,
+            sanitized_input="Safe user input",
+            confidence=0.95,
+            reasoning="Input appears to be a legitimate question about insurance"
+        )
+        
+        # Setup the mock to return our security check
+        self.agent.chain.invoke.return_value = mock_security_check
+        mock_security_check.dict = MagicMock(return_value={
+            "is_safe": True,
+            "threat_detected": False,
+            "threat_type": None,
+            "threat_severity": None,
+            "sanitized_input": "Safe user input",
+            "confidence": 0.95,
+            "reasoning": "Input appears to be a legitimate question about insurance"
+        })
+        
+        # Call check_input with input that passes quick_check
+        safe_input = "Can you help me find insurance coverage for my medical procedure?"
+        
+        # Patch time.time to return consistent values for testing
+        with patch('agents.prompt_security.time.time', side_effect=[0, 1]):
+            result = self.agent.check_input(safe_input)
+        
+        # Verify the chain was called with the correct input
+        self.agent.chain.invoke.assert_called_once_with(safe_input)
+        
+        # Verify the result
+        self.assertTrue(result["is_safe"])
+        self.assertFalse(result["threat_detected"])
+        self.assertEqual(result["sanitized_input"], "Safe user input")
+        self.assertEqual(result["confidence"], 0.95)
 
 if __name__ == "__main__":
     unittest.main() 
