@@ -1,0 +1,3 @@
+"""
+Configuration tests module initialization.
+""" 
