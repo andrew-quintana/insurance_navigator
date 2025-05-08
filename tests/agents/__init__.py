@@ -1,3 +1,3 @@
 """
-Agent tests module initialization.
+Tests for agent modules.
 """ 
