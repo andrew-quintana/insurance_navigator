@@ -1,0 +1,74 @@
+{
+  "agent_name": "Service Provider",
+  "fmea_entries": [
+    {
+      "function": "Query CMS and internal directories",
+      "failure_mode": "Query fails or returns empty result",
+      "effect": "User receives no provider recommendations",
+      "severity": 6,
+      "cause": "API outage, invalid query params",
+      "occurrence": 4,
+      "current_controls": "Local cache fallback, timeout retries",
+      "detection": 3,
+      "rpn": 432,
+      "recommended_action": "Add pre-query simulation and backup data mirror",
+      "risk_level": "medium"
+    },
+    {
+      "function": "Match provider to service type",
+      "failure_mode": "Suggests wrong kind of provider",
+      "effect": "User misled or receives unusable results",
+      "severity": 6,
+      "cause": "Bad service-to-specialty mapping",
+      "occurrence": 5,
+      "current_controls": "Specialty taxonomy + rule-based mappings",
+      "detection": 4,
+      "rpn": 720,
+      "recommended_action": "Add feedback loop to update mappings with user interactions",
+      "risk_level": "high"
+    },
+    {
+      "function": "Filter for policy coverage",
+      "failure_mode": "Suggests out-of-network providers",
+      "effect": "Denied coverage, frustration, trust erosion",
+      "severity": 7,
+      "cause": "Policy check not integrated or skipped",
+      "occurrence": 4,
+      "current_controls": "Post-query filter with coverage flag check",
+      "detection": 4,
+      "rpn": 784,
+      "recommended_action": "Add hard policy rule filters pre-query and reject early",
+      "risk_level": "high"
+    },
+    {
+      "function": "Filter for proximity",
+      "failure_mode": "Suggests far-away or inaccessible providers",
+      "effect": "User cannot access recommended care",
+      "severity": 5,
+      "cause": "Radius too large or no fallback zone logic",
+      "occurrence": 5,
+      "current_controls": "Location bounding and availability scoring",
+      "detection": 4,
+      "rpn": 500,
+      "recommended_action": "Add dynamic radius expansion with ranked fallback zones",
+      "risk_level": "high"
+    },
+    {
+      "function": "Format provider list",
+      "failure_mode": "Malformed or incomplete list returned",
+      "effect": "Downstream guide is broken or unusable",
+      "severity": 5,
+      "cause": "Loop bug or API payload formatting error",
+      "occurrence": 3,
+      "current_controls": "Output schema enforcement",
+      "detection": 2,
+      "rpn": 150,
+      "recommended_action": "Add end-to-end test with guide developer agent to confirm usability",
+      "risk_level": "low"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "last_updated": "2025-05-08"
+  }
+}

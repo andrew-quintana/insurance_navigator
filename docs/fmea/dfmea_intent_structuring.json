@@ -1,0 +1,74 @@
+{
+  "agent_name": "Intent Structuring",
+  "fmea_entries": [
+    {
+      "function": "Extract task intent",
+      "failure_mode": "Misses core user request",
+      "effect": "Entire downstream flow built on wrong goal",
+      "severity": 7,
+      "cause": "Misparsed or vague language",
+      "occurrence": 5,
+      "current_controls": "Prompt chaining, example-tuned extraction",
+      "detection": 4,
+      "rpn": 980,
+      "recommended_action": "Add fallback prompt with binary task detection step",
+      "risk_level": "high"
+    },
+    {
+      "function": "Identify constraints",
+      "failure_mode": "Ignores critical user input like location or urgency",
+      "effect": "Output becomes too generic or incorrect",
+      "severity": 6,
+      "cause": "Entity extraction misses low-salience constraints",
+      "occurrence": 5,
+      "current_controls": "Constraint grammar + term weighting",
+      "detection": 4,
+      "rpn": 720,
+      "recommended_action": "Add secondary pass for constraint recovery post-intent parse",
+      "risk_level": "high"
+    },
+    {
+      "function": "Resolve ambiguity",
+      "failure_mode": "Outputs conflicting or unresolved task branches",
+      "effect": "Multiple agents activated incorrectly",
+      "severity": 6,
+      "cause": "No disambiguation logic for dual intents",
+      "occurrence": 4,
+      "current_controls": "Heuristic to detect ambiguity (e.g. confidence drop)",
+      "detection": 3,
+      "rpn": 432,
+      "recommended_action": "Add clarifying question logic for dual interpretations",
+      "risk_level": "medium"
+    },
+    {
+      "function": "Structure into formal format",
+      "failure_mode": "Generates invalid schema (e.g. JSON errors)",
+      "effect": "Parsing fails downstream",
+      "severity": 5,
+      "cause": "Output overflows token budget; missing field mapping",
+      "occurrence": 4,
+      "current_controls": "Output validation against schema",
+      "detection": 2,
+      "rpn": 200,
+      "recommended_action": "Use programmatic generation with retry on schema mismatch",
+      "risk_level": "medium"
+    },
+    {
+      "function": "Pass output downstream",
+      "failure_mode": "Skips or corrupts transmission to Task Requirements Agent",
+      "effect": "System halts or reverts to default logic",
+      "severity": 6,
+      "cause": "Routing misfire, failed object transfer",
+      "occurrence": 3,
+      "current_controls": "API contract validator",
+      "detection": 3,
+      "rpn": 324,
+      "recommended_action": "Include checksum on outbound objects and error echo check",
+      "risk_level": "medium"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "last_updated": "2025-05-08"
+  }
+}

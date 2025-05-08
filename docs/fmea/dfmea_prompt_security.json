@@ -1,0 +1,74 @@
+{
+  "agent_name": "Prompt Security",
+  "fmea_entries": [
+    {
+      "function": "Detect prompt injection",
+      "failure_mode": "Misses an embedded adversarial instruction",
+      "effect": "Downstream agent misbehaves or leaks information",
+      "severity": 8,
+      "cause": "Obfuscated payload bypasses regex or filters",
+      "occurrence": 4,
+      "current_controls": "OWASP-aligned sanitizer; self-consistency check",
+      "detection": 3,
+      "rpn": 768,
+      "recommended_action": "Add adversarial test cases during deployment validation",
+      "risk_level": "high"
+    },
+    {
+      "function": "Detect unsafe content",
+      "failure_mode": "Fails to block explicit or discriminatory input",
+      "effect": "Legal or ethical violation; user trust loss",
+      "severity": 9,
+      "cause": "LLM parser misses toxic phrases",
+      "occurrence": 5,
+      "current_controls": "Pattern matching, moderation API fallback",
+      "detection": 4,
+      "rpn": 1620,
+      "recommended_action": "Add ensemble safety classifier and content classifier overlay",
+      "risk_level": "critical"
+    },
+    {
+      "function": "Sanitize content",
+      "failure_mode": "Removes benign intent or important task elements",
+      "effect": "User's query misunderstood or rejected",
+      "severity": 5,
+      "cause": "Overzealous filtering logic",
+      "occurrence": 6,
+      "current_controls": "Heuristic threshold for filtering scope",
+      "detection": 5,
+      "rpn": 750,
+      "recommended_action": "Add semantic diff check to preserve intent during sanitization",
+      "risk_level": "high"
+    },
+    {
+      "function": "Flag threats",
+      "failure_mode": "High-risk prompt not logged or escalated",
+      "effect": "Loss of traceability and threat monitoring",
+      "severity": 5,
+      "cause": "Logging bug or low confidence threshold",
+      "occurrence": 4,
+      "current_controls": "Logging layer with severity tagging",
+      "detection": 3,
+      "rpn": 300,
+      "recommended_action": "Raise alert level for undefined sanitization behaviors",
+      "risk_level": "medium"
+    },
+    {
+      "function": "Allow safe input",
+      "failure_mode": "Incorrectly blocks normal queries",
+      "effect": "Prevents guide creation, user friction",
+      "severity": 4,
+      "cause": "Misclassified token or context mismatch",
+      "occurrence": 6,
+      "current_controls": "Prompt review loop via feedback",
+      "detection": 5,
+      "rpn": 480,
+      "recommended_action": "Use user feedback loop to whitelist common false positives",
+      "risk_level": "medium"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "last_updated": "2025-05-08"
+  }
+}

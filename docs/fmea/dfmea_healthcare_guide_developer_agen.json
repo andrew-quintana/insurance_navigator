@@ -1,0 +1,74 @@
+{
+  "agent_name": "Healthcare Guide Developer Agen",
+  "fmea_entries": [
+    {
+      "function": "Ingest strategy and provider list",
+      "failure_mode": "Drops data or mismatches fields",
+      "effect": "Incomplete or misleading guide steps",
+      "severity": 6,
+      "cause": "Misaligned field mapping; missing validation",
+      "occurrence": 4,
+      "current_controls": "Input presence check + schema alignment",
+      "detection": 3,
+      "rpn": 432,
+      "recommended_action": "Add precondition checks with missing-field alerting",
+      "risk_level": "medium"
+    },
+    {
+      "function": "Generate narrative flow",
+      "failure_mode": "Produces unclear, confusing, or disjointed instructions",
+      "effect": "Poor user comprehension; unusable output",
+      "severity": 5,
+      "cause": "Poor prompt engineering or logic gaps",
+      "occurrence": 5,
+      "current_controls": "Chain-of-thought guide creation",
+      "detection": 4,
+      "rpn": 500,
+      "recommended_action": "Train on example-based few-shot steps with semantic flow scoring",
+      "risk_level": "high"
+    },
+    {
+      "function": "Preserve constraints and preferences",
+      "failure_mode": "Drops important context like location, timing",
+      "effect": "User receives irrelevant or incomplete plan",
+      "severity": 6,
+      "cause": "Token budget overflow; prompt context truncation",
+      "occurrence": 5,
+      "current_controls": "Prompt length monitor + truncation fallback",
+      "detection": 3,
+      "rpn": 540,
+      "recommended_action": "Break narrative into modular blocks before synthesis",
+      "risk_level": "high"
+    },
+    {
+      "function": "Format for PDF generation",
+      "failure_mode": "Sends malformed content to PDF agent",
+      "effect": "Output rejected or produces error-prone file",
+      "severity": 5,
+      "cause": "HTML or markdown error; malformed tokens",
+      "occurrence": 3,
+      "current_controls": "Format linter and preview validation",
+      "detection": 2,
+      "rpn": 150,
+      "recommended_action": "Add render preview and output diff before finalizing",
+      "risk_level": "low"
+    },
+    {
+      "function": "Pass output downstream",
+      "failure_mode": "Payload isn\u2019t sent or arrives corrupted",
+      "effect": "PDF agent fails to generate guide",
+      "severity": 5,
+      "cause": "API contract mismatch or silent fail",
+      "occurrence": 3,
+      "current_controls": "API schema validator and fallback trigger",
+      "detection": 2,
+      "rpn": 150,
+      "recommended_action": "Add delivery confirmation and JSON checksum wrapper",
+      "risk_level": "low"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "last_updated": "2025-05-08"
+  }
+}

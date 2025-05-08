@@ -1,0 +1,74 @@
+{
+  "agent_name": "Quality Assurance",
+  "fmea_entries": [
+    {
+      "function": "Validate output structure",
+      "failure_mode": "Misses malformed sections in guide or provider list",
+      "effect": "Broken or unusable output sent to user",
+      "severity": 6,
+      "cause": "Format validator skips nested/complex elements",
+      "occurrence": 4,
+      "current_controls": "ReAct format validator and regression test suite",
+      "detection": 3,
+      "rpn": 432,
+      "recommended_action": "Add recursive structure checker and post-render visual diff",
+      "risk_level": "medium"
+    },
+    {
+      "function": "Check logic/factual consistency",
+      "failure_mode": "Allows logically invalid or factually incorrect result",
+      "effect": "Misinformation passed to user; loss of trust",
+      "severity": 7,
+      "cause": "Missed inconsistency due to weak prompt chain",
+      "occurrence": 5,
+      "current_controls": "Self-consistency chain, verification step",
+      "detection": 4,
+      "rpn": 980,
+      "recommended_action": "Train QA agent on contradiction and hallucination detection corpus",
+      "risk_level": "high"
+    },
+    {
+      "function": "Flag low-confidence content",
+      "failure_mode": "Passes output without flag despite uncertain answers",
+      "effect": "Confusing or vague output undermines credibility",
+      "severity": 5,
+      "cause": "Confidence threshold not tuned for edge cases",
+      "occurrence": 5,
+      "current_controls": "Confidence estimator, model certainty metrics",
+      "detection": 4,
+      "rpn": 500,
+      "recommended_action": "Set adaptive confidence thresholds based on task type",
+      "risk_level": "high"
+    },
+    {
+      "function": "Escalate failed validation",
+      "failure_mode": "Does not rerun or halt system on failure",
+      "effect": "Faulty guide or strategy reaches user",
+      "severity": 7,
+      "cause": "Escalation trigger missing or suppressed",
+      "occurrence": 3,
+      "current_controls": "Escalation logic with retry threshold",
+      "detection": 3,
+      "rpn": 441,
+      "recommended_action": "Require affirmative QA pass signal before downstream execution",
+      "risk_level": "medium"
+    },
+    {
+      "function": "Log QA decision",
+      "failure_mode": "QA status missing or incorrect in logs",
+      "effect": "No traceability or debugging insight later",
+      "severity": 5,
+      "cause": "Logging bug or missed event propagation",
+      "occurrence": 3,
+      "current_controls": "Centralized QA event logger with replay capability",
+      "detection": 3,
+      "rpn": 225,
+      "recommended_action": "Add persistent QA token across agent output for traceability",
+      "risk_level": "medium"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "last_updated": "2025-05-08"
+  }
+}

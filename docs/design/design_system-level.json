@@ -1,0 +1,59 @@
+{
+  "design_name": "System-Level",
+  "design_entries": [
+    {
+      "category": "Inputs",
+      "element": "User-Submitted Insurance Documents",
+      "description": "Policies, PDFs, forms, preferences uploaded via UI"
+    },
+    {
+      "category": "Inputs",
+      "element": "User Service Preferences",
+      "description": "Service goals (e.g., \u201cfind cardiologist,\u201d \u201cschedule exam\u201d)"
+    },
+    {
+      "category": "Inputs",
+      "element": "Public CMS Data",
+      "description": "Medicare provider, plan, and coverage information"
+    },
+    {
+      "category": "Inputs",
+      "element": "HIPAA-Secured Historical Data",
+      "description": "User history, prior guide versions, prior provider interactions"
+    },
+    {
+      "category": "Inputs",
+      "element": "Legal/Regulatory Updates",
+      "description": "Real-time or periodic CMS policy changes"
+    },
+    {
+      "category": "Outputs",
+      "element": "Personalized Navigation Guide (PDF + UI Render)",
+      "description": "Actionable instructions for accessing approved services"
+    },
+    {
+      "category": "Outputs",
+      "element": "Provider List",
+      "description": "Validated local service options"
+    },
+    {
+      "category": "Outputs",
+      "element": "Compliance Logs",
+      "description": "Policy checks, constraint violations, eligibility rejections"
+    },
+    {
+      "category": "Outputs",
+      "element": "User Notifications",
+      "description": "Missing documentation, retry failures, invalid requests"
+    },
+    {
+      "category": "Outputs",
+      "element": "Internal System Logs",
+      "description": "Agent state traces, input/output history, runtime performance"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "last_updated": "2025-05-08"
+  }
+}

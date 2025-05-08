@@ -1,10 +1,9 @@
 {
-  "agent_name": "Policy Compliance Evaluator",
-  "agent_type": "evaluator",
+  "agent_name": "Policy Compliance Evaluator Age",
   "fmea_entries": [
     {
       "function": "Evaluate compliance with policy",
-      "failure_mode": "Approves strategy that actually violates user's plan",
+      "failure_mode": "Approves strategy that actually violates user\u2019s plan",
       "effect": "User follows invalid path; regulatory breach",
       "severity": 9,
       "cause": "Incomplete or outdated coverage criteria in memory",
@@ -13,11 +12,10 @@
       "detection": 4,
       "rpn": 1296,
       "recommended_action": "Add multi-source RAG and enforce timestamp threshold",
-      "risk_level": "critical",
-      "categories": ["compliance", "policy_evaluation", "regulatory"]
+      "risk_level": "critical"
     },
     {
-      "function": "Evaluate against insurance rules",
+      "function": "Evaluate against Medicare rules",
       "failure_mode": "Rejects a valid strategy as noncompliant",
       "effect": "User is denied a service they should be eligible for",
       "severity": 8,
@@ -27,8 +25,7 @@
       "detection": 4,
       "rpn": 1024,
       "recommended_action": "Add semantic similarity layer to detect alternate eligibility phrasing",
-      "risk_level": "high",
-      "categories": ["compliance", "eligibility", "policy_evaluation"]
+      "risk_level": "critical"
     },
     {
       "function": "Retrieve rules from RAG",
@@ -41,8 +38,7 @@
       "detection": 3,
       "rpn": 735,
       "recommended_action": "Build live CMS endpoint monitor to push index updates automatically",
-      "risk_level": "high",
-      "categories": ["data_retrieval", "rag", "policy_updates"]
+      "risk_level": "high"
     },
     {
       "function": "Output validity result",
@@ -55,8 +51,7 @@
       "detection": 2,
       "rpn": 216,
       "recommended_action": "Require consistency between flag and textual explanation",
-      "risk_level": "medium",
-      "categories": ["output_validation", "error_handling"]
+      "risk_level": "medium"
     },
     {
       "function": "Trigger retry",
@@ -69,18 +64,11 @@
       "detection": 3,
       "rpn": 324,
       "recommended_action": "Add explicit fail path node and result delivery validation",
-      "risk_level": "medium",
-      "categories": ["error_handling", "system_integration"]
+      "risk_level": "medium"
     }
   ],
   "metadata": {
     "version": "1.0",
-    "last_updated": "2024-03-19",
-    "risk_levels": {
-      "critical": "RPN >= 1000",
-      "high": "RPN >= 500",
-      "medium": "RPN >= 200",
-      "low": "RPN < 200"
-    }
+    "last_updated": "2025-05-08"
   }
-} 
+}
