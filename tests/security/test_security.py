@@ -22,6 +22,18 @@ class SecurityTester:
             'sql_injection': r'(?i)(SELECT|INSERT|UPDATE|DELETE).*\+.*',
             'xss': r'(?i)(<script|javascript:)',
             'file_path_traversal': r'(?i)(\.\.\/|\.\.\\|~\/)',
+            
+            # Encryption-related patterns
+            'weak_encryption': r'(?i)(md5|sha1|des|rc4)',
+            'hardcoded_iv': r'(?i)(iv|initialization_vector)[\s]*=[\s]*[\'"][^\'"]+[\'"]',
+            'weak_key_length': r'(?i)(key_length|key_size)[\s]*=[\s]*[0-7]',
+            'exposed_encryption_key': r'(?i)(encryption_key|enc_key|decryption_key|dec_key)[\s]*=[\s]*[\'"][^\'"]+[\'"]',
+            'unsafe_crypto_import': r'(?i)from\s+crypto\s+import|import\s+crypto',
+            'weak_random': r'(?i)(random\.|randint|randrange)',
+            'exposed_salt': r'(?i)(salt|nonce)[\s]*=[\s]*[\'"][^\'"]+[\'"]',
+            'weak_hash': r'(?i)(hashlib\.md5|hashlib\.sha1)',
+            'unsafe_cipher_mode': r'(?i)(ECB|CBC|CFB|OFB)',
+            'exposed_private_key': r'(?i)(private_key|privkey|rsa_private)[\s]*=[\s]*[\'"][^\'"]+[\'"]',
         }
 
     def check_file(self, file_path: Path) -> List[Dict]:
@@ -72,7 +84,7 @@ class SecurityTester:
             # Check for unsafe imports
             if isinstance(node, ast.Import):
                 for name in node.names:
-                    if name.name in ['pickle', 'marshal']:
+                    if name.name in ['pickle', 'marshal', 'crypto', 'pycrypto']:
                         issues.append({
                             'file': str(file_path.relative_to(self.root_dir)),
                             'line': node.lineno,
@@ -91,6 +103,16 @@ class SecurityTester:
                             'pattern': 'unsafe_call',
                             'match': f'{node.func.id}()',
                             'context': f'Unsafe function call: {node.func.id}'
+                        })
+                elif isinstance(node.func, ast.Attribute):
+                    # Check for weak crypto functions
+                    if node.func.attr in ['md5', 'sha1', 'des', 'rc4']:
+                        issues.append({
+                            'file': str(file_path.relative_to(self.root_dir)),
+                            'line': node.lineno,
+                            'pattern': 'weak_crypto',
+                            'match': f'{node.func.attr}()',
+                            'context': f'Weak cryptographic function: {node.func.attr}'
                         })
         
         return issues
@@ -116,7 +138,12 @@ def test_security_scan():
     # Filter out non-critical issues
     critical_issues = [
         issue for issue in issues 
-        if issue.get('pattern') in ['api_key', 'password', 'hardcoded_credentials', 'unsafe_eval', 'unsafe_exec']
+        if issue.get('pattern') in [
+            'api_key', 'password', 'hardcoded_credentials', 
+            'unsafe_eval', 'unsafe_exec', 'weak_encryption',
+            'exposed_encryption_key', 'exposed_private_key',
+            'hardcoded_iv', 'exposed_salt'
+        ]
     ]
     
     if critical_issues:
@@ -137,7 +164,11 @@ def test_no_hardcoded_credentials():
     
     credential_issues = [
         issue for issue in issues 
-        if issue.get('pattern') in ['api_key', 'password', 'hardcoded_credentials']
+        if issue.get('pattern') in [
+            'api_key', 'password', 'hardcoded_credentials',
+            'exposed_encryption_key', 'exposed_private_key',
+            'hardcoded_iv', 'exposed_salt'
+        ]
     ]
     
     assert not credential_issues, "Hardcoded credentials found in the codebase"
@@ -152,4 +183,28 @@ def test_no_unsafe_eval():
         if issue.get('pattern') in ['unsafe_eval', 'unsafe_exec']
     ]
     
-    assert not unsafe_calls, "Unsafe eval or exec calls found in the codebase" 
+    assert not unsafe_calls, "Unsafe eval or exec calls found in the codebase"
+
+def test_no_weak_encryption():
+    """Test that no weak encryption methods are used."""
+    tester = SecurityTester()
+    issues = tester.scan_project()
+    
+    weak_crypto = [
+        issue for issue in issues 
+        if issue.get('pattern') in [
+            'weak_encryption', 'weak_hash', 'unsafe_cipher_mode',
+            'weak_random', 'weak_key_length'
+        ]
+    ]
+    
+    if weak_crypto:
+        print("\nWeak Encryption Methods Found:")
+        for issue in weak_crypto:
+            print(f"\nFile: {issue['file']}")
+            print(f"Line: {issue.get('line', 'N/A')}")
+            print(f"Pattern: {issue['pattern']}")
+            print(f"Match: {issue['match']}")
+            print(f"Context: {issue.get('context', 'N/A')}")
+    
+    assert not weak_crypto, "Weak encryption methods found in the codebase" 
