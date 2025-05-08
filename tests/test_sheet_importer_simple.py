@@ -12,7 +12,7 @@ from unittest.mock import patch, MagicMock
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from utils.sheet_importer import SheetImporter
+from utils.sheets import SheetImporter
 
 class TestSheetImporter(unittest.TestCase):
     """Test the SheetImporter class."""
@@ -22,7 +22,7 @@ class TestSheetImporter(unittest.TestCase):
         self.spreadsheet_id = "test_spreadsheet_id"
         self.importer = SheetImporter(self.spreadsheet_id)
     
-    @patch('utils.sheet_importer.build')
+    @patch('utils.sheets.build')
     def test_list_sheets(self, mock_build):
         """Test listing sheets."""
         # Setup mocks
@@ -53,7 +53,7 @@ class TestSheetImporter(unittest.TestCase):
         self.assertEqual(sheets[0]['title'], 'dfmea_test')
         self.assertEqual(sheets[1]['title'], 'design_test')
     
-    @patch('utils.sheet_importer.build')
+    @patch('utils.sheets.build')
     def test_get_sheet_data(self, mock_build):
         """Test getting sheet data."""
         # Setup mocks
