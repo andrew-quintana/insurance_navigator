@@ -2,69 +2,95 @@
   "design_name": "Agent-Level",
   "design_entries": [
     {
-      "category": "",
-      "element": "",
-      "description": ""
+      "category": "Agent",
+      "element": "Patient Navigator Agent",
+      "description": "Front-facing chatbot that gives the user access to the functionality of the system.",
+      "prompt_tools": "Few-Shot",
+      "design_rationale": "Some sample questions and desired response tonality/detail"
     },
     {
-      "category": "",
-      "element": "",
-      "description": ""
+      "category": "Agent",
+      "element": "Prompt Security Agent",
+      "description": "Screens input for safety and injection attacks.",
+      "prompt_tools": "Self-Consistency, Tool: Sanitizer/Checker",
+      "design_rationale": "Follow OWASP Input Validation for CoT considerations with external tool to prevent malicious efforts"
     },
     {
-      "category": "",
-      "element": "",
-      "description": ""
+      "category": "Agent",
+      "element": "Intent Structuring Agent",
+      "description": "Take Patient Navigator transformed queries and transform into structured design intent",
+      "prompt_tools": "CoT + Prompt Chaining",
+      "design_rationale": "CoT: reason through ambiguous or messy prompts. Prompt Chaining: progressively structure: intent → needs → dependencies"
     },
     {
-      "category": "",
-      "element": "",
-      "description": ""
+      "category": "Agent",
+      "element": "Task Requirements Agent",
+      "description": "Identifies docs and info necessary for specific task based on task, policy, and regulations. Creates design input/output.",
+      "prompt_tools": "ReAct, Tools: RAG",
+      "design_rationale": "Need structured thought process for generalized approach to analyzing task and seeking information from a sufficient breadth of sources."
     },
     {
-      "category": "",
-      "element": "",
-      "description": ""
+      "category": "Agent",
+      "element": "Intake Validation Agent",
+      "description": "Reviews uploaded documents and information in database; determines if additional documents are needed.",
+      "prompt_tools": "COT + ReAct, Tools: RAG, OCR",
+      "design_rationale": "Compare provided info/documents to retrieved requirements; escalate to Supervisor via ReAct if incomplete."
     },
     {
-      "category": "",
-      "element": "",
-      "description": ""
+      "category": "Agent",
+      "element": "Policy Compliance Evaluator Agent",
+      "description": "Analyzes plan rules and service requirements to determine user eligibility. Regulatory mind in Service + Matching layer.",
+      "prompt_tools": "Self-Consistency + ReAct, Tools: RAG",
+      "design_rationale": "Strict legal enforcer requires many checkpoints to consider as starting point. ReAct to determine how to coordinate with Service Access Strategy Agent"
     },
     {
-      "category": "",
-      "element": "",
-      "description": ""
+      "category": "Agent",
+      "element": "Service Access Strategy Agent",
+      "description": "Identifies matching services/providers and builds an action plan for accessing them efficiently.",
+      "prompt_tools": "Graph + ReAct, Tools: RAG",
+      "design_rationale": "Creative, explorative brainstormer that gets more freedom; ReAct to determine how to coordinate with Policy Compliance Evaluator Agent and Service Provider Agent to ensure local providers"
     },
     {
-      "category": "",
-      "element": "",
-      "description": ""
+      "category": "Agent",
+      "element": "Service Provider Agent",
+      "description": "Identifies local, matching service providers.",
+      "prompt_tools": "CoT, Tools: RAG, CMS API",
+      "design_rationale": "Makes database request based on internal and external directories"
     },
     {
-      "category": "",
-      "element": "",
-      "description": ""
+      "category": "Agent",
+      "element": "Healthcare Guide Developer Agent",
+      "description": "Based on the desired information, develops a prompt for the Guide to PDF Agent.",
+      "prompt_tools": "Prompt Chaining + ReAct",
+      "design_rationale": "Set of processing steps for taking Service + Matching output to coordinate with Service Provider Agent to get any last specific information. Redundant guide check."
     },
     {
-      "category": "",
-      "element": "",
-      "description": ""
+      "category": "Agent",
+      "element": "Guide to PDF Agent",
+      "description": "Creates an up-to-date guide for the user's records.",
+      "prompt_tools": "APE with pgvector Tool",
+      "design_rationale": "Needs to prompt, test output quality, and improve performance automatically."
     },
     {
-      "category": "",
-      "element": "",
-      "description": ""
+      "category": "Agent",
+      "element": "Database Agent + Encrypted Database",
+      "description": "Controls and secures access to user policy data.",
+      "prompt_tools": "Prompt Chaining",
+      "design_rationale": "JSON conversion → JSON quality check → JSON security check → JSON submission to database API → payload quality inspection → payload security inspection → output"
     },
     {
-      "category": "",
-      "element": "",
-      "description": ""
+      "category": "Agent",
+      "element": "Quality Assurance Agent",
+      "description": "Reviews outputs for correctness and completeness.",
+      "prompt_tools": "Self-Consistency + ReAct",
+      "design_rationale": "Reliable validation without relying on single possibility-random judgement"
     },
     {
-      "category": "",
-      "element": "",
-      "description": ""
+      "category": "Agent",
+      "element": "Regulatory Agent",
+      "description": "Ensures outputs meet privacy and HIPAA standards.",
+      "prompt_tools": "Self-Consistency + ReAct (+ Compliance API)",
+      "design_rationale": "Logic to capture HIPAA conformance (include external API for validation if lacking)"
     }
   ],
   "metadata": {

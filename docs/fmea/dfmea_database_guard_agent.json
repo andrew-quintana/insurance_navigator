@@ -1,5 +1,5 @@
 {
-  "agent_name": "Database",
+  "agent_name": "Database Guard",
   "fmea_entries": [
     {
       "function": "Convert to structured format",
