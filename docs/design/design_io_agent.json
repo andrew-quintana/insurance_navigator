@@ -3,8 +3,28 @@
   "design_entries": [
     {
       "category": "Inputs",
-      "element": "User-Submitted Insurance Documents",
-      "description": "Policies, PDFs, forms, preferences uploaded via UI"
+      "element": "User-Submitted Documents",
+      "description": "Policies, PDFs, forms uploaded via UI"
+    },
+    {
+      "category": "Outputs",
+      "element": "Compliance Report",
+      "description": "Detailed compliance findings with citations"
+    },
+    {
+      "category": "Processing",
+      "element": "NLP Analysis",
+      "description": "Text extraction and semantic analysis"
+    },
+    {
+      "category": "Inputs",
+      "element": "User Preferences",
+      "description": "User-defined risk tolerance and priorities"
+    },
+    {
+      "category": "Outputs",
+      "element": "Recommendations",
+      "description": "Actionable steps to address compliance gaps"
     }
   ],
   "metadata": {

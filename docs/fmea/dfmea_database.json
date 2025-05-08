@@ -1,0 +1,74 @@
+{
+  "agent_name": "Database",
+  "fmea_entries": [
+    {
+      "function": "Convert to structured format",
+      "failure_mode": "Outputs invalid JSON or loses key fields",
+      "effect": "Data loss or corruption",
+      "severity": 6,
+      "cause": "Improper serialization or schema drift",
+      "occurrence": 4,
+      "current_controls": "JSON structure validator",
+      "detection": 3,
+      "rpn": 432,
+      "recommended_action": "Add diff-check against agent output schema before save",
+      "risk_level": "medium"
+    },
+    {
+      "function": "Check for sensitive info",
+      "failure_mode": "Stores unredacted user data",
+      "effect": "HIPAA/privacy breach",
+      "severity": 9,
+      "cause": "Missed PII/PHI field during conversion",
+      "occurrence": 3,
+      "current_controls": "Security filter + redaction audit",
+      "detection": 2,
+      "rpn": 486,
+      "recommended_action": "Add final HIPAA guard recheck before save payload is accepted",
+      "risk_level": "medium"
+    },
+    {
+      "function": "Store to database",
+      "failure_mode": "API call fails or silently drops entry",
+      "effect": "Loss of user data; workflow reset",
+      "severity": 6,
+      "cause": "Network issue, silent failure",
+      "occurrence": 4,
+      "current_controls": "Retry logic, write confirmation",
+      "detection": 3,
+      "rpn": 432,
+      "recommended_action": "Require write receipt with fallback cache if fail",
+      "risk_level": "medium"
+    },
+    {
+      "function": "Log success + return ID",
+      "failure_mode": "Storage success not logged or ID not returned",
+      "effect": "Downstream agents cannot fetch data",
+      "severity": 5,
+      "cause": "Logging race condition or ID mismatch",
+      "occurrence": 3,
+      "current_controls": "Logging queue with atomic return step",
+      "detection": 3,
+      "rpn": 225,
+      "recommended_action": "Add checkpoint confirmation step for ID transmission",
+      "risk_level": "medium"
+    },
+    {
+      "function": "Detect malformed or malicious content",
+      "failure_mode": "Accepts or stores unsafe payload",
+      "effect": "Database corruption, query failures later",
+      "severity": 7,
+      "cause": "Validator bypass or malformed input",
+      "occurrence": 3,
+      "current_controls": "Security sanitizer and schema strict mode",
+      "detection": 2,
+      "rpn": 294,
+      "recommended_action": "Add hash verification and payload inspection in staging layer",
+      "risk_level": "medium"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "last_updated": "2025-05-08"
+  }
+}
