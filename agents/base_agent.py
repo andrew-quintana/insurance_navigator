@@ -20,6 +20,19 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.tools import BaseTool
 from datetime import datetime
 
+# Add imports for LangSmith
+import os
+from langsmith import Client
+from langsmith.run_helpers import traceable
+
+# Initialize LangSmith client if API key is available
+langsmith_client = None
+if os.environ.get("LANGCHAIN_API_KEY"):
+    try:
+        langsmith_client = Client()
+    except Exception as e:
+        pass
+
 class BaseAgent:
     """Base class for all agents in the system."""
     
@@ -28,7 +41,9 @@ class BaseAgent:
         name: str,
         llm: Optional[BaseLanguageModel] = None,
         logger: Optional[logging.Logger] = None,
-        log_dir: str = "logs/agents"
+        log_dir: str = "logs/agents",
+        prompt_version: str = "V0.1",
+        prompt_description: str = "Base implementation"
     ):
         """
         Initialize the base agent with common components.
@@ -38,6 +53,8 @@ class BaseAgent:
             llm: An optional language model to use
             logger: An optional pre-configured logger
             log_dir: Directory for storing log files
+            prompt_version: Version tag for tracking prompt iterations with LangSmith
+            prompt_description: Brief description of current version for LangSmith metadata
         """
         self.name = name
         self.llm = llm or ChatAnthropic(model="claude-3-sonnet-20240229", temperature=0)
@@ -53,7 +70,17 @@ class BaseAgent:
             "avg_time": 0,
         }
         
-        self.logger.info(f"{self.name} agent initialized")
+        # LangSmith tracking metadata
+        self.prompt_version = prompt_version
+        self.prompt_description = prompt_description
+        
+        # Initialize state history for tracking
+        self.state_history = []
+        self.tools = []
+        self.memory = None
+        self.human_in_loop = False
+        
+        self.logger.info(f"{self.name} agent initialized with prompt version {self.prompt_version}")
     
     def _setup_logger(self, name: str, log_dir: str) -> logging.Logger:
         """Set up a logger for the agent."""
@@ -118,13 +145,19 @@ class BaseAgent:
         
         return wrapper
     
-    def get_metrics(self) -> Dict[str, Any]:
-        """Get the current performance metrics for the agent."""
-        return self.metrics
+    def get_langsmith_metadata(self) -> Dict[str, str]:
+        """Get metadata for LangSmith tracking."""
+        return {
+            "agent_name": self.name,
+            "prompt_version": self.prompt_version,
+            "prompt_description": self.prompt_description,
+        }
     
+    @traceable(run_type="llm", name="process_input")
     def process(self, *args, **kwargs) -> Any:
         """
         Process a request (to be implemented by subclasses).
+        This method is decorated with @traceable to track runs in LangSmith.
         
         Args:
             *args: Positional arguments
@@ -158,7 +191,8 @@ class BaseAgent:
         state_with_metadata = {
             **state,
             "timestamp": datetime.now().isoformat(),
-            "agent_name": self.name
+            "agent_name": self.name,
+            "prompt_version": self.prompt_version
         }
         self.state_history.append(state_with_metadata)
         
@@ -168,8 +202,12 @@ class BaseAgent:
             return {}
         return self.state_history[-1]
     
+    @traceable(run_type="chain", name="agent_run")
     def run(self, prompt: ChatPromptTemplate, input_text: str) -> str:
         """Run the agent with the given prompt and input."""
+        # Add LangSmith metadata
+        metadata = self.get_langsmith_metadata()
+        
         if self.human_in_loop:
             return input("Enter your feedback: ")
             
