@@ -25,6 +25,10 @@ import os
 from langsmith import Client
 from langsmith.run_helpers import traceable
 
+# Replace hardcoded API key with environment variable
+api_key = os.getenv('API_KEY')
+# Ensure to set the API_KEY environment variable in your environment or .env file
+
 # Initialize LangSmith client if API key is available
 langsmith_client = None
 if os.environ.get("LANGCHAIN_API_KEY"):
@@ -38,8 +42,9 @@ class BaseAgent:
     
     def __init__(
         self,
-        name: str,
+        name: str = None,
         llm: Optional[BaseLanguageModel] = None,
+        prompt_loader: Any = None,
         logger: Optional[logging.Logger] = None,
         log_dir: str = "logs/agents",
         prompt_version: str = "V0.1",
@@ -51,16 +56,18 @@ class BaseAgent:
         Args:
             name: The name of the agent for logging purposes
             llm: An optional language model to use
+            prompt_loader: An optional prompt loader instance
             logger: An optional pre-configured logger
             log_dir: Directory for storing log files
             prompt_version: Version tag for tracking prompt iterations with LangSmith
             prompt_description: Brief description of current version for LangSmith metadata
         """
-        self.name = name
+        self.name = name or self.__class__.__name__
         self.llm = llm or ChatAnthropic(model="claude-3-sonnet-20240229", temperature=0)
+        self.prompt_loader = prompt_loader
         
         # Set up logging
-        self.logger = logger or self._setup_logger(name, log_dir)
+        self.logger = logger or self._setup_logger(self.name, log_dir)
         
         # Performance tracking
         self.metrics = {

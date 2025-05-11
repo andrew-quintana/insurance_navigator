@@ -1,116 +1,91 @@
 """
-Test module for the Policy Compliance Evaluator Agent.
+Tests for the Policy Compliance Agent.
 """
 
-import os
-import sys
 import unittest
 from unittest.mock import MagicMock, patch
-import json
-from typing import Dict, Any, List
+from agents.policy_compliance.core.logic import PolicyComplianceAgent
+from tests.agents.test_base import BaseAgentTest
 
-# Add parent directory to path to allow imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-
-from agents.policy_compliance import PolicyComplianceAgent, ComplianceAnalysis
-from langchain_core.messages import AIMessage
-
-class TestPolicyComplianceAgent(unittest.TestCase):
-    """Tests for the Policy Compliance Evaluator Agent."""
+class TestPolicyComplianceAgent(BaseAgentTest):
+    """Test cases for the Policy Compliance Agent."""
     
     def setUp(self):
-        """Set up the test environment."""
-        # Create a mock LLM that returns a predefined response
-        self.mock_llm = MagicMock()
-        self.mock_llm.invoke.return_value = AIMessage(content="""
-        ```json
-        {
-            "is_compliant": true,
-            "compliance_score": 0.85,
-            "non_compliant_reasons": [],
-            "rules_applied": ["Medicare Part B covers outpatient medical services"],
-            "recommendations": ["Ensure proper documentation for the visit"],
-            "confidence": 0.9,
-            "reasoning": "Annual wellness visits are covered under Medicare Part B as preventive care."
-        }
-        ```
-        """)
+        """Set up test fixtures."""
+        super().setUp()
+        self.agent = self.assert_agent_initialization(PolicyComplianceAgent)
         
-        # Create a mock retriever
-        self.mock_retriever = MagicMock()
-        self.mock_retriever.get_relevant_documents.return_value = [
-            MagicMock(page_content="Annual wellness visits are covered under Medicare Part B.")
-        ]
-        
-        # Initialize the agent with the mock LLM and retriever
-        self.agent = PolicyComplianceAgent(llm=self.mock_llm, retriever=self.mock_retriever)
-    
     def test_initialization(self):
         """Test that the agent initializes correctly."""
-        self.assertEqual(self.agent.name, "policy_compliance")
-        self.assertIsNotNone(self.agent.logger)
-        self.assertIsNotNone(self.agent.policy_rules)
-    
-    def test_get_policy_info(self):
-        """Test retrieving policy information."""
-        # Test with a known policy type
-        medicare_info = self.agent.get_policy_info("medicare")
-        self.assertIn("Medicare Part A", medicare_info)
-        self.assertIn("Medicare Part B", medicare_info)
+        self.assertIsInstance(self.agent, PolicyComplianceAgent)
         
-        # Test with an unknown policy type
-        unknown_info = self.agent.get_policy_info("unknown")
-        self.assertIn("not found", unknown_info)
-    
-    def test_retrieve_context(self):
-        """Test retrieving context using the RAG retriever."""
-        context = self.agent.retrieve_context("medicare annual wellness visit")
-        self.assertIn("Annual wellness visits", context)
+    def test_check_compliance(self):
+        """Test compliance checking."""
+        test_data = {
+            "patient_id": "12345",
+            "action": "share_data",
+            "recipient": "external_provider",
+            "data_type": "medical_history"
+        }
+        expected_result = {
+            "is_compliant": True,
+            "policy_references": ["HIPAA §164.502", "HITECH Act §13405"],
+            "requirements_met": ["patient_consent", "minimum_necessary"],
+            "restrictions": ["no_marketing_use", "secure_transmission_required"]
+        }
         
-        # Test when the retriever raises an exception
-        self.mock_retriever.get_relevant_documents.side_effect = Exception("Test error")
-        error_context = self.agent.retrieve_context("medicare annual wellness visit")
-        self.assertIn("Error retrieving context", error_context)
-    
-    def test_evaluate_compliance(self):
-        """Test evaluating compliance."""
-        result = self.agent.evaluate_compliance(
-            policy_type="medicare",
-            service_request="Annual wellness visit",
-            user_context={"age": 67, "has_part_b": True}
-        )
+        # Mock the LLM response
+        self.mock_llm.generate.return_value = expected_result
         
-        self.assertTrue(result["is_compliant"])
-        self.assertEqual(result["compliance_score"], 0.85)
-        self.assertEqual(len(result["non_compliant_reasons"]), 0)
-        self.assertEqual(len(result["rules_applied"]), 1)
-        self.assertIn("Annual wellness visits", result["reasoning"])
-    
-    def test_evaluate_compliance_error(self):
-        """Test error handling in compliance evaluation."""
-        # Make the LLM raise an exception
-        self.mock_llm.invoke.side_effect = Exception("Test error")
+        result = self.agent.check_compliance(test_data)
         
-        result = self.agent.evaluate_compliance(
-            policy_type="medicare",
-            service_request="Annual wellness visit"
-        )
+        self.assertEqual(result, expected_result)
+        self.mock_llm.generate.assert_called_once()
         
-        self.assertFalse(result["is_compliant"])
-        self.assertEqual(result["compliance_score"], 0.0)
-        self.assertIn("Processing error", result["non_compliant_reasons"][0])
-    
-    def test_process(self):
-        """Test the process method."""
-        is_compliant, score, result = self.agent.process(
-            policy_type="medicare",
-            service_request="Annual wellness visit"
-        )
+    def test_validate_action(self):
+        """Test action validation."""
+        test_action = {
+            "type": "data_access",
+            "user_role": "physician",
+            "resource": "patient_records",
+            "purpose": "treatment"
+        }
+        expected_result = {
+            "is_valid": True,
+            "authorization_level": "full_access",
+            "required_documentation": ["patient_consent", "treatment_relationship"],
+            "audit_trail": True
+        }
         
-        self.assertTrue(is_compliant)
-        self.assertEqual(score, 0.85)
-        self.assertTrue(isinstance(result, dict))
-        self.assertIn("reasoning", result)
+        # Mock the LLM response
+        self.mock_llm.generate.return_value = expected_result
+        
+        result = self.agent.validate_action(test_action)
+        
+        self.assertEqual(result, expected_result)
+        self.mock_llm.generate.assert_called_once()
+        
+    def test_get_policy_requirements(self):
+        """Test retrieving policy requirements."""
+        test_scenario = "data_sharing_external"
+        expected_result = {
+            "required_policies": ["privacy", "security", "consent"],
+            "compliance_steps": [
+                "verify_patient_consent",
+                "check_recipient_credentials",
+                "encrypt_data",
+                "log_transfer"
+            ],
+            "documentation_needed": ["consent_form", "recipient_agreement"]
+        }
+        
+        # Mock the LLM response
+        self.mock_llm.generate.return_value = expected_result
+        
+        result = self.agent.get_policy_requirements(test_scenario)
+        
+        self.assertEqual(result, expected_result)
+        self.mock_llm.generate.assert_called_once()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main() 

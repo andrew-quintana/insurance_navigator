@@ -1,0 +1,100 @@
+{
+  "agent_name": "Prompt Security",
+  "fmea_entries": [
+    {
+      "function": "Detect prompt injection",
+      "failure_mode": "Fails to detect jailbreak",
+      "effect": "System prompt overridden, policy bypassed",
+      "severity": 9,
+      "cause": "Injection keywords not filtered",
+      "occurrence": 4,
+      "current_controls": "Prompt filter with keyword matching",
+      "detection": 4,
+      "rpn": 144,
+      "recommended_action": "Add adversarial testing and jailbreak tracing",
+      "risk_level": "high"
+    },
+    {
+      "function": "Detect prompt injection",
+      "failure_mode": "Fails to detect instruction override",
+      "effect": "Agent executes harmful or impersonated task",
+      "severity": 9,
+      "cause": "Role reassignment patterns not blocked",
+      "occurrence": 4,
+      "current_controls": "Basic context validation",
+      "detection": 4,
+      "rpn": 144,
+      "recommended_action": "Add system prompt freeze logic and override detection",
+      "risk_level": "high"
+    },
+    {
+      "function": "Detect prompt injection",
+      "failure_mode": "Fails to detect prompt leakage request",
+      "effect": "Reveals hidden system behavior or config",
+      "severity": 8,
+      "cause": "Model repeats prior hidden prompt",
+      "occurrence": 5,
+      "current_controls": "Stop sequences and instruction filtering",
+      "detection": 3,
+      "rpn": 120,
+      "recommended_action": "Context sanitization before model execution",
+      "risk_level": "high"
+    },
+    {
+      "function": "Detect prompt injection",
+      "failure_mode": "Fails to detect role hijack",
+      "effect": "Agent behaves as a different persona",
+      "severity": 8,
+      "cause": "Persona override via prompt",
+      "occurrence": 4,
+      "current_controls": "Role fix in system prompt",
+      "detection": 4,
+      "rpn": 128,
+      "recommended_action": "Hard-coded system role validation",
+      "risk_level": "high"
+    },
+    {
+      "function": "Detect prompt injection",
+      "failure_mode": "Fails to detect obfuscation",
+      "effect": "Obfuscated threats evade detection",
+      "severity": 7,
+      "cause": "Unicode, spacing, or encoded payloads",
+      "occurrence": 6,
+      "current_controls": "Regex and heuristic filters",
+      "detection": 3,
+      "rpn": 126,
+      "recommended_action": "Add token-level normalization and fuzz matching",
+      "risk_level": "high"
+    },
+    {
+      "function": "Detect prompt injection",
+      "failure_mode": "Fails to detect payload splitting",
+      "effect": "Threat broken across segments is executed",
+      "severity": 7,
+      "cause": "Multi-line or spaced payloads reassembled in context",
+      "occurrence": 5,
+      "current_controls": "N/A",
+      "detection": 3,
+      "rpn": 105,
+      "recommended_action": "Track semantic joins across input tokens",
+      "risk_level": "high"
+    },
+    {
+      "function": "Allow safe input",
+      "failure_mode": "Incorrectly blocks normal queries",
+      "effect": "Prevents guide creation, user friction",
+      "severity": 4,
+      "cause": "Misclassified token or context mismatch",
+      "occurrence": 6,
+      "current_controls": "Prompt review loop via feedback",
+      "detection": 5,
+      "rpn": 120,
+      "recommended_action": "Use user feedback loop to whitelist common false positives",
+      "risk_level": "medium"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "last_updated": "2025-05-08"
+  }
+}
