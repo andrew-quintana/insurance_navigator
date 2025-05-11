@@ -1,0 +1,12 @@
+{
+    "version": "1.0",
+    "mocks": [
+        {
+            "name": "basic_mock",
+            "mock_data": {
+                "input": "Mock input",
+                "response": "Mock response"
+            }
+        }
+    ]
+}

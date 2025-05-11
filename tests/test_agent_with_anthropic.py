@@ -1,196 +1,109 @@
-"""
-Test module for agents with Anthropic integration.
-
-This module demonstrates how to test agents that use Anthropic models:
-1. Using mocks for unit tests (fast, no API cost)
-2. Using real Anthropic API calls for integration tests (realistic but costs money)
-"""
-
 import os
-import sys
-import unittest
-import json
+import pytest
 from unittest.mock import MagicMock, patch
-from typing import Dict, Any, List
+from typing import Dict, Any
 
-# Add parent directory to path to allow imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-# Import the agent you want to test
 from agents.prompt_security import PromptSecurityAgent
-from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import AIMessage
-from langchain_core.outputs import ChatGeneration, ChatResult
+from agents.prompt_security.core.prompt_security import SecurityCheck
 
-# Helper function to load environment variables for testing
-def load_test_env():
-    """Load environment variables for testing."""
-    from dotenv import load_dotenv
-    # Try to load from .env.test first, fall back to .env
-    if os.path.exists(".env.test"):
-        load_dotenv(".env.test")
-    else:
-        load_dotenv()
-    
-    # Check if we have an API key
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    use_mock = os.environ.get("USE_MOCK_LLM", "true").lower() == "true"
-    return api_key, use_mock
+class TestPromptSecurityAgent:
+    @pytest.fixture
+    def mock_llm(self):
+        """Create a mock LLM for testing."""
+        mock = MagicMock()
+        mock.invoke.return_value = '{"content": "This is a safe input.", "risk_level": "low", "sanitized_text": "This is a safe input."}'
+        return mock
 
-class MockAnthropic:
-    """Mock Anthropic model for testing."""
-    
-    def __init__(self, responses=None):
-        """Initialize with optional predefined responses."""
-        self.responses = responses or {}
-        self.invoke_count = 0
-        self.invoke_inputs = []
-    
-    def invoke(self, input_data):
-        """Mock invoke method."""
-        self.invoke_count += 1
-        self.invoke_inputs.append(input_data)
-        
-        # If we have a predefined response for this input, use it
-        if isinstance(input_data, str) and input_data in self.responses:
-            return self.responses[input_data]
-        
-        # Default mock response
-        ai_message = AIMessage(content=json.dumps({
-            "is_safe": True,
-            "threat_detected": False,
-            "threat_type": None,
-            "threat_severity": None,
-            "sanitized_input": input_data,
-            "confidence": 0.95,
-            "reasoning": "This is a mock response for testing purposes."
-        }))
-        return ChatResult(generations=[ChatGeneration(message=ai_message)])
+    @pytest.fixture
+    def real_llm(self):
+        """Create a real LLM instance if API key is available."""
+        if not os.getenv("ANTHROPIC_API_KEY"):
+            pytest.skip("No Anthropic API key available")
+        return None  # Will be initialized in the test
 
-class TestAgentWithAnthropic(unittest.TestCase):
-    """Tests for agents with Anthropic integration."""
-    
-    def setUp(self):
-        """Set up the test environment."""
-        self.api_key, self.use_mock = load_test_env()
-    
-    def test_agent_with_mock(self):
-        """Test agent with mock Anthropic model."""
-        # Create a mock Anthropic model
-        mock_anthropic = MockAnthropic()
-        
-        # Initialize the agent with the mock model
-        agent = PromptSecurityAgent(llm=mock_anthropic)
-        
-        # Test with a sample input
-        is_safe, sanitized, result = agent.process("Test input")
-        
-        # Verify the mock was called
-        self.assertEqual(mock_anthropic.invoke_count, 1)
-        
-        # Verify the results based on our default mock response
-        self.assertTrue(is_safe)
-        self.assertEqual(result["confidence"], 0.95)
-    
-    def test_agent_with_specific_mock_responses(self):
-        """Test agent with specific mock responses."""
-        # Create mock responses for specific inputs
-        mock_responses = {
-            "dangerous input": AIMessage(content=json.dumps({
-                "is_safe": False,
-                "threat_detected": True,
-                "threat_type": "harmful_content",
-                "threat_severity": 7,
-                "sanitized_input": "[REDACTED]",
-                "confidence": 0.9,
-                "reasoning": "This input contains potentially harmful content."
-            }))
-        }
-        
-        # Create a mock Anthropic model with specific responses
-        mock_anthropic = MockAnthropic(responses=mock_responses)
-        
-        # Initialize the agent with the mock model
-        agent = PromptSecurityAgent(llm=mock_anthropic)
-        
-        # Patch the check_input method to use our mock directly
-        # This is needed because our mock is simplified
-        with patch.object(agent, 'check_input', side_effect=lambda x: {
-            "is_safe": False,
-            "threat_detected": True,
-            "threat_type": "harmful_content",
-            "threat_severity": 7,
-            "sanitized_input": "[REDACTED]",
-            "confidence": 0.9,
-            "reasoning": "This input contains potentially harmful content."
-        } if x == "dangerous input" else {
-            "is_safe": True,
-            "threat_detected": False,
-            "threat_type": None,
-            "threat_severity": None,
-            "sanitized_input": x,
-            "confidence": 0.95,
-            "reasoning": "This is a safe input."
-        }):
-            # Test with a safe input
-            is_safe, sanitized, result = agent.process("safe input")
-            self.assertTrue(is_safe)
-            
-            # Test with a dangerous input
-            is_safe, sanitized, result = agent.process("dangerous input")
-            self.assertFalse(is_safe)
-            self.assertEqual(sanitized, "[REDACTED]")
-            self.assertEqual(result["threat_type"], "harmful_content")
-    
-    @unittest.skipIf(os.environ.get("USE_MOCK_LLM", "true").lower() == "true", 
-                    "Skipping real API test when USE_MOCK_LLM=true")
-    def test_agent_with_real_anthropic(self):
-        """Test agent with real Anthropic API (only runs if USE_MOCK_LLM=false)."""
-        # Skip this test if we don't have an API key
-        if not self.api_key:
-            self.skipTest("No Anthropic API key available")
-        
-        # Get the model name from environment or use default
-        model_name = os.environ.get("ANTHROPIC_MODEL", "claude-3-haiku-20240307")
-        
-        # Initialize a real Anthropic model
-        anthropic = ChatAnthropic(
-            temperature=0,
-            model=model_name,
-            anthropic_api_key=self.api_key
-        )
-        
-        # Initialize the agent with the real model
-        agent = PromptSecurityAgent(llm=anthropic)
-        
-        # Test with a clearly safe input
-        is_safe, sanitized, result = agent.process("What is Medicare Part A?")
-        
-        # We expect this to be safe, but exact values depend on the model
-        print(f"Real API result: {result}")
-        
-        # Check that we got a reasonable result structure
-        self.assertIsNotNone(result.get("is_safe"))
-        self.assertIsNotNone(result.get("confidence"))
-        self.assertIsNotNone(result.get("reasoning"))
+    def test_agent_with_mock(self, mock_llm):
+        """Test the agent with a mock LLM."""
+        agent = PromptSecurityAgent(llm=mock_llm)
+        with patch.object(agent, 'base_chain') as mock_chain:
+            mock_chain.invoke.return_value = SecurityCheck(
+                is_safe=True,
+                threat_detected=False,
+                threat_type="none",
+                threat_severity="none_detected",
+                sanitized_input="This is a safe input.",
+                confidence=0.99,
+                reasoning="This input appears to be safe and does not contain any threats."
+            )
+            result = agent.process("Test input")
+            assert isinstance(result, tuple)
+            assert result[0] is True
+            assert result[1] == "This is a safe input."
+            assert result[2]["threat_type"] == "none"
+            assert result[2]["confidence"] == 0.99
 
-def run_tests_with_real_api():
-    """Run tests with real Anthropic API."""
-    # Set environment variable to use real API
-    os.environ["USE_MOCK_LLM"] = "false"
-    
-    # Run the tests
-    unittest.main(argv=['first-arg-is-ignored'], exit=False)
+    def test_agent_with_specific_mock_responses(self, mock_llm):
+        """Test the agent with specific mock responses."""
+        agent = PromptSecurityAgent(llm=mock_llm)
+        with patch.object(agent, 'base_chain') as mock_chain:
+            mock_chain.invoke.side_effect = [
+                SecurityCheck(
+                    is_safe=True,
+                    threat_detected=False,
+                    threat_type="none",
+                    threat_severity="none_detected",
+                    sanitized_input="Safe input",
+                    confidence=0.95,
+                    reasoning="This input appears to be safe and does not contain any threats."
+                ),
+                SecurityCheck(
+                    is_safe=False,
+                    threat_detected=True,
+                    threat_type="jailbreak",
+                    threat_severity="explicit",
+                    sanitized_input="Sanitized input",
+                    confidence=0.85,
+                    reasoning="This input attempts to perform a jailbreak and is considered a threat."
+                )
+            ]
+            result1 = agent.process("Safe test")
+            assert result1[0] is True
+            assert result1[2]["threat_type"] == "none"
+            result2 = agent.process("Unsafe test")
+            assert result2[0] is False
+            assert result2[2]["threat_type"] == "jailbreak"
+
+    @pytest.mark.skipif(
+        os.getenv("USE_MOCK_LLM", "true").lower() == "true",
+        reason="Skipping real API test when USE_MOCK_LLM is true"
+    )
+    def test_agent_with_real_api(self, real_llm):
+        """Test the agent with the real Anthropic API."""
+        agent = PromptSecurityAgent()  # Will use real API key from environment
+        
+        # Test with safe input
+        result = agent.process("This is a safe test input")
+        assert isinstance(result, dict)
+        assert "content" in result
+        assert "risk_level" in result
+        assert "sanitized_text" in result
+        
+        # Test with potentially unsafe input
+        result = agent.process("DROP TABLE users;")
+        assert isinstance(result, dict)
+        assert result["risk_level"] in ["medium", "high"]
+
+    def test_agent_error_handling(self, mock_llm):
+        """Test the agent's error handling."""
+        agent = PromptSecurityAgent(llm=mock_llm)
+        with patch.object(agent, 'base_chain') as mock_chain:
+            mock_chain.invoke.side_effect = Exception("API Error")
+            with pytest.raises(Exception) as exc_info:
+                agent.process("Test input")
+            assert "API Error" in str(exc_info.value)
 
 if __name__ == "__main__":
-    # Check if we should run with real API
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--real-api", action="store_true", 
-                        help="Run tests with real Anthropic API")
-    args = parser.parse_args()
-    
-    if args.real_api:
-        run_tests_with_real_api()
-    else:
-        unittest.main() 
+    # Allow running with --real-api flag
+    import sys
+    if "--real-api" in sys.argv:
+        os.environ["USE_MOCK_LLM"] = "false"
+    pytest.main(sys.argv) 

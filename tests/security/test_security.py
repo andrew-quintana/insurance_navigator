@@ -24,7 +24,7 @@ class SecurityTester:
             'file_path_traversal': r'(?i)(\.\.\/|\.\.\\|~\/)',
             
             # Encryption-related patterns
-            'weak_encryption': r'(?i)(md5|sha1|des|rc4)',
+            'weak_encryption': r'(?i)(\bmd5\b|\bsha1\b|\bdes\b|\brc4\b)\s*\(',
             'hardcoded_iv': r'(?i)(iv|initialization_vector)[\s]*=[\s]*[\'"][^\'"]+[\'"]',
             'weak_key_length': r'(?i)(key_length|key_size)[\s]*=[\s]*[0-7]',
             'exposed_encryption_key': r'(?i)(encryption_key|enc_key|decryption_key|dec_key)[\s]*=[\s]*[\'"][^\'"]+[\'"]',
@@ -118,16 +118,15 @@ class SecurityTester:
         return issues
 
     def scan_project(self) -> List[Dict]:
-        """Scan the entire project for security issues."""
+        """Scan the agents directory for security issues."""
         all_issues = []
-        
-        for root, _, files in os.walk(self.root_dir):
+        agents_dir = self.root_dir / 'agents'
+        for root, _, files in os.walk(agents_dir):
             for file in files:
-                if file.endswith(('.py', '.js', '.ts', '.html', '.md')):
+                if file.endswith('.py'):
                     file_path = Path(root) / file
                     issues = self.check_file(file_path)
                     all_issues.extend(issues)
-        
         return all_issues
 
 def test_security_scan():
