@@ -1,9 +1,3 @@
-"""
-Patient Navigator Agent
+from .core.patient_navigator import PatientNavigatorAgent, NavigatorOutput
 
-This module provides the patient navigator agent implementation.
-"""
-
-from agents.patient_navigator.core.logic import PatientNavigatorAgent
-
-__all__ = ["PatientNavigatorAgent"]
+__all__ = ['PatientNavigatorAgent', 'NavigatorOutput']

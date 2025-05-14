@@ -1,9 +1,3 @@
-"""
-Service Access Strategy Agent
+from .service_access_strategy_agent import ServiceAccessStrategyAgentAgent
 
-This module provides the service access strategy agent implementation.
-"""
-
-from agents.service_access_strategy.core.logic import ServiceAccessStrategyAgent
-
-__all__ = ["ServiceAccessStrategyAgent"]
+__all__ = ['ServiceAccessStrategyAgentAgent']

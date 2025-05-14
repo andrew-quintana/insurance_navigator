@@ -118,7 +118,7 @@ class TestPatientNavigatorAgent(unittest.TestCase):
             # Create a string representation of the expected output
             # This is necessary because the parser in invoke expects a string, not a MagicMock
             expected_output_str = json.dumps(test_case["output"])
-            
+        
             # Mock the chain's invoke method to return the expected output
             self.agent.chain = MagicMock()
             self.agent.chain.invoke.return_value = expected_output
@@ -127,10 +127,10 @@ class TestPatientNavigatorAgent(unittest.TestCase):
             print(f"\n--- Testing input: {test_case['input']} ---")
             response_text, result = self.agent.process(
                 test_case["input"],
-                self.user_id,
+            self.user_id, 
                 self.session_id
-            )
-            
+        )
+        
             # Print the response and result for inspection
             print(f"Response text: {response_text}")
             print(f"Meta intent: {result['meta_intent']['request_type']}, Emergency: {result['meta_intent']['emergency']}")
@@ -142,7 +142,7 @@ class TestPatientNavigatorAgent(unittest.TestCase):
             
             # Direct comparison instead of similarity check for deterministic testing
             self.assertEqual(response_text, expected_response)
-            
+        
             # Check output structure
             self.assertEqual(result["meta_intent"]["request_type"], test_case["output"]["meta_intent"]["request_type"])
             self.assertEqual(result["meta_intent"]["emergency"], test_case["output"]["meta_intent"]["emergency"])

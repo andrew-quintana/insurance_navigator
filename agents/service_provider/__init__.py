@@ -1,9 +1,3 @@
-"""
-Service Provider Agent
+from .service_provider_agent import ServiceProviderAgentAgent
 
-This module provides the service provider agent implementation.
-"""
-
-from agents.service_provider.core.logic import ServiceProviderAgent
-
-__all__ = ["ServiceProviderAgent"]
+__all__ = ['ServiceProviderAgentAgent']

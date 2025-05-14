@@ -1,60 +1,48 @@
 # Task Requirements Agent
 
-This module provides the task requirements agent implementation.
-
-## Directory Structure
-
-```
-task_requirements/
-├── core/               # Core agent logic
-│   └── logic.py       # Main agent implementation
-├── prompts/           # Prompt templates
-│   └── prompt_v1.0.md # Current prompt version
-├── tests/             # Test suite
-│   ├── unit/         # Unit tests
-│   └── integration/  # Integration tests
-├── utils/            # Utility functions
-├── fmea/             # Failure mode analysis
-│   └── analysis.json # FMEA data
-├── docs/             # Agent documentation
-│   └── dfmea.md      # Design FMEA documentation
-├── __init__.py       # Module exports
-├── changelog.md      # Version history
-└── README.md         # This file
-```
+## Overview
+Manages and validates task requirements
 
 ## Features
+- Requirement analysis
+- Validation rules
+- Dependency tracking
+- Compliance checking
+- Documentation
 
-- Core agent functionality
-- Prompt-based reasoning
-- Comprehensive testing
-- Failure mode analysis
-- Utility functions
+## Architecture
+The agent follows a modular architecture with the following components:
+- Core processing engine
+- Validation system
+- Integration handlers
+- Monitoring system
+- Reporting module
 
 ## Usage
-
 ```python
-from agents.task_requirements import TaskrequirementsAgent
+from agents.task_requirements import TaskRequirementsAgentAgent
 
 # Initialize the agent
-agent = TaskrequirementsAgent()
+agent = TaskRequirementsAgentAgent()
 
-# Use the agent
-result = agent.process(input_data)
+# Process content
+result = agent.process(content="...")
 ```
+
+## Configuration
+The agent can be configured through environment variables or a configuration file:
+- `TASK_REQUIREMENTS_LOG_LEVEL`: Logging verbosity
+- `TASK_REQUIREMENTS_MODE`: Operation mode
+- `TASK_REQUIREMENTS_CONFIG_PATH`: Configuration file path
+
+## Development
+See the [Development Guide](docs/development.md) for setup and contribution guidelines.
 
 ## Testing
-
 Run the test suite:
-
 ```bash
-# Run unit tests
-pytest agents/task_requirements/tests/unit/
-
-# Run integration tests
-pytest agents/task_requirements/tests/integration/
+pytest agents/task_requirements/tests/
 ```
 
-## Versioning
-
-See `changelog.md` for version history and changes.
+## License
+Proprietary - All rights reserved

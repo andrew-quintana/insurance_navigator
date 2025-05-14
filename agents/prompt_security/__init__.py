@@ -1,9 +1,3 @@
-"""
-Prompt Security Agent
+from .core.prompt_security import PromptSecurityAgent
 
-This module provides the prompt security agent implementation.
-"""
-
-from agents.prompt_security.core.prompt_security import PromptSecurityAgent
-
-__all__ = ["PromptSecurityAgent"] 
+__all__ = ['PromptSecurityAgent']

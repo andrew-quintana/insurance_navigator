@@ -1,9 +1,3 @@
-"""
-Healthcare Guide Agent
+from .healthcare_guide_developer_agent import HealthcareGuideDeveloperAgentAgent
 
-This module provides the healthcare guide agent implementation.
-"""
-
-from agents.healthcare_guide.core.logic import HealthcareGuideAgent
-
-__all__ = ["HealthcareGuideAgent"]
+__all__ = ['HealthcareGuideDeveloperAgentAgent']

@@ -1,60 +1,48 @@
 # Service Provider Agent
 
-This module provides the service provider agent implementation.
-
-## Directory Structure
-
-```
-service_provider/
-├── core/               # Core agent logic
-│   └── logic.py       # Main agent implementation
-├── prompts/           # Prompt templates
-│   └── prompt_v1.0.md # Current prompt version
-├── tests/             # Test suite
-│   ├── unit/         # Unit tests
-│   └── integration/  # Integration tests
-├── utils/            # Utility functions
-├── fmea/             # Failure mode analysis
-│   └── analysis.json # FMEA data
-├── docs/             # Agent documentation
-│   └── dfmea.md      # Design FMEA documentation
-├── __init__.py       # Module exports
-├── changelog.md      # Version history
-└── README.md         # This file
-```
+## Overview
+Manages service provider interactions
 
 ## Features
+- Provider management
+- Service coordination
+- Quality monitoring
+- Communication handling
+- Performance tracking
 
-- Core agent functionality
-- Prompt-based reasoning
-- Comprehensive testing
-- Failure mode analysis
-- Utility functions
+## Architecture
+The agent follows a modular architecture with the following components:
+- Core processing engine
+- Validation system
+- Integration handlers
+- Monitoring system
+- Reporting module
 
 ## Usage
-
 ```python
-from agents.service_provider import ServiceproviderAgent
+from agents.service_provider import ServiceProviderAgentAgent
 
 # Initialize the agent
-agent = ServiceproviderAgent()
+agent = ServiceProviderAgentAgent()
 
-# Use the agent
-result = agent.process(input_data)
+# Process content
+result = agent.process(content="...")
 ```
+
+## Configuration
+The agent can be configured through environment variables or a configuration file:
+- `SERVICE_PROVIDER_LOG_LEVEL`: Logging verbosity
+- `SERVICE_PROVIDER_MODE`: Operation mode
+- `SERVICE_PROVIDER_CONFIG_PATH`: Configuration file path
+
+## Development
+See the [Development Guide](docs/development.md) for setup and contribution guidelines.
 
 ## Testing
-
 Run the test suite:
-
 ```bash
-# Run unit tests
-pytest agents/service_provider/tests/unit/
-
-# Run integration tests
-pytest agents/service_provider/tests/integration/
+pytest agents/service_provider/tests/
 ```
 
-## Versioning
-
-See `changelog.md` for version history and changes.
+## License
+Proprietary - All rights reserved

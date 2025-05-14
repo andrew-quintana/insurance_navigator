@@ -1,9 +1,3 @@
-"""
-Regulatory Agent
+from .regulatory_agent import RegulatoryAgentAgent
 
-This module provides the regulatory agent implementation.
-"""
-
-from agents.regulatory.core.logic import RegulatoryAgent
-
-__all__ = ["RegulatoryAgent"]
+__all__ = ['RegulatoryAgentAgent']

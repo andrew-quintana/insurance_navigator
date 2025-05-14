@@ -1,60 +1,48 @@
 # Quality Assurance Agent
 
-This module provides the quality assurance agent implementation.
-
-## Directory Structure
-
-```
-quality_assurance/
-├── core/               # Core agent logic
-│   └── logic.py       # Main agent implementation
-├── prompts/           # Prompt templates
-│   └── prompt_v1.0.md # Current prompt version
-├── tests/             # Test suite
-│   ├── unit/         # Unit tests
-│   └── integration/  # Integration tests
-├── utils/            # Utility functions
-├── fmea/             # Failure mode analysis
-│   └── analysis.json # FMEA data
-├── docs/             # Agent documentation
-│   └── dfmea.md      # Design FMEA documentation
-├── __init__.py       # Module exports
-├── changelog.md      # Version history
-└── README.md         # This file
-```
+## Overview
+Ensures system quality and reliability
 
 ## Features
+- Quality monitoring
+- Testing automation
+- Performance tracking
+- Issue detection
+- Compliance verification
 
-- Core agent functionality
-- Prompt-based reasoning
-- Comprehensive testing
-- Failure mode analysis
-- Utility functions
+## Architecture
+The agent follows a modular architecture with the following components:
+- Core processing engine
+- Validation system
+- Integration handlers
+- Monitoring system
+- Reporting module
 
 ## Usage
-
 ```python
-from agents.quality_assurance import QualityassuranceAgent
+from agents.quality_assurance import QualityAssuranceAgentAgent
 
 # Initialize the agent
-agent = QualityassuranceAgent()
+agent = QualityAssuranceAgentAgent()
 
-# Use the agent
-result = agent.process(input_data)
+# Process content
+result = agent.process(content="...")
 ```
+
+## Configuration
+The agent can be configured through environment variables or a configuration file:
+- `QUALITY_ASSURANCE_LOG_LEVEL`: Logging verbosity
+- `QUALITY_ASSURANCE_MODE`: Operation mode
+- `QUALITY_ASSURANCE_CONFIG_PATH`: Configuration file path
+
+## Development
+See the [Development Guide](docs/development.md) for setup and contribution guidelines.
 
 ## Testing
-
 Run the test suite:
-
 ```bash
-# Run unit tests
-pytest agents/quality_assurance/tests/unit/
-
-# Run integration tests
-pytest agents/quality_assurance/tests/integration/
+pytest agents/quality_assurance/tests/
 ```
 
-## Versioning
-
-See `changelog.md` for version history and changes.
+## License
+Proprietary - All rights reserved

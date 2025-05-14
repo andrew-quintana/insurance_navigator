@@ -1,9 +1,3 @@
-"""
-Database Guard Agent package.
+from .database_agent import DatabaseAgentAgent
 
-This module provides functionality for database security and access control.
-"""
-
-from agents.database_guard.core.logic import DatabaseGuardAgent
-
-__all__ = ['DatabaseGuardAgent']
+__all__ = ['DatabaseAgentAgent']

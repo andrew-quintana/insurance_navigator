@@ -1,60 +1,48 @@
 # Regulatory Agent
 
-This module provides the regulatory agent implementation.
-
-## Directory Structure
-
-```
-regulatory/
-├── core/               # Core agent logic
-│   └── logic.py       # Main agent implementation
-├── prompts/           # Prompt templates
-│   └── prompt_v1.0.md # Current prompt version
-├── tests/             # Test suite
-│   ├── unit/         # Unit tests
-│   └── integration/  # Integration tests
-├── utils/            # Utility functions
-├── fmea/             # Failure mode analysis
-│   └── analysis.json # FMEA data
-├── docs/             # Agent documentation
-│   └── dfmea.md      # Design FMEA documentation
-├── __init__.py       # Module exports
-├── changelog.md      # Version history
-└── README.md         # This file
-```
+## Overview
+Ensures regulatory compliance
 
 ## Features
+- Compliance checking
+- Regulation tracking
+- Policy enforcement
+- Documentation
+- Audit support
 
-- Core agent functionality
-- Prompt-based reasoning
-- Comprehensive testing
-- Failure mode analysis
-- Utility functions
+## Architecture
+The agent follows a modular architecture with the following components:
+- Core processing engine
+- Validation system
+- Integration handlers
+- Monitoring system
+- Reporting module
 
 ## Usage
-
 ```python
-from agents.regulatory import RegulatoryAgent
+from agents.regulatory import RegulatoryAgentAgent
 
 # Initialize the agent
-agent = RegulatoryAgent()
+agent = RegulatoryAgentAgent()
 
-# Use the agent
-result = agent.process(input_data)
+# Process content
+result = agent.process(content="...")
 ```
+
+## Configuration
+The agent can be configured through environment variables or a configuration file:
+- `REGULATORY_LOG_LEVEL`: Logging verbosity
+- `REGULATORY_MODE`: Operation mode
+- `REGULATORY_CONFIG_PATH`: Configuration file path
+
+## Development
+See the [Development Guide](docs/development.md) for setup and contribution guidelines.
 
 ## Testing
-
 Run the test suite:
-
 ```bash
-# Run unit tests
-pytest agents/regulatory/tests/unit/
-
-# Run integration tests
-pytest agents/regulatory/tests/integration/
+pytest agents/regulatory/tests/
 ```
 
-## Versioning
-
-See `changelog.md` for version history and changes.
+## License
+Proprietary - All rights reserved
