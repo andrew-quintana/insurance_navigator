@@ -1,56 +1,48 @@
 # Prompt Security Agent
 
-This module provides a security agent for validating and sanitizing user inputs before they are processed by other agents in the system.
-
-## Directory Structure
-
-```
-prompt_security_agent/
-├── core/               # Core agent logic
-│   └── logic.py       # Main agent implementation
-├── prompts/           # Prompt templates and versions
-│   └── prompt_v1.0.md # Current prompt version
-├── tests/             # Test suite
-│   ├── unit/         # Unit tests
-│   └── integration/  # Integration tests
-├── utils/            # Utility functions
-├── __init__.py       # Module exports
-├── changelog.md      # Version history
-└── README.md         # This file
-```
+## Overview
+Ensures prompt security and compliance
 
 ## Features
+- Prompt validation
+- Security checking
+- Compliance verification
+- Audit logging
+- Risk assessment
 
-- Input validation and sanitization
-- Threat detection and classification
-- Multiple reasoning paths with self-consistency
-- Comprehensive logging and error handling
-- Integration with LangSmith for tracing and evaluation
+## Architecture
+The agent follows a modular architecture with the following components:
+- Core processing engine
+- Validation system
+- Integration handlers
+- Monitoring system
+- Reporting module
 
 ## Usage
-
 ```python
-from agents.prompt_security_agent import PromptSecurityAgent
+from agents.prompt_security import PromptSecurityAgentAgent
 
 # Initialize the agent
-security_agent = PromptSecurityAgent()
+agent = PromptSecurityAgentAgent()
 
-# Process user input
-is_safe, sanitized_input, metadata = security_agent.process(user_input)
+# Process content
+result = agent.process(content="...")
 ```
+
+## Configuration
+The agent can be configured through environment variables or a configuration file:
+- `PROMPT_SECURITY_LOG_LEVEL`: Logging verbosity
+- `PROMPT_SECURITY_MODE`: Operation mode
+- `PROMPT_SECURITY_CONFIG_PATH`: Configuration file path
+
+## Development
+See the [Development Guide](docs/development.md) for setup and contribution guidelines.
 
 ## Testing
-
 Run the test suite:
-
 ```bash
-# Run unit tests
-pytest agents/prompt_security_agent/tests/unit/
-
-# Run integration tests
-pytest agents/prompt_security_agent/tests/integration/
+pytest agents/prompt_security/tests/
 ```
 
-## Versioning
-
-See `changelog.md` for version history and changes. 
+## License
+Proprietary - All rights reserved

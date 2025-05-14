@@ -1,60 +1,48 @@
-# Guide To Pdf Agent
+# Guide to PDF Agent
 
-This module provides the guide to pdf agent implementation.
-
-## Directory Structure
-
-```
-guide_to_pdf/
-├── core/               # Core agent logic
-│   └── logic.py       # Main agent implementation
-├── prompts/           # Prompt templates
-│   └── prompt_v1.0.md # Current prompt version
-├── tests/             # Test suite
-│   ├── unit/         # Unit tests
-│   └── integration/  # Integration tests
-├── utils/            # Utility functions
-├── fmea/             # Failure mode analysis
-│   └── analysis.json # FMEA data
-├── docs/             # Agent documentation
-│   └── dfmea.md      # Design FMEA documentation
-├── __init__.py       # Module exports
-├── changelog.md      # Version history
-└── README.md         # This file
-```
+## Overview
+Converts healthcare guides to PDF format
 
 ## Features
+- PDF generation
+- Format preservation
+- Image handling
+- Table formatting
+- Document styling
 
-- Core agent functionality
-- Prompt-based reasoning
-- Comprehensive testing
-- Failure mode analysis
-- Utility functions
+## Architecture
+The agent follows a modular architecture with the following components:
+- Core processing engine
+- Validation system
+- Integration handlers
+- Monitoring system
+- Reporting module
 
 ## Usage
-
 ```python
-from agents.guide_to_pdf import GuidetopdfAgent
+from agents.guide_to_pdf import GuidetoPDFAgentAgent
 
 # Initialize the agent
-agent = GuidetopdfAgent()
+agent = GuidetoPDFAgentAgent()
 
-# Use the agent
-result = agent.process(input_data)
+# Process content
+result = agent.process(content="...")
 ```
+
+## Configuration
+The agent can be configured through environment variables or a configuration file:
+- `GUIDE_TO_PDF_LOG_LEVEL`: Logging verbosity
+- `GUIDE_TO_PDF_MODE`: Operation mode
+- `GUIDE_TO_PDF_CONFIG_PATH`: Configuration file path
+
+## Development
+See the [Development Guide](docs/development.md) for setup and contribution guidelines.
 
 ## Testing
-
 Run the test suite:
-
 ```bash
-# Run unit tests
-pytest agents/guide_to_pdf/tests/unit/
-
-# Run integration tests
-pytest agents/guide_to_pdf/tests/integration/
+pytest agents/guide_to_pdf/tests/
 ```
 
-## Versioning
-
-See `changelog.md` for version history and changes.
+## License
+Proprietary - All rights reserved

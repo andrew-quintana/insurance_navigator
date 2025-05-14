@@ -1,14 +1,14 @@
-# Healthcare Guide Developer Agent
+# Document Manager Agent
 
 ## Overview
-Develops and maintains healthcare guides
+Manages document lifecycle and processing
 
 ## Features
-- Guide creation
-- Content validation
-- Version management
-- Template handling
-- Quality assurance
+- Document processing
+- Version control
+- Metadata management
+- Storage optimization
+- Access control
 
 ## Architecture
 The agent follows a modular architecture with the following components:
@@ -20,10 +20,10 @@ The agent follows a modular architecture with the following components:
 
 ## Usage
 ```python
-from agents.healthcare_guide_developer import HealthcareGuideDeveloperAgentAgent
+from agents.document_manager import DocumentManagerAgentAgent
 
 # Initialize the agent
-agent = HealthcareGuideDeveloperAgentAgent()
+agent = DocumentManagerAgentAgent()
 
 # Process content
 result = agent.process(content="...")
@@ -31,9 +31,9 @@ result = agent.process(content="...")
 
 ## Configuration
 The agent can be configured through environment variables or a configuration file:
-- `HEALTHCARE_GUIDE_DEVELOPER_LOG_LEVEL`: Logging verbosity
-- `HEALTHCARE_GUIDE_DEVELOPER_MODE`: Operation mode
-- `HEALTHCARE_GUIDE_DEVELOPER_CONFIG_PATH`: Configuration file path
+- `DOCUMENT_MANAGER_LOG_LEVEL`: Logging verbosity
+- `DOCUMENT_MANAGER_MODE`: Operation mode
+- `DOCUMENT_MANAGER_CONFIG_PATH`: Configuration file path
 
 ## Development
 See the [Development Guide](docs/development.md) for setup and contribution guidelines.
@@ -41,7 +41,7 @@ See the [Development Guide](docs/development.md) for setup and contribution guid
 ## Testing
 Run the test suite:
 ```bash
-pytest agents/healthcare_guide_developer/tests/
+pytest agents/document_manager/tests/
 ```
 
 ## License
