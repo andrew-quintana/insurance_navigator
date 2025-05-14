@@ -108,4 +108,11 @@ MIT
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines. 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+
+## Updated Repository Structure
+
+The agent architecture has been refactored to follow a consistent structure with:
+- Core implementation in `core/` directories
+- Agent-specific logging in `logs/` directories
+- Standardized interfaces across agents 
