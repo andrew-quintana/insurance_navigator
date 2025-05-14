@@ -1,0 +1,193 @@
+{
+    "agent_name": "Patient Navigator Agent",
+    "version": "1.0",
+    "last_updated": "2024-03-19",
+    "failure_modes": [
+        {
+            "id": "FM001",
+            "name": "User Intent Interpretation Failure",
+            "description": "Misunderstands user goal (e.g., wrong task type)",
+            "potential_causes": [
+                "Prompt too vague",
+                "Overly compressed input",
+                "Insufficient context"
+            ],
+            "potential_effects": [
+                "Downstream agents pursue incorrect pathway",
+                "Incorrect task routing",
+                "User goal not achieved"
+            ],
+            "severity": 7,
+            "occurrence": 5,
+            "detection": 4,
+            "risk_priority_number": 980,
+            "current_controls": [
+                "Few-shot examples",
+                "Clarification routing",
+                "Intent validation"
+            ],
+            "recommended_actions": [
+                "Add clarification loop if confidence < 80%",
+                "Implement confidence scoring",
+                "Enhance context gathering"
+            ],
+            "status": "open"
+        },
+        {
+            "id": "FM002",
+            "name": "Output Schema Structure Failure",
+            "description": "Output has incorrect fields or invalid format",
+            "potential_causes": [
+                "Schema mismatch",
+                "Invalid field names",
+                "Format violation"
+            ],
+            "potential_effects": [
+                "Task Requirements Agent fails",
+                "Payload rejection",
+                "Process interruption"
+            ],
+            "severity": 6,
+            "occurrence": 4,
+            "detection": 3,
+            "risk_priority_number": 432,
+            "current_controls": [
+                "Output format validator",
+                "Schema validation",
+                "Field verification"
+            ],
+            "recommended_actions": [
+                "Add automated schema linter",
+                "Implement pre-output validation",
+                "Enhance format checking"
+            ],
+            "status": "open"
+        },
+        {
+            "id": "FM003",
+            "name": "Threat Flag Handling Failure",
+            "description": "Does not notify user of sanitized/blocked input",
+            "potential_causes": [
+                "No message template for threat-flagged queries",
+                "Missing notification logic",
+                "Incomplete threat handling"
+            ],
+            "potential_effects": [
+                "User receives no explanation",
+                "System failure blamed",
+                "User frustration"
+            ],
+            "severity": 5,
+            "occurrence": 4,
+            "detection": 4,
+            "risk_priority_number": 400,
+            "current_controls": [
+                "Upstream threat_log parsing",
+                "Basic notification system",
+                "Threat detection"
+            ],
+            "recommended_actions": [
+                "Add user-friendly flag handling layer",
+                "Implement rejection explanation",
+                "Enhance notification system"
+            ],
+            "status": "open"
+        },
+        {
+            "id": "FM004",
+            "name": "Document Request Relay Failure",
+            "description": "Fails to deliver missing-info prompt from downstream",
+            "potential_causes": [
+                "Payload from downstream dropped",
+                "Message misrouting",
+                "Communication failure"
+            ],
+            "potential_effects": [
+                "Process halts",
+                "User confusion",
+                "User frustration"
+            ],
+            "severity": 6,
+            "occurrence": 3,
+            "detection": 4,
+            "risk_priority_number": 432,
+            "current_controls": [
+                "Request mapping to UX message",
+                "Message routing",
+                "Communication validation"
+            ],
+            "recommended_actions": [
+                "Add routing guard for request_for_information messages",
+                "Implement message tracking",
+                "Enhance delivery confirmation"
+            ],
+            "status": "open"
+        },
+        {
+            "id": "FM005",
+            "name": "Contextual Modifier Preservation Failure",
+            "description": "Drops urgency, location, or constraints",
+            "potential_causes": [
+                "Modifier not extracted from prompt",
+                "Context loss during processing",
+                "Incomplete parsing"
+            ],
+            "potential_effects": [
+                "Task passed to Task Requirements Agent is incomplete",
+                "Missing context",
+                "Incorrect task handling"
+            ],
+            "severity": 6,
+            "occurrence": 5,
+            "detection": 4,
+            "risk_priority_number": 720,
+            "current_controls": [
+                "Weighted field tagging during parsing",
+                "Context preservation",
+                "Modifier tracking"
+            ],
+            "recommended_actions": [
+                "Add secondary pass for missed modifiers",
+                "Implement context recovery",
+                "Enhance modifier extraction"
+            ],
+            "status": "open"
+        },
+        {
+            "id": "FM006",
+            "name": "Task Requirements Agent Routing Failure",
+            "description": "Structured object is not passed or is misrouted",
+            "potential_causes": [
+                "Message delivery error",
+                "Missing API trigger",
+                "Routing failure"
+            ],
+            "potential_effects": [
+                "System stalls",
+                "No requirements generated",
+                "Process interruption"
+            ],
+            "severity": 7,
+            "occurrence": 3,
+            "detection": 3,
+            "risk_priority_number": 441,
+            "current_controls": [
+                "Schema and routing validator",
+                "Message delivery check",
+                "API trigger verification"
+            ],
+            "recommended_actions": [
+                "Add contract check",
+                "Implement delivery echo",
+                "Enhance routing confirmation"
+            ],
+            "status": "open"
+        }
+    ],
+    "metadata": {
+        "created_by": "System Architect",
+        "reviewed_by": "QA Team",
+        "review_date": "2024-03-19",
+        "next_review_date": "2024-06-19"
+    }
+} 
