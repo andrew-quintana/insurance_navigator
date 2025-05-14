@@ -31,14 +31,16 @@ from config.langsmith_config import get_langsmith_client
 # Setup logging
 logger = logging.getLogger("prompt_security_agent")
 if not logger.handlers:
-    handler = logging.FileHandler(os.path.join("logs", "agents", "prompt_security.log"))
+    # Create logs directory if it doesn't exist
+    log_dir = os.path.join("agents", "prompt_security", "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # Set up file handler
+    handler = logging.FileHandler(os.path.join(log_dir, "prompt_security.log"))
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
-
-# Ensure logs directory exists
-os.makedirs(os.path.join("logs", "agents"), exist_ok=True)
 
 # Define output schema for the agent
 class SecurityCheck(BaseModel):
