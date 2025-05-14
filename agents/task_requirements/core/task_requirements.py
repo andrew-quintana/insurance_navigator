@@ -120,8 +120,6 @@ class TaskRequirementsAgent(BaseAgent):
             Default prompt for self.requirements_system_prompt. Replace with actual prompt if needed.
             """
         
-        
-        
         # Define the requirements prompt template
         self.requirements_template = PromptTemplate(
             template="""
@@ -147,6 +145,33 @@ class TaskRequirementsAgent(BaseAgent):
              "task_description": lambda x: x["task_description"],
              "user_context": lambda x: json.dumps(x.get("user_context", {}), indent=2)}
             | self.requirements_template
+            | self.llm
+            | self.parser
+        )
+        
+        # Define patient navigator processing prompt template
+        self.navigator_template = PromptTemplate(
+            template="""
+            {system_prompt}
+            
+            PATIENT NAVIGATOR OUTPUT:
+            {navigator_output}
+            
+            Based on this patient navigator output, extract a clear task description and user context.
+            
+            Analyze this to identify all requirements, inputs, and expected outputs needed to fulfill the user's needs.
+            
+            {format_instructions}
+            """,
+            input_variables=["system_prompt", "navigator_output"],
+            partial_variables={"format_instructions": self.parser.get_format_instructions()}
+        )
+        
+        # Create the navigator output processing chain
+        self.navigator_chain = (
+            {"system_prompt": lambda _: self.requirements_system_prompt,
+             "navigator_output": lambda x: json.dumps(x["navigator_output"], indent=2)}
+            | self.navigator_template
             | self.llm
             | self.parser
         )
@@ -339,18 +364,95 @@ class TaskRequirementsAgent(BaseAgent):
                 "error": str(e)
             }
     
-    def process(self, task_description: str, user_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    @BaseAgent.track_performance
+    def process_navigator_output(self, navigator_output: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Process a task to identify its requirements.
+        Process patient navigator output to identify requirements.
         
         Args:
-            task_description: Description of the task
-            user_context: Optional user context information
+            navigator_output: Output from the patient navigator agent
             
         Returns:
             Task requirements
         """
-        return self.identify_requirements(task_description, user_context)
+        start_time = time.time()
+        
+        # Log the request
+        request_type = navigator_output.get("meta_intent", {}).get("request_type", "unknown")
+        summary = navigator_output.get("meta_intent", {}).get("summary", "no summary available")
+        self.logger.info(f"Processing navigator output for request type: {request_type}, summary: {summary}")
+        
+        try:
+            # Prepare input for the navigator output chain
+            input_dict = {
+                "navigator_output": navigator_output
+            }
+            
+            # Generate requirements
+            requirements = self.navigator_chain.invoke(input_dict)
+            
+            # Convert to dictionary
+            result = requirements.dict()
+            
+            # Check policy freshness
+            outdated_policies = []
+            for i, policy in enumerate(result.get("policy_references", [])):
+                if not self._check_policy_freshness(policy.get("last_updated", "1900-01-01")):
+                    outdated_policies.append(policy["policy_name"])
+            
+            if outdated_policies:
+                self.logger.warning(f"Outdated policies referenced: {', '.join(outdated_policies)}")
+            
+            # Log the result
+            self.logger.info(f"Task categorized as: {result['category']} with complexity {result['estimated_complexity']}")
+            self.logger.info(f"Identified {len(result['required_inputs'])} required inputs and {len(result['expected_outputs'])} expected outputs")
+            
+            # Log execution time
+            execution_time = time.time() - start_time
+            self.logger.info(f"Navigator output processing completed in {execution_time:.2f}s")
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Error in navigator output processing: {str(e)}")
+            
+            # Create a minimal fallback response
+            task_id = f"task_{int(time.time())}"
+            raw_text = navigator_output.get("metadata", {}).get("raw_user_text", "No raw text available")
+            
+            return {
+                "task_id": task_id,
+                "task_name": "Error in navigator output processing",
+                "task_description": raw_text,
+                "category": "unknown",
+                "required_inputs": [],
+                "expected_outputs": [],
+                "policy_references": [],
+                "estimated_complexity": 5,
+                "prerequisites": [],
+                "confidence": 0.0,
+                "error": str(e)
+            }
+    
+    def process(self, input_data: Union[str, Dict[str, Any]], user_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Process input to identify task requirements. Can accept either:
+        1. A string task description
+        2. A dictionary of patient navigator output
+        
+        Args:
+            input_data: Either a task description string or navigator output dict
+            user_context: Optional user context information (only used with string input)
+            
+        Returns:
+            Task requirements
+        """
+        if isinstance(input_data, dict) and "meta_intent" in input_data:
+            # Input is from patient navigator
+            return self.process_navigator_output(input_data)
+        else:
+            # Input is a task description string
+            return self.identify_requirements(input_data, user_context)
 
 # Example usage
 if __name__ == "__main__":
@@ -382,4 +484,48 @@ if __name__ == "__main__":
     
     print("\nPolicy References:")
     for policy in requirements['policy_references']:
-        print(f"- {policy['policy_name']} ({policy['authority']}): {policy['requirement']}") 
+        print(f"- {policy['policy_name']} ({policy['authority']}): {policy['requirement']}")
+    
+    # Test with sample navigator output
+    sample_navigator_output = {
+        "meta_intent": {
+            "request_type": "service_request",
+            "summary": "User wants a flu shot.",
+            "emergency": False
+        },
+        "clinical_context": {
+            "symptom": None,
+            "body": {
+                "region": None,
+                "side": None,
+                "subpart": None
+            },
+            "onset": None,
+            "duration": None
+        },
+        "service_context": {
+            "specialty": "primary care",
+            "service": "flu shot",
+            "plan_detail_type": None
+        },
+        "metadata": {
+            "raw_user_text": "I want to get a flu shot.",
+            "user_response_created": "You got it — I'll help you figure out how to get a flu shot based on your plan.",
+            "timestamp": "2025-05-13T15:52:00Z"
+        }
+    }
+    
+    # Process the navigator output
+    navigator_requirements = agent.process(sample_navigator_output)
+    
+    print("\n\nNAVIGATOR OUTPUT PROCESSING:")
+    print(f"Task: {navigator_requirements['task_name']}")
+    print(f"Category: {navigator_requirements['category']}")
+    print(f"Complexity: {navigator_requirements['estimated_complexity']}")
+    print("\nRequired Inputs:")
+    for input_item in navigator_requirements['required_inputs']:
+        print(f"- {input_item['name']} ({input_item['input_type']}): {input_item['description']}")
+    
+    print("\nExpected Outputs:")
+    for output in navigator_requirements['expected_outputs']:
+        print(f"- {output['name']} ({output['output_type']}): {output['description']}") 
