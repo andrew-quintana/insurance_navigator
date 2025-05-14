@@ -46,7 +46,7 @@ class BaseAgent:
         llm: Optional[BaseLanguageModel] = None,
         prompt_loader: Any = None,
         logger: Optional[logging.Logger] = None,
-        log_dir: str = "logs/agents",
+        log_dir: str = None,
         prompt_version: str = "V0.1",
         prompt_description: str = "Base implementation"
     ):
@@ -66,8 +66,16 @@ class BaseAgent:
         self.llm = llm or ChatAnthropic(model="claude-3-sonnet-20240229", temperature=0)
         self.prompt_loader = prompt_loader
         
+        # Set default log directory based on agent name if not provided
+        if log_dir is None:
+            module_path = os.path.dirname(os.path.dirname(__file__))
+            agent_dir = os.path.join(module_path, self.name.lower().replace("agent", ""))
+            self.log_dir = os.path.join(agent_dir, "logs")
+        else:
+            self.log_dir = log_dir
+        
         # Set up logging
-        self.logger = logger or self._setup_logger(self.name, log_dir)
+        self.logger = logger or self._setup_logger(self.name, self.log_dir)
         
         # Performance tracking
         self.metrics = {
