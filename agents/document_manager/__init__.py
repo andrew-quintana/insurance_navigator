@@ -1,3 +1,9 @@
-from .document_manager_agent import DocumentManagerAgent
+"""
+Document Manager Agent package.
 
-__all__ = ['DocumentManagerAgent'] 
+This package provides document management, processing, and lifecycle functionality.
+"""
+
+from agents.document_manager.core.document_manager import DocumentManagerAgent, DocumentProcessingResult
+
+__all__ = ['DocumentManagerAgent', 'DocumentProcessingResult']
