@@ -2,7 +2,7 @@
 Tests for the VectorStore implementation.
 """
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from config.vectorstore import VectorStore
@@ -17,8 +17,11 @@ class MockEmbeddings(Embeddings):
 
 @pytest.fixture
 def mock_pgvector():
-    """Mock PGVector instance."""
-    with patch('langchain_community.vectorstores.PGVector', autospec=True) as mock:
+    """Mock PGVector module and class."""
+    with patch('config.vectorstore.PGVector') as mock:
+        # Create a mock instance that will be returned
+        mock_instance = MagicMock()
+        mock.return_value = mock_instance
         yield mock
 
 @pytest.fixture
@@ -53,6 +56,9 @@ def test_init_store_success(vector_store, mock_pgvector):
 
 def test_init_store_error(vector_store, mock_pgvector):
     """Test error handling in store initialization."""
+    # Reset mock to ensure clean state
+    mock_pgvector.reset_mock()
+    # Set up the mock to raise an exception
     mock_pgvector.side_effect = Exception("Test error")
     
     with pytest.raises(Exception) as exc_info:
@@ -61,6 +67,9 @@ def test_init_store_error(vector_store, mock_pgvector):
 
 def test_add_documents_success(vector_store, mock_pgvector):
     """Test successful document addition."""
+    # Create a mock instance that will be accessed
+    mock_instance = mock_pgvector.return_value
+    
     docs = [
         Document(page_content="Test content 1"),
         Document(page_content="Test content 2")
@@ -69,11 +78,13 @@ def test_add_documents_success(vector_store, mock_pgvector):
     vector_store.add_documents(docs)
     
     # Verify documents were added
-    mock_pgvector.return_value.add_documents.assert_called_once_with(docs)
+    mock_instance.add_documents.assert_called_once_with(docs)
 
 def test_add_documents_error(vector_store, mock_pgvector):
     """Test error handling in document addition."""
-    mock_pgvector.return_value.add_documents.side_effect = Exception("Test error")
+    # Create a mock instance that will be accessed
+    mock_instance = mock_pgvector.return_value
+    mock_instance.add_documents.side_effect = Exception("Test error")
     
     with pytest.raises(Exception) as exc_info:
         vector_store.add_documents([Document(page_content="Test")])
@@ -81,18 +92,22 @@ def test_add_documents_error(vector_store, mock_pgvector):
 
 def test_similarity_search_success(vector_store, mock_pgvector):
     """Test successful similarity search."""
+    # Create a mock instance that will be accessed
+    mock_instance = mock_pgvector.return_value
     mock_docs = [Document(page_content="Test result")]
-    mock_pgvector.return_value.similarity_search.return_value = mock_docs
+    mock_instance.similarity_search.return_value = mock_docs
     
     result = vector_store.similarity_search("test query", k=2)
     
     # Verify search was performed correctly
     assert result == mock_docs
-    mock_pgvector.return_value.similarity_search.assert_called_once_with("test query", k=2)
+    mock_instance.similarity_search.assert_called_once_with("test query", k=2)
 
 def test_similarity_search_error(vector_store, mock_pgvector):
     """Test error handling in similarity search."""
-    mock_pgvector.return_value.similarity_search.side_effect = Exception("Test error")
+    # Create a mock instance that will be accessed
+    mock_instance = mock_pgvector.return_value
+    mock_instance.similarity_search.side_effect = Exception("Test error")
     
     with pytest.raises(Exception) as exc_info:
         vector_store.similarity_search("test query")
@@ -100,14 +115,19 @@ def test_similarity_search_error(vector_store, mock_pgvector):
 
 def test_delete_collection_success(vector_store, mock_pgvector):
     """Test successful collection deletion."""
+    # Create a mock instance that will be accessed
+    mock_instance = mock_pgvector.return_value
+    
     vector_store.delete_collection()
     
     # Verify collection was deleted
-    mock_pgvector.return_value.delete_collection.assert_called_once()
+    mock_instance.delete_collection.assert_called_once()
 
 def test_delete_collection_error(vector_store, mock_pgvector):
     """Test error handling in collection deletion."""
-    mock_pgvector.return_value.delete_collection.side_effect = Exception("Test error")
+    # Create a mock instance that will be accessed
+    mock_instance = mock_pgvector.return_value
+    mock_instance.delete_collection.side_effect = Exception("Test error")
     
     with pytest.raises(Exception) as exc_info:
         vector_store.delete_collection()

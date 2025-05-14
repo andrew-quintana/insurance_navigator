@@ -1,0 +1,24 @@
+# Development and Testing Dependencies
+# These versions are specifically chosen for compatibility
+
+# Core dependencies with version constraints
+numpy==1.24.4  # Compatible with sentence-transformers and testing
+langchain-core>=0.3.0,<0.4.0
+langchain-anthropic>=0.1.0,<0.4.0
+pydantic>=2.0.0,<3.0.0
+
+# Testing specific libraries
+pytest>=7.0.0,<8.0.0
+pytest-cov>=4.0.0,<5.0.0
+sentence-transformers==4.1.0
+mock>=5.0.0,<6.0.0
+
+# Analysis and tracing
+langsmith>=0.1.0,<0.5.0
+
+# Utilities
+python-dotenv>=1.0.0,<2.0.0
+
+# Additional compatibility requirements
+torch>=1.11.0,<3.0.0
+transformers>=4.41.0,<5.0.0 
