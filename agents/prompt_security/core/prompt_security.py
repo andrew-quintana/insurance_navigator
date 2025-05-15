@@ -27,6 +27,7 @@ from langsmith import Client, RunTree, traceable
 from agents.base_agent import BaseAgent
 from utils.prompt_loader import load_prompt
 from config.langsmith_config import get_langsmith_client
+from utils.agent_config_manager import get_config_manager
 
 # Setup logging
 logger = logging.getLogger("prompt_security_agent")
@@ -121,7 +122,17 @@ class PromptSecurityAgent(BaseAgent):
         mock_mode: bool = False
     ):
         """Initialize the agent with an optional language model."""
-        # Initialize the base agent with version information
+        # Get configuration
+        config_manager = get_config_manager()
+        agent_config = config_manager.get_agent_config(name)
+        
+        # Get prompt version from config
+        prompt_version = agent_config["prompt"]["version"]
+        prompt_description = agent_config["prompt"]["description"]
+        
+        # Get model config
+        model_config = agent_config["model"]
+        
         if mock_mode:
             # Use a mock LLM for testing
             self.mock_mode = True
@@ -129,18 +140,18 @@ class PromptSecurityAgent(BaseAgent):
                 name=name,
                 llm=None,  # We'll handle LLM calls manually in mock mode
                 prompt_loader=prompt_loader,
-                prompt_version="V1.0",
-                prompt_description="Security prompt implementation with LangSmith integration"
+                prompt_version=prompt_version,
+                prompt_description=prompt_description
             )
         else:
             # Use the real LLM
             self.mock_mode = False
             super().__init__(
                 name=name, 
-                llm=llm or ChatAnthropic(model="claude-3-sonnet-20240229", temperature=0),
+                llm=llm or ChatAnthropic(model=model_config["name"], temperature=model_config["temperature"]),
                 prompt_loader=prompt_loader,
-                prompt_version="V1.0",
-                prompt_description="Security prompt implementation with LangSmith integration"
+                prompt_version=prompt_version,
+                prompt_description=prompt_description
             )
         
         # Initialize LangSmith client
@@ -275,22 +286,33 @@ class PromptSecurityAgent(BaseAgent):
     @traceable(run_type="chain")
     def _load_prompt_with_examples(self):
         """Load the prompt template and insert examples from JSON file."""
+        # Get configuration
+        config_manager = get_config_manager()
+        agent_config = config_manager.get_agent_config(self.name)
+        
         # Load the prompt template
-        prompt_template = load_prompt("prompt_security")
+        prompt_path = agent_config["prompt"]["path"]
+        examples_path = agent_config["examples"]["path"]
         
-        # Load examples from JSON file
-        examples = self._load_examples_from_json()
-        
-        # Replace {Examples} placeholder with formatted examples
-        prompt_with_examples = prompt_template.replace("{Examples}", examples)
-        
-        return prompt_with_examples
+        try:
+            # Load prompt template
+            with open(prompt_path, "r") as f:
+                prompt_template = f.read()
+            
+            # Load examples
+            examples = self._load_examples_from_json(examples_path)
+            
+            # Replace {Examples} placeholder with formatted examples
+            prompt_with_examples = prompt_template.replace("{Examples}", examples)
+            
+            return prompt_with_examples
+        except Exception as e:
+            self.logger.error(f"Error loading prompt with examples: {str(e)}")
+            return self.security_system_prompt
     
     @traceable(run_type="chain")
-    def _load_examples_from_json(self):
+    def _load_examples_from_json(self, examples_path: str):
         """Load and format examples from the JSON file."""
-        examples_path = os.path.join("agents", "prompt_security", "prompts", "examples", "prompt_examples_prompt_security.json")
-        
         try:
             with open(examples_path, "r") as f:
                 examples_data = json.load(f)
@@ -337,15 +359,19 @@ class PromptSecurityAgent(BaseAgent):
             return "\n".join(formatted_examples)
         
         except Exception as e:
-            self.logger.error(f"Error loading examples: {str(e)}")
+            self.logger.error(f"Error loading examples from {examples_path}: {str(e)}")
             return "Examples could not be loaded."
     
     @traceable(run_type="chain")
     def load_failure_mode_examples(self):
         """Load examples for each failure mode from the JSON file."""
         try:
+            # Get configuration
+            config_manager = get_config_manager()
+            agent_config = config_manager.get_agent_config(self.name)
+            
             # Load examples from JSON file
-            examples_path = os.path.join("agents", "prompt_security", "prompts", "examples", "prompt_examples_prompt_security.json")
+            examples_path = agent_config["examples"]["path"]
             with open(examples_path, "r") as f:
                 examples_data = json.load(f)
             

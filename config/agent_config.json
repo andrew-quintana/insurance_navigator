@@ -1,0 +1,90 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2023-05-15",
+  "agents": {
+    "prompt_security": {
+      "active": true,
+      "description": "Agent responsible for ensuring prompt security and content safety",
+      "prompt": {
+        "version": "1.0",
+        "path": "agents/prompt_security/prompts/prompt_v1.0.md",
+        "description": "Security prompt implementation with LangSmith integration"
+      },
+      "examples": {
+        "version": "0.1",
+        "path": "agents/prompt_security/prompts/examples/prompt_examples_prompt_security.json",
+        "description": "Examples for prompt security agent showing different threat types"
+      },
+      "test_examples": {
+        "version": "0.1",
+        "path": "agents/prompt_security/tests/examples/test_examples_prompt_security.json",
+        "description": "Test examples for evaluating prompt security agent performance"
+      },
+      "model": {
+        "name": "claude-3-sonnet-20240229",
+        "temperature": 0.0
+      },
+      "metrics": {
+        "latest_run": "agents/prompt_security/metrics/performance_metrics_20250515_103235.json"
+      }
+    },
+    "patient_navigator": {
+      "active": true,
+      "description": "Agent responsible for guiding patients through insurance processes",
+      "prompt": {
+        "version": "1.0",
+        "path": "agents/patient_navigator/prompts/prompt_patient_navigator_v1.0.md",
+        "description": "Patient navigator prompt with task identification and routing"
+      },
+      "examples": {
+        "version": "0.1",
+        "path": "agents/patient_navigator/prompts/examples/patient_navigator_examples_v0.1.json",
+        "description": "Examples for patient navigator showing different patient scenarios"
+      },
+      "test_examples": {
+        "version": "0.1",
+        "path": "agents/patient_navigator/tests/examples/patient_navigator_test_examples.json",
+        "description": "Test examples for evaluating patient navigator performance"
+      },
+      "model": {
+        "name": "claude-3-sonnet-20240229",
+        "temperature": 0.0
+      },
+      "metrics": {
+        "latest_run": null
+      }
+    },
+    "task_requirements": {
+      "active": true,
+      "description": "Agent responsible for determining required documentation for tasks",
+      "prompt": {
+        "version": "0.1",
+        "path": "agents/task_requirements/prompts/prompt_template_react_v0.1.md",
+        "description": "Task requirements prompt with ReAct framework for document validation"
+      },
+      "examples": {
+        "version": "0.1",
+        "path": "agents/task_requirements/prompts/examples/examples_v0_1.md",
+        "description": "Examples for task requirements showing document validation scenarios"
+      },
+      "test_examples": {
+        "version": "0.1",
+        "path": "agents/task_requirements/tests/examples/task_requirements_test_examples.json",
+        "description": "Test examples for evaluating task requirements agent performance"
+      },
+      "model": {
+        "name": "claude-3-sonnet-20240229",
+        "temperature": 0.0
+      },
+      "metrics": {
+        "latest_run": null
+      }
+    }
+  },
+  "performance_metrics": {
+    "enabled": true,
+    "save_directory": "metrics",
+    "track_memory": true,
+    "track_tokens": true
+  }
+} 
