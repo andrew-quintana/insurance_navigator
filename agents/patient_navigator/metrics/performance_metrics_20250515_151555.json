@@ -1,0 +1,23 @@
+{
+  "total_requests": 5,
+  "successful_requests": 5,
+  "failed_requests": 0,
+  "avg_response_time": 6.015152025222778,
+  "total_response_time": 30.07576012611389,
+  "token_usage": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0
+  },
+  "by_category": {
+    "default": {
+      "total": 5,
+      "successful": 5,
+      "failed": 0,
+      "avg_response_time": 6.015152025222778,
+      "total_response_time": 30.07576012611389
+    }
+  },
+  "success_rate": 1.0,
+  "timestamp": "2025-05-15T15:15:55.878764"
+}
