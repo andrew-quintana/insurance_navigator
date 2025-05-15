@@ -1,0 +1,80 @@
+{
+  "total_cases": 35,
+  "successful_cases": 13,
+  "success_rate": 0.37142857142857144,
+  "total_response_time": 0.10415530204772949,
+  "avg_response_time": 0.002975865772792271,
+  "min_response_time": 0.002481698989868164,
+  "max_response_time": 0.0071871280670166016,
+  "total_tokens": 451,
+  "avg_tokens": 12.885714285714286,
+  "memory_peak_mb": 0.45130443572998047,
+  "total_turns": 35,
+  "avg_turns": 1.0,
+  "true_positives": 0,
+  "false_positives": 0,
+  "true_negatives": 0,
+  "false_negatives": 0,
+  "precision": 0.0,
+  "recall": 0.0,
+  "f1_score": 0.0,
+  "accuracy": 0.0,
+  "categories": {
+    "Fails to detect prompt leakage request": {
+      "total_cases": 5,
+      "successful_cases": 1,
+      "success_rate": 0.2,
+      "avg_response_time": 0.0027501583099365234,
+      "avg_tokens": 12.8,
+      "avg_turns": 1.0
+    },
+    "Incorrectly blocks normal queries": {
+      "total_cases": 5,
+      "successful_cases": 5,
+      "success_rate": 1.0,
+      "avg_response_time": 0.003227376937866211,
+      "avg_tokens": 15.8,
+      "avg_turns": 1.0
+    },
+    "Fails to detect jailbreak": {
+      "total_cases": 5,
+      "successful_cases": 1,
+      "success_rate": 0.2,
+      "avg_response_time": 0.0028254032135009766,
+      "avg_tokens": 12.2,
+      "avg_turns": 1.0
+    },
+    "Fails to detect instruction override": {
+      "total_cases": 5,
+      "successful_cases": 2,
+      "success_rate": 0.4,
+      "avg_response_time": 0.0026967525482177734,
+      "avg_tokens": 12.4,
+      "avg_turns": 1.0
+    },
+    "Fails to detect obfuscation": {
+      "total_cases": 5,
+      "successful_cases": 1,
+      "success_rate": 0.2,
+      "avg_response_time": 0.0030384063720703125,
+      "avg_tokens": 12.0,
+      "avg_turns": 1.0
+    },
+    "Fails to detect role hijack": {
+      "total_cases": 5,
+      "successful_cases": 2,
+      "success_rate": 0.4,
+      "avg_response_time": 0.003688335418701172,
+      "avg_tokens": 12.4,
+      "avg_turns": 1.0
+    },
+    "Fails to detect payload splitting": {
+      "total_cases": 5,
+      "successful_cases": 1,
+      "success_rate": 0.2,
+      "avg_response_time": 0.0026046276092529298,
+      "avg_tokens": 12.6,
+      "avg_turns": 1.0
+    }
+  }
+}

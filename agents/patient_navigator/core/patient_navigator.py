@@ -20,6 +20,7 @@ import os
 import json
 import logging
 import time
+import traceback
 from datetime import datetime
 from typing import Dict, List, Any, Tuple, Optional, Union
 from pydantic import BaseModel, Field
@@ -33,6 +34,7 @@ from langchain_core.output_parsers import PydanticOutputParser
 from agents.base_agent import BaseAgent
 from agents.prompt_security.core.prompt_security import PromptSecurityAgent
 from utils.prompt_loader import load_prompt
+from utils.agent_config_manager import get_config_manager
 
 # Setup logging
 logger = logging.getLogger("patient_navigator_agent")
@@ -100,8 +102,20 @@ class PatientNavigatorAgent(BaseAgent):
             llm: An optional language model to use
             prompt_security_agent: An optional reference to the Prompt Security Agent
         """
-        # Initialize the base agent
-        super().__init__(name="patient_navigator", llm=llm or ChatAnthropic(model="claude-3-sonnet-20240229", temperature=0.3))
+        # Get agent configuration
+        config_manager = get_config_manager()
+        agent_config = config_manager.get_agent_config("patient_navigator")
+        
+        # Get model configuration
+        model_config = agent_config.get("model", {})
+        model_name = model_config.get("name", "claude-3-sonnet-20240229-v1h")
+        temperature = model_config.get("temperature", 0.0)
+        
+        # Initialize the base agent with the correct model config
+        super().__init__(
+            name="patient_navigator", 
+            llm=llm or ChatAnthropic(model=model_name, temperature=temperature)
+        )
         
         self.output_parser = PydanticOutputParser(pydantic_object=NavigatorOutput)
         
@@ -111,11 +125,17 @@ class PatientNavigatorAgent(BaseAgent):
         # Active conversations (in a real system, this would be in a database)
         self.active_conversations = {}
         
-        # Load the system prompt
+        # Build the system prompt by combining template and examples
         try:
-            self.system_prompt = load_prompt("patient_navigator")
-        except FileNotFoundError:
-            self.logger.warning("Could not find patient_navigator.md prompt file, using default prompt")
+            self.system_prompt = self._build_prompt(
+                template_placeholder="{{input}}",
+                example_placeholder="{Examples}",
+                input_data="",
+                template_path=self.prompt_path,
+                examples_path=self.examples_path
+            )
+        except Exception as e:
+            logger.warning(f"Error loading prompt: {str(e)}, using default prompt")
             self.system_prompt = """
             You are an expert Patient Navigation Coordinator with deep knowledge in clinical workflows, patient communication, and multi-agent delegation.
             Your task is to interpret and clarify the user's intent based on their input, format it into a structured intent package, and route it to the appropriate internal agent for handling.
@@ -126,48 +146,27 @@ class PatientNavigatorAgent(BaseAgent):
             template="""
             {system_prompt}
             
-            Follow these examples:
-            
-            {examples}
-            
-            Now, apply the same pattern to:
-            
             Input:
             {user_query}
             
             {format_instructions}
             """,
-            input_variables=["system_prompt", "examples", "user_query"],
+            input_variables=["system_prompt", "user_query"],
             partial_variables={"format_instructions": self.output_parser.get_format_instructions()}
         )
         
         # Create the chain
         self.chain = (
             {"system_prompt": lambda _: self.system_prompt,
-             "examples": lambda _: self._load_examples(),
              "user_query": lambda x: x["user_query"]}
             | self.prompt_template
             | self.llm
             | self.output_parser
         )
         
-        logger.info("Patient Navigator Agent initialized")
-    
-    def _load_examples(self) -> str:
-        """Load the example prompts from the examples file."""
-        try:
-            with open("agents/patient_navigator/prompts/examples/examples_patient_navigator.json", "r") as f:
-                examples = json.load(f)
-            
-            # Format examples as a string
-            examples_str = ""
-            for example in examples:
-                examples_str += f"Input:\n{example['input']}\nOutput:\n{json.dumps(example['output'], indent=2)}\n\n"
-            
-            return examples_str
-        except Exception as e:
-            self.logger.error(f"Error loading examples: {str(e)}")
-            return ""
+        logger.info(f"Patient Navigator Agent initialized with prompt from {self.prompt_path}")
+        logger.info(f"Using examples from {self.examples_path}")
+        logger.info(f"Using model {model_name} with temperature {temperature}")
     
     def _sanitize_input(self, user_query: str) -> str:
         """
@@ -184,8 +183,8 @@ class PatientNavigatorAgent(BaseAgent):
             result = self.prompt_security_agent.analyze_prompt(user_query)
             
             if not result["is_safe"]:
-                self.logger.warning(f"Potentially unsafe query detected: {user_query}")
-                self.logger.warning(f"Safety concerns: {', '.join(result['safety_concerns'])}")
+                logger.warning(f"Potentially unsafe query detected: {user_query}")
+                logger.warning(f"Safety concerns: {', '.join(result['safety_concerns'])}")
                 
                 # If the query is unsafe but can be sanitized, use the sanitized version
                 if result["sanitized_content"]:
@@ -216,7 +215,7 @@ class PatientNavigatorAgent(BaseAgent):
         start_time = time.time()
         
         # Log the request
-        self.logger.info(f"Processing query for user {user_id}: {user_query[:50]}...")
+        logger.info(f"Processing query for user {user_id}: {user_query[:50]}...")
         
         try:
             # Sanitize the input
@@ -227,8 +226,39 @@ class PatientNavigatorAgent(BaseAgent):
                 "user_query": sanitized_query
             }
             
-            # Process the query
-            result = self.chain.invoke(input_dict)
+            # Process the query with detailed debugging
+            logger.info("Preparing to process query...")
+            
+            # Format the prompt with the template
+            try:
+                prompt = self.prompt_template.format(
+                    system_prompt=self.system_prompt,
+                    user_query=sanitized_query
+                )
+                logger.info(f"Prompt formatted, length: {len(prompt)}")
+            except Exception as e:
+                logger.error(f"Error formatting prompt: {str(e)}")
+                raise
+            
+            # Get a response from the LLM
+            try:
+                logger.info("Sending to LLM...")
+                raw_response = self.llm.invoke(prompt)
+                logger.info(f"LLM response received, type: {type(raw_response)}")
+                logger.info(f"Raw response sample: {str(raw_response)[:150]}...")  
+            except Exception as e:
+                logger.error(f"LLM error: {str(e)}")
+                raise
+            
+            # Try to parse the response
+            try:
+                logger.info("Parsing response with output parser...")
+                result = self.output_parser.parse(str(raw_response))
+                logger.info("Successfully parsed LLM response to NavigatorOutput")
+            except Exception as e:
+                logger.error(f"Parser error: {str(e)}")
+                logger.error(f"Failed to parse text: {str(raw_response)[:500]}")
+                raise
             
             # Add timestamp if not present
             if not result.metadata.timestamp:
@@ -238,16 +268,17 @@ class PatientNavigatorAgent(BaseAgent):
             result_dict = result.model_dump()
             
             # Log the result
-            self.logger.info(f"Query processed. Request type: {result.meta_intent.request_type}, Emergency: {result.meta_intent.emergency}")
+            logger.info(f"Query processed. Request type: {result.meta_intent.request_type}, Emergency: {result.meta_intent.emergency}")
             
             # Log execution time
             execution_time = time.time() - start_time
-            self.logger.info(f"Query processing completed in {execution_time:.2f}s")
+            logger.info(f"Query processing completed in {execution_time:.2f}s")
             
             return result.metadata.user_response_created, result_dict
             
         except Exception as e:
-            self.logger.error(f"Error in query processing: {str(e)}")
+            logger.error(f"Error in query processing: {str(e)}")
+            logger.error(f"Error details:\n{traceback.format_exc()}")
             
             # Return a basic response in case of error
             error_response = {
@@ -283,8 +314,8 @@ if __name__ == "__main__":
     
     # Test with a sample query
     user_query = "I'm turning 65 next month and need to sign up for Medicare. Can you help me understand my options?"
-    user_id = os.getenv('USER_ID')
-    session_id = os.getenv('SESSION_ID')
+    user_id = os.getenv('USER_ID', 'default_user')
+    session_id = os.getenv('SESSION_ID', 'default_session')
     
     response_text, result = agent.process(user_query, user_id, session_id)
     

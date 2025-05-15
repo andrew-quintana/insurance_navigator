@@ -3,6 +3,9 @@ vibe_coding_directive.md
 .env
 .env.*
 !.env.template
+.cursorignore
+.cursor/
+z_prompt_sops/
 
 # Python
 __pycache__/

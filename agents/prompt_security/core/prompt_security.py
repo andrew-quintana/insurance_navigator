@@ -295,9 +295,8 @@ class PromptSecurityAgent(BaseAgent):
         examples_path = agent_config["examples"]["path"]
         
         try:
-            # Load prompt template
-            with open(prompt_path, "r") as f:
-                prompt_template = f.read()
+            # Use the BaseAgent's _load_file method instead of opening files directly
+            prompt_template = self._load_file(prompt_path)
             
             # Load examples
             examples = self._load_examples_from_json(examples_path)
@@ -314,8 +313,9 @@ class PromptSecurityAgent(BaseAgent):
     def _load_examples_from_json(self, examples_path: str):
         """Load and format examples from the JSON file."""
         try:
-            with open(examples_path, "r") as f:
-                examples_data = json.load(f)
+            # Use the BaseAgent's _load_file method and parse the JSON
+            examples_json = self._load_file(examples_path)
+            examples_data = json.loads(examples_json)
             
             # Format examples for inclusion in the prompt
             formatted_examples = []
@@ -484,7 +484,7 @@ class PromptSecurityAgent(BaseAgent):
                     "sanitized_input": user_input,
                     "confidence": 0.95,
                     "reasoning": "This input appears to be a standard query about insurance coverage without any harmful intent or security risks."
-                }
+            }
         
         # Run the base chain
         result = self.base_chain.invoke(user_input)

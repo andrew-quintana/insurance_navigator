@@ -1,0 +1,155 @@
+[
+  {
+    "input": "Can I book an appointment with a podiatrist?",
+    "output": {
+      "meta_intent": {
+        "request_type": "expert_request",
+        "summary": "User is requesting to see a podiatrist.",
+        "emergency": false
+      },
+      "clinical_context": {
+        "symptom": null,
+        "body": {
+          "region": null,
+          "side": null,
+          "subpart": null
+        },
+        "onset": null,
+        "duration": null
+      },
+      "service_intent": {
+        "specialty": "podiatry",
+        "service": null,
+        "plan_detail_type": null
+      },
+      "documents": [],
+      "required_context": {},
+      "metadata": {
+        "raw_user_text": "Can I book an appointment with a podiatrist?",
+        "user_response_created": "Sure! I'll help you figure out how to get support from a podiatrist based on your insurance.",
+        "timestamp": "2025-05-13T15:51:00Z"
+      }
+    }
+  },
+  {
+    "input": "I want to get a flu shot.",
+    "output": {
+      "meta_intent": {
+        "request_type": "service_request",
+        "summary": "User wants a flu shot.",
+        "emergency": false
+      },
+      "clinical_context": {
+        "symptom": null,
+        "body": {
+          "region": null,
+          "side": null,
+          "subpart": null
+        },
+        "onset": null,
+        "duration": null
+      },
+      "service_intent": {
+        "specialty": "primary care",
+        "service": "flu shot",
+        "plan_detail_type": null
+      },
+      "metadata": {
+        "raw_user_text": "I want to get a flu shot.",
+        "user_response_created": "You got it — I'll help you figure out how to get a flu shot based on your plan.",
+        "timestamp": "2025-05-13T15:52:00Z"
+      }
+    }
+  },
+  {
+    "input": "My right shoulder hurts when I lift things.",
+    "output": {
+      "meta_intent": {
+        "request_type": "symptom_report",
+        "summary": "User reports pain in their right shoulder after lifting.",
+        "emergency": "unsure"
+      },
+      "clinical_context": {
+        "symptom": "shoulder pain",
+        "body": {
+          "region": "shoulder",
+          "side": "right",
+          "subpart": null
+        },
+        "onset": "after lifting",
+        "duration": "acute"
+      },
+      "service_intent": {
+        "specialty": "orthopedics",
+        "service": null,
+        "plan_detail_type": null
+      },
+      "metadata": {
+        "raw_user_text": "My right shoulder hurts when I lift things.",
+        "user_response_created": "Thanks for letting me know. Let me think about what people do when they have shoulder pain and how you can use your plan to get help.",
+        "timestamp": "2025-05-13T15:53:00Z"
+      }
+    }
+  },
+  {
+    "input": "Does my insurance cover dental cleanings?",
+    "output": {
+      "meta_intent": {
+        "request_type": "policy_question",
+        "summary": "User asking whether dental cleanings are covered.",
+        "emergency": false
+      },
+      "clinical_context": {
+        "symptom": null,
+        "body": {
+          "region": "mouth",
+          "side": null,
+          "subpart": "teeth"
+        },
+        "onset": null,
+        "duration": null
+      },
+      "service_intent": {
+        "specialty": "dentistry",
+        "service": "dental cleaning",
+        "plan_detail_type": "coverage"
+      },
+      "metadata": {
+        "raw_user_text": "Does my insurance cover dental cleanings?",
+        "user_response_created": "Let me take a look at your plan to see if dental cleanings are included.",
+        "timestamp": "2025-05-13T15:54:00Z"
+      }
+    }
+  },
+  {
+    "input": "[SECURITY WARNING: Jailbreak detected.]",
+    "output": {
+      "meta_intent": {
+        "request_type": "security_warning",
+        "summary": "SECURITY WARNING: Jailbreak detected",
+        "emergency": false
+      },
+      "clinical_context": {
+        "symptom": null,
+        "body": {
+          "region": null,
+          "side": null,
+          "subpart": null
+        },
+        "onset": null,
+        "duration": null
+      },
+      "service_intent": {
+        "specialty": null,
+        "service": null,
+        "plan_detail_type": null
+      },
+      "metadata": {
+        "raw_user_text": "[SECURITY WARNING: Jailbreak detected.]",
+        "user_response_created": "We detected an illegal request in your last message. Click here to request support or try again. Warning, if another illegal request is made, your account may be suspended.",
+        "timestamp": "2025-05-13T15:43:00Z"
+      }
+    }
+  }
+  
+]

@@ -42,14 +42,21 @@ medicare_navigator/
 ├── config/           # Configuration and setup
 ├── agents/           # Agent modules
 │   ├── base_agent.py             # Base agent class
-│   ├── prompt_security.py        # Prompt security agent
-│   ├── policy_compliance.py      # Policy compliance agent
-│   ├── document_parser.py        # Document parser agent
-│   ├── healthcare_guide.py       # Healthcare guide agent
-│   ├── service_provider.py       # Service provider agent
-│   ├── service_access_strategy.py # Service access strategy agent
-│   ├── guide_to_pdf.py           # Guide to PDF agent
-│   └── patient_navigator.py      # Patient navigator agent
+│   ├── prompt_security/          # Prompt security agent
+│   │   ├── core/                 # Core implementation
+│   │   ├── prompts/              # Prompts and examples
+│   │   ├── tests/                # Test cases
+│   │   └── logs/                 # Agent-specific logs
+│   ├── patient_navigator/        # Patient navigator agent
+│   │   ├── core/                 # Core implementation
+│   │   ├── prompts/              # Prompts and examples
+│   │   ├── tests/                # Test cases
+│   │   └── logs/                 # Agent-specific logs
+│   └── task_requirements/        # Task requirements agent
+│       ├── core/                 # Core implementation
+│       ├── prompts/              # Prompts and examples
+│       ├── tests/                # Test cases
+│       └── logs/                 # Agent-specific logs
 ├── data/             # Data storage
 │   ├── documents/    # Raw documents
 │   ├── vectors/      # Vector storage
@@ -101,6 +108,124 @@ prompt_text = load_prompt("agent_name")
 ```
 
 For more information on working with prompts, see the [Prompt Conversion Guide](prompts/CONVERSION_GUIDE.md).
+
+## Agent Configuration Management
+
+The system includes a centralized configuration management system for all agents, which provides:
+
+- **Central Configuration**: All agent configurations stored in `config/agent_config.json`
+- **Version Tracking**: Track which prompt, example, and test versions are active
+- **Performance Metrics**: Record and compare metrics across different configurations
+- **Easy Switching**: Quickly switch between different agent configurations
+
+### Agent Configuration Components
+
+Each agent configuration includes the following components:
+
+- **core_file**: Main implementation file for the agent
+- **prompt**: Agent prompt file
+- **examples**: Example inputs and outputs for the agent
+- **test_examples**: Test cases for evaluating agent performance
+
+### Configuration File Structure
+
+The configuration file (`agent_config.json`) has the following structure:
+
+```json
+{
+  "version": "1.0.0",
+  "last_updated": "2023-05-15",
+  "agents": {
+    "agent_name": {
+      "active": true,
+      "description": "Agent description",
+      "core_file": {
+        "path": "path/to/core_file.py",
+        "version": "0.1"
+      },
+      "prompt": {
+        "version": "0.1",
+        "path": "path/to/prompt_v0_1.md"
+      },
+      "examples": {
+        "version": "0.1",
+        "path": "path/to/examples.json"
+      },
+      "test_examples": {
+        "version": "0.1",
+        "path": "path/to/test_examples.json"
+      },
+      "model": {
+        "name": "model-name",
+        "temperature": 0.0
+      },
+      "metrics": {
+        "latest_run": "path/to/metrics.json"
+      }
+    }
+  },
+  "performance_metrics": {
+    "enabled": true,
+    "save_directory": "metrics",
+    "track_memory": true,
+    "track_tokens": true
+  }
+}
+```
+
+### Using the Configuration Manager
+
+```python
+from utils.agent_config_manager import get_config_manager
+
+# Get the configuration manager
+config_manager = get_config_manager()
+
+# Get configuration for a specific agent
+agent_config = config_manager.get_agent_config("prompt_security")
+
+# Get core file path and version
+core_file_path = agent_config["core_file"]["path"]
+core_file_version = agent_config["core_file"]["version"]
+
+# Get paths to prompts and examples
+prompt_path = agent_config["prompt"]["path"]
+examples_path = agent_config["examples"]["path"]
+```
+
+### Command-Line Management
+
+The system includes a command-line tool for managing agent configurations:
+
+```bash
+# List all agents
+python utils/manage_agents.py list
+
+# Show details for an agent
+python utils/manage_agents.py show prompt_security
+
+# Update a prompt
+python utils/manage_agents.py update-prompt prompt_security \
+  --version "0.2" \
+  --path "path/to/new/prompt_v0_2.md"
+
+# Run a performance test
+python utils/manage_agents.py test prompt_security --mock
+```
+
+### Performance Testing
+
+The system includes a standardized performance testing framework:
+
+```bash
+# Run performance tests for an agent
+python agents/prompt_security/tests/test_performance.py
+
+# View metrics in the generated JSON file
+cat agents/prompt_security/metrics/performance_metrics_*.json
+```
+
+For more information on the configuration system, see the [Agent Configuration Guide](utils/README_performance_metrics.md).
 
 ## License
 

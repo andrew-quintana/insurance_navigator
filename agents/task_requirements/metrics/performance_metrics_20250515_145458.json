@@ -1,0 +1,23 @@
+{
+  "total_requests": 2,
+  "successful_requests": 2,
+  "failed_requests": 0,
+  "avg_response_time": 3.0040740966796875e-05,
+  "total_response_time": 6.008148193359375e-05,
+  "token_usage": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0
+  },
+  "by_category": {
+    "default": {
+      "total": 2,
+      "successful": 2,
+      "failed": 0,
+      "avg_response_time": 3.0040740966796875e-05,
+      "total_response_time": 6.008148193359375e-05
+    }
+  },
+  "success_rate": 1.0,
+  "timestamp": "2025-05-15T14:54:58.008334"
+}

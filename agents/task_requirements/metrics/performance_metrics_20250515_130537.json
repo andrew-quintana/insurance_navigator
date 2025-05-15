@@ -1,0 +1,30 @@
+{
+  "total_requests": 2,
+  "successful_requests": 2,
+  "failed_requests": 0,
+  "avg_response_time": 3.8504600524902344e-05,
+  "total_response_time": 7.700920104980469e-05,
+  "token_usage": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0
+  },
+  "by_category": {
+    "service_request": {
+      "total": 1,
+      "successful": 1,
+      "failed": 0,
+      "avg_response_time": 5.412101745605469e-05,
+      "total_response_time": 5.412101745605469e-05
+    },
+    "policy_question": {
+      "total": 1,
+      "successful": 1,
+      "failed": 0,
+      "avg_response_time": 2.288818359375e-05,
+      "total_response_time": 2.288818359375e-05
+    }
+  },
+  "success_rate": 1.0,
+  "timestamp": "2025-05-15T13:05:37.605676"
+}
