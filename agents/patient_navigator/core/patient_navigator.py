@@ -62,8 +62,8 @@ class ClinicalContext(BaseModel):
     onset: Optional[str] = Field(description="When the symptom started", default=None)
     duration: Optional[str] = Field(description="Duration of the symptom", default=None)
 
-class ServiceContext(BaseModel):
-    """Schema for service context."""
+class ServiceIntent(BaseModel):
+    """Schema for service intent."""
     specialty: Optional[str] = Field(description="Medical specialty", default=None)
     service: Optional[str] = Field(description="Specific service requested", default=None)
     plan_detail_type: Optional[str] = Field(description="Type of plan detail being requested", default=None)
@@ -84,7 +84,7 @@ class NavigatorOutput(BaseModel):
     """Schema for the navigator's output."""
     meta_intent: MetaIntent
     clinical_context: ClinicalContext
-    service_context: ServiceContext
+    service_intent: ServiceIntent
     metadata: Metadata
 
 class PatientNavigatorAgent(BaseAgent):
@@ -262,7 +262,7 @@ class PatientNavigatorAgent(BaseAgent):
                     "onset": None,
                     "duration": None
                 },
-                "service_context": {
+                "service_intent": {
                     "specialty": None,
                     "service": None,
                     "plan_detail_type": None
