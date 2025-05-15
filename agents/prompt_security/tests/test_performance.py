@@ -15,13 +15,18 @@ sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
 from agents.prompt_security.core.prompt_security import PromptSecurityAgent
 from utils.performance_metrics import PerformanceEvaluator, TestCase, estimate_tokens
+from utils.agent_config_manager import get_config_manager
 
 def load_test_cases():
     """Load test cases from the test examples file."""
     test_cases = []
     
     try:
-        examples_path = os.path.join("agents", "prompt_security", "tests", "examples", "test_examples_prompt_security.json")
+        # Get the test examples path from configuration
+        config_manager = get_config_manager()
+        agent_config = config_manager.get_agent_config("prompt_security")
+        examples_path = agent_config["test_examples"]["path"]
+        
         with open(examples_path, "r") as f:
             examples_data = json.load(f)
         
@@ -95,11 +100,17 @@ def main():
     evaluator.print_metrics_report(metrics)
     
     # Save metrics to file
+    config_manager = get_config_manager()
     metrics_dir = os.path.join("agents", "prompt_security", "metrics")
     os.makedirs(metrics_dir, exist_ok=True)
     metrics_file = os.path.join(metrics_dir, f"performance_metrics_{time.strftime('%Y%m%d_%H%M%S')}.json")
     metrics.save_to_file(metrics_file)
+    
+    # Update the configuration with the latest metrics run
+    config_manager.update_metrics_run("prompt_security", metrics_file)
+    
     print(f"\nMetrics saved to {metrics_file}")
+    print("Configuration updated with latest metrics run")
 
 if __name__ == "__main__":
     main() 
