@@ -117,25 +117,46 @@ class PromptSecurityAgent(BaseAgent):
         self,
         llm: Optional[BaseLanguageModel] = None,
         prompt_loader: Any = None,
-        name: str = "prompt_security"
+        name: str = "prompt_security",
+        mock_mode: bool = False
     ):
         """Initialize the agent with an optional language model."""
         # Initialize the base agent with version information
-        super().__init__(
-            name=name, 
-            llm=llm or ChatAnthropic(model="claude-3-sonnet-20240229", temperature=0),
-            prompt_loader=prompt_loader,
-            prompt_version="V1.0",
-            prompt_description="Security prompt implementation with LangSmith integration"
-        )
+        if mock_mode:
+            # Use a mock LLM for testing
+            self.mock_mode = True
+            super().__init__(
+                name=name,
+                llm=None,  # We'll handle LLM calls manually in mock mode
+                prompt_loader=prompt_loader,
+                prompt_version="V1.0",
+                prompt_description="Security prompt implementation with LangSmith integration"
+            )
+        else:
+            # Use the real LLM
+            self.mock_mode = False
+            super().__init__(
+                name=name, 
+                llm=llm or ChatAnthropic(model="claude-3-sonnet-20240229", temperature=0),
+                prompt_loader=prompt_loader,
+                prompt_version="V1.0",
+                prompt_description="Security prompt implementation with LangSmith integration"
+            )
         
         # Initialize LangSmith client
-        self.langsmith_client = get_langsmith_client()
+        try:
+            self.langsmith_client = get_langsmith_client()
+        except Exception as e:
+            self.logger.warning(f"Failed to initialize LangSmith client: {str(e)}")
+            self.langsmith_client = None
         
         # Get current git commit for tracing
-        self.git_commit = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"]
-        ).decode("utf-8").strip()
+        try:
+            self.git_commit = subprocess.check_output(
+                ["git", "rev-parse", "HEAD"]
+            ).decode("utf-8").strip()
+        except Exception:
+            self.git_commit = "unknown"
         
         self.parser = PydanticOutputParser(pydantic_object=SecurityCheck)
         
@@ -156,7 +177,7 @@ class PromptSecurityAgent(BaseAgent):
         
         # Load the main system prompt from file
         try:
-            self.security_system_prompt = load_prompt("prompt_security") if not prompt_loader else prompt_loader.load("prompt_security")
+            self.security_system_prompt = self._load_prompt_with_examples()
         except FileNotFoundError:
             self.logger.warning("Could not find prompt files, using default prompt")
             self.security_system_prompt = """
@@ -252,12 +273,92 @@ class PromptSecurityAgent(BaseAgent):
         logger.info(f"Prompt Security Agent initialized with prompt version {self.prompt_version}")
     
     @traceable(run_type="chain")
+    def _load_prompt_with_examples(self):
+        """Load the prompt template and insert examples from JSON file."""
+        # Load the prompt template
+        prompt_template = load_prompt("prompt_security")
+        
+        # Load examples from JSON file
+        examples = self._load_examples_from_json()
+        
+        # Replace {Examples} placeholder with formatted examples
+        prompt_with_examples = prompt_template.replace("{Examples}", examples)
+        
+        return prompt_with_examples
+    
+    @traceable(run_type="chain")
+    def _load_examples_from_json(self):
+        """Load and format examples from the JSON file."""
+        examples_path = os.path.join("agents", "prompt_security", "prompts", "examples", "prompt_examples_prompt_security.json")
+        
+        try:
+            with open(examples_path, "r") as f:
+                examples_data = json.load(f)
+            
+            # Format examples for inclusion in the prompt
+            formatted_examples = []
+            
+            for test_group in examples_data.get("failure_mode_tests", []):
+                function = test_group.get("function", "")
+                failure_mode = test_group.get("failure_mode", "")
+                
+                formatted_examples.append(f"### {function}: {failure_mode}")
+                formatted_examples.append("")
+                
+                for i, example in enumerate(test_group.get("examples", [])[:3]):  # Limit to 3 examples per category
+                    input_text = example.get("input", "")
+                    expected_output = example.get("expected_output", [])
+                    
+                    if len(expected_output) >= 3:
+                        is_safe = expected_output[0]
+                        sanitized_input = expected_output[1]
+                        details = expected_output[2]
+                        
+                        formatted_examples.append(f"**Example {i+1}:**")
+                        formatted_examples.append(f"Input: \"{input_text}\"")
+                        formatted_examples.append(f"Safe: {str(is_safe).lower()}")
+                        formatted_examples.append(f"Sanitized: \"{sanitized_input}\"")
+                        
+                        if details:
+                            threat_type = details.get("threat_type", "none")
+                            threat_severity = details.get("threat_severity", "none_detected")
+                            confidence = details.get("confidence", 0.0)
+                            reasoning = details.get("reasoning", "")
+                            
+                            formatted_examples.append(f"Threat Type: {threat_type}")
+                            formatted_examples.append(f"Severity: {threat_severity}")
+                            formatted_examples.append(f"Confidence: {confidence}")
+                            formatted_examples.append(f"Reasoning: \"{reasoning}\"")
+                        
+                        formatted_examples.append("")
+                
+                formatted_examples.append("")
+            
+            return "\n".join(formatted_examples)
+        
+        except Exception as e:
+            self.logger.error(f"Error loading examples: {str(e)}")
+            return "Examples could not be loaded."
+    
+    @traceable(run_type="chain")
     def load_failure_mode_examples(self):
         """Load examples for each failure mode from the JSON file."""
         try:
             # Load examples from JSON file
-            with open("docs/fmea/dfmea_prompt_security.json", "r") as f:
-                self.failure_mode_examples = json.load(f)
+            examples_path = os.path.join("agents", "prompt_security", "prompts", "examples", "prompt_examples_prompt_security.json")
+            with open(examples_path, "r") as f:
+                examples_data = json.load(f)
+            
+            # Organize examples by failure mode
+            self.failure_mode_examples = {}
+            
+            for test_group in examples_data.get("failure_mode_tests", []):
+                failure_mode = test_group.get("failure_mode", "")
+                examples = test_group.get("examples", [])
+                
+                if failure_mode:
+                    self.failure_mode_examples[failure_mode] = examples
+        
         except FileNotFoundError:
             self.logger.warning("Could not find failure mode examples file")
             self.failure_mode_examples = {}
@@ -269,7 +370,21 @@ class PromptSecurityAgent(BaseAgent):
         for i, example in enumerate(examples[:max_examples]):
             formatted.append(f"Example {i+1}:")
             formatted.append(f"Input: {example['input']}")
-            formatted.append(f"Assessment: {example['assessment']}")
+            
+            # Extract expected output details
+            if 'expected_output' in example and len(example['expected_output']) >= 3:
+                is_safe = example['expected_output'][0]
+                sanitized = example['expected_output'][1]
+                details = example['expected_output'][2]
+                
+                formatted.append(f"Assessment: Safe={str(is_safe).lower()}, " +
+                               f"Sanitized=\"{sanitized}\", " +
+                               f"Threat={details.get('threat_type', 'none')}, " +
+                               f"Severity={details.get('threat_severity', 'none_detected')}, " +
+                               f"Reasoning=\"{details.get('reasoning', '')}\"")
+            else:
+                formatted.append(f"Assessment: {example.get('assessment', 'No assessment available')}")
+            
             formatted.append("")
         return "\n".join(formatted)
     
@@ -317,10 +432,33 @@ class PromptSecurityAgent(BaseAgent):
                 "threat_detected": True,
                 "threat_type": "jailbreak",
                 "threat_severity": "explicit",
-                "sanitized_input": "[BLOCKED DUE TO SECURITY CONCERNS]",
+                "sanitized_input": "[SECURITY WARNING: jailbreak detected]",
                 "confidence": 0.95,
                 "reasoning": "This input attempts to bypass system instructions with clear intent to provoke unauthorized behavior."
             }
+        
+        # In mock mode, return a safe result for testing
+        if self.mock_mode:
+            if "jailbreak" in user_input.lower() or "ignore" in user_input.lower():
+                return {
+                    "is_safe": False,
+                    "threat_detected": True,
+                    "threat_type": "jailbreak",
+                    "threat_severity": "explicit",
+                    "sanitized_input": "[SECURITY WARNING: jailbreak detected]",
+                    "confidence": 0.95,
+                    "reasoning": "This input attempts to bypass system instructions with clear intent to provoke unauthorized behavior."
+                }
+            else:
+                return {
+                    "is_safe": True,
+                    "threat_detected": False,
+                    "threat_type": "none",
+                    "threat_severity": "none_detected",
+                    "sanitized_input": user_input,
+                    "confidence": 0.95,
+                    "reasoning": "This input appears to be a standard query about insurance coverage without any harmful intent or security risks."
+                }
         
         # Run the base chain
         result = self.base_chain.invoke(user_input)
