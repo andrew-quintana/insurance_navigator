@@ -1,37 +1,22 @@
 """
-Task Requirements Agent
+Task Requirements Agent with ReAct-based Processing
 
 This agent is responsible for:
-1. Interpreting user task intents
-2. Querying policy and regulatory requirements
-3. Generating input checklists for tasks
-4. Defining expected outputs for tasks
-5. Formatting requirements into structured objects
+1. Receiving input from the Patient Navigator Agent
+2. Determining required documentation for user requests
+3. Checking for document availability
+4. Requesting missing information from users when needed
+5. Forwarding validated tasks to the Service Access Strategy Agent
 
-Based on FMEA analysis, this agent implements controls for:
-- Intent schema enforcement with example-based prompts
-- RAG source filtering and versioning
-- Prompt chaining with constraint-aware matching
-- Role-based validation for outputs
-- JSON structure checking and field-level test cases
+Uses a ReAct (Reasoning+Acting) framework to reason about documentation requirements
+and take appropriate actions to validate them.
 """
 
 import os
 import json
-import time
+import re
 import logging
-from typing import Dict, List, Any, Tuple, Optional, Union, Set
-from datetime import datetime
-from pydantic import BaseModel, Field
-from langchain_core.prompts import PromptTemplate
-from langchain_core.runnables import RunnablePassthrough
-from langchain_core.language_models import BaseLanguageModel
-from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_core.output_parsers import PydanticOutputParser
-
-from agents.base_agent import BaseAgent
-from utils.prompt_loader import load_prompt
+from typing import Dict, List, Any, Optional, Union
 
 # Setup logging
 logger = logging.getLogger("task_requirements_agent")
@@ -41,345 +26,616 @@ if not logger.handlers:
     os.makedirs(log_dir, exist_ok=True)
     
     # Set up file handler
-    handler = logging.FileHandler(os.path.join(log_dir, "task_requirements.log"))
+    handler = logging.FileHandler(os.path.join(log_dir, "task_requirements_react.log"))
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
 
-# Define output schemas
-class RequiredInput(BaseModel):
-    """Schema for a required input item."""
-    name: str = Field(description="Name of the required input")
-    description: str = Field(description="Description of the input")
-    input_type: str = Field(description="Type of input (document, form, information)")
-    required: bool = Field(description="Whether the input is required or optional", default=True)
-    source: Optional[str] = Field(description="Where the input can be obtained", default=None)
-    alternatives: List[str] = Field(description="Alternative inputs that can be provided", default_factory=list)
-    validation_rules: List[str] = Field(description="Rules for validating the input", default_factory=list)
-
-class ExpectedOutput(BaseModel):
-    """Schema for an expected output."""
-    name: str = Field(description="Name of the expected output")
-    description: str = Field(description="Description of the output")
-    output_type: str = Field(description="Type of output (document, approval, information)")
-    format: Optional[str] = Field(description="Format of the output", default=None)
-    recipients: List[str] = Field(description="Who will receive the output", default_factory=list)
-    dependencies: List[str] = Field(description="Outputs this depends on", default_factory=list)
-    success_criteria: List[str] = Field(description="Criteria for successful completion", default_factory=list)
-
-class PolicyReference(BaseModel):
-    """Schema for a policy reference."""
-    policy_name: str = Field(description="Name of the policy")
-    policy_section: str = Field(description="Relevant section of the policy")
-    requirement: str = Field(description="The specific requirement from the policy")
-    authority: str = Field(description="The authority or organization behind the policy")
-    last_updated: str = Field(description="When the policy was last updated")
-    impact: str = Field(description="How this policy impacts the task")
-    uri: Optional[str] = Field(description="URI to the policy document", default=None)
-
-class TaskRequirements(BaseModel):
-    """Output schema for task requirements."""
-    task_id: str = Field(description="Unique identifier for the task")
-    task_name: str = Field(description="Name of the task")
-    task_description: str = Field(description="Detailed description of the task")
-    category: str = Field(description="Category of the task (enrollment, claims, benefits)")
-    required_inputs: List[RequiredInput] = Field(description="Inputs required for the task")
-    expected_outputs: List[ExpectedOutput] = Field(description="Expected outputs from the task")
-    policy_references: List[PolicyReference] = Field(description="Relevant policy references")
-    estimated_complexity: int = Field(description="Estimated complexity (1-10)")
-    prerequisites: List[str] = Field(description="Prerequisites for the task", default_factory=list)
-    time_sensitivity: Optional[str] = Field(description="Time sensitivity of the task", default=None)
-    confidence: float = Field(description="Confidence in the requirements (0-1)")
-
-class TaskRequirementsAgent(BaseAgent):
-    """Agent responsible for identifying requirements for Medicare-related tasks."""
+class TaskRequirementsReactAgent:
+    """
+    Agent that uses a ReAct-based approach to determine and validate
+    required documentation for insurance tasks and requests.
+    """
     
-    def __init__(self, llm: Optional[BaseLanguageModel] = None):
-        """Initialize the agent with an optional language model."""
-        # Initialize the base agent
-        super().__init__(name="task_requirements", llm=llm or ChatAnthropic(model="claude-3-sonnet-20240229", temperature=0))
+    def __init__(self, prompt_template_path="agents/task_requirements/prompts/prompt_v0.1.md", 
+                 examples_path="agents/task_requirements/prompts/examples/prompt_examples_v0_1.md",
+                 use_mock_db=False,
+                 patient_navigator_agent=None):
+        """
+        Initialize the Task Requirements ReAct Agent.
         
-        self.parser = PydanticOutputParser(pydantic_object=TaskRequirements)
+        Args:
+            prompt_template_path (str): Path to the prompt template file
+            examples_path (str): Path to the examples file
+            use_mock_db (bool): Whether to use a mock document database for testing
+            patient_navigator_agent: Optional reference to the patient navigator agent
+        """
+        self.prompt_template_path = prompt_template_path
+        self.examples_path = examples_path
+        self.use_mock_db = use_mock_db
+        self.patient_navigator_agent = patient_navigator_agent
         
-        # Initialize common task categories and their typical requirements
-        self._init_task_categories()
+        # Load prompt template and examples
+        self.prompt_template = self._load_file(prompt_template_path)
+        self.examples = self._load_file(examples_path)
         
-        # Define system prompt for requirements identification
-        # Load the self.requirements_system_prompt from file
+        # Initialize the mock document database if needed
+        self.mock_document_db = self._init_mock_document_db() if use_mock_db else None
+        
+        # Store the last processed input for context
+        self.last_input = None
+        
+        logger.info(f"Task Requirements ReAct Agent initialized with prompt from {prompt_template_path}")
+        logger.info(f"Using examples from {examples_path}")
+
+    def _load_file(self, file_path: str) -> str:
+        """
+        Load a file and return its contents as a string.
+        
+        Args:
+            file_path (str): Path to the file to load
+            
+        Returns:
+            str: Contents of the file
+        """
         try:
-            self.requirements_system_prompt = load_prompt("task_requirements_requirements")
+            with open(file_path, 'r') as file:
+                return file.read()
         except FileNotFoundError:
-            self.logger.warning("Could not find task_requirements_requirements.md prompt file, using default prompt")
-            # Load the self.requirements_system_prompt from file
-        try:
-            self.requirements_system_prompt = load_prompt("task_requirements_requirements_prompt")
-        except FileNotFoundError:
-            self.logger.warning("Could not find task_requirements_requirements_prompt.md prompt file, using default prompt")
-            self.requirements_system_prompt = """
-            Default prompt for self.requirements_system_prompt. Replace with actual prompt if needed.
-            """
+            logger.error(f"File not found: {file_path}")
+            raise FileNotFoundError(f"File not found: {file_path}")
+
+    def _init_mock_document_db(self) -> Dict[str, Any]:
+        """
+        Initialize a mock document database for testing.
         
-        
-        
-        # Define the requirements prompt template
-        self.requirements_template = PromptTemplate(
-            template="""
-            {system_prompt}
-            
-            TASK DESCRIPTION:
-            {task_description}
-            
-            USER CONTEXT:
-            {user_context}
-            
-            Analyze this task to identify all requirements, inputs, and expected outputs.
-            
-            {format_instructions}
-            """,
-            input_variables=["system_prompt", "task_description", "user_context"],
-            partial_variables={"format_instructions": self.parser.get_format_instructions()}
-        )
-        
-        # Create the requirements chain
-        self.requirements_chain = (
-            {"system_prompt": lambda _: self.requirements_system_prompt,
-             "task_description": lambda x: x["task_description"],
-             "user_context": lambda x: json.dumps(x.get("user_context", {}), indent=2)}
-            | self.requirements_template
-            | self.llm
-            | self.parser
-        )
-        
-        # Set RAG source metadata threshold
-        self.max_policy_age_days = 365  # Policies older than 1 year are considered outdated
-        
-        logger.info("Task Requirements Agent initialized")
-    
-    def _init_task_categories(self):
-        """Initialize common task categories and their typical requirements."""
-        self.task_categories = {
-            "enrollment": {
-                "description": "Tasks related to Medicare enrollment",
-                "common_inputs": [
-                    {"name": "Personal identification", "input_type": "document", "examples": ["birth certificate", "passport", "driver's license"]},
-                    {"name": "Social Security card", "input_type": "document"},
-                    {"name": "Medicare card (if already enrolled in Part A)", "input_type": "document"},
-                    {"name": "Employment information", "input_type": "information"},
-                    {"name": "CMS-40B form", "input_type": "form", "description": "Application for Enrollment in Medicare Part B"}
-                ],
-                "common_outputs": [
-                    {"name": "Medicare card", "output_type": "document", "description": "Official Medicare card showing coverage"},
-                    {"name": "Enrollment confirmation", "output_type": "document"},
-                    {"name": "Medicare & You handbook", "output_type": "document"}
-                ],
-                "common_policies": [
-                    "Medicare Part B enrollment periods",
-                    "Initial Enrollment Period (IEP)",
-                    "General Enrollment Period (GEP)",
-                    "Special Enrollment Period (SEP)"
-                ]
+        Returns:
+            Dict[str, Any]: Mock document database
+        """
+        return {
+            # Insurance ID cards
+            "doc_328uwh": {
+                "type": "insurance_id_card",
+                "description": "Photo or scan of the user's active insurance card. Confirmed active with UnitedHealthcare, valid through 2026.",
+                "date_added": "2025-05-10",
+                "validated": True
             },
-            "claims": {
-                "description": "Tasks related to Medicare claims",
-                "common_inputs": [
-                    {"name": "Medicare card", "input_type": "document"},
-                    {"name": "Medical bills", "input_type": "document"},
-                    {"name": "Explanation of Benefits (EOB)", "input_type": "document"},
-                    {"name": "CMS-1490S form", "input_type": "form", "description": "Patient's Request for Medicare Payment"}
-                ],
-                "common_outputs": [
-                    {"name": "Claim approval/denial", "output_type": "document"},
-                    {"name": "Medicare Summary Notice (MSN)", "output_type": "document"},
-                    {"name": "Payment information", "output_type": "information"}
-                ],
-                "common_policies": [
-                    "Timely filing requirements",
-                    "Medicare-covered services",
-                    "Medicare secondary payer rules",
-                    "Appeal rights"
-                ]
+            "doc_554abc": {
+                "type": "insurance_id_card",
+                "description": "Photo or scan of the user's active insurance card. Confirmed active with Anthem PPO, valid through 2026.",
+                "date_added": "2025-05-11",
+                "validated": True
             },
-            "benefits": {
-                "description": "Tasks related to understanding Medicare benefits",
-                "common_inputs": [
-                    {"name": "Medicare card", "input_type": "document"},
-                    {"name": "Medical condition information", "input_type": "information"},
-                    {"name": "Provider information", "input_type": "information"}
-                ],
-                "common_outputs": [
-                    {"name": "Benefits explanation", "output_type": "document"},
-                    {"name": "Coverage determination", "output_type": "document"}
-                ],
-                "common_policies": [
-                    "Medicare Part A benefits",
-                    "Medicare Part B benefits",
-                    "Medicare Part D prescription drug coverage",
-                    "Preventive services"
-                ]
+            "doc_abc123": {
+                "type": "insurance_id_card",
+                "description": "Active Anthem PPO card, valid through 2026.",
+                "date_added": "2025-05-11",
+                "validated": True
+            },
+            "doc_4482x": {
+                "type": "insurance_id_card",
+                "description": "Cigna HMO insurance card valid through 2025",
+                "date_added": "2025-05-12",
+                "validated": True
+            },
+            
+            # Referral notes
+            "muhoh351fxq": {
+                "type": "referral_note",
+                "description": "Referral from primary care doctor for podiatry",
+                "date_added": "2025-05-14",
+                "validated": True
+            },
+            
+            # Plan coverage info
+            "covcheck_00281": {
+                "type": "plan_coverage_info",
+                "description": "Plan HMO-X23 requires a referral from a PCP for podiatry.",
+                "date_added": "2025-05-13",
+                "validated": True
+            },
+            "covcheck_00312": {
+                "type": "plan_coverage_info",
+                "description": "Allergy testing is covered with no referral required under Anthem PPO plan.",
+                "date_added": "2025-05-13",
+                "validated": True
+            },
+            "covcheck_0333": {
+                "type": "plan_coverage_info",
+                "description": "Allergy testing is covered under Anthem PPO without referral.",
+                "date_added": "2025-05-13",
+                "validated": True
+            },
+            "covcheck_0451": {
+                "type": "plan_coverage_info",
+                "description": "Plan allows up to 25 physical therapy visits per year.",
+                "date_added": "2025-05-13",
+                "validated": True
             }
         }
-    
-    def _check_policy_freshness(self, policy_date: str) -> bool:
-        """Check if a policy reference is fresh based on its date."""
-        try:
-            # Parse the date string
-            policy_datetime = datetime.strptime(policy_date, "%Y-%m-%d")
-            current_datetime = datetime.now()
-            
-            # Calculate the difference in days
-            delta = current_datetime - policy_datetime
-            
-            # Check if the policy is fresh
-            return delta.days <= self.max_policy_age_days
-        except Exception as e:
-            self.logger.warning(f"Error checking policy freshness: {str(e)}")
-            return False  # Assume outdated if we can't parse the date
-    
-    def _get_base_requirements(self, task_category: str) -> Dict[str, Any]:
-        """Get base requirements for a given task category."""
-        if task_category in self.task_categories:
-            category_info = self.task_categories[task_category]
-            
-            # Create base requirements
-            base_requirements = {
-                "category": task_category,
-                "required_inputs": [
-                    RequiredInput(
-                        name=input_item["name"],
-                        description=input_item.get("description", f"Required {input_item['input_type']} for {task_category}"),
-                        input_type=input_item["input_type"],
-                        required=True,
-                        source=input_item.get("source")
-                    )
-                    for input_item in category_info["common_inputs"]
-                ],
-                "expected_outputs": [
-                    ExpectedOutput(
-                        name=output_item["name"],
-                        description=output_item.get("description", f"Output for {task_category}"),
-                        output_type=output_item["output_type"],
-                        format=output_item.get("format")
-                    )
-                    for output_item in category_info["common_outputs"]
-                ],
-                "policy_references": []
-            }
-            
-            return base_requirements
-        
-        return {}
-    
-    @BaseAgent.track_performance
-    def identify_requirements(self, task_description: str, user_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+
+    def _build_prompt(self, input_json: Dict[str, Any]) -> str:
         """
-        Identify requirements for a task.
+        Build the full prompt by inserting examples into the template.
         
         Args:
-            task_description: Description of the task
-            user_context: Optional user context information
+            input_json (Dict[str, Any]): The input JSON from the patient navigator
             
         Returns:
-            Task requirements
+            str: The complete prompt with examples inserted
         """
-        start_time = time.time()
+        # Insert examples into the template
+        full_prompt = self.prompt_template.replace("{Examples}", self.examples)
         
-        # Log the request
-        self.logger.info(f"Identifying requirements for task: {task_description[:50]}...")
+        # Add the input to the prompt
+        full_prompt += f"\nInput:\n```json\n{json.dumps(input_json, indent=2)}\n```\n"
         
-        try:
-            # Prepare input for the requirements chain
-            input_dict = {
-                "task_description": task_description,
-                "user_context": user_context or {}
-            }
+        return full_prompt
+
+    def process(self, input_data: Dict[str, Any], llm_client=None) -> Dict[str, Any]:
+        """
+        Process input from the Patient Navigator and determine document requirements.
+        
+        Args:
+            input_data (Dict[str, Any]): The input data from the Patient Navigator
+            llm_client: The LLM client to use for generating responses (optional)
             
-            # Generate requirements
-            requirements = self.requirements_chain.invoke(input_dict)
+        Returns:
+            Dict[str, Any]: The processed result with required_context
+        """
+        # Store the input for context
+        self.last_input = input_data
+        
+        if not llm_client:
+            # Just log that we'd use a real LLM in production
+            logger.info("No LLM client provided. In production, this would use a real LLM.")
+            # For testing purposes, return simulated output based on the input
+            result = self._simulate_llm_response(input_data)
             
-            # Convert to dictionary
-            result = requirements.dict()
-            
-            # Check policy freshness
-            outdated_policies = []
-            for i, policy in enumerate(result.get("policy_references", [])):
-                if not self._check_policy_freshness(policy.get("last_updated", "1900-01-01")):
-                    outdated_policies.append(policy["policy_name"])
-            
-            if outdated_policies:
-                self.logger.warning(f"Outdated policies referenced: {', '.join(outdated_policies)}")
-            
-            # Log the result
-            self.logger.info(f"Task categorized as: {result['category']} with complexity {result['estimated_complexity']}")
-            self.logger.info(f"Identified {len(result['required_inputs'])} required inputs and {len(result['expected_outputs'])} expected outputs")
-            
-            # Log execution time
-            execution_time = time.time() - start_time
-            self.logger.info(f"Requirements identification completed in {execution_time:.2f}s")
+            # Check if we need to request missing documents
+            missing_docs = self._check_for_missing_documents(result["required_context"])
+            if missing_docs:
+                request_result = self.request_from_patient_navigator(missing_docs)
+                if request_result:
+                    # In a real implementation, we would wait for a response
+                    # For testing, we'll simulate getting the documents
+                    result["patient_navigator_request"] = request_result
+                    result["required_context"] = self._simulate_document_update(result["required_context"])
             
             return result
-            
-        except Exception as e:
-            self.logger.error(f"Error in requirements identification: {str(e)}")
-            
-            # Create a minimal fallback response
-            task_id = f"task_{int(time.time())}"
-            
-            return {
-                "task_id": task_id,
-                "task_name": "Error in task processing",
-                "task_description": task_description,
-                "category": "unknown",
-                "required_inputs": [],
-                "expected_outputs": [],
-                "policy_references": [],
-                "estimated_complexity": 5,
-                "prerequisites": [],
-                "confidence": 0.0,
-                "error": str(e)
-            }
-    
-    def process(self, task_description: str, user_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        
+        # In a real implementation, we would:
+        # 1. Build the prompt
+        prompt = self._build_prompt(input_data)
+        
+        # 2. Send the prompt to the LLM
+        # llm_response = llm_client.generate(prompt)
+        
+        # 3. Parse the LLM response to extract the ReAct steps
+        # parsed_steps = self._parse_react_output(llm_response)
+        
+        # 4. Process the steps to determine the final output
+        # result = self._process_react_steps(parsed_steps)
+        
+        # 5. Check if we need to request missing documents
+        # missing_docs = self._check_for_missing_documents(result["required_context"])
+        # if missing_docs:
+        #     self.request_from_patient_navigator(missing_docs)
+        
+        # 6. Return the result
+        # return result
+        
+        # For now, simulate the response
+        return self._simulate_llm_response(input_data)
+
+    def _check_for_missing_documents(self, required_context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
-        Process a task to identify its requirements.
+        Check for missing documents in the required context.
         
         Args:
-            task_description: Description of the task
-            user_context: Optional user context information
+            required_context (Dict[str, Any]): The required context with document status
             
         Returns:
-            Task requirements
+            List[Dict[str, Any]]: List of missing documents
         """
-        return self.identify_requirements(task_description, user_context)
+        missing_docs = []
+        
+        for doc_type, doc_info in required_context.items():
+            if doc_info.get("present") is None or doc_info.get("present") is False:
+                missing_docs.append({
+                    "type": doc_type,
+                    "description": doc_info.get("description", f"Missing {doc_type}")
+                })
+        
+        return missing_docs
 
-# Example usage
+    def request_from_patient_navigator(self, missing_docs: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Send a request to the Patient Navigator Agent for missing documents.
+        
+        Args:
+            missing_docs (List[Dict[str, Any]]): List of missing documents
+            
+        Returns:
+            Dict[str, Any]: The request sent to the Patient Navigator
+        """
+        if not missing_docs:
+            return None
+        
+        # Create the request
+        request = {
+            "request_type": "document_request",
+            "missing_documents": missing_docs,
+            "context": {
+                "service_intent": self.last_input.get("service_intent", {}),
+                "meta_intent": self.last_input.get("meta_intent", {})
+            }
+        }
+        
+        logger.info(f"Sending request to Patient Navigator: {json.dumps(request)}")
+        
+        # If we have a real Patient Navigator agent, send the request
+        if self.patient_navigator_agent:
+            try:
+                response = self.patient_navigator_agent.process_request(request)
+                logger.info(f"Received response from Patient Navigator: {json.dumps(response)}")
+                return request
+            except Exception as e:
+                logger.error(f"Error sending request to Patient Navigator: {str(e)}")
+                return request
+        
+        # For testing, just return the request
+        return request
+
+    def _simulate_document_update(self, required_context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Simulate updating the required context with documents from the Patient Navigator.
+        
+        Args:
+            required_context (Dict[str, Any]): The current required context
+            
+        Returns:
+            Dict[str, Any]: The updated required context
+        """
+        updated_context = required_context.copy()
+        
+        # For each document that's missing, simulate getting it
+        for doc_type, doc_info in updated_context.items():
+            if doc_info.get("present") is None or doc_info.get("present") is False:
+                # Find a matching document in the mock database
+                for doc_id, mock_doc in self.mock_document_db.items():
+                    if mock_doc["type"] == doc_type:
+                        updated_context[doc_type] = {
+                            "type": "document",
+                            "present": True,
+                            "validated": True,
+                            "source": "user_documents_database",
+                            "description": mock_doc["description"],
+                            "date_added": mock_doc["date_added"],
+                            "document_id": doc_id
+                        }
+                        break
+        
+        return updated_context
+
+    def _parse_react_output(self, llm_output: str) -> List[Dict[str, str]]:
+        """
+        Parse the LLM output to extract the ReAct steps.
+        
+        Args:
+            llm_output (str): The raw output from the LLM
+            
+        Returns:
+            List[Dict[str, str]]: List of parsed ReAct steps
+        """
+        steps = []
+        
+        # Pattern to match the Thought-Act-Obs triples
+        pattern = r'\*\*Thought (\d+)\*\*:\s*(.*?)(?:\n\*\*Act \1\*\*:\s*(.*?)(?:\n\*\*Obs \1(?:\s*\(.*?\))?\*\*:\s*(.*?))?)?(?=\n\*\*Thought \d+\*\*|\Z)'
+        
+        matches = re.findall(pattern, llm_output, re.DOTALL)
+        
+        for match in matches:
+            step_num, thought, act, obs = match
+            step = {"step": int(step_num), "thought": thought.strip()}
+            
+            if act:
+                # Parse the action and its arguments
+                act = act.strip()
+                action_match = re.match(r'(\w+)\[(.*)\]', act)
+                if action_match:
+                    action_name, action_args = action_match.groups()
+                    step["action"] = action_name
+                    step["action_args"] = action_args
+                else:
+                    step["action"] = act
+                    step["action_args"] = None
+            
+            if obs:
+                step["observation"] = obs.strip()
+            
+            steps.append(step)
+        
+        return steps
+
+    def _process_react_steps(self, steps: List[Dict[str, str]]) -> Dict[str, Any]:
+        """
+        Process the parsed ReAct steps to determine the final output.
+        
+        Args:
+            steps (List[Dict[str, str]]): The parsed ReAct steps
+            
+        Returns:
+            Dict[str, Any]: The final output
+        """
+        required_context = {}
+        
+        for step in steps:
+            if "action" not in step:
+                continue
+                
+            action = step["action"]
+            
+            if action == "determine_required_context":
+                # Extract the required context from the observation
+                if "observation" in step:
+                    try:
+                        required_context = json.loads(step["observation"])
+                    except json.JSONDecodeError:
+                        # If the observation is not valid JSON, try to extract it
+                        json_match = re.search(r'```json\n(.*?)\n```', step["observation"], re.DOTALL)
+                        if json_match:
+                            try:
+                                required_context = json.loads(json_match.group(1))
+                            except json.JSONDecodeError:
+                                logger.error("Failed to parse JSON from observation")
+            
+            elif action == "read_document":
+                # Update the required context with the document information
+                if "action_args" in step and "observation" in step:
+                    doc_type = step["action_args"]
+                    if doc_type in required_context:
+                        required_context[doc_type]["present"] = True
+                        required_context[doc_type]["validated"] = True
+            
+            elif action == "request_user":
+                # Process the user request response
+                if "observation" in step:
+                    try:
+                        updated_context = json.loads(step["observation"])
+                        required_context.update(updated_context)
+                    except json.JSONDecodeError:
+                        logger.error("Failed to parse JSON from user request observation")
+            
+            elif action == "add_doc_unique_ids":
+                # Process the unique IDs
+                if "observation" in step:
+                    try:
+                        updated_context = json.loads(step["observation"])
+                        required_context.update(updated_context)
+                    except json.JSONDecodeError:
+                        logger.error("Failed to parse JSON from add_doc_unique_ids observation")
+            
+            elif action == "trigger_next_agent":
+                # We've reached the end of the process
+                break
+        
+        return {"required_context": required_context}
+
+    def _simulate_document_action(self, action: str, doc_type: str) -> Dict[str, Any]:
+        """
+        Simulate a document-related action for testing.
+        
+        Args:
+            action (str): The action to simulate
+            doc_type (str): The document type
+            
+        Returns:
+            Dict[str, Any]: The simulated response
+        """
+        if not self.use_mock_db:
+            return {"error": "Mock database not enabled"}
+        
+        if action == "read_document":
+            # Find a document of the specified type
+            for doc_id, doc_info in self.mock_document_db.items():
+                if doc_info["type"] == doc_type:
+                    return {
+                        "type": "document",
+                        "present": True,
+                        "validated": True,
+                        "source": "user_documents_database",
+                        "description": doc_info["description"],
+                        "date_added": doc_info["date_added"],
+                        "document_id": doc_id
+                    }
+            
+            # No document found
+            return {
+                "type": "document",
+                "present": False,
+                "validated": False,
+                "source": None,
+                "description": f"{doc_type} is missing",
+                "date_added": None,
+                "document_id": None
+            }
+        
+        return {"error": f"Unsupported action: {action}"}
+
+    def _simulate_llm_response(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Simulate an LLM response for testing.
+        
+        Args:
+            input_data (Dict[str, Any]): The input data
+            
+        Returns:
+            Dict[str, Any]: The simulated response
+        """
+        # Default response structure
+        response = {
+            "required_context": {}
+        }
+        
+        # Very basic simulation based on the request type and specialty
+        meta_intent = input_data.get("meta_intent", {})
+        request_type = meta_intent.get("request_type", "")
+        
+        service_intent = input_data.get("service_intent", {})
+        specialty = service_intent.get("specialty", "")
+        service = service_intent.get("service", "")
+        
+        # Simulate different responses based on the request type and specialty
+        if request_type == "expert_request" and specialty == "podiatry":
+            # Similar to Example 1 - with missing referral for testing
+            response["required_context"] = {
+                "insurance_id_card": {
+                    "type": "document",
+                    "present": True,
+                    "validated": True,
+                    "source": "user_documents_database",
+                    "description": "Photo or scan of the user's active insurance card. Confirmed active with UnitedHealthcare, valid through 2026.",
+                    "date_added": "2025-05-10",
+                    "document_id": "doc_328uwh"
+                },
+                "referral_note": {
+                    "type": "document",
+                    "present": None,
+                    "validated": False,
+                    "source": None,
+                    "description": "Referral from primary care doctor for podiatry",
+                    "date_added": None,
+                    "document_id": None
+                },
+                "plan_coverage_info": {
+                    "type": "document",
+                    "present": True,
+                    "validated": True,
+                    "source": "user_documents_database",
+                    "description": "Plan HMO-X23 requires a referral from a PCP for podiatry.",
+                    "date_added": "2025-05-13",
+                    "document_id": "covcheck_00281"
+                }
+            }
+        elif request_type == "service_request" and specialty == "allergy" and service == "allergy test":
+            # Similar to Example 2
+            response["required_context"] = {
+                "insurance_id_card": {
+                    "type": "document",
+                    "present": True,
+                    "validated": True,
+                    "source": "user_documents_database",
+                    "description": "Photo or scan of the user's active insurance card. Confirmed active with Anthem PPO, valid through 2026.",
+                    "date_added": "2025-05-11",
+                    "document_id": "doc_554abc"
+                },
+                "plan_coverage_info": {
+                    "type": "document",
+                    "present": True,
+                    "validated": True,
+                    "source": "user_documents_database",
+                    "description": "Allergy testing is covered with no referral required under Anthem PPO plan.",
+                    "date_added": "2025-05-13",
+                    "document_id": "covcheck_00312"
+                }
+            }
+        elif request_type == "policy_question" and specialty == "physical therapy":
+            # Similar to Example 4
+            response["required_context"] = {
+                "insurance_id_card": {
+                    "type": "document",
+                    "present": True,
+                    "validated": True,
+                    "source": "user_documents_database",
+                    "description": "Cigna HMO insurance card valid through 2025",
+                    "date_added": "2025-05-12",
+                    "document_id": "doc_4482x"
+                },
+                "plan_coverage_info": {
+                    "type": "document",
+                    "present": True,
+                    "validated": True,
+                    "source": "user_documents_database",
+                    "description": "Plan allows up to 25 physical therapy visits per year.",
+                    "date_added": "2025-05-13",
+                    "document_id": "covcheck_0451"
+                }
+            }
+        else:
+            # Generic response for other cases - with missing documents
+            response["required_context"] = {
+                "insurance_id_card": {
+                    "type": "document",
+                    "present": None,
+                    "validated": False,
+                    "source": None,
+                    "description": "Insurance ID card needed",
+                    "date_added": None,
+                    "document_id": None
+                },
+                "plan_coverage_info": {
+                    "type": "document",
+                    "present": None,
+                    "validated": False,
+                    "source": None,
+                    "description": "Plan coverage information needed",
+                    "date_added": None,
+                    "document_id": None
+                }
+            }
+        
+        return response
+
+def test_task_requirements_agent():
+    """
+    Test function for the Task Requirements Agent.
+    
+    This function loads test examples and runs them through the agent.
+    """
+    # Load test examples
+    test_examples_path = "agents/task_requirements/tests/data/examples/test_examples_v0_1.md"
+    
+    try:
+        with open(test_examples_path, 'r') as file:
+            test_content = file.read()
+    except FileNotFoundError:
+        logger.error(f"Test examples file not found: {test_examples_path}")
+        return
+    
+    # Extract test inputs using regex
+    input_pattern = r'Input:\n```json\n(.*?)\n```'
+    test_inputs = re.findall(input_pattern, test_content, re.DOTALL)
+    
+    if not test_inputs:
+        logger.error("No test inputs found in the test examples file")
+        return
+    
+    # Initialize the agent with mock database
+    agent = TaskRequirementsReactAgent(use_mock_db=True)
+    
+    # Run each test input
+    for i, input_json_str in enumerate(test_inputs):
+        try:
+            input_json = json.loads(input_json_str)
+            logger.info(f"Running test {i+1} with input: {input_json['meta_intent']['summary']}")
+            
+            # Process the input
+            result = agent.process(input_json)
+            
+            # Log the result
+            logger.info(f"Test {i+1} result: {json.dumps(result, indent=2)}")
+            print(f"Test {i+1} result: {json.dumps(result, indent=2)}")
+            
+        except json.JSONDecodeError:
+            logger.error(f"Failed to parse JSON from test input {i+1}")
+        except Exception as e:
+            logger.error(f"Error processing test {i+1}: {str(e)}")
+    
+    logger.info("All tests completed")
+    print("All tests completed")
+
 if __name__ == "__main__":
-    # Initialize the agent
-    agent = TaskRequirementsAgent()
-    
-    # Test with sample task
-    sample_task = "I need to enroll in Medicare Part B because I'm turning 65 next month"
-    
-    sample_context = {
-        "user_age": 64,
-        "current_insurance": "Employer group health plan",
-        "employment_status": "Retiring next month"
-    }
-    
-    # Process the task
-    requirements = agent.process(sample_task, sample_context)
-    
-    print(f"Task: {requirements['task_name']}")
-    print(f"Category: {requirements['category']}")
-    print(f"Complexity: {requirements['estimated_complexity']}")
-    print("\nRequired Inputs:")
-    for input_item in requirements['required_inputs']:
-        print(f"- {input_item['name']} ({input_item['input_type']}): {input_item['description']}")
-    
-    print("\nExpected Outputs:")
-    for output in requirements['expected_outputs']:
-        print(f"- {output['name']} ({output['output_type']}): {output['description']}")
-    
-    print("\nPolicy References:")
-    for policy in requirements['policy_references']:
-        print(f"- {policy['policy_name']} ({policy['authority']}): {policy['requirement']}") 
+    # Run the test function when the script is executed directly
+    test_task_requirements_agent()

@@ -1,3 +1,3 @@
-from .task_requirements_agent import TaskRequirementsAgentAgent
+from .core.task_requirements import TaskRequirementsReactAgent
 
-__all__ = ['TaskRequirementsAgentAgent']
+__all__ = ['TaskRequirementsReactAgent']
