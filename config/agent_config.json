@@ -82,6 +82,33 @@
       "metrics": {
         "latest_run": "agents/task_requirements/metrics/performance_metrics_20250515_145819.json"
       }
+    },
+  "service_access_strategy": {
+      "active": true,
+      "description": "Agent responsible for coming up with strategies for accessing services",
+      "core_file": {
+        "path": "agents/service_access_strategy/core/service_access_strategy.py",
+        "version": "0.2"
+      },
+      "prompt": {
+        "version": "0.1",
+        "path": "agents/service_access_strategy/prompts/prompt_service_access_strategy_v0_2.md"
+      },
+      "examples": {
+        "version": "0.1",
+        "path": "agents/service_access_strategy/prompts/examples/prompt_examples_service_access_strategy_v0_1.md"
+      },
+      "test_examples": {
+        "version": "0.1",
+        "path": "agents/service_access_strategy/tests/data/examples/test_examples_service_access_strategy_v0_1.md"
+      },
+      "model": {
+        "name": "claude-3-7-sonnet-20250219",
+        "temperature": 0.2
+      },
+      "metrics": {
+        "latest_run": "agents/service_access_strategy/metrics/performance_metrics_20250515_153019.json"
+      }
     }
   },
   "performance_metrics": {
