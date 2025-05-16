@@ -1,3 +1,3 @@
-from .service_access_strategy_agent import ServiceAccessStrategyAgentAgent
+from .core.service_access_strategy import ServiceAccessStrategyAgent
 
-__all__ = ['ServiceAccessStrategyAgentAgent']
+__all__ = ['ServiceAccessStrategyAgent']

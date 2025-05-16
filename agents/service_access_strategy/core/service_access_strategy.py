@@ -99,8 +99,43 @@ class ServiceAccessStrategyAgent(BaseAgent):
             policy_compliance_agent: An optional reference to the Policy Compliance Agent
             service_provider_agent: An optional reference to the Service Provider Agent
         """
+        # Default configuration values
+        model_name = "claude-3-sonnet-20240229"
+        temperature = 0.0
+        prompt_path = None
+        
+        # Try to get configuration from agent_config if available
+        try:
+            from utils.agent_config_manager import get_config_manager
+            config_manager = get_config_manager()
+            agent_config = config_manager.get_agent_config("service_access_strategy")
+            
+            # Get model configuration
+            model_config = agent_config.get("model", {})
+            model_name = model_config.get("name", model_name)
+            temperature = model_config.get("temperature", temperature)
+            
+            # Get prompt path from config
+            prompt_path = agent_config.get("prompt", {}).get("path")
+            logger.info(f"Loaded agent configuration with model {model_name} and prompt {prompt_path}")
+        except Exception as e:
+            logger.warning(f"Failed to load agent configuration: {str(e)}. Using default values.")
+        
+        # Initialize LLM if not provided
+        if llm is None:
+            try:
+                llm = ChatAnthropic(model=model_name, temperature=temperature)
+            except Exception as e:
+                logger.error(f"Failed to initialize LLM with model {model_name}: {str(e)}")
+                # Fall back to whatever LLM BaseAgent will use
+                llm = None
+        
         # Initialize the base agent
-        super().__init__(name="service_access_strategy", llm=llm or ChatAnthropic(model="claude-3-sonnet-20240229", temperature=0))
+        super().__init__(
+            name="service_access_strategy", 
+            llm=llm,
+            prompt_path=prompt_path
+        )
         
         self.strategy_parser = PydanticOutputParser(pydantic_object=ServiceAccessStrategy)
         
@@ -108,22 +143,41 @@ class ServiceAccessStrategyAgent(BaseAgent):
         self.policy_compliance_agent = policy_compliance_agent
         self.service_provider_agent = service_provider_agent
         
-        # Define system prompt for strategy development
-        # Load the self.system_prompt from file
+        # Load prompt from the configured path
         try:
-            self.system_prompt = load_prompt("service_access_strategy")
-        except FileNotFoundError:
-            self.logger.warning("Could not find service_access_strategy.md prompt file, using default prompt")
-            # Load the self.system_prompt from file
-        try:
-            self.system_prompt = load_prompt("service_access_strategy")
-        except FileNotFoundError:
-            self.logger.warning("Could not find service_access_strategy.md prompt file, using default prompt")
+            if prompt_path and os.path.exists(prompt_path):
+                with open(prompt_path, 'r') as f:
+                    self.system_prompt = f.read()
+                    logger.info(f"Loaded prompt from {prompt_path}")
+            else:
+                # Try using the prompt loader
+                try:
+                    self.system_prompt = load_prompt("service_access_strategy")
+                    logger.info("Loaded prompt using prompt_loader")
+                except Exception as prompt_error:
+                    logger.warning(f"Could not load prompt using prompt_loader: {str(prompt_error)}")
+                    # Use a default prompt as a last resort
+                    self.system_prompt = """
+                    # Service Access Strategy Prompt
+
+                    You are an expert healthcare navigation assistant. Your task is to create detailed strategies
+                    for accessing healthcare services based on a user's needs, insurance coverage, and constraints.
+                    
+                    Given information about a patient, their medical need, insurance policy, and location, provide:
+                    1. A comprehensive strategy for accessing appropriate care
+                    2. Detailed action steps with timelines
+                    3. Information about provider options
+                    4. Preparation guidance for appointments
+                    
+                    Your response should follow the specified JSON format.
+                    """
+                    logger.warning("Using default backup prompt")
+        except Exception as e:
+            logger.error(f"Error loading prompt: {str(e)}")
+            # Fallback to a simple prompt as a last resort
             self.system_prompt = """
-            Default prompt for self.system_prompt. Replace with actual prompt if needed.
+            Service Access Strategy prompt. Create a healthcare access strategy based on the provided information.
             """
-        
-        
         
         # Define the strategy development prompt template
         self.strategy_template = PromptTemplate(
@@ -171,7 +225,7 @@ class ServiceAccessStrategyAgent(BaseAgent):
             | self.strategy_parser
         )
         
-        logger.info("Service Access Strategy Agent initialized")
+        logger.info(f"Service Access Strategy Agent initialized with model {model_name}")
     
     def check_compliance(self, policy_type: str, service_type: str, user_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
