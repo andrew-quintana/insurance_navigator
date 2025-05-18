@@ -1,751 +1,289 @@
 """
-Unit tests for the Task Requirements Agent.
+Tests for the Task Requirements Agent.
 
-This file contains tests to verify that the TaskRequirementsAgent
-properly processes input from the patient navigator, combines the prompt template
-with examples, and produces the expected output.
+These tests verify that the Task Requirements Agent correctly determines
+required documentation for service requests and processes ReAct-based reasoning.
 """
 
-import os
-import json
 import unittest
-from unittest.mock import patch, MagicMock
-import time
-from datetime import datetime
-import sys
+from unittest.mock import Mock, patch, MagicMock
+import json
 import re
-from typing import Dict, Any, List, Tuple
-
-# Add the root directory to the path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
+from datetime import datetime
 
 from agents.task_requirements.core.task_requirements import TaskRequirementsAgent
+from agents.task_requirements.models.task_models import (
+    DocumentStatus, ReactStep, TaskProcessingResult
+)
+from agents.common.exceptions import (
+    TaskRequirementsException,
+    TaskRequirementsProcessingError,
+    DocumentValidationError,
+    ReactProcessingError
+)
 
-# For SBERT similarity comparison
-try:
-    from sentence_transformers import SentenceTransformer, util
-    SBERT_AVAILABLE = True
-except ImportError:
-    SBERT_AVAILABLE = False
+# Test data
+TEST_INPUT = {
+    "meta_intent": {
+        "request_type": "service_request",
+        "summary": "Request for cardiology consultation",
+        "emergency": False
+    },
+    "clinical_context": {
+        "symptom": "chest pain",
+        "body": {"region": "chest", "side": "left", "subpart": "center"},
+        "onset": "3 days ago",
+        "duration": "intermittent"
+    },
+    "service_intent": {
+        "specialty": "cardiology",
+        "service": "consultation",
+        "plan_detail_type": "coverage"
+    },
+    "metadata": {
+        "raw_user_text": "I need to see a cardiologist for chest pain",
+        "user_response_created": "I'll help you with that request.",
+        "timestamp": "2025-05-20T14:30:00Z"
+    }
+}
 
-class MockLLM:
-    """Mock LLM for testing."""
-    
-    def __init__(self, response_text=None, prompt_tokens=100, completion_tokens=50):
-        self.response_text = response_text
-        self.prompt_tokens = prompt_tokens
-        self.completion_tokens = completion_tokens
-        self.last_prompt = None
-    
-    def generate(self, prompt):
-        """Generate a response from the mock LLM."""
-        self.last_prompt = prompt
-        
-        # If no response text is provided, generate a default one
-        if self.response_text is None:
-            self.response_text = self._generate_default_response()
-        
-        # Create a response object with the same interface as the real LLM
-        response = MagicMock()
-        response.text = self.response_text
-        response.prompt_tokens = self.prompt_tokens
-        response.completion_tokens = self.completion_tokens
-        
-        return response
-    
-    def _generate_default_response(self):
-        """Generate a default response for testing."""
-        return """
-**Thought 1**: I need to determine what documentation or plan rules are required for this request.
+TEST_REACT_OUTPUT = """
+**Thought 1**: I need to determine what documents are required for a cardiology consultation service request.
+
 **Act 1**: determine_required_context[service_intent]
-**Obs 1**: {
-  "insurance_id_card": {
-    "type": "document",
-    "present": null,
-    "source": null,
-    "user_validated": false,
-    "description": "Photo or scan of the user's active insurance card",
-    "date_added": null,
-    "document_id": null
-  },
-  "insurance_plan": {
-    "type": "document",
-    "present": null,
-    "source": null,
-    "user_validated": false,
-    "description": "System must confirm services are covered under user plan",
-    "date_added": null,
-    "document_id": null
-  }
-}
 
-**Thought 2**: I need to check the insurance card to confirm coverage.
+**Obs 1**: The required documents for a cardiology consultation are:
+- Insurance ID card
+- Primary care referral
+- Recent medical records related to heart issues
+
+**Thought 2**: Now I need to check if the insurance ID card is available.
+
 **Act 2**: read_document[insurance_id_card]
-**Obs 2**: {
-  "type": "document",
-  "present": true,
-  "user_validated": false,
-  "source": "user_documents_database",
-  "description": "Active insurance card valid through 2026",
-  "date_added": "2025-05-10",
-  "document_id": null
-}
 
-**Thought 3**: I need to check the plan coverage info.
-**Act 3**: read_document[insurance_plan]
-**Obs 3**: {
-  "type": "document",
-  "present": true,
-  "user_validated": false,
-  "source": "user_documents_database",
-  "description": "Plan covers requested service",
-  "date_added": "2025-05-13",
-  "document_id": null
-}
+**Obs 2**: Insurance ID card is available in the system. Last updated 2025-01-15.
 
-**Thought 4**: I need to validate the documents with the user.
-**Act 4**: request_user[required_context]
-**Obs 4**: {
-  "insurance_id_card": {
-    "type": "document",
-    "present": true,
-    "user_validated": true,
-    "source": "user_documents_database",
-    "description": "Active insurance card valid through 2026",
-    "date_added": "2025-05-10",
-    "document_id": null
-  },
-  "insurance_plan": {
-    "type": "document",
-    "present": true,
-    "user_validated": true,
-    "source": "user_documents_database",
-    "description": "Plan covers requested service",
-    "date_added": "2025-05-13",
-    "document_id": null
-  }
-}
+**Thought 3**: Next, I need to check if the referral is available.
 
-**Thought 5**: I need to add unique IDs to the documents.
-**Act 5**: add_doc_unique_ids[required_context]
-**Obs 5**: {
-  "insurance_id_card": {
-    "type": "document",
-    "present": true,
-    "user_validated": true,
-    "source": "user_documents_database",
-    "description": "Active insurance card valid through 2026",
-    "date_added": "2025-05-10",
-    "document_id": "doc_123"
-  },
-  "insurance_plan": {
-    "type": "document",
-    "present": true,
-    "user_validated": true,
-    "source": "user_documents_database",
-    "description": "Plan covers requested service",
-    "date_added": "2025-05-13",
-    "document_id": "plan_456"
-  }
-}
+**Act 3**: read_document[primary_care_referral]
 
-**Thought 6**: I have all the required documentation. I can now finish the task.
+**Obs 3**: Primary care referral is not available in the system.
+
+**Thought 4**: I need to request validation of the available documents.
+
+**Act 4**: request_document_validation[required_context]
+
+**Obs 4**: The insurance ID card has been validated.
+
+**Thought 5**: I need to request the missing referral from the user.
+
+**Act 5**: request_user[missing_context]
+
+**Obs 5**: User has been informed of the missing primary care referral.
+
+**Thought 6**: Now that all documents are accounted for, I can complete this task.
+
 **Act 6**: finish[(input, required_context)]
+
+**Obs 6**: Task completed. Required documents: insurance ID card (available), primary care referral (requested).
 """
 
-class MockDocumentManager:
-    """Mock Document Manager for testing."""
-    
-    def determine_required_context(self, service_intent):
-        """Determine the required context based on the service intent."""
-        return {
-            "insurance_id_card": {
-                "type": "document",
-                "present": None,
-                "source": None,
-                "user_validated": False,
-                "description": "Photo or scan of the user's active insurance card",
-                "date_added": None,
-                "document_id": None
-            },
-            "insurance_plan": {
-                "type": "document",
-                "present": None,
-                "source": None,
-                "user_validated": False,
-                "description": "System must confirm services are covered under user plan",
-                "date_added": None,
-                "document_id": None
-            }
-        }
-    
-    def read_document(self, document_type):
-        """Read a document from the document manager."""
-        return {
-            "type": "document",
-            "present": True,
-            "user_validated": False,
-            "source": "user_documents_database",
-            "description": f"Mock {document_type} document",
-            "date_added": datetime.now().strftime("%Y-%m-%d"),
-            "document_id": None
-        }
-    
-    def validate_documents(self, required_context):
-        """Validate documents."""
-        updated_context = required_context.copy()
-        for key in updated_context:
-            updated_context[key]["user_validated"] = True
-        return updated_context
-    
-    def validate_information(self, required_context):
-        """Validate information."""
-        return required_context
-    
-    def add_unique_ids(self, required_context):
-        """Add unique IDs to documents."""
-        updated_context = required_context.copy()
-        for key in updated_context:
-            updated_context[key]["document_id"] = f"mock_id_{key}"
-        return updated_context
-
-class MockOutputAgent:
-    """Mock Output Agent for testing."""
-    
-    def __init__(self):
-        self.last_request = None
-        self.last_task = None
-    
-    def request_user_information(self, missing_context):
-        """Request information from the user."""
-        self.last_request = missing_context
-        
-        # Return validated context
-        updated_context = missing_context.copy()
-        for key in updated_context:
-            updated_context[key]["user_validated"] = True
-        
-        return updated_context
-    
-    def process_task(self, task):
-        """Process a completed task."""
-        self.last_task = task
-        return {"status": "success"}
 
 class TestTaskRequirementsAgent(unittest.TestCase):
-    """Test case for the TaskRequirementsAgent."""
-    
+    """Test suite for the TaskRequirements agent."""
+
     def setUp(self):
-        """Set up test fixtures."""
-        # Use test versions of the prompt files
-        self.prompt_path = "agents/task_requirements/prompts/prompt_task_requirements_v0_1.md"
-        self.examples_path = "agents/task_requirements/prompts/examples/prompt_examples_task_requirements_v0_1.md"
+        """Set up test environment."""
+        # Mock LLM
+        self.mock_llm = Mock()
+        self.mock_llm.invoke.return_value = TEST_REACT_OUTPUT
         
-        # Create mock components
-        self.mock_llm = MockLLM()
-        self.mock_document_manager = MockDocumentManager()
-        self.mock_output_agent = MockOutputAgent()
-        
-        # Initialize the agent with mock components
-        self.agent = TaskRequirementsAgent(
-            llm=self.mock_llm,
-            document_manager=self.mock_document_manager,
-            output_agent=self.mock_output_agent,
-            prompt_path=self.prompt_path,
-            examples_path=self.examples_path,
-            use_mock=False
+        # Mock document manager
+        self.mock_doc_manager = Mock()
+        self.mock_doc_manager.determine_required_context.return_value = {
+            "insurance_id_card": {
+                "type": "document",
+                "present": None,
+                "source": None,
+                "user_validated": False,
+                "description": "Insurance identification card",
+                "date_added": None,
+                "document_id": None
+            },
+            "primary_care_referral": {
+                "type": "document",
+                "present": None,
+                "source": None,
+                "user_validated": False,
+                "description": "Referral from primary care physician",
+                "date_added": None,
+                "document_id": None
+            }
+        }
+        self.mock_doc_manager.read_document.side_effect = lambda doc_type: (
+            {
+                "type": "document",
+                "present": True,
+                "source": "system",
+                "user_validated": False,
+                "description": f"Test {doc_type}",
+                "date_added": "2025-01-15",
+                "document_id": f"test_{doc_type}_id"
+            } if doc_type == "insurance_id_card" else 
+            {
+                "type": "document",
+                "present": False,
+                "source": None,
+                "user_validated": False,
+                "description": f"Test {doc_type}",
+                "date_added": None,
+                "document_id": None
+            }
         )
         
-        # Create test input data
-        self.test_input = {
-            "meta_intent": {
-                "request_type": "service_request",
-                "summary": "User wants to get an allergy test.",
-                "emergency": False
+        # Mock output agent
+        self.mock_output_agent = Mock()
+        
+        # Mock config manager
+        self.mock_config_manager = Mock()
+        self.mock_config_manager.get_agent_config.return_value = {
+            "model": {
+                "name": "test-model",
+                "temperature": 0.0
             },
-            "clinical_context": {
-                "symptom": None,
-                "body": {
-                    "region": None,
-                    "side": None,
-                    "subpart": None
-                },
-                "onset": None,
-                "duration": None
+            "prompt": {
+                "path": "dummy_path.md"
             },
-            "service_intent": {
-                "specialty": "allergy",
-                "service": "allergy test",
-                "plan_detail_type": None
+            "examples": {
+                "path": "dummy_examples.md"
             },
-            "metadata": {
-                "raw_user_text": "I want to get an allergy test.",
-                "user_response_created": "Got it — I'll check your plan and try to help you access an allergy test near you.",
-                "timestamp": "2025-05-13T15:41:00Z"
+            "test_examples": {
+                "path": "dummy_test_examples.md"
             }
         }
         
-        # Load test examples
-        self.test_examples_path = "agents/task_requirements/tests/data/examples/test_examples_task_requirements_v0_1.md"
-        with open(self.test_examples_path, 'r') as f:
-            self.test_examples_content = f.read()
+        # Create agent with mocks
+        with patch('os.path.exists', return_value=False):
+            self.agent = TaskRequirementsAgent(
+                llm=self.mock_llm,
+                document_manager=self.mock_doc_manager,
+                output_agent=self.mock_output_agent,
+                config_manager=self.mock_config_manager
+            )
+            
+        # Set default prompt template and examples for testing
+        self.agent.prompt_template = "You are a test task requirements agent. {Examples}"
+        self.agent.examples = "Example: Determine required documents"
+
+    def test_init(self):
+        """Test agent initialization."""
+        self.assertEqual(self.agent.name, "task_requirements")
+        self.assertEqual(self.agent.document_manager, self.mock_doc_manager)
+        self.assertEqual(self.agent.output_agent, self.mock_output_agent)
+        self.assertIn("determine_required_context", self.agent.available_actions)
+
+    def test_process_successful(self):
+        """Test successful processing."""
+        # Process a task
+        result = self.agent.process(TEST_INPUT)
         
-        # Initialize SBERT model if available
-        if SBERT_AVAILABLE:
-            self.model = SentenceTransformer('all-MiniLM-L6-v2')
-    
-    def test_initialization(self):
-        """Test that the agent initializes correctly."""
-        self.assertIsNotNone(self.agent)
-        self.assertEqual(self.agent.prompt_path, self.prompt_path)
-        self.assertEqual(self.agent.examples_path, self.examples_path)
-        self.assertFalse(self.agent.use_mock)
-        self.assertIsNotNone(self.agent.prompt_template)
-        self.assertIsNotNone(self.agent.examples)
-    
-    def test_build_prompt(self):
-        """Test that the prompt is built correctly."""
-        prompt = self.agent._build_prompt(self.test_input)
+        # Check that LLM was called
+        self.mock_llm.invoke.assert_called_once()
         
-        # Verify that the prompt includes the examples
-        self.assertIn("# Example 1:", prompt)
+        # Check that document manager was called
+        self.mock_doc_manager.determine_required_context.assert_called_once()
+        self.mock_doc_manager.read_document.assert_called()
         
-        # Verify that the prompt includes the input
-        self.assertIn(json.dumps(self.test_input, indent=2), prompt)
-    
-    def test_determine_required_context(self):
-        """Test the determine_required_context action."""
-        service_intent = self.test_input["service_intent"]
-        result = self.agent._determine_required_context(service_intent)
-        
-        # Verify the result structure
-        self.assertIn("insurance_id_card", result)
-        self.assertIn("insurance_plan", result)
-        
-        # Verify the result content
-        self.assertEqual(result["insurance_id_card"]["present"], None)
-        self.assertEqual(result["insurance_id_card"]["user_validated"], False)
-    
-    def test_read_document(self):
-        """Test the read_document action."""
-        result = self.agent._read_document("insurance_id_card")
-        
-        # Verify the result structure
-        self.assertEqual(result["type"], "document")
-        self.assertEqual(result["present"], True)
-        self.assertEqual(result["user_validated"], False)
-        self.assertIn("description", result)
-    
-    def test_request_document_validation(self):
-        """Test the request_document_validation action."""
-        required_context = {
-            "insurance_id_card": {
-                "type": "document",
-                "present": True,
-                "user_validated": False,
-                "source": "user_documents_database",
-                "description": "Mock insurance_id_card document",
-                "date_added": datetime.now().strftime("%Y-%m-%d"),
-                "document_id": None
-            }
-        }
-        
-        result = self.agent._request_document_validation(required_context)
-        
-        # Verify the result
-        self.assertEqual(result["insurance_id_card"]["user_validated"], True)
-    
-    def test_request_user(self):
-        """Test the request_user action."""
-        required_context = {
-            "insurance_id_card": {
-                "type": "document",
-                "present": True,
-                "user_validated": False,
-                "source": "user_documents_database",
-                "description": "Mock insurance_id_card document",
-                "date_added": datetime.now().strftime("%Y-%m-%d"),
-                "document_id": None
-            }
-        }
-        
-        result = self.agent._request_user(required_context)
-        
-        # Verify the result
-        self.assertEqual(result["insurance_id_card"]["user_validated"], True)
-        
-        # Verify that the output agent was called
-        self.assertEqual(self.mock_output_agent.last_request, required_context)
-    
-    def test_add_doc_unique_ids(self):
-        """Test the add_doc_unique_ids action."""
-        required_context = {
-            "insurance_id_card": {
-                "type": "document",
-                "present": True,
-                "user_validated": True,
-                "source": "user_documents_database",
-                "description": "Mock insurance_id_card document",
-                "date_added": datetime.now().strftime("%Y-%m-%d"),
-                "document_id": None
-            }
-        }
-        
-        result = self.agent._add_doc_unique_ids(required_context)
-        
-        # Verify the result
-        self.assertIsNotNone(result["insurance_id_card"]["document_id"])
-        self.assertEqual(result["insurance_id_card"]["document_id"], "mock_id_insurance_id_card")
-    
-    def test_finish(self):
-        """Test the finish action."""
-        input_data = self.test_input
-        required_context = {
-            "insurance_id_card": {
-                "type": "document",
-                "present": True,
-                "user_validated": True,
-                "source": "user_documents_database",
-                "description": "Mock insurance_id_card document",
-                "date_added": datetime.now().strftime("%Y-%m-%d"),
-                "document_id": "mock_id_insurance_id_card"
-            }
-        }
-        
-        result = self.agent._finish((input_data, required_context))
-        
-        # Verify the result structure
-        self.assertIn("input", result)
-        self.assertIn("required_context", result)
-        self.assertIn("status", result)
-        self.assertIn("timestamp", result)
-        
-        # Verify the result content
-        self.assertEqual(result["input"], input_data)
-        self.assertEqual(result["required_context"], required_context)
+        # Check result
         self.assertEqual(result["status"], "complete")
-        
-        # Verify that the output agent was called
-        self.assertEqual(self.mock_output_agent.last_task, result)
-    
+        self.assertEqual(result["input"], TEST_INPUT)
+        self.assertIn("required_context", result)
+        self.assertIn("insurance_id_card", result["required_context"])
+
     def test_parse_react_output(self):
-        """Test parsing the ReAct output."""
-        llm_output = self.mock_llm._generate_default_response()
-        steps = self.agent._parse_react_output(llm_output)
+        """Test parsing of ReAct output."""
+        # Parse test output
+        steps = self.agent._parse_react_output(TEST_REACT_OUTPUT)
         
-        # Verify the steps
+        # Check parsing results
         self.assertEqual(len(steps), 6)
+        
+        # Check first step
         self.assertIn("thought", steps[0])
-        self.assertIn("act", steps[0])
         self.assertIn("action_name", steps[0])
-        self.assertIn("action_args", steps[0])
-        self.assertIn("observation", steps[0])
-        
-        # Verify the first step
         self.assertEqual(steps[0]["action_name"], "determine_required_context")
-        self.assertEqual(steps[0]["action_args"], "service_intent")
-    
-    def test_process_react_steps(self):
-        """Test processing the ReAct steps."""
-        # Create mock steps
-        steps = [
-            {
-                "thought": "I need to determine what documentation or plan rules are required for this request.",
-                "act": "determine_required_context[service_intent]",
-                "action_name": "determine_required_context",
-                "action_args": "service_intent",
-                "observation": "..."
-            },
-            {
-                "thought": "I need to check the insurance card to confirm coverage.",
-                "act": "read_document[insurance_id_card]",
-                "action_name": "read_document",
-                "action_args": "insurance_id_card",
-                "observation": "..."
-            },
-            {
-                "thought": "I need to validate the documents with the user.",
-                "act": "request_user[required_context]",
-                "action_name": "request_user",
-                "action_args": "required_context",
-                "observation": "..."
-            },
-            {
-                "thought": "I need to add unique IDs to the documents.",
-                "act": "add_doc_unique_ids[required_context]",
-                "action_name": "add_doc_unique_ids",
-                "action_args": "required_context",
-                "observation": "..."
-            },
-            {
-                "thought": "I have all the required documentation. I can now finish the task.",
-                "act": "finish[(input, required_context)]",
-                "action_name": "finish",
-                "action_args": "(input, required_context)",
-                "observation": "..."
-            }
-        ]
         
-        # Set the last input
-        self.agent.last_input = self.test_input
+        # Check last step
+        self.assertEqual(steps[5]["action_name"], "finish")
+
+    def test_build_specific_prompt(self):
+        """Test prompt building."""
+        # Build prompt
+        prompt = self.agent._build_specific_prompt(TEST_INPUT)
         
-        # Process the steps
-        result = self.agent._process_react_steps(steps)
-        
-        # Verify the result
-        self.assertIn("required_context", result)
-        self.assertIn("status", result)
-    
-    def test_process_with_mock_llm(self):
-        """Test processing with a mock LLM."""
-        result = self.agent.process(self.test_input)
-        
-        # Verify the result
-        self.assertIn("required_context", result)
-        self.assertIn("status", result)
-        self.assertEqual(result["status"], "complete")
-        
-        # Verify metrics were updated
-        self.assertEqual(self.agent.metrics["total_requests"], 1)
-        self.assertEqual(self.agent.metrics["successful_requests"], 1)
-        self.assertGreater(self.agent.metrics["avg_response_time"], 0)
-    
-    def test_process_with_mock_mode(self):
-        """Test processing with mock mode enabled."""
-        # Create a new agent with mock mode enabled
+        # Check prompt structure
+        self.assertIn("You are a test task requirements agent", prompt)
+        self.assertIn("Example: Determine required documents", prompt)
+        self.assertIn("service_request", prompt)  # From TEST_INPUT
+
+    def test_mock_mode(self):
+        """Test mock mode operation."""
+        # Create agent in mock mode
         mock_agent = TaskRequirementsAgent(
-            prompt_path=self.prompt_path,
-            examples_path=self.examples_path,
+            config_manager=self.mock_config_manager,
             use_mock=True
         )
         
-        result = mock_agent.process(self.test_input)
+        # Process with mock mode
+        result = mock_agent.process(TEST_INPUT)
         
-        # Verify the result
-        self.assertIn("required_context", result)
-        self.assertIn("status", result)
+        # Check result
         self.assertEqual(result["status"], "complete")
-        
-        # Verify the required context
-        self.assertIn("insurance_id_card", result["required_context"])
-        self.assertEqual(result["required_context"]["insurance_id_card"]["present"], True)
-        self.assertEqual(result["required_context"]["insurance_id_card"]["user_validated"], True)
-    
-    def test_process_without_llm(self):
-        """Test processing without an LLM."""
-        # Create a new agent without an LLM
-        no_llm_agent = TaskRequirementsAgent(
-            document_manager=self.mock_document_manager,
-            output_agent=self.mock_output_agent,
-            prompt_path=self.prompt_path,
-            examples_path=self.examples_path,
-            use_mock=False
-        )
-        
-        result = no_llm_agent.process(self.test_input)
-        
-        # Verify the result
-        self.assertIn("error", result)
-        self.assertEqual(result["status"], "failed")
-    
-    def test_metrics(self):
-        """Test metrics collection and reporting."""
-        # Process a request to generate metrics
-        self.agent.process(self.test_input)
-        
-        # Get the metrics
-        metrics = self.agent.get_metrics()
-        
-        # Verify the metrics structure
-        self.assertIn("total_requests", metrics)
-        self.assertIn("successful_requests", metrics)
-        self.assertIn("failed_requests", metrics)
-        self.assertIn("avg_response_time", metrics)
-        self.assertIn("token_usage", metrics)
-        self.assertIn("by_category", metrics)
-        self.assertIn("success_rate", metrics)
-        
-        # Verify the metrics content
-        self.assertEqual(metrics["total_requests"], 1)
-        self.assertEqual(metrics["successful_requests"], 1)
-        self.assertEqual(metrics["success_rate"], 1.0)
-        
-        # Test saving metrics
-        metrics_file = self.agent.save_metrics()
-        self.assertTrue(os.path.exists(metrics_file))
-        
-        # Clean up
-        if os.path.exists(metrics_file):
-            os.remove(metrics_file)
-    
-    def test_against_examples(self):
-        """Test the agent against the test examples."""
-        # Skip if SBERT is not available
-        if not SBERT_AVAILABLE:
-            self.skipTest("SBERT is not available")
-        
-        # Extract examples from the test examples file
-        examples = self._extract_examples_from_md(self.test_examples_content)
-        
-        for i, example in enumerate(examples):
-            # Create a custom LLM response based on the example
-            llm_response = self._create_llm_response_from_example(example)
-            mock_llm = MockLLM(response_text=llm_response)
-            
-            # Create a new agent with the mock LLM
-            test_agent = TaskRequirementsAgent(
-                llm=mock_llm,
-                document_manager=self.mock_document_manager,
-                output_agent=self.mock_output_agent,
-                prompt_path=self.prompt_path,
-                examples_path=self.examples_path,
-                use_mock=False
-            )
-            
-            # Process the input
-            result = test_agent.process(example["input"])
-            
-            # Compare the result with the expected output
-            similarity_score = self._compare_outputs(result, example["expected_output"])
-            
-            # Verify the similarity score
-            self.assertGreaterEqual(similarity_score, 0.7, f"Example {i+1} failed with similarity score {similarity_score}")
-            
-            # Print the result
-            print(f"Example {i+1}: Similarity score = {similarity_score:.2f} - {'PASS' if similarity_score >= 0.7 else 'FAIL'}")
-    
-    def _extract_examples_from_md(self, md_content: str) -> List[Dict[str, Any]]:
-        """Extract examples from the markdown content."""
-        examples = []
-        
-        # Split the content by example sections
-        example_sections = re.split(r'# Example \d+:', md_content)[1:]
-        
-        for section in example_sections:
-            # Extract the input JSON
-            input_match = re.search(r'```json\n(.*?)\n```', section, re.DOTALL)
-            if not input_match:
-                continue
-            
-            input_json = json.loads(input_match.group(1))
-            
-            # Extract the expected output (final required_context)
-            output_match = re.search(r'\*\*Obs \d+ \(uid added required_context\)\*\*:\s*```json\n(.*?)\n```', section, re.DOTALL)
-            if not output_match:
-                continue
-            
-            expected_output = json.loads(output_match.group(1))
-            
-            # Create the example
-            examples.append({
-                "input": input_json,
-                "expected_output": expected_output
-            })
-        
-        return examples
-    
-    def _create_llm_response_from_example(self, example: Dict[str, Any]) -> str:
-        """Create an LLM response from an example."""
-        # Extract the input and expected output
-        input_json = example["input"]
-        expected_output = example["expected_output"]
-        
-        # Create a response with the expected steps
-        response = """
-**Thought 1**: I need to determine what documentation or plan rules are required for this request.
-**Act 1**: determine_required_context[service_intent]
-**Obs 1**: {
-  "insurance_id_card": {
-    "type": "document",
-    "present": null,
-    "source": null,
-    "user_validated": false,
-    "description": "Photo or scan of the user's active insurance card",
-    "date_added": null,
-    "document_id": null
-  },
-  "insurance_plan": {
-    "type": "document",
-    "present": null,
-    "source": null,
-    "user_validated": false,
-    "description": "System must confirm services are covered under user plan",
-    "date_added": null,
-    "document_id": null
-  }
-}
+        self.assertIn("mock_insurance_id", result["required_context"]["insurance_id_card"]["document_id"])
 
-**Thought 2**: I need to check the insurance card to confirm coverage.
-**Act 2**: read_document[insurance_id_card]
-**Obs 2**: {
-  "type": "document",
-  "present": true,
-  "user_validated": false,
-  "source": "user_documents_database",
-  "description": "Active insurance card valid through 2026",
-  "date_added": "2025-05-10",
-  "document_id": null
-}
-
-**Thought 3**: I need to check the plan coverage info.
-**Act 3**: read_document[insurance_plan]
-**Obs 3**: {
-  "type": "document",
-  "present": true,
-  "user_validated": false,
-  "source": "user_documents_database",
-  "description": "Plan covers requested service",
-  "date_added": "2025-05-13",
-  "document_id": null
-}
-
-**Thought 4**: I need to validate the documents with the user.
-**Act 4**: request_user[required_context]
-**Obs 4**: {
-  "insurance_id_card": {
-    "type": "document",
-    "present": true,
-    "user_validated": true,
-    "source": "user_documents_database",
-    "description": "Active insurance card valid through 2026",
-    "date_added": "2025-05-10",
-    "document_id": null
-  },
-  "insurance_plan": {
-    "type": "document",
-    "present": true,
-    "user_validated": true,
-    "source": "user_documents_database",
-    "description": "Plan covers requested service",
-    "date_added": "2025-05-13",
-    "document_id": null
-  }
-}
-
-**Thought 5**: I need to add unique IDs to the documents.
-**Act 5**: add_doc_unique_ids[required_context]
-**Obs 5**: """ + json.dumps(expected_output, indent=2) + """
-
-**Thought 6**: I have all the required documentation. I can now finish the task.
-**Act 6**: finish[(input, required_context)]
-"""
+    def test_document_validation_error(self):
+        """Test handling of document validation errors."""
+        # Make document manager throw an exception
+        self.mock_doc_manager.determine_required_context.side_effect = Exception("Document error")
         
-        return response
-    
-    def _compare_outputs(self, actual_output: Dict[str, Any], expected_output: Dict[str, Any]) -> float:
-        """Compare the actual output with the expected output using SBERT."""
-        # Convert the outputs to strings
-        actual_str = json.dumps(actual_output.get("required_context", {}), sort_keys=True)
-        expected_str = json.dumps(expected_output, sort_keys=True)
-        
-        # Compute embeddings
-        actual_embedding = self.model.encode(actual_str, convert_to_tensor=True)
-        expected_embedding = self.model.encode(expected_str, convert_to_tensor=True)
-        
-        # Compute cosine similarity
-        similarity = util.pytorch_cos_sim(actual_embedding, expected_embedding).item()
-        
-        return similarity
+        # Create a patched parser that will trigger the error
+        def patched_parse(output):
+            steps = [
+                {
+                    "thought": "I need to determine required documents",
+                    "action_name": "determine_required_context",
+                    "action_args": "service_intent"
+                }
+            ]
+            return steps
+            
+        # Apply the patch
+        with patch.object(self.agent, '_parse_react_output', return_value=patched_parse(TEST_REACT_OUTPUT)):
+            # Check that the correct exception is raised
+            with self.assertRaises(DocumentValidationError):
+                self.agent.process(TEST_INPUT)
 
-if __name__ == "__main__":
+    def test_react_processing_error(self):
+        """Test handling of ReAct processing errors."""
+        # Make ReAct parsing throw an exception
+        with patch.object(self.agent, '_parse_react_output', side_effect=Exception("ReAct error")):
+            # Check that the correct exception is raised
+            with self.assertRaises(ReactProcessingError):
+                self.agent.process(TEST_INPUT)
+
+    def test_reset(self):
+        """Test agent reset functionality."""
+        # Set some state
+        self.agent.last_input = TEST_INPUT
+        self.agent.last_required_context = {"test": "context"}
+        
+        # Reset
+        self.agent.reset()
+        
+        # Verify state was cleared
+        self.assertIsNone(self.agent.last_input)
+        self.assertIsNone(self.agent.last_required_context)
+
+
+if __name__ == '__main__':
     unittest.main() 

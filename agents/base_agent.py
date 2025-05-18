@@ -499,37 +499,56 @@ class BaseAgent:
             return {}
         return self.state_history[-1]["state"]
     
-    def _load_prompt(self, prompt_path: Optional[str] = None) -> str:
+    def _load_prompt(self, prompt_path: Optional[str] = None, default_prompt: Optional[str] = None) -> str:
         """
         Load a prompt from a file.
         
         Args:
             prompt_path: Path to the prompt file. If not provided, the agent's
                        default prompt path will be used.
+            default_prompt: Default prompt text to use if the file is not found
+                           or cannot be read.
                        
         Returns:
             The loaded prompt as a string
             
         Raises:
-            ConfigurationError: If the prompt file is not found
+            ConfigurationError: If the prompt file is not found and no default is provided
         """
         path = prompt_path or self.prompt_path
         if not path:
-            raise ConfigurationError("No prompt path specified")
+            if default_prompt:
+                self.logger.warning("No prompt path specified, using default prompt")
+                return default_prompt
+            raise ConfigurationError("No prompt path specified and no default prompt provided")
         
         try:
             with open(path, 'r') as f:
-                return f.read()
+                prompt_text = f.read()
+                self.logger.info(f"Successfully loaded prompt from {path}")
+                return prompt_text
         except FileNotFoundError:
+            if default_prompt:
+                self.logger.warning(f"Prompt file not found at {path}, using default prompt")
+                return default_prompt
+            self.logger.error(f"Prompt file not found: {path}")
             raise ConfigurationError(f"Prompt file not found: {path}")
+        except Exception as e:
+            if default_prompt:
+                self.logger.warning(f"Error reading prompt file {path}: {str(e)}, using default prompt")
+                return default_prompt
+            self.logger.error(f"Error reading prompt file {path}: {str(e)}")
+            raise ConfigurationError(f"Error reading prompt file {path}: {str(e)}")
     
-    def _load_examples(self, examples_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    def _load_examples(self, examples_path: Optional[str] = None, default_examples: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
         """
         Load examples from a file.
         
         Args:
             examples_path: Path to the examples file. If not provided, the agent's
                          default examples path will be used.
+            default_examples: Default examples to use if the file is not found
+                             or cannot be read.
                          
         Returns:
             The loaded examples as a list of dictionaries
@@ -539,13 +558,19 @@ class BaseAgent:
         """
         path = examples_path or self.examples_path
         if not path:
+            if default_examples is not None:
+                self.logger.info("No examples path specified, using default examples")
+                return default_examples
+            self.logger.info("No examples path specified and no default examples provided")
             return []
         
         try:
             with open(path, 'r') as f:
                 # Check file extension and load accordingly
                 if path.endswith('.json'):
-                    return json.load(f)
+                    examples = json.load(f)
+                    self.logger.info(f"Successfully loaded {len(examples)} examples from {path}")
+                    return examples
                 elif path.endswith('.md'):
                     # Parse markdown examples - this is a simple implementation
                     # and may need to be adjusted based on your markdown format
@@ -570,14 +595,28 @@ class BaseAgent:
                     if current_example:
                         examples.append(current_example)
                     
+                    self.logger.info(f"Successfully loaded {len(examples)} examples from {path}")
                     return examples
                 else:
                     raise ConfigurationError(f"Unsupported examples file format: {path}")
         except FileNotFoundError:
+            if default_examples is not None:
+                self.logger.warning(f"Examples file not found at {path}, using default examples")
+                return default_examples
             self.logger.warning(f"Examples file not found: {path}")
             return []
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            if default_examples is not None:
+                self.logger.warning(f"Invalid JSON in examples file {path}: {str(e)}, using default examples")
+                return default_examples
+            self.logger.error(f"Invalid JSON in examples file: {path}")
             raise ConfigurationError(f"Invalid JSON in examples file: {path}")
+        except Exception as e:
+            if default_examples is not None:
+                self.logger.warning(f"Error reading examples file {path}: {str(e)}, using default examples")
+                return default_examples
+            self.logger.error(f"Error reading examples file {path}: {str(e)}")
+            raise ConfigurationError(f"Error reading examples file {path}: {str(e)}")
     
     @staticmethod
     def get_env_variable(variable_name: str, default: str = None) -> str:

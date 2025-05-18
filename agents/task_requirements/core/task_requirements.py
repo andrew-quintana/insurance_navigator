@@ -17,33 +17,32 @@ import json
 import re
 import logging
 import time
+import traceback
 from typing import Dict, List, Any, Optional, Union, Tuple
 from datetime import datetime
-import traceback
-from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
-
-# Import the agent config manager
-from utils.agent_config_manager import get_config_manager
-
-# Import the BaseAgent class
+# Import base agent and exceptions
 from agents.base_agent import BaseAgent
+from agents.common.exceptions import (
+    TaskRequirementsException,
+    TaskRequirementsProcessingError,
+    DocumentValidationError,
+    ReactProcessingError
+)
 
-# Setup logging
-logger = logging.getLogger("task_requirements_agent")
-if not logger.handlers:
-    # Create logs directory if it doesn't exist
-    log_dir = os.path.join("agents", "task_requirements", "logs")
-    os.makedirs(log_dir, exist_ok=True)
-    
-    # Set up file handler
-    handler = logging.FileHandler(os.path.join(log_dir, "task_requirements.log"))
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
+# Import configuration handling
+from utils.config_manager import ConfigManager
+
+# Import models
+from agents.task_requirements.models.task_models import (
+    DocumentStatus,
+    ReactStep,
+    TaskProcessingResult
+)
+
+# Setup logger
+logger = logging.getLogger(__name__)
+
 
 class TaskRequirementsAgent(BaseAgent):
     """
@@ -51,13 +50,12 @@ class TaskRequirementsAgent(BaseAgent):
     required documentation for insurance tasks and requests.
     """
     
-    def __init__(self, 
+    def __init__(self,
                  llm=None,
                  document_manager=None,
                  output_agent=None,
-                 prompt_path=None,
-                 examples_path=None,
-                 use_mock=False):
+                 config_manager: Optional[ConfigManager] = None,
+                 use_mock: bool = False):
         """
         Initialize the Task Requirements Agent.
         
@@ -65,29 +63,40 @@ class TaskRequirementsAgent(BaseAgent):
             llm: The language model to use for generating responses
             document_manager: The document manager agent to use for document operations
             output_agent: The agent to pass finished tasks to
-            prompt_path (str): Optional path to the prompt template file (overrides config)
-            examples_path (str): Optional path to the examples file (overrides config)
-            use_mock (bool): Whether to use mock responses for testing
+            config_manager: Configuration manager instance
+            use_mock: Whether to use mock responses for testing
         """
+        # Get configuration manager if not provided
+        self.config_manager = config_manager or ConfigManager()
+        
+        # Get agent configuration
+        agent_config = self.config_manager.get_agent_config("task_requirements")
+        
+        # Get model configuration
+        model_config = agent_config.get("model", {})
+        model_name = model_config.get("name", "claude-3-sonnet-20240229")
+        temperature = model_config.get("temperature", 0.0)
+        
+        # Get prompt configuration
+        prompt_path = agent_config.get("prompt", {}).get("path")
+        examples_path = agent_config.get("examples", {}).get("path")
+        
         # Initialize the BaseAgent
         super().__init__(
             name="task_requirements",
             llm=llm,
-            use_mock=use_mock,
-            prompt_path=prompt_path,
-            examples_path=examples_path
+            config_manager=self.config_manager
         )
         
         # Store additional components
         self.document_manager = document_manager
         self.output_agent = output_agent
+        self.use_mock = use_mock
         
-        # Get paths from config if not provided
-        if not self.prompt_path:
-            self.prompt_path = self.agent_config["prompt"]["path"]
-        if not self.examples_path:
-            self.examples_path = self.agent_config["examples"]["path"]
-        self.test_examples_path = self.agent_config["test_examples"]["path"]
+        # Store paths
+        self.prompt_path = prompt_path
+        self.examples_path = examples_path
+        self.test_examples_path = agent_config.get("test_examples", {}).get("path")
         
         # Load prompt template and examples
         self.prompt_template = self._load_file(self.prompt_path)
@@ -108,36 +117,74 @@ class TaskRequirementsAgent(BaseAgent):
         self.last_input = None
         self.last_required_context = None
         
-        self.logger.info(f"Task Requirements Agent initialized with prompt from {self.prompt_path}")
-        self.logger.info(f"Using examples from {self.examples_path}")
+        logger.info(f"Task Requirements Agent initialized with model {model_name}")
+
+    def _load_file(self, file_path: str) -> str:
+        """
+        Load file content from path.
+        
+        Args:
+            file_path: Path to the file
+            
+        Returns:
+            File content as string, empty string if file not found
+            
+        Raises:
+            FileNotFoundError: If the file is not found
+        """
+        if not file_path:
+            return ""
+            
+        try:
+            with open(file_path, 'r') as f:
+                return f.read()
+        except FileNotFoundError:
+            logger.warning(f"File not found: {file_path}")
+            raise FileNotFoundError(f"File not found: {file_path}")
+        except Exception as e:
+            logger.error(f"Error loading file {file_path}: {str(e)}")
+            raise
 
     def _build_specific_prompt(self, input_json: Dict[str, Any]) -> str:
         """
         Build the full prompt by inserting examples into the template.
         
         Args:
-            input_json (Dict[str, Any]): The input JSON from the patient navigator
+            input_json: The input JSON from the patient navigator
             
         Returns:
-            str: The complete prompt with examples inserted
+            The complete prompt with examples inserted
+            
+        Raises:
+            TaskRequirementsException: If there's an error building the prompt
         """
-        return self._build_prompt(
-            template_placeholder=None,
-            example_placeholder="{Examples}",
-            input_data=input_json,
-            template_path=self.prompt_path,
-            examples_path=self.examples_path
-        )
+        try:
+            if "{Examples}" in self.prompt_template and self.examples:
+                prompt = self.prompt_template.replace("{Examples}", self.examples)
+            else:
+                prompt = self.prompt_template
+                
+            # Add the input to the prompt
+            if input_json:
+                prompt += f"\n\nInput:\n```json\n{json.dumps(input_json, indent=2)}\n```"
+                
+            return prompt
+        except Exception as e:
+            logger.error(f"Error building prompt: {str(e)}")
+            raise TaskRequirementsException(f"Failed to build prompt: {str(e)}")
 
     def _determine_required_context(self, service_intent: Dict[str, Any]) -> Dict[str, Any]:
         """
         Determine the required context based on the service intent.
         
         Args:
-            service_intent (Dict[str, Any]): The service intent from the input
+            service_intent: The service intent from the input
             
         Returns:
-            Dict[str, Any]: The required context
+            The required context
+            
+        Raises:
+            DocumentValidationError: If there's an error determining the required context
         """
         if self.use_mock:
             # Return mock required context
@@ -170,9 +217,10 @@ class TaskRequirementsAgent(BaseAgent):
             except Exception as e:
                 logger.error(f"Error determining required context: {str(e)}")
                 logger.error(traceback.format_exc())
-                return {}
+                raise DocumentValidationError(f"Failed to determine required context: {str(e)}")
         
         # Default empty response if no document manager is available
+        logger.warning("No document manager available to determine required context")
         return {}
 
     def _read_document(self, document_type: str) -> Dict[str, Any]:
@@ -180,10 +228,13 @@ class TaskRequirementsAgent(BaseAgent):
         Read a document from the document manager.
         
         Args:
-            document_type (str): The type of document to read
+            document_type: The type of document to read
             
         Returns:
-            Dict[str, Any]: The document data
+            The document data
+            
+        Raises:
+            DocumentValidationError: If there's an error reading the document
         """
         if self.use_mock:
             # Return mock document data
@@ -204,17 +255,10 @@ class TaskRequirementsAgent(BaseAgent):
             except Exception as e:
                 logger.error(f"Error reading document: {str(e)}")
                 logger.error(traceback.format_exc())
-                return {
-                    "type": "document",
-                    "present": False,
-                    "user_validated": False,
-                    "source": None,
-                    "description": f"Error reading {document_type}",
-                    "date_added": None,
-                    "document_id": None
-                }
+                raise DocumentValidationError(f"Failed to read document {document_type}: {str(e)}")
         
         # Default response if no document manager is available
+        logger.warning(f"No document manager available to read {document_type}")
         return {
             "type": "document",
             "present": False,
@@ -230,10 +274,13 @@ class TaskRequirementsAgent(BaseAgent):
         Request document validation from the document manager.
         
         Args:
-            required_context (Dict[str, Any]): The required context
+            required_context: The required context
             
         Returns:
-            Dict[str, Any]: The updated required context with validation status
+            The updated required context with validation status
+            
+        Raises:
+            DocumentValidationError: If there's an error validating the documents
         """
         if self.use_mock:
             # Return mock validation results
@@ -251,9 +298,10 @@ class TaskRequirementsAgent(BaseAgent):
             except Exception as e:
                 logger.error(f"Error validating documents: {str(e)}")
                 logger.error(traceback.format_exc())
-                return required_context
+                raise DocumentValidationError(f"Failed to validate documents: {str(e)}")
         
         # Default response if no document manager is available
+        logger.warning("No document manager available to validate documents")
         return required_context
 
     def _request_information_validation(self, required_context: Dict[str, Any]) -> Dict[str, Any]:
@@ -261,10 +309,13 @@ class TaskRequirementsAgent(BaseAgent):
         Request information validation from the document manager.
         
         Args:
-            required_context (Dict[str, Any]): The required context
+            required_context: The required context
             
         Returns:
-            Dict[str, Any]: The updated required context with validation status
+            The updated required context with validation status
+            
+        Raises:
+            DocumentValidationError: If there's an error validating the information
         """
         if self.use_mock:
             # Return mock validation results
@@ -282,9 +333,10 @@ class TaskRequirementsAgent(BaseAgent):
             except Exception as e:
                 logger.error(f"Error validating information: {str(e)}")
                 logger.error(traceback.format_exc())
-                return required_context
+                raise DocumentValidationError(f"Failed to validate information: {str(e)}")
         
         # Default response if no document manager is available
+        logger.warning("No document manager available to validate information")
         return required_context
 
     def _request_user(self, missing_context: Dict[str, Any]) -> Dict[str, Any]:
@@ -292,10 +344,13 @@ class TaskRequirementsAgent(BaseAgent):
         Request missing information from the user.
         
         Args:
-            missing_context (Dict[str, Any]): The missing context
+            missing_context: The missing context
             
         Returns:
-            Dict[str, Any]: The updated context with user-provided information
+            The updated context with user-provided information
+            
+        Raises:
+            TaskRequirementsException: If there's an error requesting information from the user
         """
         if self.use_mock:
             # Return mock user response
@@ -313,9 +368,10 @@ class TaskRequirementsAgent(BaseAgent):
             except Exception as e:
                 logger.error(f"Error requesting user information: {str(e)}")
                 logger.error(traceback.format_exc())
-                return missing_context
+                raise TaskRequirementsException(f"Failed to request user information: {str(e)}")
         
         # Default response if no output agent is available
+        logger.warning("No output agent available to request user information")
         return missing_context
 
     def _add_doc_unique_ids(self, required_context: Dict[str, Any]) -> Dict[str, Any]:
@@ -323,10 +379,13 @@ class TaskRequirementsAgent(BaseAgent):
         Add unique IDs to documents in the required context.
         
         Args:
-            required_context (Dict[str, Any]): The required context
+            required_context: The required context
             
         Returns:
-            Dict[str, Any]: The updated required context with unique IDs
+            The updated required context with unique IDs
+            
+        Raises:
+            DocumentValidationError: If there's an error adding unique IDs
         """
         if self.use_mock:
             # Return mock unique IDs
@@ -343,9 +402,10 @@ class TaskRequirementsAgent(BaseAgent):
             except Exception as e:
                 logger.error(f"Error adding unique IDs: {str(e)}")
                 logger.error(traceback.format_exc())
-                return required_context
+                raise DocumentValidationError(f"Failed to add unique IDs: {str(e)}")
         
         # Default response if no document manager is available
+        logger.warning("No document manager available to add unique IDs")
         return required_context
 
     def _finish(self, data: Tuple[Dict[str, Any], Dict[str, Any]]) -> Dict[str, Any]:
@@ -353,10 +413,13 @@ class TaskRequirementsAgent(BaseAgent):
         Finish processing and return the result.
         
         Args:
-            data (Tuple[Dict[str, Any], Dict[str, Any]]): The input and required context
+            data: The input and required context
             
         Returns:
-            Dict[str, Any]: The result
+            The result
+            
+        Raises:
+            TaskRequirementsException: If there's an error finishing the task
         """
         input_data, required_context = data
         
@@ -373,6 +436,7 @@ class TaskRequirementsAgent(BaseAgent):
             except Exception as e:
                 logger.error(f"Error processing task: {str(e)}")
                 logger.error(traceback.format_exc())
+                raise TaskRequirementsException(f"Failed to process task: {str(e)}")
         
         return result
 
@@ -381,117 +445,132 @@ class TaskRequirementsAgent(BaseAgent):
         Parse the output from the LLM into a list of ReAct steps.
         
         Args:
-            llm_output (str): The output from the LLM
+            llm_output: The output from the LLM
             
         Returns:
-            List[Dict[str, str]]: The parsed ReAct steps
+            The parsed ReAct steps
+            
+        Raises:
+            ReactProcessingError: If there's an error parsing the output
         """
-        steps = []
-        
-        # Define regex patterns to extract thought-act-obs triplets
-        thought_pattern = r"\*\*Thought\s+(\d+)\*\*:\s+(.*?)(?=\*\*Act|\Z)"
-        act_pattern = r"\*\*Act\s+(\d+)\*\*:\s+(.*?)(?=\*\*Obs|\Z)"
-        obs_pattern = r"\*\*Obs\s+(\d+)(?:\s+\([^)]*\))?\*\*:\s+(.*?)(?=\*\*Thought|\Z)"
-        
-        # Extract thoughts, acts, and observations
-        thoughts = re.findall(thought_pattern, llm_output, re.DOTALL)
-        acts = re.findall(act_pattern, llm_output, re.DOTALL)
-        observations = re.findall(obs_pattern, llm_output, re.DOTALL)
-        
-        # Match them up by step number
-        for i in range(len(thoughts)):
-            step = {}
+        try:
+            steps = []
             
-            # Add thought if available
-            if i < len(thoughts):
-                step_num, thought_text = thoughts[i]
-                step["thought"] = thought_text.strip()
+            # Define regex patterns to extract thought-act-obs triplets
+            thought_pattern = r"\*\*Thought\s+(\d+)\*\*:\s+(.*?)(?=\*\*Act|\Z)"
+            act_pattern = r"\*\*Act\s+(\d+)\*\*:\s+(.*?)(?=\*\*Obs|\Z)"
+            obs_pattern = r"\*\*Obs\s+(\d+)(?:\s+\([^)]*\))?\*\*:\s+(.*?)(?=\*\*Thought|\Z)"
             
-            # Add act if available
-            if i < len(acts):
-                step_num, act_text = acts[i]
-                step["act"] = act_text.strip()
+            # Extract thoughts, acts, and observations
+            thoughts = re.findall(thought_pattern, llm_output, re.DOTALL)
+            acts = re.findall(act_pattern, llm_output, re.DOTALL)
+            observations = re.findall(obs_pattern, llm_output, re.DOTALL)
+            
+            # Match them up by step number
+            for i in range(len(thoughts)):
+                step = {}
                 
-                # Parse the action and arguments
-                action_match = re.match(r"(\w+)\[(.*)\]", act_text.strip())
-                if action_match:
-                    action_name, args_str = action_match.groups()
-                    step["action_name"] = action_name
-                    step["action_args"] = args_str
+                # Add thought if available
+                if i < len(thoughts):
+                    step_num, thought_text = thoughts[i]
+                    step["thought"] = thought_text.strip()
+                
+                # Add act if available
+                if i < len(acts):
+                    step_num, act_text = acts[i]
+                    step["act"] = act_text.strip()
+                    
+                    # Parse the action and arguments
+                    action_match = re.match(r"(\w+)\[(.*)\]", act_text.strip())
+                    if action_match:
+                        action_name, args_str = action_match.groups()
+                        step["action_name"] = action_name
+                        step["action_args"] = args_str
+                
+                # Add observation if available
+                if i < len(observations):
+                    step_num, obs_text = observations[i]
+                    step["observation"] = obs_text.strip()
+                
+                steps.append(step)
             
-            # Add observation if available
-            if i < len(observations):
-                step_num, obs_text = observations[i]
-                step["observation"] = obs_text.strip()
-            
-            steps.append(step)
-        
-        return steps
+            return steps
+        except Exception as e:
+            logger.error(f"Error parsing ReAct output: {str(e)}")
+            raise ReactProcessingError(f"Failed to parse ReAct output: {str(e)}")
 
     def _process_react_steps(self, steps: List[Dict[str, str]]) -> Dict[str, Any]:
         """
         Process the ReAct steps and execute the actions.
         
         Args:
-            steps (List[Dict[str, str]]): The ReAct steps
+            steps: The ReAct steps
             
         Returns:
-            Dict[str, Any]: The result of processing the steps
+            The result of processing the steps
+            
+        Raises:
+            ReactProcessingError: If there's an error processing the steps
         """
-        result = {}
-        required_context = {}
-        
-        for step in steps:
-            if "action_name" not in step or "action_args" not in step:
-                continue
+        try:
+            result = {}
+            required_context = {}
             
-            action_name = step["action_name"]
-            action_args = step["action_args"]
+            for step in steps:
+                if "action_name" not in step or "action_args" not in step:
+                    continue
+                
+                action_name = step["action_name"]
+                action_args = step["action_args"]
+                
+                # Skip if the action is not available
+                if action_name not in self.available_actions:
+                    logger.warning(f"Action not available: {action_name}")
+                    continue
+                
+                # Parse the arguments
+                try:
+                    if action_name == "determine_required_context":
+                        # Extract service_intent from the input
+                        args = self.last_input.get("service_intent", {})
+                        result = self.available_actions[action_name](args)
+                        required_context = result
+                        self.last_required_context = required_context
+                    elif action_name == "read_document":
+                        # Extract document type from the arguments
+                        document_type = action_args.strip()
+                        doc_result = self.available_actions[action_name](document_type)
+                        if required_context and document_type in required_context:
+                            required_context[document_type].update(doc_result)
+                        else:
+                            required_context[document_type] = doc_result
+                    elif action_name == "request_document_validation":
+                        # Pass the required context
+                        required_context = self.available_actions[action_name](required_context)
+                    elif action_name == "request_information_validation":
+                        # Pass the required context
+                        required_context = self.available_actions[action_name](required_context)
+                    elif action_name == "request_user":
+                        # Pass the required context
+                        required_context = self.available_actions[action_name](required_context)
+                    elif action_name == "add_doc_unique_ids":
+                        # Pass the required context
+                        required_context = self.available_actions[action_name](required_context)
+                    elif action_name == "finish":
+                        # Pass the input and required context
+                        result = self.available_actions[action_name]((self.last_input, required_context))
+                except Exception as e:
+                    logger.error(f"Error processing action {action_name}: {str(e)}")
+                    logger.error(traceback.format_exc())
+                    raise ReactProcessingError(f"Failed to process action {action_name}: {str(e)}")
             
-            # Skip if the action is not available
-            if action_name not in self.available_actions:
-                logger.warning(f"Action not available: {action_name}")
-                continue
-            
-            # Parse the arguments
-            try:
-                if action_name == "determine_required_context":
-                    # Extract service_intent from the input
-                    args = self.last_input.get("service_intent", {})
-                    result = self.available_actions[action_name](args)
-                    required_context = result
-                    self.last_required_context = required_context
-                elif action_name == "read_document":
-                    # Extract document type from the arguments
-                    document_type = action_args.strip()
-                    doc_result = self.available_actions[action_name](document_type)
-                    if required_context and document_type in required_context:
-                        required_context[document_type].update(doc_result)
-                    else:
-                        required_context[document_type] = doc_result
-                elif action_name == "request_document_validation":
-                    # Pass the required context
-                    required_context = self.available_actions[action_name](required_context)
-                elif action_name == "request_information_validation":
-                    # Pass the required context
-                    required_context = self.available_actions[action_name](required_context)
-                elif action_name == "request_user":
-                    # Pass the required context
-                    required_context = self.available_actions[action_name](required_context)
-                elif action_name == "add_doc_unique_ids":
-                    # Pass the required context
-                    required_context = self.available_actions[action_name](required_context)
-                elif action_name == "finish":
-                    # Pass the input and required context
-                    result = self.available_actions[action_name]((self.last_input, required_context))
-            except Exception as e:
-                logger.error(f"Error processing action {action_name}: {str(e)}")
-                logger.error(traceback.format_exc())
-        
-        return {
-            "required_context": required_context,
-            **result
-        }
+            return {
+                "required_context": required_context,
+                **result
+            }
+        except Exception as e:
+            logger.error(f"Error processing ReAct steps: {str(e)}")
+            raise ReactProcessingError(f"Failed to process ReAct steps: {str(e)}")
     
     @BaseAgent.track_performance
     def process(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -499,10 +578,15 @@ class TaskRequirementsAgent(BaseAgent):
         Process input from the Patient Navigator and determine document requirements.
         
         Args:
-            input_data (Dict[str, Any]): The input data from the Patient Navigator
+            input_data: The input data from the Patient Navigator
             
         Returns:
-            Dict[str, Any]: The processed result with required_context
+            The processed result with required_context
+            
+        Raises:
+            TaskRequirementsProcessingError: If there's an error processing the input
+            ReactProcessingError: If there's an error in the ReAct framework
+            DocumentValidationError: If there's an error validating documents
         """
         start_time = time.time()
         
@@ -551,48 +635,50 @@ class TaskRequirementsAgent(BaseAgent):
                             # Fallback, try to convert to string
                             llm_text = str(llm_response)
                     
-                    self.logger.info(f"LLM response received, length: {len(llm_text)}")
+                    logger.info(f"LLM response received, length: {len(llm_text)}")
                     
                     # Parse the response
-                    react_steps = self._parse_react_output(llm_text)
+                    try:
+                        react_steps = self._parse_react_output(llm_text)
+                    except ReactProcessingError as e:
+                        logger.error(f"Error parsing ReAct output: {str(e)}")
+                        raise
                     
                     # Process the steps
-                    result = self._process_react_steps(react_steps)
+                    try:
+                        result = self._process_react_steps(react_steps)
+                    except ReactProcessingError as e:
+                        logger.error(f"Error processing ReAct steps: {str(e)}")
+                        raise
                     
                     return result
+                except (ReactProcessingError, DocumentValidationError):
+                    # Re-raise specific exceptions
+                    raise
                 except Exception as e:
-                    self.logger.error(f"Error processing LLM response: {str(e)}")
-                    self.logger.error(traceback.format_exc())
-                    
-                    return {
-                        "error": f"Error processing LLM response: {str(e)}",
-                        "status": "failed"
-                    }
+                    logger.error(f"Error processing LLM response: {str(e)}")
+                    logger.error(traceback.format_exc())
+                    raise TaskRequirementsProcessingError(f"Error processing LLM response: {str(e)}")
             else:
                 logger.warning("No LLM provided. Cannot process input.")
-                
-                return {
-                    "error": "No LLM provided",
-                    "status": "failed"
-                }
+                raise TaskRequirementsProcessingError("No LLM provided. Cannot process input.")
+        except TaskRequirementsException:
+            # Re-raise specific exceptions
+            raise
         except Exception as e:
             logger.error(f"Error processing input: {str(e)}")
             logger.error(traceback.format_exc())
-            
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
+            raise TaskRequirementsProcessingError(f"Error processing input: {str(e)}")
 
     def _simulate_mock_response(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Simulate a mock response for testing.
         
         Args:
-            input_data (Dict[str, Any]): The input data
+            input_data: The input data
             
         Returns:
-            Dict[str, Any]: The simulated response
+            The simulated response
         """
         # Get the request type
         request_type = input_data.get("meta_intent", {}).get("request_type", "unknown")
@@ -649,6 +735,12 @@ class TaskRequirementsAgent(BaseAgent):
             "timestamp": datetime.now().isoformat()
         }
 
+    def reset(self) -> None:
+        """Reset the agent's state."""
+        self.last_input = None
+        self.last_required_context = None
+        logger.info("Reset TaskRequirementsAgent state")
+
 def test_with_anthropic():
     """
     Test the TaskRequirementsAgent with the real Anthropic model.
@@ -664,7 +756,7 @@ def test_with_anthropic():
         return
     
     # Get the test examples path from agent config
-    config_manager = get_config_manager()
+    config_manager = ConfigManager()
     agent_config = config_manager.get_agent_config("task_requirements")
     test_examples_path = agent_config["test_examples"]["path"]
     model_config = agent_config["model"]
@@ -734,7 +826,7 @@ def test_task_requirements_agent():
     This function loads test examples and runs them through the agent.
     """
     # Get the test examples path from agent config
-    config_manager = get_config_manager()
+    config_manager = ConfigManager()
     agent_config = config_manager.get_agent_config("task_requirements")
     test_examples_path = agent_config["test_examples"]["path"]
     
