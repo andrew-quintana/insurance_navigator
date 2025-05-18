@@ -26,7 +26,8 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.language_models import BaseLanguageModel
 from langchain_anthropic import ChatAnthropic
 from langchain_core.output_parsers import PydanticOutputParser
-from langchain.prompts import SystemMessage, HumanMessage, ChatPromptTemplate
+from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.prompts import ChatPromptTemplate
 
 # Import base agent and exceptions
 from agents.base_agent import BaseAgent
@@ -41,12 +42,23 @@ from agents.common.exceptions import (
 from utils.config_manager import ConfigManager
 
 # Import models
-from agents.service_access_strategy.models.strategy_models import (
+from agents.service_access_strategy.core.models.strategy_models import (
     ServiceAccessStrategy, ServiceMatch, ActionStep
 )
 
 # Setup logger
 logger = logging.getLogger(__name__)
+if not logger.handlers:
+    # Create logs directory if it doesn't exist
+    log_dir = os.path.join("logs")
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # Set up file handler
+    handler = logging.FileHandler(os.path.join(log_dir, "service_access_strategy.log"))
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
 
 
 class ServiceAccessStrategyAgent(BaseAgent):
@@ -54,7 +66,7 @@ class ServiceAccessStrategyAgent(BaseAgent):
     
     def __init__(
         self, 
-        llm: Optional[BaseLanguageModel] = None,
+                 llm: Optional[BaseLanguageModel] = None,
         policy_compliance_agent = None,
         service_provider_agent = None,
         config_manager: Optional[ConfigManager] = None
@@ -68,9 +80,12 @@ class ServiceAccessStrategyAgent(BaseAgent):
             service_provider_agent: Optional ServiceProviderAgent to find providers
             config_manager: Optional ConfigManager for configuration
         """
+        # Store ConfigManager
+        self.config_manager = config_manager
+        
         # Initialize base agent
         super().__init__(
-            name="service_access_strategy",
+            name="service_access_strategy", 
             llm=llm,
             logger=logger
         )
@@ -87,7 +102,7 @@ class ServiceAccessStrategyAgent(BaseAgent):
         
         # Initialize agent-specific components
         self._initialize_agent()
-
+    
     def check_compliance(self, policy_type: str, service_type: str, user_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Check policy compliance for a service.
@@ -232,8 +247,18 @@ class ServiceAccessStrategyAgent(BaseAgent):
             
             # Generate the strategy
             try:
-                strategy = self.strategy_chain.invoke(input_dict)
-                result = strategy.model_dump()
+                strategy_response = self.strategy_chain.invoke(input_dict)
+                
+                # Handle different response formats
+                if isinstance(strategy_response, str):
+                    # Parse string response
+                    result = json.loads(strategy_response)
+                elif hasattr(strategy_response, 'model_dump'):
+                    # Handle Pydantic model response
+                    result = strategy_response.model_dump()
+                else:
+                    # Fallback
+                    result = strategy_response
             except Exception as e:
                 logger.error(f"Strategy generation error: {str(e)}")
                 raise StrategyDevelopmentError(f"Failed to generate strategy: {str(e)}") from e
@@ -303,25 +328,14 @@ class ServiceAccessStrategyAgent(BaseAgent):
             # Use default paths if not available
             prompt_path = "agents/service_access_strategy/prompts/prompt_service_access_strategy_v0_2.md"
             examples_path = "agents/service_access_strategy/prompts/examples/strategy_examples_v0_1.json"
-            
-        # Default prompt if path is not found
-        default_prompt = """
-        # Service Access Strategy Prompt
-
-        You are an expert healthcare navigation assistant. Your task is to create detailed strategies
-        for accessing healthcare services based on a user's needs, insurance coverage, and constraints.
-        
-        Given information about a patient, their medical need, insurance policy, and location, provide:
-        1. A comprehensive strategy for accessing appropriate care
-        2. Detailed action steps with timelines
-        3. Information about provider options
-        4. Preparation guidance for appointments
-        
-        Your response should follow the specified JSON format.
-        """
-            
-        # Load prompt from file
-        self.system_prompt = self._load_prompt(prompt_path, default_prompt=default_prompt)
+                
+        # Load prompt from file using BaseAgent's method
+        try:
+            self.system_prompt = self._load_prompt(prompt_path)
+        except Exception as e:
+            self.logger.error(f"Failed to load prompt: {e}")
+            # Use minimal fallback to prevent system crash, but log an error
+            self.system_prompt = "Service Access Strategy Agent: Error loading prompt"
         
         # Create output parser for strategy
         self.strategy_parser = PydanticOutputParser(pydantic_object=ServiceAccessStrategy)

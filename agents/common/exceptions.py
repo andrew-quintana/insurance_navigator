@@ -107,6 +107,46 @@ class ProviderLookupError(ServiceAccessStrategyException):
     pass
 
 
+# Database Agent exceptions
+class DatabaseAgentException(AgentException):
+    """Base exception for database agent errors."""
+    pass
+
+class DatabaseOperationError(DatabaseAgentException):
+    """Exception raised when there's an error executing a database operation."""
+    pass
+
+class DatabaseConnectionError(DatabaseAgentException):
+    """Exception raised when there's an error connecting to the database."""
+    pass
+
+class DatabaseQueryError(DatabaseAgentException):
+    """Exception raised when there's an error in the database query."""
+    pass
+
+class DataValidationError(DatabaseAgentException):
+    """Exception raised when data validation fails."""
+    pass
+
+
+# Regulatory Agent exceptions
+class RegulatoryAgentException(AgentException):
+    """Base exception for regulatory agent errors."""
+    pass
+
+class RegulatoryComplianceError(RegulatoryAgentException):
+    """Exception raised when there's an error assessing regulatory compliance."""
+    pass
+
+class RegulatoryRequirementError(RegulatoryAgentException):
+    """Exception raised when there's an error with regulatory requirements."""
+    pass
+
+class ComplianceDocumentationError(RegulatoryAgentException):
+    """Exception raised when there's an error with compliance documentation."""
+    pass
+
+
 # API exceptions
 class APIException(InsuranceNavigatorException):
     """Base exception for API errors."""

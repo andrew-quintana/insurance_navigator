@@ -83,7 +83,7 @@
         "latest_run": "agents/task_requirements/metrics/performance_metrics_20250515_145819.json"
       }
     },
-    "service_access_strategy": {
+  "service_access_strategy": {
       "active": true,
       "description": "Agent responsible for coming up with strategies for accessing services",
       "core_file": {
