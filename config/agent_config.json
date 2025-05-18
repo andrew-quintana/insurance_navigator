@@ -11,18 +11,18 @@
       },
       "prompt": {
         "version": "0.1",
-        "path": "agents/prompt_security/prompts/prompt_prompt_security_v0_1.md"
+        "path": "agents/prompt_security/prompts/prompt_security_v0_2.md"
       },
       "examples": {
         "version": "0.1",
-        "path": "agents/prompt_security/prompts/examples/prompt_examples_prompt_security_v0_1.json"
+        "path": "agents/prompt_security/prompts/examples/security_examples_v0_1.md"
       },
       "test_examples": {
         "version": "0.1",
         "path": "agents/prompt_security/tests/data/examples/test_examples_prompt_security_v0_1.json"
       },
       "model": {
-        "name": "claude-3-7-sonnet-20250219",
+        "name": "claude-3-sonnet-20240229-v1h",
         "temperature": 0.0
       },
       "metrics": {
@@ -38,19 +38,19 @@
       },
       "prompt": {
         "version": "0.1",
-        "path": "agents/patient_navigator/prompts/prompt_patient_navigator_v0_1.md"
+        "path": "agents/patient_navigator/prompts/prompt_navigator_v0_2.md"
       },
       "examples": {
         "version": "0.1",
-        "path": "agents/patient_navigator/prompts/examples/prompt_examples_patient_navigator_v0_1.md"
+        "path": "agents/patient_navigator/prompts/examples/navigator_examples_v0_1.md"
       },
       "test_examples": {
         "version": "0.1",
         "path": "agents/patient_navigator/tests/data/examples/test_examples_patient_navigator_v0_1.json"
       },
       "model": {
-        "name": "claude-3-7-sonnet-20250219",
-        "temperature": 0.7
+        "name": "claude-3-sonnet-20240229-v1h",
+        "temperature": 0.0
       },
       "metrics": {
         "latest_run": "agents/patient_navigator/metrics/performance_metrics_20250515_151555.json"
@@ -65,25 +65,25 @@
       },
       "prompt": {
         "version": "0.1",
-        "path": "agents/task_requirements/prompts/prompt_task_requirements_v0_1.md"
+        "path": "agents/task_requirements/prompts/prompt_requirements_v0_2.md"
       },
       "examples": {
         "version": "0.1",
-        "path": "agents/task_requirements/prompts/examples/prompt_examples_task_requirements_v0_1.md"
+        "path": "agents/task_requirements/prompts/examples/requirements_examples_v0_1.md"
       },
       "test_examples": {
         "version": "0.1",
-        "path": "agents/task_requirements/tests/data/examples/test_examples_task_requirements_v0_1.md"
+        "path": "agents/task_requirements/prompts/test_examples/test_examples_v0_1.md"
       },
       "model": {
-        "name": "claude-3-7-sonnet-20250219",
-        "temperature": 0.2
+        "name": "claude-3-sonnet-20240229-v1h",
+        "temperature": 0.0
       },
       "metrics": {
         "latest_run": "agents/task_requirements/metrics/performance_metrics_20250515_145819.json"
       }
     },
-  "service_access_strategy": {
+    "service_access_strategy": {
       "active": true,
       "description": "Agent responsible for coming up with strategies for accessing services",
       "core_file": {
@@ -96,15 +96,15 @@
       },
       "examples": {
         "version": "0.1",
-        "path": "agents/service_access_strategy/prompts/examples/prompt_examples_service_access_strategy_v0_1.md"
+        "path": "agents/service_access_strategy/prompts/examples/strategy_examples_v0_1.md"
       },
       "test_examples": {
         "version": "0.1",
         "path": "agents/service_access_strategy/tests/data/examples/test_examples_service_access_strategy_v0_1.md"
       },
       "model": {
-        "name": "claude-3-7-sonnet-20250219",
-        "temperature": 0.2
+        "name": "claude-3-sonnet-20240229-v1h",
+        "temperature": 0.0
       },
       "metrics": {
         "latest_run": "agents/service_access_strategy/metrics/performance_metrics_20250515_153019.json"

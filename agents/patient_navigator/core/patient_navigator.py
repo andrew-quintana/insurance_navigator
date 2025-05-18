@@ -23,123 +23,82 @@ import time
 import traceback
 from datetime import datetime
 from typing import Dict, List, Any, Tuple, Optional, Union
-from pydantic import BaseModel, Field
-from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
+from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.language_models import BaseLanguageModel
 from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_core.output_parsers import PydanticOutputParser
 
+# Import base agent and exceptions
 from agents.base_agent import BaseAgent
-from agents.prompt_security.core.prompt_security import PromptSecurityAgent
-from utils.prompt_loader import load_prompt
-from utils.agent_config_manager import get_config_manager
+from agents.common.exceptions import (
+    PatientNavigatorException, 
+    PatientNavigatorProcessingError,
+    PatientNavigatorOutputParsingError, 
+    PatientNavigatorSessionError
+)
 
-# Setup logging
-logger = logging.getLogger("patient_navigator_agent")
-if not logger.handlers:
-    # Create logs directory if it doesn't exist
-    log_dir = os.path.join("agents", "patient_navigator", "logs")
-    os.makedirs(log_dir, exist_ok=True)
-    
-    # Set up file handler
-    handler = logging.FileHandler(os.path.join(log_dir, "patient_navigator.log"))
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
+# Import configuration handling
+from utils.config_manager import ConfigManager
 
-# Define output schema for patient navigator
-class BodyRegion(BaseModel):
-    """Schema for body region information."""
-    region: Optional[str] = Field(description="Body region mentioned", default=None)
-    side: Optional[str] = Field(description="Side of the body (left/right)", default=None)
-    subpart: Optional[str] = Field(description="Specific subpart of the region", default=None)
+# Import models
+from agents.patient_navigator.models.navigator_models import (
+    NavigatorOutput, MetaIntent, ClinicalContext, 
+    ServiceIntent, Metadata, BodyLocation
+)
 
-class ClinicalContext(BaseModel):
-    """Schema for clinical context."""
-    symptom: Optional[str] = Field(description="Reported symptom", default=None)
-    body: BodyRegion = Field(description="Body region information", default_factory=BodyRegion)
-    onset: Optional[str] = Field(description="When the symptom started", default=None)
-    duration: Optional[str] = Field(description="Duration of the symptom", default=None)
+# Setup logger
+logger = logging.getLogger(__name__)
 
-class ServiceIntent(BaseModel):
-    """Schema for service intent."""
-    specialty: Optional[str] = Field(description="Medical specialty", default=None)
-    service: Optional[str] = Field(description="Specific service requested", default=None)
-    plan_detail_type: Optional[str] = Field(description="Type of plan detail being requested", default=None)
-
-class MetaIntent(BaseModel):
-    """Schema for meta intent."""
-    request_type: str = Field(description="Type of request (expert_request, service_request, symptom_report, policy_question, security_warning)")
-    summary: str = Field(description="Summary of the user's request")
-    emergency: Union[bool, str] = Field(description="Whether this is an emergency (true/false/unsure)")
-
-class Metadata(BaseModel):
-    """Schema for metadata."""
-    raw_user_text: str = Field(description="Original user input")
-    user_response_created: str = Field(description="Response created for the user")
-    timestamp: str = Field(description="ISO 8601 timestamp")
-
-class NavigatorOutput(BaseModel):
-    """Schema for the navigator's output."""
-    meta_intent: MetaIntent
-    clinical_context: ClinicalContext
-    service_intent: ServiceIntent
-    metadata: Metadata
 
 class PatientNavigatorAgent(BaseAgent):
     """Agent responsible for front-facing interactions with users."""
     
     def __init__(self, 
                  llm: Optional[BaseLanguageModel] = None,
-                 prompt_security_agent: Optional[PromptSecurityAgent] = None):
+                 prompt_security_agent = None,
+                 config_manager: Optional[ConfigManager] = None):
         """
         Initialize the Patient Navigator Agent.
         
         Args:
             llm: An optional language model to use
             prompt_security_agent: An optional reference to the Prompt Security Agent
+            config_manager: Configuration manager instance
         """
+        # Get configuration manager if not provided
+        self.config_manager = config_manager or ConfigManager()
+        
         # Get agent configuration
-        config_manager = get_config_manager()
-        agent_config = config_manager.get_agent_config("patient_navigator")
+        agent_config = self.config_manager.get_agent_config("patient_navigator")
         
         # Get model configuration
         model_config = agent_config.get("model", {})
         model_name = model_config.get("name", "claude-3-sonnet-20240229-v1h")
         temperature = model_config.get("temperature", 0.0)
         
-        # Initialize the base agent with the correct model config
+        # Get prompt configuration
+        prompt_path = agent_config.get("prompt", {}).get("path")
+        examples_path = agent_config.get("examples", {}).get("path")
+        
+        # Initialize the base agent
         super().__init__(
             name="patient_navigator", 
-            llm=llm or ChatAnthropic(model=model_name, temperature=temperature)
+            llm=llm or ChatAnthropic(model=model_name, temperature=temperature),
+            config_manager=self.config_manager
         )
         
+        # Initialize the output parser
         self.output_parser = PydanticOutputParser(pydantic_object=NavigatorOutput)
         
-        # Store reference to other agents
+        # Store reference to the prompt security agent
         self.prompt_security_agent = prompt_security_agent
         
         # Active conversations (in a real system, this would be in a database)
         self.active_conversations = {}
         
-        # Build the system prompt by combining template and examples
-        try:
-            self.system_prompt = self._build_prompt(
-                template_placeholder="{{input}}",
-                example_placeholder="{Examples}",
-                input_data="",
-                template_path=self.prompt_path,
-                examples_path=self.examples_path
-            )
-        except Exception as e:
-            logger.warning(f"Error loading prompt: {str(e)}, using default prompt")
-            self.system_prompt = """
-            You are an expert Patient Navigation Coordinator with deep knowledge in clinical workflows, patient communication, and multi-agent delegation.
-            Your task is to interpret and clarify the user's intent based on their input, format it into a structured intent package, and route it to the appropriate internal agent for handling.
-            """
+        # Load prompt template and examples
+        self.system_prompt = self._load_prompt(prompt_path, examples_path)
         
         # Define the prompt template
         self.prompt_template = PromptTemplate(
@@ -164,148 +123,271 @@ class PatientNavigatorAgent(BaseAgent):
             | self.output_parser
         )
         
-        logger.info(f"Patient Navigator Agent initialized with prompt from {self.prompt_path}")
-        logger.info(f"Using examples from {self.examples_path}")
-        logger.info(f"Using model {model_name} with temperature {temperature}")
+        logger.info(f"Patient Navigator Agent initialized with model {model_name}")
+
+    # Using BaseAgent's _load_prompt method instead of a custom implementation
     
-    def _sanitize_input(self, user_query: str) -> str:
+    def _check_security(self, user_query: str) -> Tuple[bool, Optional[str]]:
         """
-        Sanitize user input using the Prompt Security Agent or a basic sanitizer.
+        Check if the user query passes security checks.
         
         Args:
-            user_query: The user's query
+            user_query: The user's query to check
             
         Returns:
-            Sanitized query
+            Tuple of (passed, reason) where passed is a boolean and reason is 
+            a string explaining why it didn't pass (if applicable)
         """
-        if self.prompt_security_agent:
-            # Use the Prompt Security Agent to sanitize the input
-            result = self.prompt_security_agent.analyze_prompt(user_query)
+        if not self.prompt_security_agent:
+            # No security agent available, assume safe
+            return True, None
             
-            if not result["is_safe"]:
-                logger.warning(f"Potentially unsafe query detected: {user_query}")
-                logger.warning(f"Safety concerns: {', '.join(result['safety_concerns'])}")
-                
-                # If the query is unsafe but can be sanitized, use the sanitized version
-                if result["sanitized_content"]:
-                    return result["sanitized_content"]
-                
-                # If the query is completely unsafe, return a safety message
-                return "I'm unable to process this request as it appears to contain unsafe content."
+        try:
+            # Check security using the prompt security agent
+            is_safe, confidence, issues = self.prompt_security_agent.validate_prompt(user_query)
             
-            # Return the original query if it's safe, or the sanitized version if provided
-            return result["sanitized_content"] or user_query
-        else:
-            # Basic sanitization if no security agent is available
-            return user_query.strip()
-    
+            if not is_safe:
+                issues_str = ", ".join(issues) if issues else "Unknown security issues"
+                return False, f"Security check failed: {issues_str}"
+                
+            return True, None
+            
+        except Exception as e:
+            logger.warning(f"Error in security check: {str(e)}")
+            # On error, allow the query but log the issue
+            return True, f"Security check error: {str(e)}"
+            
+    def _handle_context(self, user_id: str, session_id: str, result: Dict[str, Any]) -> None:
+        """
+        Handle conversation context updates.
+        
+        Args:
+            user_id: The ID of the user
+            session_id: The ID of the session
+            result: The result of processing the query
+        """
+        conversation_key = f"{user_id}:{session_id}"
+        
+        if conversation_key not in self.active_conversations:
+            self.active_conversations[conversation_key] = {
+                "history": [],
+                "session_start": datetime.utcnow().isoformat() + "Z",
+                "last_updated": datetime.utcnow().isoformat() + "Z"
+            }
+            
+        # Update conversation history
+        self.active_conversations[conversation_key]["history"].append({
+            "timestamp": result.get("metadata", {}).get("timestamp") or (datetime.utcnow().isoformat() + "Z"),
+            "meta_intent": result.get("meta_intent", {}),
+            "raw_user_text": result.get("metadata", {}).get("raw_user_text", ""),
+            "response": result.get("metadata", {}).get("user_response_created", "")
+        })
+        
+        # Update last updated timestamp
+        self.active_conversations[conversation_key]["last_updated"] = datetime.utcnow().isoformat() + "Z"
+
     @BaseAgent.track_performance
     def process(self, user_query: str, user_id: str, session_id: str) -> Tuple[str, Dict[str, Any]]:
         """
-        Process a user query and generate a response.
+        Process a user query and return a response.
         
         Args:
             user_query: The user's query
-            user_id: User identifier
-            session_id: Session identifier
+            user_id: The ID of the user
+            session_id: The ID of the session
             
         Returns:
-            Tuple of (response_text, full_result)
+            Tuple of (response_text, structured_output) where response_text is the text to 
+            show to the user and structured_output is the full structured output
+            
+        Raises:
+            PatientNavigatorProcessingError: If there is an error processing the query
+            PatientNavigatorOutputParsingError: If there is an error parsing the output
+            PatientNavigatorSessionError: If there is an error managing the session
         """
         start_time = time.time()
         
-        # Log the request
-        logger.info(f"Processing query for user {user_id}: {user_query[:50]}...")
-        
         try:
-            # Sanitize the input
-            sanitized_query = self._sanitize_input(user_query)
+            # Log the incoming query (sanitized)
+            logger.info(f"Processing query from user {user_id} - Length: {len(user_query)} chars")
             
-            # Prepare the input for the chain
-            input_dict = {
-                "user_query": sanitized_query
-            }
+            # Security check
+            passed_security, security_reason = self._check_security(user_query)
+            if not passed_security:
+                logger.warning(f"Security check failed for user {user_id}: {security_reason}")
+                error_response = {
+                    "meta_intent": {
+                        "request_type": "security_issue",
+                        "summary": "Security issue detected",
+                        "emergency": False
+                    },
+                    "clinical_context": {
+                        "symptom": None,
+                        "body": {"region": None, "side": None, "subpart": None},
+                        "onset": None,
+                        "duration": None
+                    },
+                    "service_intent": {
+                        "specialty": None,
+                        "service": None,
+                        "plan_detail_type": None
+                    },
+                    "metadata": {
+                        "raw_user_text": user_query,
+                        "user_response_created": f"I apologize, but I cannot process this request. {security_reason}. Please rephrase your question.",
+                        "timestamp": datetime.utcnow().isoformat() + "Z"
+                    }
+                }
+                return error_response["metadata"]["user_response_created"], error_response
             
-            # Process the query with detailed debugging
-            logger.info("Preparing to process query...")
-            
-            # Format the prompt with the template
-            try:
-                prompt = self.prompt_template.format(
-                    system_prompt=self.system_prompt,
-                    user_query=sanitized_query
-                )
-                logger.info(f"Prompt formatted, length: {len(prompt)}")
-            except Exception as e:
-                logger.error(f"Error formatting prompt: {str(e)}")
-                raise
-            
-            # Get a response from the LLM
-            try:
-                logger.info("Sending to LLM...")
-                raw_response = self.llm.invoke(prompt)
-                logger.info(f"LLM response received, type: {type(raw_response)}")
-                logger.info(f"Raw response sample: {str(raw_response)[:150]}...")  
-            except Exception as e:
-                logger.error(f"LLM error: {str(e)}")
-                raise
+            # Process the query
+            logger.info("Calling language model...")
+            raw_response = self.llm.invoke(self.prompt_template.format(
+                system_prompt=self.system_prompt,
+                user_query=user_query,
+                format_instructions=self.output_parser.get_format_instructions()
+            ))
             
             # Try to parse the response
             try:
                 logger.info("Parsing response with output parser...")
                 result = self.output_parser.parse(str(raw_response))
                 logger.info("Successfully parsed LLM response to NavigatorOutput")
+                
+                # Convert to dict for return
+                result_dict = result.model_dump()
+                
             except Exception as e:
                 logger.error(f"Parser error: {str(e)}")
                 logger.error(f"Failed to parse text: {str(raw_response)[:500]}")
-                raise
+                raise PatientNavigatorOutputParsingError(f"Failed to parse model output: {str(e)}")
             
             # Add timestamp if not present
-            if not result.metadata.timestamp:
-                result.metadata.timestamp = datetime.utcnow().isoformat() + "Z"
+            if not result_dict.get("metadata", {}).get("timestamp"):
+                result_dict["metadata"]["timestamp"] = datetime.utcnow().isoformat() + "Z"
             
-            # Convert to dict for return
-            result_dict = result.model_dump()
+            # Update conversation context
+            try:
+                self._handle_context(user_id, session_id, result_dict)
+            except Exception as e:
+                logger.error(f"Error updating conversation context: {str(e)}")
+                logger.error(traceback.format_exc())
+                raise PatientNavigatorSessionError(f"Failed to update session: {str(e)}")
             
             # Log the result
-            logger.info(f"Query processed. Request type: {result.meta_intent.request_type}, Emergency: {result.meta_intent.emergency}")
+            logger.info(f"Query processed. Request type: {result_dict['meta_intent']['request_type']}, Emergency: {result_dict['meta_intent']['emergency']}")
             
             # Log execution time
             execution_time = time.time() - start_time
             logger.info(f"Query processing completed in {execution_time:.2f}s")
             
-            return result.metadata.user_response_created, result_dict
+            return result_dict["metadata"]["user_response_created"], result_dict
+            
+        except PatientNavigatorException:
+            # Re-raise specific exceptions without wrapping
+            raise
             
         except Exception as e:
             logger.error(f"Error in query processing: {str(e)}")
             logger.error(f"Error details:\n{traceback.format_exc()}")
             
-            # Return a basic response in case of error
-            error_response = {
-                "meta_intent": {
-                    "request_type": "error",
-                    "summary": "Error processing request",
-                    "emergency": False
-                },
-                "clinical_context": {
-                    "symptom": None,
-                    "body": {"region": None, "side": None, "subpart": None},
-                    "onset": None,
-                    "duration": None
-                },
-                "service_intent": {
-                    "specialty": None,
-                    "service": None,
-                    "plan_detail_type": None
-                },
-                "metadata": {
-                    "raw_user_text": user_query,
-                    "user_response_created": "I apologize, but I encountered an error while processing your request. Could you please rephrase your question or try again later?",
-                    "timestamp": datetime.utcnow().isoformat() + "Z"
-                }
-            }
+            # Wrap in a PatientNavigatorProcessingError
+            raise PatientNavigatorProcessingError(f"Error processing query: {str(e)}") from e
+
+    def get_conversation_history(self, user_id: str, session_id: str) -> List[Dict[str, Any]]:
+        """
+        Get the conversation history for a user session.
+        
+        Args:
+            user_id: The ID of the user
+            session_id: The ID of the session
             
-            return error_response["metadata"]["user_response_created"], error_response
+        Returns:
+            The conversation history as a list of interactions
+            
+        Raises:
+            PatientNavigatorSessionError: If the session doesn't exist
+        """
+        conversation_key = f"{user_id}:{session_id}"
+        
+        if conversation_key not in self.active_conversations:
+            raise PatientNavigatorSessionError(f"No active conversation found for session {session_id}")
+            
+        return self.active_conversations[conversation_key]["history"]
+
+    def end_conversation(self, user_id: str, session_id: str) -> None:
+        """
+        End a conversation and clean up resources.
+        
+        Args:
+            user_id: The ID of the user
+            session_id: The ID of the session
+            
+        Raises:
+            PatientNavigatorSessionError: If the session doesn't exist
+        """
+        conversation_key = f"{user_id}:{session_id}"
+        
+        if conversation_key not in self.active_conversations:
+            raise PatientNavigatorSessionError(f"No active conversation found for session {session_id}")
+            
+        # In a real system, this might archive the conversation to a database
+        del self.active_conversations[conversation_key]
+        logger.info(f"Ended conversation for user {user_id}, session {session_id}")
+
+    def reset(self) -> None:
+        """Reset the agent's state."""
+        self.active_conversations = {}
+        logger.info("Reset PatientNavigatorAgent state - all conversations cleared")
+
+    def _initialize_agent(self):
+        """Initialize agent-specific components."""
+        # Get paths from configuration
+        try:
+            prompt_path = self.prompt_path
+            examples_path = self.examples_path
+        except AttributeError:
+            # Use default paths if not available
+            prompt_path = "agents/patient_navigator/prompts/prompt_navigator_v0_1.md"
+            examples_path = "agents/patient_navigator/prompts/examples/navigator_examples_v0_1.json"
+            
+        # Default prompt if path is not found
+        default_prompt = """
+        You are an expert Patient Navigation Coordinator with deep knowledge in clinical workflows, 
+        patient communication, and multi-agent delegation.
+        
+        Your task is to interpret and clarify the user's intent based on their input, 
+        format it into a structured intent package, and route it to the appropriate 
+        internal agent for handling.
+        """
+        
+        # Load examples if available
+        examples = []
+        try:
+            examples = self._load_examples(examples_path, default_examples=[])
+            if examples:
+                examples_text = "\n\nExamples:\n\n" + json.dumps(examples, indent=2)
+                default_prompt += examples_text
+        except Exception as e:
+            self.logger.warning(f"Failed to load examples: {e}")
+        
+        # Load prompt from file
+        self.system_prompt = self._load_prompt(prompt_path, default_prompt=default_prompt)
+        
+        # Create output parser for navigator response
+        self.output_parser = PydanticOutputParser(pydantic_object=NavigatorOutput)
+        
+        # Create prompt template
+        self.prompt_template = """
+        {system_prompt}
+        
+        USER QUERY: {user_query}
+        
+        {format_instructions}
+        """
+        
+        # Initialize conversation tracking
+        self.active_conversations = {}
 
 # Example usage
 if __name__ == "__main__":

@@ -21,212 +21,73 @@ import json
 import logging
 import time
 from typing import Dict, List, Any, Tuple, Optional, Union
-from pydantic import BaseModel, Field
-from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough, RunnableSequence
+from langchain_core.prompts import PromptTemplate
+from langchain_core.runnables import RunnablePassthrough
 from langchain_core.language_models import BaseLanguageModel
 from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_core.output_parsers import PydanticOutputParser
-from langchain_core.tools import BaseTool
+from langchain.prompts import SystemMessage, HumanMessage, ChatPromptTemplate
 
+# Import base agent and exceptions
 from agents.base_agent import BaseAgent
-from agents.policy_compliance import PolicyComplianceAgent
-from agents.service_provider import ServiceProviderAgent
-from utils.prompt_loader import load_prompt
+from agents.common.exceptions import (
+    ServiceAccessStrategyException,
+    StrategyDevelopmentError,
+    PolicyComplianceError,
+    ProviderLookupError
+)
 
-# Setup logging
-logger = logging.getLogger("service_access_strategy_agent")
-if not logger.handlers:
-    handler = logging.FileHandler(os.path.join("logs", "agents", "service_access_strategy.log"))
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
+# Import configuration handling
+from utils.config_manager import ConfigManager
 
-# Ensure logs directory exists
-os.makedirs(os.path.join("logs", "agents"), exist_ok=True)
+# Import models
+from agents.service_access_strategy.models.strategy_models import (
+    ServiceAccessStrategy, ServiceMatch, ActionStep
+)
 
-# Define the output schema for service matching
-class ServiceMatch(BaseModel):
-    """Schema for a matched healthcare service."""
-    service_name: str = Field(description="Name of the healthcare service")
-    service_type: str = Field(description="Type/category of service")
-    service_description: str = Field(description="Description of the service")
-    is_covered: bool = Field(description="Whether the service is covered by insurance")
-    coverage_details: Dict[str, Any] = Field(description="Details about coverage", default_factory=dict)
-    estimated_cost: Optional[str] = Field(description="Estimated cost of the service", default=None)
-    required_documentation: List[str] = Field(description="Documents required for the service", default_factory=list)
-    prerequisites: List[str] = Field(description="Prerequisites for accessing the service", default_factory=list)
-    alternatives: List[str] = Field(description="Alternative services", default_factory=list)
-    compliance_score: float = Field(description="Compliance score from 0-1")
+# Setup logger
+logger = logging.getLogger(__name__)
 
-# Define the output schema for action steps
-class ActionStep(BaseModel):
-    """Schema for an action step in the service access plan."""
-    step_number: int = Field(description="Number of the step in sequence")
-    step_description: str = Field(description="Description of the action step")
-    expected_timeline: str = Field(description="Expected timeline for completing the step")
-    required_resources: List[str] = Field(description="Resources required for the step", default_factory=list)
-    potential_obstacles: List[str] = Field(description="Potential obstacles for this step", default_factory=list)
-    contingency_plan: Optional[str] = Field(description="Contingency plan if step encounters issues", default=None)
-
-# Define the output schema for service access strategy
-class ServiceAccessStrategy(BaseModel):
-    """Output schema for the service access strategy."""
-    patient_need: str = Field(description="Description of the patient's medical need")
-    matched_services: List[ServiceMatch] = Field(description="List of matched services", default_factory=list)
-    recommended_service: str = Field(description="The recommended service option")
-    action_plan: List[ActionStep] = Field(description="Step-by-step action plan", default_factory=list)
-    estimated_timeline: str = Field(description="Estimated overall timeline")
-    provider_options: List[Dict[str, Any]] = Field(description="Provider options", default_factory=list)
-    compliance_assessment: Dict[str, Any] = Field(description="Policy compliance assessment", default_factory=dict)
-    guidance_notes: List[str] = Field(description="Additional guidance notes", default_factory=list)
-    confidence: float = Field(description="Overall confidence in the strategy (0-1)")
 
 class ServiceAccessStrategyAgent(BaseAgent):
     """Agent responsible for developing access strategies for healthcare services."""
     
-    def __init__(self, 
-                 llm: Optional[BaseLanguageModel] = None,
-                 policy_compliance_agent: Optional[PolicyComplianceAgent] = None,
-                 service_provider_agent: Optional[ServiceProviderAgent] = None):
+    def __init__(
+        self, 
+        llm: Optional[BaseLanguageModel] = None,
+        policy_compliance_agent = None,
+        service_provider_agent = None,
+        config_manager: Optional[ConfigManager] = None
+    ):
         """
         Initialize the Service Access Strategy Agent.
         
         Args:
-            llm: An optional language model to use
-            policy_compliance_agent: An optional reference to the Policy Compliance Agent
-            service_provider_agent: An optional reference to the Service Provider Agent
+            llm: Language model to use for generating strategies
+            policy_compliance_agent: Optional PolicyComplianceAgent to check compliance
+            service_provider_agent: Optional ServiceProviderAgent to find providers
+            config_manager: Optional ConfigManager for configuration
         """
-        # Default configuration values
-        model_name = "claude-3-sonnet-20240229"
-        temperature = 0.0
-        prompt_path = None
-        
-        # Try to get configuration from agent_config if available
-        try:
-            from utils.agent_config_manager import get_config_manager
-            config_manager = get_config_manager()
-            agent_config = config_manager.get_agent_config("service_access_strategy")
-            
-            # Get model configuration
-            model_config = agent_config.get("model", {})
-            model_name = model_config.get("name", model_name)
-            temperature = model_config.get("temperature", temperature)
-            
-            # Get prompt path from config
-            prompt_path = agent_config.get("prompt", {}).get("path")
-            logger.info(f"Loaded agent configuration with model {model_name} and prompt {prompt_path}")
-        except Exception as e:
-            logger.warning(f"Failed to load agent configuration: {str(e)}. Using default values.")
-        
-        # Initialize LLM if not provided
-        if llm is None:
-            try:
-                llm = ChatAnthropic(model=model_name, temperature=temperature)
-            except Exception as e:
-                logger.error(f"Failed to initialize LLM with model {model_name}: {str(e)}")
-                # Fall back to whatever LLM BaseAgent will use
-                llm = None
-        
-        # Initialize the base agent
+        # Initialize base agent
         super().__init__(
-            name="service_access_strategy", 
+            name="service_access_strategy",
             llm=llm,
-            prompt_path=prompt_path
+            logger=logger
         )
-        
-        self.strategy_parser = PydanticOutputParser(pydantic_object=ServiceAccessStrategy)
         
         # Store references to other agents
         self.policy_compliance_agent = policy_compliance_agent
         self.service_provider_agent = service_provider_agent
         
-        # Load prompt from the configured path
-        try:
-            if prompt_path and os.path.exists(prompt_path):
-                with open(prompt_path, 'r') as f:
-                    self.system_prompt = f.read()
-                    logger.info(f"Loaded prompt from {prompt_path}")
-            else:
-                # Try using the prompt loader
-                try:
-                    self.system_prompt = load_prompt("service_access_strategy")
-                    logger.info("Loaded prompt using prompt_loader")
-                except Exception as prompt_error:
-                    logger.warning(f"Could not load prompt using prompt_loader: {str(prompt_error)}")
-                    # Use a default prompt as a last resort
-                    self.system_prompt = """
-                    # Service Access Strategy Prompt
+        # Set up chain components in _initialize_agent
+        self.strategy_parser = None
+        self.prompt_template = None
+        self.strategy_chain = None
+        self.system_prompt = None
+        
+        # Initialize agent-specific components
+        self._initialize_agent()
 
-                    You are an expert healthcare navigation assistant. Your task is to create detailed strategies
-                    for accessing healthcare services based on a user's needs, insurance coverage, and constraints.
-                    
-                    Given information about a patient, their medical need, insurance policy, and location, provide:
-                    1. A comprehensive strategy for accessing appropriate care
-                    2. Detailed action steps with timelines
-                    3. Information about provider options
-                    4. Preparation guidance for appointments
-                    
-                    Your response should follow the specified JSON format.
-                    """
-                    logger.warning("Using default backup prompt")
-        except Exception as e:
-            logger.error(f"Error loading prompt: {str(e)}")
-            # Fallback to a simple prompt as a last resort
-            self.system_prompt = """
-            Service Access Strategy prompt. Create a healthcare access strategy based on the provided information.
-            """
-        
-        # Define the strategy development prompt template
-        self.strategy_template = PromptTemplate(
-            template="""
-            {system_prompt}
-            
-            PATIENT INFORMATION:
-            {patient_info}
-            
-            MEDICAL NEED:
-            {medical_need}
-            
-            POLICY INFORMATION:
-            {policy_info}
-            
-            COMPLIANCE ASSESSMENT:
-            {compliance_info}
-            
-            PROVIDER OPTIONS:
-            {provider_info}
-            
-            ADDITIONAL CONSTRAINTS:
-            {constraints}
-            
-            Based on this information, develop a comprehensive service access strategy.
-            
-            {format_instructions}
-            """,
-            input_variables=["system_prompt", "patient_info", "medical_need", "policy_info", 
-                           "compliance_info", "provider_info", "constraints"],
-            partial_variables={"format_instructions": self.strategy_parser.get_format_instructions()}
-        )
-        
-        # Create the strategy development chain
-        self.strategy_chain = (
-            {"system_prompt": lambda _: self.system_prompt,
-             "patient_info": lambda x: x["patient_info"],
-             "medical_need": lambda x: x["medical_need"],
-             "policy_info": lambda x: x["policy_info"],
-             "compliance_info": lambda x: x["compliance_info"],
-             "provider_info": lambda x: x["provider_info"],
-             "constraints": lambda x: x["constraints"]}
-            | self.strategy_template
-            | self.llm
-            | self.strategy_parser
-        )
-        
-        logger.info(f"Service Access Strategy Agent initialized with model {model_name}")
-    
     def check_compliance(self, policy_type: str, service_type: str, user_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Check policy compliance for a service.
@@ -238,9 +99,12 @@ class ServiceAccessStrategyAgent(BaseAgent):
             
         Returns:
             Compliance assessment
+            
+        Raises:
+            PolicyComplianceError: If there's an error checking policy compliance
         """
         if not self.policy_compliance_agent:
-            self.logger.warning("Policy Compliance Agent not available. Using placeholder data.")
+            logger.warning("Policy Compliance Agent not available. Using placeholder data.")
             # Return placeholder data
             return {
                 "is_compliant": True,
@@ -256,15 +120,8 @@ class ServiceAccessStrategyAgent(BaseAgent):
             _, _, result = self.policy_compliance_agent.process(policy_type, service_type, user_context)
             return result
         except Exception as e:
-            self.logger.error(f"Error checking compliance: {str(e)}")
-            return {
-                "is_compliant": False,
-                "compliance_score": 0.0,
-                "non_compliant_reasons": [f"Error checking compliance: {str(e)}"],
-                "rules_applied": [],
-                "recommendations": ["Contact customer support for assistance"],
-                "confidence": 0.0
-            }
+            logger.error(f"Error checking compliance: {str(e)}")
+            raise PolicyComplianceError(f"Failed to check policy compliance: {str(e)}") from e
     
     def find_providers(self, service_type: str, location: str) -> List[Dict[str, Any]]:
         """
@@ -276,9 +133,12 @@ class ServiceAccessStrategyAgent(BaseAgent):
             
         Returns:
             List of providers
+            
+        Raises:
+            ProviderLookupError: If there's an error finding providers
         """
         if not self.service_provider_agent:
-            self.logger.warning("Service Provider Agent not available. Using placeholder data.")
+            logger.warning("Service Provider Agent not available. Using placeholder data.")
             # Return placeholder data
             return [{
                 "name": "Example Provider",
@@ -293,8 +153,8 @@ class ServiceAccessStrategyAgent(BaseAgent):
             providers, _ = self.service_provider_agent.process(service_type, location)
             return providers
         except Exception as e:
-            self.logger.error(f"Error finding providers: {str(e)}")
-            return []
+            logger.error(f"Error finding providers: {str(e)}")
+            raise ProviderLookupError(f"Failed to find providers: {str(e)}") from e
     
     @BaseAgent.track_performance
     def develop_strategy(self, 
@@ -315,11 +175,16 @@ class ServiceAccessStrategyAgent(BaseAgent):
             
         Returns:
             Service access strategy
+            
+        Raises:
+            StrategyDevelopmentError: If there's an error developing the strategy
+            PolicyComplianceError: If there's an error checking policy compliance
+            ProviderLookupError: If there's an error finding providers
         """
         start_time = time.time()
         
         # Log the request
-        self.logger.info(f"Developing strategy for: {medical_need}")
+        logger.info(f"Developing strategy for: {medical_need}")
         
         try:
             # Extract policy type and service type
@@ -327,10 +192,33 @@ class ServiceAccessStrategyAgent(BaseAgent):
             service_type = medical_need.split()[0]  # Simple extraction of first word as service type
             
             # Check policy compliance
-            compliance_info = self.check_compliance(policy_type, service_type, patient_info)
+            try:
+                compliance_info = self.check_compliance(policy_type, service_type, patient_info)
+            except PolicyComplianceError as e:
+                # Handle compliance check error but continue with development
+                logger.warning(f"Compliance check error: {str(e)}")
+                compliance_info = {
+                    "is_compliant": None,
+                    "compliance_score": 0.0,
+                    "non_compliant_reasons": [f"Error checking compliance: {str(e)}"],
+                    "rules_applied": [],
+                    "recommendations": ["Contact customer support for assistance with compliance verification"],
+                    "confidence": 0.0
+                }
             
             # Find providers
-            providers = self.find_providers(service_type, location)
+            try:
+                providers = self.find_providers(service_type, location)
+            except ProviderLookupError as e:
+                # Handle provider lookup error but continue with development
+                logger.warning(f"Provider lookup error: {str(e)}")
+                providers = [{
+                    "name": "Provider information unavailable",
+                    "address": "Please contact customer support for provider information",
+                    "distance": None,
+                    "in_network": None,
+                    "specialties": [service_type]
+                }]
             
             # Prepare input for the strategy chain
             input_dict = {
@@ -343,43 +231,31 @@ class ServiceAccessStrategyAgent(BaseAgent):
             }
             
             # Generate the strategy
-            strategy = self.strategy_chain.invoke(input_dict)
-            result = strategy.dict()
+            try:
+                strategy = self.strategy_chain.invoke(input_dict)
+                result = strategy.model_dump()
+            except Exception as e:
+                logger.error(f"Strategy generation error: {str(e)}")
+                raise StrategyDevelopmentError(f"Failed to generate strategy: {str(e)}") from e
             
             # Log the result
-            self.logger.info(f"Strategy developed with {len(result['matched_services'])} matched services and {len(result['action_plan'])} action steps")
+            logger.info(f"Strategy developed with {len(result['matched_services'])} matched services and {len(result['action_plan'])} action steps")
             
             # Log execution time
             execution_time = time.time() - start_time
-            self.logger.info(f"Strategy development completed in {execution_time:.2f}s")
+            logger.info(f"Strategy development completed in {execution_time:.2f}s")
             
             return result
             
+        except (PolicyComplianceError, ProviderLookupError):
+            # Re-raise these exceptions as they've already been logged
+            raise
+        except StrategyDevelopmentError:
+            # Re-raise strategy development error
+            raise
         except Exception as e:
-            self.logger.error(f"Error in strategy development: {str(e)}")
-            
-            # Return a basic strategy in case of error
-            return {
-                "patient_need": medical_need,
-                "matched_services": [],
-                "recommended_service": "Unable to determine due to error",
-                "action_plan": [
-                    {
-                        "step_number": 1,
-                        "step_description": "Contact customer support for assistance",
-                        "expected_timeline": "Immediately",
-                        "required_resources": ["Phone or email"],
-                        "potential_obstacles": ["Extended wait times"],
-                        "contingency_plan": "Try alternative contact methods"
-                    }
-                ],
-                "estimated_timeline": "Unknown due to error",
-                "provider_options": [],
-                "compliance_assessment": {"error": str(e)},
-                "guidance_notes": ["Strategy development encountered an error. Please try again or contact support."],
-                "confidence": 0.0,
-                "error": str(e)
-            }
+            logger.error(f"Error in strategy development: {str(e)}")
+            raise StrategyDevelopmentError(f"Failed to develop strategy: {str(e)}") from e
     
     def process(self, 
                patient_info: Dict[str, Any],
@@ -399,9 +275,88 @@ class ServiceAccessStrategyAgent(BaseAgent):
             
         Returns:
             Tuple of (strategy, provider_options)
+            
+        Raises:
+            ServiceAccessStrategyException: If there's an error processing the request
         """
-        strategy = self.develop_strategy(patient_info, medical_need, policy_info, location, constraints)
-        return strategy, strategy.get("provider_options", [])
+        try:
+            strategy = self.develop_strategy(patient_info, medical_need, policy_info, location, constraints)
+            return strategy, strategy.get("provider_options", [])
+        except ServiceAccessStrategyException:
+            # Re-raise specific exceptions without wrapping
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error in process: {str(e)}")
+            raise ServiceAccessStrategyException(f"Error processing service access strategy request: {str(e)}") from e
+
+    def reset(self) -> None:
+        """Reset the agent's state."""
+        logger.info("Reset ServiceAccessStrategyAgent state")
+
+    def _initialize_agent(self):
+        """Initialize agent-specific components."""
+        # Get paths from configuration
+        try:
+            prompt_path = self.prompt_path
+            examples_path = self.examples_path
+        except AttributeError:
+            # Use default paths if not available
+            prompt_path = "agents/service_access_strategy/prompts/prompt_service_access_strategy_v0_2.md"
+            examples_path = "agents/service_access_strategy/prompts/examples/strategy_examples_v0_1.json"
+            
+        # Default prompt if path is not found
+        default_prompt = """
+        # Service Access Strategy Prompt
+
+        You are an expert healthcare navigation assistant. Your task is to create detailed strategies
+        for accessing healthcare services based on a user's needs, insurance coverage, and constraints.
+        
+        Given information about a patient, their medical need, insurance policy, and location, provide:
+        1. A comprehensive strategy for accessing appropriate care
+        2. Detailed action steps with timelines
+        3. Information about provider options
+        4. Preparation guidance for appointments
+        
+        Your response should follow the specified JSON format.
+        """
+            
+        # Load prompt from file
+        self.system_prompt = self._load_prompt(prompt_path, default_prompt=default_prompt)
+        
+        # Create output parser for strategy
+        self.strategy_parser = PydanticOutputParser(pydantic_object=ServiceAccessStrategy)
+        
+        # Create prompt template
+        system_prompt_template = SystemMessage(content=self.system_prompt)
+        human_template = HumanMessage(content="""
+        Patient Information: {patient_info}
+        
+        Medical Need: {medical_need}
+        
+        Policy Information: {policy_info}
+        
+        Compliance Information: {compliance_info}
+        
+        Provider Information: {provider_info}
+        
+        Additional Constraints: {constraints}
+        
+        Please provide a comprehensive service access strategy in JSON format according to the schema provided.
+        """)
+        
+        self.prompt_template = ChatPromptTemplate.from_messages([
+            system_prompt_template,
+            human_template
+        ])
+        
+        # Create strategy chain
+        self.strategy_chain = (
+            self.prompt_template
+            | self.llm
+            | self.strategy_parser
+        )
+        
+        logger.info(f"Service Access Strategy Agent initialized with model {self.llm.model if hasattr(self.llm, 'model') else 'unknown'}")
 
 # Example usage
 if __name__ == "__main__":

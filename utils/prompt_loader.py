@@ -1,15 +1,16 @@
 """
-Prompt Loader Utility
+Prompt Loader Utility.
 
-This module provides functions for loading prompts from files.
+This module provides functions for loading prompts from files,
+ensuring consistent prompt management across the system.
 """
 
 import os
 import logging
-from typing import Dict, Optional, Union
+from typing import Optional, List, Dict, Any
 
 # Setup logging
-logger = logging.getLogger("prompt_loader")
+logger = logging.getLogger(__name__)
 if not logger.handlers:
     handler = logging.StreamHandler()
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -24,45 +25,59 @@ AGENT_PROMPT_DIR = os.path.join(DEFAULT_PROMPT_DIR, "agents")
 # Cache for loaded prompts
 _prompt_cache: Dict[str, str] = {}
 
-def load_prompt(prompt_name: str, prompt_dir: Optional[str] = None) -> str:
+def load_prompt(prompt_path: str) -> str:
     """
     Load a prompt from a file.
     
     Args:
-        prompt_name: The name of the prompt file (with or without extension)
-        prompt_dir: Optional directory path, defaults to prompts/agents
+        prompt_path: Path to the prompt file
         
     Returns:
-        The prompt text
-    
+        Prompt text as a string
+        
     Raises:
         FileNotFoundError: If the prompt file does not exist
     """
-    # Add .md extension if not present
-    if not prompt_name.endswith(".md") and not prompt_name.endswith(".txt"):
-        prompt_name += ".md"
-    
-    # Determine the directory to look in
-    directory = prompt_dir or AGENT_PROMPT_DIR
-    
-    # Full path to the prompt file
-    prompt_path = os.path.join(directory, prompt_name)
-    
-    # Check cache first
-    if prompt_path in _prompt_cache:
-        return _prompt_cache[prompt_path]
-    
-    try:
-        with open(prompt_path, 'r', encoding='utf-8') as f:
-            prompt_text = f.read()
-            _prompt_cache[prompt_path] = prompt_text
-            logger.debug(f"Loaded prompt from {prompt_path}")
-            return prompt_text
-    except FileNotFoundError:
+    if not os.path.exists(prompt_path):
         logger.error(f"Prompt file not found: {prompt_path}")
         raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
+    
+    try:
+        with open(prompt_path, "r") as f:
+            prompt_text = f.read()
+        
+        logger.info(f"Loaded prompt from {prompt_path}")
+        return prompt_text
     except Exception as e:
         logger.error(f"Error loading prompt from {prompt_path}: {str(e)}")
+        raise
+
+def load_examples(examples_path: str) -> List[Dict[str, Any]]:
+    """
+    Load examples from a file.
+    
+    Args:
+        examples_path: Path to the examples file
+        
+    Returns:
+        List of example dictionaries
+        
+    Raises:
+        FileNotFoundError: If the examples file does not exist
+    """
+    if not os.path.exists(examples_path):
+        logger.error(f"Examples file not found: {examples_path}")
+        raise FileNotFoundError(f"Examples file not found: {examples_path}")
+    
+    try:
+        import json
+        with open(examples_path, "r") as f:
+            examples = json.load(f)
+        
+        logger.info(f"Loaded {len(examples)} examples from {examples_path}")
+        return examples
+    except Exception as e:
+        logger.error(f"Error loading examples from {examples_path}: {str(e)}")
         raise
 
 def clear_cache() -> None:
