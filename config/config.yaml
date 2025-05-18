@@ -1,0 +1,106 @@
+version: 1.0.0
+last_updated: '2025-05-15'
+agents:
+  prompt_security:
+    active: true
+    description: Agent responsible for ensuring prompt security and content safety
+    core_file:
+      path: agents/prompt_security/core/prompt_security.py
+      version: '0.1'
+    prompt:
+      version: '0.1'
+      path: agents/prompt_security/core/prompts/prompt_prompt_security_v0_1.md
+      description: Security prompt for detecting and handling injection attacks
+    examples:
+      version: '0.1'
+      path: agents/prompt_security/core/examples/prompt_examples_prompt_security_v0_1.json
+    test_examples:
+      version: '0.1'
+      path: agents/prompt_security/tests/data/examples/test_examples_prompt_security_v0_1.json
+    model:
+      name: claude-3-7-sonnet-20250219
+      temperature: 0.0
+    metrics:
+      latest_run: agents/prompt_security/metrics/performance_metrics_20250515_103235.json
+  patient_navigator:
+    active: true
+    description: Agent responsible for guiding patients through insurance processes
+    core_file:
+      path: agents/patient_navigator/core/patient_navigator.py
+      version: '0.1'
+    prompt:
+      version: '0.1'
+      path: agents/patient_navigator/core/prompts/prompt_patient_navigator_v0_1.md
+      description: Navigator prompt for guiding patients through insurance processes
+    examples:
+      version: '0.1'
+      path: agents/patient_navigator/core/examples/prompt_examples_patient_navigator_v0_1.json
+    test_examples:
+      version: '0.1'
+      path: agents/patient_navigator/tests/data/examples/test_examples_patient_navigator_v0_1.json
+    model:
+      name: claude-3-7-sonnet-20250219
+      temperature: 0.7
+    metrics:
+      latest_run: agents/patient_navigator/metrics/performance_metrics_20250515_151555.json
+  task_requirements:
+    active: true
+    description: Agent responsible for determining required documentation for tasks
+    core_file:
+      path: agents/task_requirements/core/task_requirements.py
+      version: '0.1'
+    prompt:
+      version: '0.1'
+      path: agents/task_requirements/core/prompts/prompt_task_requirements_v0_1.md
+      description: Task requirements prompt for determining needed documentation
+    examples:
+      version: '0.1'
+      path: agents/task_requirements/core/examples/prompt_examples_task_requirements_v0_1.json
+    test_examples:
+      version: '0.1'
+      path: agents/task_requirements/tests/data/examples/test_examples_task_requirements_v0_1.json
+    model:
+      name: claude-3-7-sonnet-20250219
+      temperature: 0.2
+    metrics:
+      latest_run: agents/task_requirements/metrics/performance_metrics_20250515_145819.json
+  service_access_strategy:
+    active: true
+    description: Agent responsible for coming up with strategies for accessing services
+    core_file:
+      path: agents/service_access_strategy/core/service_access_strategy.py
+      version: '0.2'
+    prompt:
+      version: '0.1'
+      path: agents/service_access_strategy/core/prompts/prompt_service_access_strategy_v0_2.md
+      description: Service access strategy prompt for developing access plans
+    examples:
+      version: '0.1'
+      path: agents/service_access_strategy/core/examples/prompt_examples_service_access_strategy_v0_1.json
+    test_examples:
+      version: '0.1'
+      path: agents/service_access_strategy/tests/data/examples/test_examples_service_access_strategy_v0_1.json
+    model:
+      name: claude-3-7-sonnet-20250219
+      temperature: 0.2
+    metrics:
+      latest_run: agents/service_access_strategy/metrics/performance_metrics_20250515_153019.json
+performance_metrics:
+  enabled: true
+  save_directory: metrics
+  track_memory: true
+  track_tokens: true
+logging:
+  level: INFO
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  save_directory: logs
+  file_rotation: daily
+  max_file_size: 10485760  # 10MB in bytes
+security:
+  validate_inputs: true
+  sanitize_outputs: true
+  max_token_limit: 4096
+  blocked_patterns:
+    - 'ignore previous instructions'
+    - 'disregard all instructions'
+    - 'system prompt' 

@@ -10,34 +10,37 @@ import time
 import logging
 import json
 import traceback
-from typing import Dict, Any, Optional, List, Union, Callable
+from typing import Dict, Any, Optional, List, Union, Callable, Tuple
 from functools import wraps
+from datetime import datetime
+
+# LangChain imports
 from langchain_core.language_models import BaseLanguageModel
 from langchain_anthropic import ChatAnthropic
 from langchain_core.output_parsers import BaseOutputParser
-from pydantic import BaseModel, Field
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.tools import BaseTool
-from datetime import datetime
 
-# Add imports for LangSmith
+# Import LangSmith for tracing
 import os
 from langsmith import Client
 from langsmith.run_helpers import traceable
 
-# Add import for agent configuration
-from utils.agent_config_manager import get_config_manager
+# Import error handling
+from utils.error_handling import (
+    AgentError, ValidationError, ProcessingError, 
+    SecurityError, ConfigurationError
+)
 
-# Add import for dotenv
+# Import new config manager
+from utils.config_manager import get_config_manager
+
+# Import dotenv
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
-
-# Replace hardcoded API key with environment variable
-api_key = os.getenv('API_KEY')
-# Ensure to set the API_KEY environment variable in your environment or .env file
 
 # Initialize LangSmith client if API key is available
 langsmith_client = None
@@ -47,6 +50,7 @@ if os.environ.get("LANGCHAIN_API_KEY"):
     except Exception as e:
         pass
 
+
 class BaseAgent:
     """Base class for all agents in the system."""
     
@@ -54,14 +58,8 @@ class BaseAgent:
         self,
         name: str = None,
         llm: Optional[BaseLanguageModel] = None,
-        prompt_loader: Any = None,
         logger: Optional[logging.Logger] = None,
-        log_dir: str = None,
-        prompt_version: str = "V0.1",
-        prompt_description: str = "Base implementation",
         use_mock: bool = False,
-        prompt_path: str = None,
-        examples_path: str = None
     ):
         """
         Initialize the base agent with common components.
@@ -69,54 +67,76 @@ class BaseAgent:
         Args:
             name: The name of the agent for logging purposes
             llm: An optional language model to use
-            prompt_loader: An optional prompt loader instance
             logger: An optional pre-configured logger
-            log_dir: Directory for storing log files
-            prompt_version: Version tag for tracking prompt iterations with LangSmith
-            prompt_description: Brief description of current version for LangSmith metadata
             use_mock: Whether to use mock responses for testing
-            prompt_path: Path to prompt template file
-            examples_path: Path to examples file
         """
         self.name = name or self.__class__.__name__
-        self.llm = llm or ChatAnthropic(model="claude-3-sonnet-20240229-v1h", temperature=0)
-        self.prompt_loader = prompt_loader
         self.use_mock = use_mock
-        self.prompt_path = prompt_path
-        self.examples_path = examples_path
         
-        # Get configuration if name is provided
+        # Get configuration
         try:
             self.config_manager = get_config_manager()
             if name:
                 self.agent_config = self.config_manager.get_agent_config(name)
-                # Update prompt version from config if available
-                if "prompt" in self.agent_config:
-                    prompt_version = self.agent_config["prompt"].get("version", prompt_version)
-                    prompt_description = self.agent_config["prompt"].get("description", prompt_description)
-                    
-                    # Get paths from config if not provided
-                    if not self.prompt_path and "path" in self.agent_config["prompt"]:
-                        self.prompt_path = self.agent_config["prompt"]["path"]
-                    
-                    if not self.examples_path and "examples" in self.agent_config:
-                        self.examples_path = self.agent_config["examples"]["path"]
+                
+                # Extract model config
+                model_config = self.agent_config["model"]
+                
+                # Extract paths
+                self.core_file_path = self.agent_config["core_file"]["path"]
+                self.core_file_version = self.agent_config["core_file"]["version"]
+                self.prompt_path = self.agent_config["prompt"]["path"]
+                self.prompt_version = self.agent_config["prompt"]["version"]
+                self.prompt_description = self.agent_config["prompt"].get("description", "")
+                self.examples_path = self.agent_config["examples"]["path"]
+                self.examples_version = self.agent_config["examples"]["version"]
+            else:
+                # Default values if name is not provided
+                self.agent_config = {}
+                self.core_file_path = None
+                self.core_file_version = "0.1"
+                self.prompt_path = None
+                self.prompt_version = "0.1"
+                self.prompt_description = ""
+                self.examples_path = None
+                self.examples_version = "0.1"
+                model_config = {"name": "claude-3-sonnet-20240229-v1h", "temperature": 0.0}
         except Exception as e:
-            if logger:
-                logger.error(f"Error loading agent configuration: {str(e)}")
+            # Fallback configuration
             self.agent_config = {}
             self.config_manager = None
+            self.core_file_path = None
+            self.core_file_version = "0.1"
+            self.prompt_path = None
+            self.prompt_version = "0.1"
+            self.prompt_description = ""
+            self.examples_path = None
+            self.examples_version = "0.1"
+            model_config = {"name": "claude-3-sonnet-20240229-v1h", "temperature": 0.0}
+            
+            if logger:
+                logger.error(f"Error loading agent configuration: {str(e)}")
+                logger.error(traceback.format_exc())
         
-        # Set default log directory based on agent name if not provided
-        if log_dir is None:
-            module_path = os.path.dirname(os.path.dirname(__file__))
-            agent_dir = os.path.join(module_path, self.name.lower().replace("agent", ""))
-            self.log_dir = os.path.join(agent_dir, "logs")
+        # Set up LLM
+        if not use_mock:
+            self.llm = llm or ChatAnthropic(
+                model=model_config["name"], 
+                temperature=model_config["temperature"]
+            )
         else:
-            self.log_dir = log_dir
+            self.llm = None
         
         # Set up logging
-        self.logger = logger or self._setup_logger(self.name, self.log_dir)
+        if logger is None:
+            # Set default log directory based on agent name
+            module_path = os.path.dirname(os.path.dirname(__file__))
+            agent_dir = os.path.join(module_path, self.name.lower().replace("agent", ""))
+            log_dir = os.path.join(agent_dir, "logs")
+            os.makedirs(log_dir, exist_ok=True)
+            self.logger = self._setup_logger(self.name, log_dir)
+        else:
+            self.logger = logger
         
         # Enhanced performance tracking
         self.metrics = {
@@ -133,17 +153,24 @@ class BaseAgent:
             "by_category": {}
         }
         
-        # LangSmith tracking metadata
-        self.prompt_version = prompt_version
-        self.prompt_description = prompt_description
-        
         # Initialize state history for tracking
         self.state_history = []
         self.tools = []
-        self.memory = None
-        self.human_in_loop = False
         
         self.logger.info(f"{self.name} agent initialized with prompt version {self.prompt_version}")
+        
+        # Perform agent-specific initialization
+        self._initialize_agent()
+    
+    def _initialize_agent(self) -> None:
+        """
+        Initialize agent-specific components.
+        
+        This method is meant to be overridden by subclasses to perform
+        any agent-specific initialization, such as loading tools, setting up
+        memory, or initializing other components.
+        """
+        pass
     
     def _setup_logger(self, name: str, log_dir: str) -> logging.Logger:
         """Set up a logger for the agent."""
@@ -197,23 +224,23 @@ class BaseAgent:
                 
                 # Log performance
                 self.logger.info(
-                    f"{func.__name__} completed in {time.time() - start_time:.2f}s - "
-                    f"Avg time: {self.metrics['avg_response_time']:.2f}s"
+                    f"{func.__name__} completed in {time.time() - start_time:.2f}s"
                 )
                 
                 return result
-                
             except Exception as e:
-                # Update error metrics
+                # Update metrics with failure
                 self.update_metrics(
                     success=False,
                     response_time=time.time() - start_time,
                     category=category,
-                    prompt_tokens=0,
-                    completion_tokens=0
+                    error=str(e)
                 )
                 
-                self.logger.error(f"Error in {func.__name__}: {str(e)}")
+                # Log error
+                self.logger.error(
+                    f"Error in {func.__name__}: {str(e)}"
+                )
                 self.logger.error(traceback.format_exc())
                 
                 # Re-raise the exception
@@ -221,295 +248,366 @@ class BaseAgent:
         
         return wrapper
     
-    def update_metrics(self, success: bool, response_time: float, category: str, 
-                      prompt_tokens: int, completion_tokens: int) -> None:
-        """
-        Update performance metrics.
-        
-        Args:
-            success (bool): Whether the request was successful
-            response_time (float): The response time in seconds
-            category (str): The request category
-            prompt_tokens (int): The number of prompt tokens used
-            completion_tokens (int): The number of completion tokens used
-        """
-        # Update overall metrics
+    def update_metrics(
+        self, 
+        success: bool, 
+        response_time: float, 
+        category: str = "default", 
+        prompt_tokens: int = 0, 
+        completion_tokens: int = 0,
+        error: str = None
+    ) -> None:
+        """Update performance metrics."""
+        # Update total requests
         self.metrics["total_requests"] += 1
         
+        # Update success/failure counts
         if success:
             self.metrics["successful_requests"] += 1
         else:
             self.metrics["failed_requests"] += 1
         
+        # Update response time metrics
         self.metrics["total_response_time"] += response_time
-        self.metrics["avg_response_time"] = self.metrics["total_response_time"] / self.metrics["total_requests"]
+        self.metrics["avg_response_time"] = (
+            self.metrics["total_response_time"] / self.metrics["total_requests"]
+        )
         
         # Update token usage
         self.metrics["token_usage"]["prompt_tokens"] += prompt_tokens
         self.metrics["token_usage"]["completion_tokens"] += completion_tokens
-        self.metrics["token_usage"]["total_tokens"] += prompt_tokens + completion_tokens
+        self.metrics["token_usage"]["total_tokens"] += (prompt_tokens + completion_tokens)
         
-        # Update category metrics
+        # Update category-specific metrics
         if category not in self.metrics["by_category"]:
             self.metrics["by_category"][category] = {
-                "total": 0,
+                "requests": 0,
                 "successful": 0,
                 "failed": 0,
                 "avg_response_time": 0,
-                "total_response_time": 0
+                "total_response_time": 0,
+                "errors": []
             }
         
-        self.metrics["by_category"][category]["total"] += 1
+        cat_metrics = self.metrics["by_category"][category]
+        cat_metrics["requests"] += 1
         
         if success:
-            self.metrics["by_category"][category]["successful"] += 1
+            cat_metrics["successful"] += 1
         else:
-            self.metrics["by_category"][category]["failed"] += 1
+            cat_metrics["failed"] += 1
+            if error:
+                cat_metrics["errors"].append(error)
         
-        self.metrics["by_category"][category]["total_response_time"] += response_time
-        self.metrics["by_category"][category]["avg_response_time"] = (
-            self.metrics["by_category"][category]["total_response_time"] / 
-            self.metrics["by_category"][category]["total"]
+        cat_metrics["total_response_time"] += response_time
+        cat_metrics["avg_response_time"] = (
+            cat_metrics["total_response_time"] / cat_metrics["requests"]
         )
     
     def get_metrics(self) -> Dict[str, Any]:
-        """
-        Get the current performance metrics.
-        
-        Returns:
-            Dict[str, Any]: The performance metrics
-        """
-        # Calculate additional metrics
-        if self.metrics["total_requests"] > 0:
-            success_rate = self.metrics["successful_requests"] / self.metrics["total_requests"]
-        else:
-            success_rate = 0
-        
-        # Add calculated metrics
-        metrics = {
-            **self.metrics,
-            "success_rate": success_rate,
-            "timestamp": datetime.now().isoformat()
-        }
-        
-        return metrics
+        """Get the current performance metrics."""
+        return self.metrics
     
     def save_metrics(self, file_path: Optional[str] = None) -> str:
         """
-        Save the current performance metrics to a file.
+        Save the current metrics to a file.
         
         Args:
-            file_path (Optional[str]): The file path to save the metrics to
-            
+            file_path: Optional path to save the metrics to. If not provided,
+                     a default path will be used.
+                     
         Returns:
-            str: The file path where the metrics were saved
+            The path to the saved metrics file.
         """
+        # Determine the output path
         if file_path is None:
-            # Create a metrics directory if it doesn't exist
-            metrics_dir = os.path.join("agents", self.name, "metrics")
+            # Create the metrics directory if it doesn't exist
+            module_path = os.path.dirname(os.path.dirname(__file__))
+            agent_dir = os.path.join(module_path, self.name.lower().replace("agent", ""))
+            metrics_dir = os.path.join(agent_dir, "metrics")
             os.makedirs(metrics_dir, exist_ok=True)
             
-            # Generate a file name with timestamp
+            # Create a timestamp-based filename
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             file_path = os.path.join(metrics_dir, f"performance_metrics_{timestamp}.json")
         
-        # Get the metrics
-        metrics = self.get_metrics()
+        # Add metadata
+        metrics_with_metadata = {
+            "agent": self.name,
+            "timestamp": datetime.now().isoformat(),
+            "prompt_version": self.prompt_version,
+            "metrics": self.metrics
+        }
         
-        # Save the metrics to the file
-        with open(file_path, 'w') as f:
-            json.dump(metrics, f, indent=2)
+        # Save the metrics
+        with open(file_path, "w") as f:
+            json.dump(metrics_with_metadata, f, indent=2)
         
-        # Update the agent config with the latest metrics run
-        if self.config_manager and self.name:
-            try:
-                self.config_manager.update_metrics_run(self.name, file_path)
-            except Exception as e:
-                self.logger.error(f"Error updating metrics in agent config: {str(e)}")
-        
+        # Log the save
         self.logger.info(f"Metrics saved to {file_path}")
+        
+        # Update the latest metrics path in the agent configuration
+        if self.config_manager and self.name in self.config_manager.get_all_agents():
+            try:
+                agent_config = self.agent_config.copy()
+                agent_config["metrics"]["latest_run"] = file_path
+                self.config_manager.update_agent_config(self.name, agent_config)
+            except Exception as e:
+                self.logger.error(f"Error updating metrics path in configuration: {str(e)}")
         
         return file_path
     
     def get_langsmith_metadata(self) -> Dict[str, str]:
-        """Get metadata for LangSmith tracking."""
+        """Get metadata for LangSmith tracing."""
         return {
             "agent_name": self.name,
             "prompt_version": self.prompt_version,
-            "prompt_description": self.prompt_description,
+            "prompt_description": self.prompt_description
         }
     
-    @traceable(run_type="llm", name="process_input")
-    def process(self, *args, **kwargs) -> Any:
+    def process(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Process a request (to be implemented by subclasses).
-        This method is decorated with @traceable to track runs in LangSmith.
+        Process input data through the standard pipeline.
+        
+        This method implements a standard processing pipeline that:
+        1. Validates the input data
+        2. Processes the validated data
+        3. Formats the processed data for output
+        
+        Subclasses should override the _validate_input, _process_data, and
+        _format_output methods rather than this method.
         
         Args:
-            *args: Positional arguments
-            **kwargs: Keyword arguments
+            input_data: The input data to process
             
         Returns:
-            Processing result (varies by agent)
+            The processed output data
+            
+        Raises:
+            ValidationError: If input validation fails
+            ProcessingError: If data processing fails
+            AgentError: For other errors
         """
-        raise NotImplementedError("Subclasses must implement the process method")
+        try:
+            # Step 1: Validate input
+            self.logger.info(f"Processing input: {str(input_data)[:100]}...")
+            validated_input = self._validate_input(input_data)
+            
+            # Step 2: Process data
+            self.logger.info("Input validated, processing data...")
+            processed_data = self._process_data(validated_input)
+            
+            # Step 3: Format output
+            self.logger.info("Data processed, formatting output...")
+            output = self._format_output(processed_data)
+            
+            self.logger.info("Processing complete")
+            return output
+            
+        except ValidationError as e:
+            self.logger.error(f"Validation error: {str(e)}")
+            raise
+        except ProcessingError as e:
+            self.logger.error(f"Processing error: {str(e)}")
+            raise
+        except AgentError as e:
+            self.logger.error(f"Agent error: {str(e)}")
+            raise
+        except Exception as e:
+            self.logger.error(f"Unexpected error: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            raise AgentError(f"Unexpected error: {str(e)}")
+    
+    def _validate_input(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate input data before processing.
         
-    def create_prompt(self, system_message: str) -> ChatPromptTemplate:
-        """Create a prompt template with system message and available tools."""
+        This method should be overridden by subclasses to implement
+        agent-specific input validation logic.
+        
+        Args:
+            input_data: The input data to validate
+            
+        Returns:
+            The validated input data
+            
+        Raises:
+            ValidationError: If validation fails
+        """
+        # Default implementation just returns the input data
+        return input_data
+    
+    def _process_data(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Process the validated input data.
+        
+        This method should be overridden by subclasses to implement
+        agent-specific data processing logic.
+        
+        Args:
+            input_data: The validated input data
+            
+        Returns:
+            The processed data
+            
+        Raises:
+            ProcessingError: If processing fails
+        """
+        # Default implementation raises NotImplementedError
+        raise NotImplementedError("Subclasses must implement _process_data")
+    
+    def _format_output(self, processed_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Format the processed data for output.
+        
+        This method should be overridden by subclasses to implement
+        agent-specific output formatting logic.
+        
+        Args:
+            processed_data: The processed data
+            
+        Returns:
+            The formatted output data
+        """
+        # Default implementation returns the processed data as is
+        return processed_data
+    
+    def create_prompt(
+        self, 
+        system_message: str,
+        human_template: str = "{input}"
+    ) -> ChatPromptTemplate:
+        """Create a ChatPromptTemplate with the given system message."""
         messages = [
-            ("system", system_message)
+            SystemMessage(content=system_message),
+            HumanMessage(content=human_template)
         ]
-        
-        if self.tools:
-            tool_descriptions = "\n".join([
-                f"- {tool.name}: {tool.description}"
-                for tool in self.tools
-            ])
-            messages[0] = (
-                "system",
-                f"{system_message}\n\nAvailable tools:\n{tool_descriptions}"
-            )
-        
         return ChatPromptTemplate.from_messages(messages)
     
     def save_state(self, state: Dict[str, Any]) -> None:
-        """Save the current state to history."""
-        state_with_metadata = {
-            **state,
+        """Save the current state of the agent."""
+        state_with_timestamp = {
             "timestamp": datetime.now().isoformat(),
-            "agent_name": self.name,
-            "prompt_version": self.prompt_version
+            "state": state
         }
-        self.state_history.append(state_with_metadata)
-        
+        self.state_history.append(state_with_timestamp)
+        self.logger.debug(f"State saved: {str(state)[:100]}...")
+    
     def load_state(self) -> Dict[str, Any]:
-        """Load the most recent state."""
+        """Load the most recent state of the agent."""
         if not self.state_history:
             return {}
-        return self.state_history[-1]
+        return self.state_history[-1]["state"]
     
-    @traceable(run_type="chain", name="agent_run")
-    def run(self, prompt: ChatPromptTemplate, input_text: str) -> str:
-        """Run the agent with the given prompt and input."""
-        # Add LangSmith metadata
-        metadata = self.get_langsmith_metadata()
+    def _load_prompt(self, prompt_path: Optional[str] = None) -> str:
+        """
+        Load a prompt from a file.
         
-        if self.human_in_loop:
-            return input("Enter your feedback: ")
+        Args:
+            prompt_path: Path to the prompt file. If not provided, the agent's
+                       default prompt path will be used.
+                       
+        Returns:
+            The loaded prompt as a string
             
-        # Save state
-        current_state = {
-            "input": input_text,
-            "prompt": str(prompt)
-        }
-        self.save_state(current_state)
+        Raises:
+            ConfigurationError: If the prompt file is not found
+        """
+        path = prompt_path or self.prompt_path
+        if not path:
+            raise ConfigurationError("No prompt path specified")
         
-        # Update memory if available
-        if self.memory:
-            self.memory.save_context(
-                {"input": input_text},
-                {"output": f"Agent {self.name} processed: {input_text}"}
-            )
-        
-        return f"Agent {self.name} processed: {input_text}"
+        try:
+            with open(path, 'r') as f:
+                return f.read()
+        except FileNotFoundError:
+            raise ConfigurationError(f"Prompt file not found: {path}")
     
-    def export_state_history(self, filepath: str) -> None:
-        """Export state history to a JSON file."""
-        with open(filepath, 'w') as f:
-            json.dump(self.state_history, f, indent=2)
+    def _load_examples(self, examples_path: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Load examples from a file.
+        
+        Args:
+            examples_path: Path to the examples file. If not provided, the agent's
+                         default examples path will be used.
+                         
+        Returns:
+            The loaded examples as a list of dictionaries
             
-    def import_state_history(self, filepath: str) -> None:
-        """Import state history from a JSON file."""
-        with open(filepath, 'r') as f:
-            self.state_history = json.load(f)
+        Raises:
+            ConfigurationError: If the examples file is not found or is invalid
+        """
+        path = examples_path or self.examples_path
+        if not path:
+            return []
+        
+        try:
+            with open(path, 'r') as f:
+                # Check file extension and load accordingly
+                if path.endswith('.json'):
+                    return json.load(f)
+                elif path.endswith('.md'):
+                    # Parse markdown examples - this is a simple implementation
+                    # and may need to be adjusted based on your markdown format
+                    examples = []
+                    current_example = {}
+                    
+                    for line in f:
+                        line = line.strip()
+                        if line.startswith('# Example'):
+                            if current_example:
+                                examples.append(current_example)
+                                current_example = {}
+                        elif line.startswith('## Input'):
+                            current_example['input'] = ''
+                        elif line.startswith('## Output'):
+                            current_example['output'] = ''
+                        elif 'input' in current_example and 'output' not in current_example:
+                            current_example['input'] += line + '\n'
+                        elif 'output' in current_example:
+                            current_example['output'] += line + '\n'
+                    
+                    if current_example:
+                        examples.append(current_example)
+                    
+                    return examples
+                else:
+                    raise ConfigurationError(f"Unsupported examples file format: {path}")
+        except FileNotFoundError:
+            self.logger.warning(f"Examples file not found: {path}")
+            return []
+        except json.JSONDecodeError:
+            raise ConfigurationError(f"Invalid JSON in examples file: {path}")
     
     @staticmethod
     def get_env_variable(variable_name: str, default: str = None) -> str:
         """
-        Get an environment variable, returning a default if not found.
+        Get an environment variable.
         
         Args:
-            variable_name: Name of the environment variable
-            default: Default value to return if variable is not set
+            variable_name: The name of the environment variable
+            default: The default value to return if the variable is not set
             
         Returns:
-            The value of the environment variable or the default
+            The value of the environment variable, or the default if not set
         """
-        return os.getenv(variable_name, default)
+        return os.environ.get(variable_name, default)
     
     @staticmethod
     def get_api_key(key_name: str = "ANTHROPIC_API_KEY") -> str:
         """
-        Get an API key from environment variables.
+        Get an API key from the environment.
         
         Args:
-            key_name: Name of the API key environment variable
+            key_name: The name of the environment variable containing the API key
             
         Returns:
-            The API key or None if not found
+            The API key
+            
+        Raises:
+            ConfigurationError: If the API key is not set
         """
-        api_key = os.getenv(key_name)
+        api_key = os.environ.get(key_name)
         if not api_key:
-            raise ValueError(f"API key {key_name} not found in environment variables")
-        return api_key
-    
-    def _load_file(self, file_path: str) -> str:
-        """
-        Load a file and return its contents as a string.
-        
-        Args:
-            file_path (str): Path to the file to load
-            
-        Returns:
-            str: Contents of the file
-        """
-        try:
-            with open(file_path, 'r') as file:
-                return file.read()
-        except FileNotFoundError:
-            self.logger.error(f"File not found: {file_path}")
-            raise FileNotFoundError(f"File not found: {file_path}")
-    
-    def _build_prompt(self, template_placeholder: str, example_placeholder: str, input_data: Any, 
-                     template_path: str = None, examples_path: str = None) -> str:
-        """
-        Build a prompt by inserting examples into a template.
-        
-        Args:
-            template_placeholder: Placeholder in the template to replace with examples
-            example_placeholder: Optional placeholder for examples in the template
-            input_data: The input data to include in the prompt
-            template_path: Path to the template file (defaults to self.prompt_path)
-            examples_path: Path to examples file (defaults to self.examples_path)
-            
-        Returns:
-            str: The complete prompt
-        """
-        # Use provided paths or instance paths
-        template_path = template_path or self.prompt_path
-        examples_path = examples_path or self.examples_path
-        
-        # Load template and examples
-        template = self._load_file(template_path)
-        examples = self._load_file(examples_path) if examples_path else ""
-        
-        # Insert examples into the template if placeholder exists
-        if example_placeholder and example_placeholder in template:
-            template = template.replace(example_placeholder, examples)
-        
-        # Format input data
-        input_str = ""
-        if isinstance(input_data, dict):
-            input_str = json.dumps(input_data, indent=2)
-        elif isinstance(input_data, str):
-            input_str = input_data
-        else:
-            input_str = str(input_data)
-        
-        # Add the input to the prompt
-        if template_placeholder:
-            full_prompt = template.replace(template_placeholder, input_str)
-        else:
-            full_prompt = f"{template}\n\nInput:\n```\n{input_str}\n```\n"
-        
-        return full_prompt 
+            raise ConfigurationError(f"API key not set: {key_name}")
+        return api_key 
