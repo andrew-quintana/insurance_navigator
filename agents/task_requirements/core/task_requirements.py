@@ -34,7 +34,7 @@ from agents.common.exceptions import (
 from utils.config_manager import ConfigManager
 
 # Import models
-from agents.task_requirements.models.task_models import (
+from agents.task_requirements.core.models.task_models import (
     DocumentStatus,
     ReactStep,
     TaskProcessingResult
@@ -42,6 +42,17 @@ from agents.task_requirements.models.task_models import (
 
 # Setup logger
 logger = logging.getLogger(__name__)
+if not logger.handlers:
+    # Create logs directory if it doesn't exist
+    log_dir = os.path.join("logs")
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # Set up file handler
+    handler = logging.FileHandler(os.path.join(log_dir, "task_requirements.log"))
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
 
 
 class TaskRequirementsAgent(BaseAgent):
@@ -78,14 +89,15 @@ class TaskRequirementsAgent(BaseAgent):
         temperature = model_config.get("temperature", 0.0)
         
         # Get prompt configuration
-        prompt_path = agent_config.get("prompt", {}).get("path")
-        examples_path = agent_config.get("examples", {}).get("path")
+        self.custom_prompt_path = agent_config.get("prompt", {}).get("path")
+        self.custom_examples_path = agent_config.get("examples", {}).get("path")
+        self.custom_test_examples_path = agent_config.get("test_examples", {}).get("path")
         
         # Initialize the BaseAgent
         super().__init__(
             name="task_requirements",
             llm=llm,
-            config_manager=self.config_manager
+            use_mock=use_mock
         )
         
         # Store additional components
@@ -93,14 +105,9 @@ class TaskRequirementsAgent(BaseAgent):
         self.output_agent = output_agent
         self.use_mock = use_mock
         
-        # Store paths
-        self.prompt_path = prompt_path
-        self.examples_path = examples_path
-        self.test_examples_path = agent_config.get("test_examples", {}).get("path")
-        
-        # Load prompt template and examples
-        self.prompt_template = self._load_file(self.prompt_path)
-        self.examples = self._load_file(self.examples_path)
+        # Store the last processed input for context
+        self.last_input = None
+        self.last_required_context = None
         
         # Define available actions
         self.available_actions = {
@@ -113,37 +120,26 @@ class TaskRequirementsAgent(BaseAgent):
             "finish": self._finish
         }
         
-        # Store the last processed input for context
-        self.last_input = None
-        self.last_required_context = None
+        # Initialize agent-specific components
+        self._initialize_agent()
         
         logger.info(f"Task Requirements Agent initialized with model {model_name}")
 
-    def _load_file(self, file_path: str) -> str:
-        """
-        Load file content from path.
-        
-        Args:
-            file_path: Path to the file
-            
-        Returns:
-            File content as string, empty string if file not found
-            
-        Raises:
-            FileNotFoundError: If the file is not found
-        """
-        if not file_path:
-            return ""
-            
+    def _initialize_agent(self):
+        """Initialize agent-specific components."""
+        # Load prompt template and examples using BaseAgent's methods
         try:
-            with open(file_path, 'r') as f:
-                return f.read()
-        except FileNotFoundError:
-            logger.warning(f"File not found: {file_path}")
-            raise FileNotFoundError(f"File not found: {file_path}")
+            self.prompt_template = self._load_prompt(self.custom_prompt_path)
         except Exception as e:
-            logger.error(f"Error loading file {file_path}: {str(e)}")
-            raise
+            self.logger.error(f"Failed to load prompt template: {e}")
+            # Use minimal fallback to prevent system crash, but log an error
+            self.prompt_template = "Error: Failed to load prompt template"
+        
+        try:
+            self.examples = self._load_examples(self.custom_examples_path)
+        except Exception as e:
+            self.logger.warning(f"Failed to load examples: {e}")
+            self.examples = ""
 
     def _build_specific_prompt(self, input_json: Dict[str, Any]) -> str:
         """

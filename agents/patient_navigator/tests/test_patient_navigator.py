@@ -12,7 +12,7 @@ import json
 from datetime import datetime
 
 from agents.patient_navigator.core.patient_navigator import PatientNavigatorAgent
-from agents.patient_navigator.models.navigator_models import (
+from agents.patient_navigator.core.models.navigator_models import (
     NavigatorOutput, MetaIntent, ClinicalContext, ServiceIntent, Metadata, BodyLocation
 )
 from agents.common.exceptions import (

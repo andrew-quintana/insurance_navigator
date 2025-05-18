@@ -175,6 +175,7 @@ class BaseAgent:
     def _setup_logger(self, name: str, log_dir: str) -> logging.Logger:
         """Set up a logger for the agent."""
         # Create log directory if it doesn't exist
+        log_dir = os.path.join("logs")
         os.makedirs(log_dir, exist_ok=True)
         
         # Create logger
@@ -315,7 +316,7 @@ class BaseAgent:
         Args:
             file_path: Optional path to save the metrics to. If not provided,
                      a default path will be used.
-                     
+            
         Returns:
             The path to the saved metrics file.
         """
@@ -492,35 +493,30 @@ class BaseAgent:
         }
         self.state_history.append(state_with_timestamp)
         self.logger.debug(f"State saved: {str(state)[:100]}...")
-    
+        
     def load_state(self) -> Dict[str, Any]:
         """Load the most recent state of the agent."""
         if not self.state_history:
             return {}
         return self.state_history[-1]["state"]
     
-    def _load_prompt(self, prompt_path: Optional[str] = None, default_prompt: Optional[str] = None) -> str:
+    def _load_prompt(self, prompt_path: Optional[str] = None) -> str:
         """
         Load a prompt from a file.
         
         Args:
             prompt_path: Path to the prompt file. If not provided, the agent's
                        default prompt path will be used.
-            default_prompt: Default prompt text to use if the file is not found
-                           or cannot be read.
                        
         Returns:
             The loaded prompt as a string
             
         Raises:
-            ConfigurationError: If the prompt file is not found and no default is provided
+            ConfigurationError: If the prompt file is not found or cannot be read
         """
         path = prompt_path or self.prompt_path
         if not path:
-            if default_prompt:
-                self.logger.warning("No prompt path specified, using default prompt")
-                return default_prompt
-            raise ConfigurationError("No prompt path specified and no default prompt provided")
+            raise ConfigurationError("No prompt path specified")
         
         try:
             with open(path, 'r') as f:
@@ -528,40 +524,30 @@ class BaseAgent:
                 self.logger.info(f"Successfully loaded prompt from {path}")
                 return prompt_text
         except FileNotFoundError:
-            if default_prompt:
-                self.logger.warning(f"Prompt file not found at {path}, using default prompt")
-                return default_prompt
             self.logger.error(f"Prompt file not found: {path}")
             raise ConfigurationError(f"Prompt file not found: {path}")
         except Exception as e:
-            if default_prompt:
-                self.logger.warning(f"Error reading prompt file {path}: {str(e)}, using default prompt")
-                return default_prompt
             self.logger.error(f"Error reading prompt file {path}: {str(e)}")
             raise ConfigurationError(f"Error reading prompt file {path}: {str(e)}")
     
-    def _load_examples(self, examples_path: Optional[str] = None, default_examples: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+    def _load_examples(self, examples_path: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Load examples from a file.
         
         Args:
             examples_path: Path to the examples file. If not provided, the agent's
-                         default examples path will be used.
-            default_examples: Default examples to use if the file is not found
-                             or cannot be read.
+                         default examples path will be used. If no path is available,
+                         returns an empty list.
                          
         Returns:
-            The loaded examples as a list of dictionaries
+            The loaded examples as a list of dictionaries, or an empty list if no path is specified
             
         Raises:
-            ConfigurationError: If the examples file is not found or is invalid
+            ConfigurationError: If the examples file is specified but not found or is invalid
         """
         path = examples_path or self.examples_path
         if not path:
-            if default_examples is not None:
-                self.logger.info("No examples path specified, using default examples")
-                return default_examples
-            self.logger.info("No examples path specified and no default examples provided")
+            self.logger.info("No examples path specified, returning empty examples list")
             return []
         
         try:
@@ -600,21 +586,12 @@ class BaseAgent:
                 else:
                     raise ConfigurationError(f"Unsupported examples file format: {path}")
         except FileNotFoundError:
-            if default_examples is not None:
-                self.logger.warning(f"Examples file not found at {path}, using default examples")
-                return default_examples
-            self.logger.warning(f"Examples file not found: {path}")
-            return []
+            self.logger.error(f"Examples file not found: {path}")
+            raise ConfigurationError(f"Examples file not found: {path}")
         except json.JSONDecodeError as e:
-            if default_examples is not None:
-                self.logger.warning(f"Invalid JSON in examples file {path}: {str(e)}, using default examples")
-                return default_examples
             self.logger.error(f"Invalid JSON in examples file: {path}")
             raise ConfigurationError(f"Invalid JSON in examples file: {path}")
         except Exception as e:
-            if default_examples is not None:
-                self.logger.warning(f"Error reading examples file {path}: {str(e)}, using default examples")
-                return default_examples
             self.logger.error(f"Error reading examples file {path}: {str(e)}")
             raise ConfigurationError(f"Error reading examples file {path}: {str(e)}")
     
@@ -649,4 +626,4 @@ class BaseAgent:
         api_key = os.environ.get(key_name)
         if not api_key:
             raise ConfigurationError(f"API key not set: {key_name}")
-        return api_key 
+        return api_key

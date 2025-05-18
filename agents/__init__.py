@@ -15,15 +15,15 @@ from agents.task_requirements.core.task_requirements import TaskRequirementsAgen
 from agents.service_access_strategy.core.service_access_strategy import ServiceAccessStrategyAgent
 
 # Import models
-from agents.prompt_security.models.security_models import SecurityCheck
-from agents.patient_navigator.models.navigator_models import (
+from agents.prompt_security.core.models.security_models import SecurityCheck
+from agents.patient_navigator.core.models.navigator_models import (
     NavigatorOutput, MetaIntent, ClinicalContext, 
     ServiceIntent, Metadata, BodyLocation
 )
-from agents.task_requirements.models.task_models import (
+from agents.task_requirements.core.models.task_models import (
     DocumentStatus, ReactStep, TaskProcessingResult
 )
-from agents.service_access_strategy.models.strategy_models import (
+from agents.service_access_strategy.core.models.strategy_models import (
     ServiceAccessStrategy, ServiceMatch, ActionStep
 )
 

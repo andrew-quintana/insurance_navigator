@@ -13,7 +13,7 @@ agents:
       description: Security prompt for detecting and handling injection attacks
     examples:
       version: '0.1'
-      path: agents/prompt_security/core/examples/prompt_examples_prompt_security_v0_1.json
+      path: agents/prompt_security/core/prompts/examples/prompt_examples_prompt_security_v0_1.json
     test_examples:
       version: '0.1'
       path: agents/prompt_security/tests/data/examples/test_examples_prompt_security_v0_1.json
@@ -34,7 +34,7 @@ agents:
       description: Navigator prompt for guiding patients through insurance processes
     examples:
       version: '0.1'
-      path: agents/patient_navigator/core/examples/prompt_examples_patient_navigator_v0_1.json
+      path: agents/patient_navigator/core/prompts/examples/prompt_examples_patient_navigator_v0_1.json
     test_examples:
       version: '0.1'
       path: agents/patient_navigator/tests/data/examples/test_examples_patient_navigator_v0_1.json
@@ -55,7 +55,7 @@ agents:
       description: Task requirements prompt for determining needed documentation
     examples:
       version: '0.1'
-      path: agents/task_requirements/core/examples/prompt_examples_task_requirements_v0_1.json
+      path: agents/task_requirements/core/prompts/examples/prompt_examples_task_requirements_v0_1.json
     test_examples:
       version: '0.1'
       path: agents/task_requirements/tests/data/examples/test_examples_task_requirements_v0_1.json

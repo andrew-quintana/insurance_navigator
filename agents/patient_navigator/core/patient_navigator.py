@@ -42,13 +42,24 @@ from agents.common.exceptions import (
 from utils.config_manager import ConfigManager
 
 # Import models
-from agents.patient_navigator.models.navigator_models import (
+from agents.patient_navigator.core.models.navigator_models import (
     NavigatorOutput, MetaIntent, ClinicalContext, 
     ServiceIntent, Metadata, BodyLocation
 )
 
 # Setup logger
 logger = logging.getLogger(__name__)
+if not logger.handlers:
+    # Create logs directory if it doesn't exist
+    log_dir = os.path.join("logs")
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # Set up file handler
+    handler = logging.FileHandler(os.path.join(log_dir, "patient_navigator.log"))
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
 
 
 class PatientNavigatorAgent(BaseAgent):
@@ -84,8 +95,7 @@ class PatientNavigatorAgent(BaseAgent):
         # Initialize the base agent
         super().__init__(
             name="patient_navigator", 
-            llm=llm or ChatAnthropic(model=model_name, temperature=temperature),
-            config_manager=self.config_manager
+            llm=llm or ChatAnthropic(model=model_name, temperature=temperature)
         )
         
         # Initialize the output parser
@@ -97,8 +107,9 @@ class PatientNavigatorAgent(BaseAgent):
         # Active conversations (in a real system, this would be in a database)
         self.active_conversations = {}
         
-        # Load prompt template and examples
-        self.system_prompt = self._load_prompt(prompt_path, examples_path)
+        # Store paths for use in _initialize_agent
+        self.custom_prompt_path = prompt_path
+        self.custom_examples_path = examples_path
         
         # Define the prompt template
         self.prompt_template = PromptTemplate(
@@ -122,6 +133,9 @@ class PatientNavigatorAgent(BaseAgent):
             | self.llm
             | self.output_parser
         )
+        
+        # Initialize agent-specific components
+        self._initialize_agent()
         
         logger.info(f"Patient Navigator Agent initialized with model {model_name}")
 
@@ -185,7 +199,7 @@ class PatientNavigatorAgent(BaseAgent):
         
         # Update last updated timestamp
         self.active_conversations[conversation_key]["last_updated"] = datetime.utcnow().isoformat() + "Z"
-
+    
     @BaseAgent.track_performance
     def process(self, user_query: str, user_id: str, session_id: str) -> Tuple[str, Dict[str, Any]]:
         """
@@ -243,7 +257,7 @@ class PatientNavigatorAgent(BaseAgent):
             # Process the query
             logger.info("Calling language model...")
             raw_response = self.llm.invoke(self.prompt_template.format(
-                system_prompt=self.system_prompt,
+                    system_prompt=self.system_prompt,
                 user_query=user_query,
                 format_instructions=self.output_parser.get_format_instructions()
             ))
@@ -344,47 +358,24 @@ class PatientNavigatorAgent(BaseAgent):
         """Initialize agent-specific components."""
         # Get paths from configuration
         try:
-            prompt_path = self.prompt_path
-            examples_path = self.examples_path
+            prompt_path = self.custom_prompt_path
+            examples_path = self.custom_examples_path
         except AttributeError:
             # Use default paths if not available
             prompt_path = "agents/patient_navigator/prompts/prompt_navigator_v0_1.md"
             examples_path = "agents/patient_navigator/prompts/examples/navigator_examples_v0_1.json"
             
-        # Default prompt if path is not found
-        default_prompt = """
-        You are an expert Patient Navigation Coordinator with deep knowledge in clinical workflows, 
-        patient communication, and multi-agent delegation.
-        
-        Your task is to interpret and clarify the user's intent based on their input, 
-        format it into a structured intent package, and route it to the appropriate 
-        internal agent for handling.
-        """
+        # Load prompt from file using BaseAgent's method
+        self.system_prompt = self._load_prompt(prompt_path)
         
         # Load examples if available
-        examples = []
         try:
-            examples = self._load_examples(examples_path, default_examples=[])
+            examples = self._load_examples(examples_path)
             if examples:
                 examples_text = "\n\nExamples:\n\n" + json.dumps(examples, indent=2)
-                default_prompt += examples_text
+                self.system_prompt += examples_text
         except Exception as e:
             self.logger.warning(f"Failed to load examples: {e}")
-        
-        # Load prompt from file
-        self.system_prompt = self._load_prompt(prompt_path, default_prompt=default_prompt)
-        
-        # Create output parser for navigator response
-        self.output_parser = PydanticOutputParser(pydantic_object=NavigatorOutput)
-        
-        # Create prompt template
-        self.prompt_template = """
-        {system_prompt}
-        
-        USER QUERY: {user_query}
-        
-        {format_instructions}
-        """
         
         # Initialize conversation tracking
         self.active_conversations = {}
