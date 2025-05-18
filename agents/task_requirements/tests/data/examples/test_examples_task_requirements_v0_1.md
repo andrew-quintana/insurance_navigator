@@ -192,6 +192,58 @@
 **Thought 6**: I have all required documentation. Proceeding to next step.  
 **Act 6**: finish[(input, required_context)]
 
+**Output:**
+```json
+{
+  "user_request": {
+    "meta_intent": {
+    "request_type": "service_request",
+    "summary": "User wants to get an allergy test.",
+    "emergency": false
+    },
+    "clinical_context": {
+      "symptom": null,
+      "body": {
+        "region": null,
+        "side": null,
+        "subpart": null
+      },
+      "onset": null,
+      "duration": null
+    },
+    "service_intent": {
+      "specialty": "allergy",
+      "service": "allergy test",
+      "plan_detail_type": null
+    },
+    "metadata": {
+      "raw_user_text": "I want to get an allergy test.",
+      "user_response_created": "Got it — I'll check your plan and try to help you access an allergy test near you.",
+      "timestamp": "2025-05-13T15:41:00Z"
+    }
+  },
+  "required_context": {
+    "insurance_id_card": {
+      "type": "document",
+      "present": true,
+      "user_validated": true,
+      "source": "user_documents_database",
+      "description": "Active Anthem PPO card, valid through 2026.",
+      "date_added": "2025-05-11",
+      "document_id": "doc_abc123"
+    },
+    "insurance_plan": {
+      "type": "document",
+      "present": true,
+      "user_validated": true,
+      "source": "user_documents_database",
+      "description": "Allergy testing is covered under Anthem PPO without referral.",
+      "date_added": "2025-05-13",
+      "document_id": "covcheck_0333"
+    }
+  }
+}
+
 ---
 
 # Example 4: Policy Question — PT Visit Limit

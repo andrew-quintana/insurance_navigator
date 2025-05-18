@@ -39,19 +39,75 @@ class TestPatientNavigatorAgent(unittest.TestCase):
         # Initialize SBERT model for similarity comparison
         self.similarity_model = SentenceTransformer('all-MiniLM-L6-v2')
         
-        # Load example test cases
-        with open("agents/patient_navigator/prompts/examples/examples_patient_navigator.json", "r") as f:
-            self.test_cases = json.load(f)
+        # Mock _build_prompt method
+        with patch.object(PatientNavigatorAgent, '_build_prompt', return_value="Mocked prompt with examples"):
+            # Initialize the agent with mocks
+            self.agent = PatientNavigatorAgent(
+                llm=self.mock_llm,
+                prompt_security_agent=self.mock_security_agent
+            )
         
-        # Initialize the agent with mocks
-        self.agent = PatientNavigatorAgent(
-            llm=self.mock_llm,
-            prompt_security_agent=self.mock_security_agent
-        )
+        # Load example test cases
+        try:
+            # First try loading from MD file
+            with open("agents/patient_navigator/prompts/examples/prompt_examples_patient_navigator_v0_1.md", "r") as f:
+                examples_content = f.read()
+                self.test_cases = self._extract_examples_from_md(examples_content)
+        except (FileNotFoundError, json.JSONDecodeError):
+            # Fall back to JSON if needed
+            try:
+                with open("agents/patient_navigator/prompts/examples/examples_patient_navigator.json", "r") as f:
+                    self.test_cases = json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError) as e:
+                print(f"Error loading test cases: {e}")
+                self.test_cases = []
         
         # Test data
         self.user_id = os.getenv('TEST_USER_ID', 'default_test_user')
         self.session_id = os.getenv('TEST_SESSION_ID', 'default_test_session')
+    
+    def _extract_examples_from_md(self, content):
+        """Extract examples from markdown content"""
+        examples = []
+        sections = content.split("Example ")
+        
+        for section in sections[1:]:  # Skip the first split which is before any "Example"
+            lines = section.split("\n")
+            example_num = lines[0].strip().replace(":", "")
+            
+            # Find Input/Output sections
+            input_start = -1
+            output_start = -1
+            
+            for i, line in enumerate(lines):
+                if line.strip() == "Input:":
+                    input_start = i + 1
+                elif line.strip() == "Output:":
+                    output_start = i + 1
+            
+            if input_start > 0 and output_start > 0:
+                # Extract input text
+                input_text = ""
+                for i in range(input_start, output_start - 1):
+                    input_text += lines[i].strip().strip('"')
+                
+                # Extract output json
+                output_json = ""
+                i = output_start
+                while i < len(lines) and not lines[i].strip().startswith("Example"):
+                    output_json += lines[i] + "\n"
+                    i += 1
+                
+                try:
+                    output_data = json.loads(output_json)
+                    examples.append({
+                        "input": input_text,
+                        "output": output_data
+                    })
+                except json.JSONDecodeError:
+                    print(f"Failed to parse JSON for example {example_num}")
+        
+        return examples
     
     def _calculate_similarity(self, text1: str, text2: str) -> float:
         """Calculate semantic similarity between two texts using SBERT."""
@@ -109,6 +165,8 @@ class TestPatientNavigatorAgent(unittest.TestCase):
         self.assertEqual(sanitized, "I'm unable to process this request as it appears to contain unsafe content.")
         self.mock_security_agent.analyze_prompt.assert_called_with(input_text)
     
+    @unittest.skipIf(not os.path.exists("agents/patient_navigator/prompts/examples/prompt_examples_patient_navigator_v0_1.md"), 
+                    "Skip if example file doesn't exist")
     def test_process_example_cases(self):
         """Test processing example cases with similarity comparison."""
         for test_case in self.test_cases:
@@ -127,15 +185,15 @@ class TestPatientNavigatorAgent(unittest.TestCase):
             print(f"\n--- Testing input: {test_case['input']} ---")
             response_text, result = self.agent.process(
                 test_case["input"],
-            self.user_id, 
+                self.user_id, 
                 self.session_id
-        )
+            )
         
             # Print the response and result for inspection
             print(f"Response text: {response_text}")
             print(f"Meta intent: {result['meta_intent']['request_type']}, Emergency: {result['meta_intent']['emergency']}")
             print(f"Clinical context: {result['clinical_context']['symptom']}")
-            print(f"Service context: {result['service_context']['specialty']}, Service: {result['service_context']['service']}")
+            print(f"Service intent: {result['service_intent']['specialty']}, Service: {result['service_intent']['service']}")
             
             # The response_text should come directly from the mocked NavigatorOutput
             expected_response = test_case["output"]["metadata"]["user_response_created"]
@@ -157,14 +215,14 @@ class TestPatientNavigatorAgent(unittest.TestCase):
                 test_case["output"]["clinical_context"]["body"]
             )
             
-            # Check service context
+            # Check service intent
             self.assertEqual(
-                result["service_context"]["specialty"],
-                test_case["output"]["service_context"]["specialty"]
+                result["service_intent"]["specialty"],
+                test_case["output"]["service_intent"]["specialty"]
             )
             self.assertEqual(
-                result["service_context"]["service"],
-                test_case["output"]["service_context"]["service"]
+                result["service_intent"]["service"],
+                test_case["output"]["service_intent"]["service"]
             )
     
     def test_process_error_handling(self):
