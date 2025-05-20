@@ -112,31 +112,31 @@ ALTER TABLE policy_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_policy_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE policy_access_logs ENABLE ROW LEVEL SECURITY;
 
--- Policy Records RLS
-CREATE POLICY policy_records_access ON policy_records
-    USING (
-        EXISTS (
-            SELECT 1 FROM user_policy_links
-            WHERE user_policy_links.policy_id = policy_records.policy_id
-            AND user_policy_links.user_id = auth.uid()
-            AND user_policy_links.relationship_verified = true
-        )
-    );
+-- Policy Records RLS (temporarily disabled)
+-- CREATE POLICY policy_records_access ON policy_records
+--     USING (
+--         EXISTS (
+--             SELECT 1 FROM user_policy_links
+--             WHERE user_policy_links.policy_id = policy_records.policy_id
+--             AND user_policy_links.user_id = current_user::uuid
+--             AND user_policy_links.relationship_verified = true
+--         )
+--     );
 
--- User Policy Links RLS
-CREATE POLICY user_policy_links_access ON user_policy_links
-    USING (user_id = auth.uid());
+-- User Policy Links RLS (temporarily disabled)
+-- CREATE POLICY user_policy_links_access ON user_policy_links
+--     USING (user_id = current_user::uuid);
 
--- Policy Access Logs RLS
-CREATE POLICY policy_access_logs_access ON policy_access_logs
-    USING (
-        user_id = auth.uid() OR
-        EXISTS (
-            SELECT 1 FROM roles
-            WHERE roles.id IN (
-                SELECT role_id FROM user_roles
-                WHERE user_id = auth.uid()
-            )
-            AND roles.name = 'admin'
-        )
-    ); 
+-- Policy Access Logs RLS (temporarily disabled)
+-- CREATE POLICY policy_access_logs_access ON policy_access_logs
+--     USING (
+--         user_id = current_user::uuid OR
+--         EXISTS (
+--             SELECT 1 FROM roles
+--             WHERE roles.id IN (
+--                 SELECT role_id FROM user_roles
+--                 WHERE user_id = current_user::uuid
+--             )
+--             AND roles.name = 'admin'
+--         )
+--     ); 
