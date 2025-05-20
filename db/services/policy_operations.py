@@ -1,21 +1,39 @@
+"""Policy operations service."""
+
 from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 from datetime import datetime
 import json
+import logging
 
 from .policy_access_evaluator import PolicyAccessEvaluator
-from .encryption_service import EncryptionService
+from .encryption_key_manager import EncryptionKeyManager
 from .access_logging_service import AccessLoggingService
 
+logger = logging.getLogger(__name__)
+
 class PolicyOperations:
-    """
-    Handles CRUD operations for policies with integrated access control and encryption.
-    """
-    def __init__(self, db_session, encryption_service: EncryptionService):
+    """Handles CRUD operations for policies with encryption and access control."""
+
+    def __init__(
+        self,
+        db_session,
+        access_evaluator: PolicyAccessEvaluator,
+        encryption_service: EncryptionKeyManager,
+        access_logger: AccessLoggingService
+    ):
+        """Initialize the policy operations service.
+        
+        Args:
+            db_session: Database session
+            access_evaluator: Policy access evaluator instance
+            encryption_service: Encryption service instance
+            access_logger: Access logging service instance
+        """
         self.db = db_session
+        self.access_evaluator = access_evaluator
         self.encryption_service = encryption_service
-        self.access_evaluator = PolicyAccessEvaluator(db_session)
-        self.access_logger = AccessLoggingService(db_session)
+        self.access_logger = access_logger
 
     async def create_policy(
         self,
@@ -23,23 +41,21 @@ class PolicyOperations:
         policy_data: Dict[str, Any],
         metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """
-        Create a new policy with encrypted sensitive data.
+        """Create a new policy.
+        
         Args:
-            user_id: The UUID of the user creating the policy.
-            policy_data: The policy data to be stored.
-            metadata: Optional metadata for the policy.
+            user_id: UUID of the user creating the policy
+            policy_data: Policy data to store
+            metadata: Optional metadata about the policy
+            
         Returns:
-            The created policy with non-sensitive data.
+            The created policy with non-sensitive data
         """
         # Check write access
         if not self.access_evaluator.has_access(user_id, None, 'write'):
             raise PermissionError("User does not have write access")
 
         try:
-            # Generate new policy ID
-            policy_id = str(uuid4())
-            
             # Separate sensitive and non-sensitive data
             sensitive_data = {
                 'ssn': policy_data.pop('ssn', None),
@@ -52,20 +68,19 @@ class PolicyOperations:
                 json.dumps(sensitive_data)
             )
 
-            # Prepare policy record
-            policy_record = {
+            # Create policy record
+            policy_id = str(uuid4())
+            policy = {
                 'id': policy_id,
-                'created_at': datetime.utcnow().isoformat(),
-                'created_by': user_id,
                 'data': policy_data,
                 'encrypted_data': encrypted_data,
                 'metadata': metadata or {},
-                'version': 1,
-                'status': 'active'
+                'created_at': datetime.utcnow().isoformat(),
+                'created_by': user_id,
+                'version': 1
             }
 
-            # Store in database
-            await self.db.policies.insert_one(policy_record)
+            await self.db.policies.insert_one(policy)
 
             # Log the creation
             await self.access_logger.log_access(
@@ -78,9 +93,16 @@ class PolicyOperations:
                 metadata={'version': 1}
             )
 
-            # Return non-sensitive data
-            return {k: v for k, v in policy_record.items() if k != 'encrypted_data'}
+            # Return policy without sensitive data
+            return {
+                'id': policy_id,
+                'data': policy_data,
+                'metadata': metadata or {},
+                'created_at': policy['created_at'],
+                'version': 1
+            }
         except Exception as e:
+            logger.error(f"Failed to create policy: {str(e)}")
             raise RuntimeError(f"Failed to create policy: {str(e)}")
 
     async def get_policy(
@@ -89,21 +111,22 @@ class PolicyOperations:
         policy_id: str,
         include_sensitive: bool = False
     ) -> Dict[str, Any]:
-        """
-        Retrieve a policy by ID.
+        """Get a policy by ID.
+        
         Args:
-            user_id: The UUID of the user requesting the policy.
-            policy_id: The UUID of the policy to retrieve.
-            include_sensitive: Whether to include decrypted sensitive data.
+            user_id: UUID of the user requesting the policy
+            policy_id: UUID of the policy to retrieve
+            include_sensitive: Whether to include sensitive data
+            
         Returns:
-            The policy data.
+            The requested policy
         """
         # Check read access
         if not self.access_evaluator.has_access(user_id, policy_id, 'read'):
             raise PermissionError("User does not have read access")
 
         try:
-            # Retrieve policy from database
+            # Get policy
             policy = await self.db.policies.find_one({'id': policy_id})
             if not policy:
                 raise ValueError(f"Policy {policy_id} not found")
@@ -115,24 +138,34 @@ class PolicyOperations:
                 action='read',
                 actor_type='user',
                 actor_id=user_id,
-                purpose='policy_view',
-                metadata={'include_sensitive': include_sensitive}
+                purpose='policy_retrieval'
             )
 
-            # Handle sensitive data if requested
-            if include_sensitive and self.access_evaluator.has_access(user_id, policy_id, 'read_sensitive'):
+            # Return policy data
+            result = {
+                'id': policy['id'],
+                'data': policy['data'],
+                'metadata': policy.get('metadata', {}),
+                'created_at': policy['created_at'],
+                'version': policy['version']
+            }
+
+            # Include sensitive data if requested and authorized
+            if include_sensitive:
+                if not self.access_evaluator.has_access(user_id, policy_id, 'read_sensitive'):
+                    raise PermissionError("User does not have access to sensitive data")
+                
                 encrypted_data = policy.get('encrypted_data')
                 if encrypted_data:
                     sensitive_data = json.loads(
                         await self.encryption_service.decrypt_data(encrypted_data)
                     )
-                    policy['data'].update(sensitive_data)
+                    result['sensitive_data'] = sensitive_data
 
-            # Remove encrypted data from response
-            policy.pop('encrypted_data', None)
-            return policy
+            return result
         except Exception as e:
-            raise RuntimeError(f"Failed to retrieve policy: {str(e)}")
+            logger.error(f"Failed to get policy {policy_id}: {str(e)}")
+            raise RuntimeError(f"Failed to get policy: {str(e)}")
 
     async def update_policy(
         self,
@@ -141,15 +174,16 @@ class PolicyOperations:
         updates: Dict[str, Any],
         metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """
-        Update an existing policy.
+        """Update an existing policy.
+        
         Args:
-            user_id: The UUID of the user updating the policy.
-            policy_id: The UUID of the policy to update.
-            updates: The updates to apply to the policy.
-            metadata: Optional metadata updates.
+            user_id: The UUID of the user updating the policy
+            policy_id: The UUID of the policy to update
+            updates: The updates to apply to the policy
+            metadata: Optional metadata updates
+            
         Returns:
-            The updated policy with non-sensitive data.
+            The updated policy with non-sensitive data
         """
         # Check write access
         if not self.access_evaluator.has_access(user_id, policy_id, 'write'):
@@ -222,33 +256,32 @@ class PolicyOperations:
         except Exception as e:
             raise RuntimeError(f"Failed to update policy: {str(e)}")
 
-    async def delete_policy(self, user_id: str, policy_id: str) -> bool:
-        """
-        Delete a policy by ID.
+    async def delete_policy(
+        self,
+        user_id: str,
+        policy_id: str
+    ) -> bool:
+        """Delete a policy.
+        
         Args:
-            user_id: The UUID of the user deleting the policy.
-            policy_id: The UUID of the policy to delete.
+            user_id: UUID of the user deleting the policy
+            policy_id: UUID of the policy to delete
+            
         Returns:
-            True if successful, raises exception otherwise.
+            True if deleted successfully
         """
         # Check delete access
         if not self.access_evaluator.has_access(user_id, policy_id, 'delete'):
             raise PermissionError("User does not have delete access")
 
         try:
-            # Soft delete by updating status
-            result = await self.db.policies.update_one(
-                {'id': policy_id},
-                {
-                    '$set': {
-                        'status': 'deleted',
-                        'deleted_at': datetime.utcnow().isoformat(),
-                        'deleted_by': user_id
-                    }
-                }
-            )
-            if result.modified_count == 0:
+            # Get policy to verify it exists
+            policy = await self.db.policies.find_one({'id': policy_id})
+            if not policy:
                 raise ValueError(f"Policy {policy_id} not found")
+
+            # Delete from database
+            result = await self.db.policies.delete_one({'id': policy_id})
 
             # Log the deletion
             await self.access_logger.log_access(
@@ -257,12 +290,12 @@ class PolicyOperations:
                 action='delete',
                 actor_type='user',
                 actor_id=user_id,
-                purpose='policy_deletion',
-                metadata={'soft_delete': True}
+                purpose='policy_deletion'
             )
 
-            return True
+            return result.deleted_count > 0
         except Exception as e:
+            logger.error(f"Failed to delete policy {policy_id}: {str(e)}")
             raise RuntimeError(f"Failed to delete policy: {str(e)}")
 
     async def list_policies(
@@ -272,61 +305,53 @@ class PolicyOperations:
         page: int = 1,
         page_size: int = 50
     ) -> Dict[str, Any]:
-        """
-        List policies with pagination and filtering.
+        """List policies with pagination.
+        
         Args:
-            user_id: The UUID of the user requesting the list.
-            filters: Optional filters to apply.
-            page: Page number (1-based).
-            page_size: Number of items per page.
+            user_id: UUID of the user requesting the list
+            filters: Optional filters to apply
+            page: Page number (1-based)
+            page_size: Number of items per page
+            
         Returns:
-            Dict containing policies and pagination info.
+            Dict containing policies and pagination info
         """
         try:
-            # Base query
-            query = {'status': 'active'}
+            # Build query
+            query = filters or {}
             
-            # Apply filters
-            if filters:
-                query.update(filters)
-
-            # Add RLS conditions
-            rls_conditions = await self.access_evaluator.get_rls_conditions(user_id)
-            if rls_conditions:
-                query.update(rls_conditions)
-
             # Calculate pagination
             skip = (page - 1) * page_size
-
-            # Execute query
+            
+            # Get total count
             total = await self.db.policies.count_documents(query)
-            policies = await self.db.policies.find(
-                query,
-                {'encrypted_data': 0}  # Exclude encrypted data
-            ).skip(skip).limit(page_size).to_list(length=page_size)
-
-            # Log the list access
-            await self.access_logger.log_access(
-                policy_id=None,
-                user_id=user_id,
-                action='list',
-                actor_type='user',
-                actor_id=user_id,
-                purpose='policy_list',
-                metadata={
-                    'filters': filters,
-                    'page': page,
-                    'page_size': page_size,
-                    'total_results': total
-                }
-            )
-
+            
+            # Get policies
+            policies = await self.db.policies.find(query) \
+                .sort('created_at', -1) \
+                .skip(skip) \
+                .limit(page_size) \
+                .to_list(None)
+            
+            # Filter out sensitive data
+            filtered_policies = []
+            for policy in policies:
+                if self.access_evaluator.has_access(user_id, policy['id'], 'read'):
+                    filtered_policies.append({
+                        'id': policy['id'],
+                        'data': policy['data'],
+                        'metadata': policy.get('metadata', {}),
+                        'created_at': policy['created_at'],
+                        'version': policy['version']
+                    })
+            
             return {
-                'items': policies,
+                'items': filtered_policies,
                 'total': total,
                 'page': page,
                 'page_size': page_size,
                 'total_pages': (total + page_size - 1) // page_size
             }
         except Exception as e:
+            logger.error(f"Failed to list policies: {str(e)}")
             raise RuntimeError(f"Failed to list policies: {str(e)}") 

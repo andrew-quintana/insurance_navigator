@@ -1,5 +1,5 @@
 from typing import Any, Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import UUID, uuid4
 import logging
 import json
@@ -88,28 +88,23 @@ class AccessLoggingService:
         self,
         policy_id: Optional[str] = None,
         user_id: Optional[str] = None,
-        actor_id: Optional[str] = None,
         action: Optional[str] = None,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-        page: int = 1,
-        page_size: int = 50
-    ) -> Dict[str, Any]:
-        """
-        Retrieve access history with optional filtering.
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        """Get access history with optional filters.
         
         Args:
-            policy_id: Optional policy ID to filter by
-            user_id: Optional user ID to filter by
-            actor_id: Optional actor ID to filter by
-            action: Optional action type to filter by
-            start_date: Optional start date (ISO format) for time range
-            end_date: Optional end date (ISO format) for time range
-            page: Page number (1-based)
-            page_size: Number of items per page
+            policy_id: Optional filter by policy ID
+            user_id: Optional filter by user ID
+            action: Optional filter by action type
+            start_time: Optional filter by start time
+            end_time: Optional filter by end time
+            limit: Maximum number of records to return
             
         Returns:
-            Dict containing access logs and pagination info
+            List of access log entries
         """
         try:
             # Build query
@@ -118,40 +113,113 @@ class AccessLoggingService:
                 query['policy_id'] = policy_id
             if user_id:
                 query['user_id'] = user_id
-            if actor_id:
-                query['actor_id'] = actor_id
             if action:
                 query['action'] = action
-            
-            # Add date range if specified
-            if start_date or end_date:
+            if start_time or end_time:
                 query['timestamp'] = {}
-                if start_date:
-                    query['timestamp']['$gte'] = start_date
-                if end_date:
-                    query['timestamp']['$lte'] = end_date
-
-            # Calculate pagination
-            skip = (page - 1) * page_size
+                if start_time:
+                    query['timestamp']['$gte'] = start_time.isoformat()
+                if end_time:
+                    query['timestamp']['$lte'] = end_time.isoformat()
 
             # Execute query
-            total = await self.db.policy_access_logs.count_documents(query)
-            logs = await self.db.policy_access_logs.find(
-                query
-            ).sort(
-                'timestamp', -1
-            ).skip(skip).limit(page_size).to_list(length=page_size)
+            logs = await self.db.policy_access_logs \
+                .find(query) \
+                .sort('timestamp', -1) \
+                .limit(limit) \
+                .to_list(None)
 
-            return {
-                'items': logs,
-                'total': total,
-                'page': page,
-                'page_size': page_size,
-                'total_pages': (total + page_size - 1) // page_size
-            }
+            return logs
         except Exception as e:
             logger.error(f"Failed to retrieve access history: {str(e)}")
             raise RuntimeError(f"Failed to retrieve access history: {str(e)}")
+
+    async def get_user_activity(
+        self,
+        user_id: str,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None
+    ) -> Dict[str, Any]:
+        """Get activity summary for a user.
+        
+        Args:
+            user_id: UUID of the user
+            start_time: Optional start time for the summary
+            end_time: Optional end time for the summary
+            
+        Returns:
+            Activity summary dictionary
+        """
+        try:
+            # Build time range query
+            query = {'user_id': user_id}
+            if start_time or end_time:
+                query['timestamp'] = {}
+                if start_time:
+                    query['timestamp']['$gte'] = start_time.isoformat()
+                if end_time:
+                    query['timestamp']['$lte'] = end_time.isoformat()
+
+            # Get activity counts
+            pipeline = [
+                {'$match': query},
+                {
+                    '$group': {
+                        '_id': {
+                            'action': '$action',
+                            'actor_type': '$actor_type'
+                        },
+                        'count': {'$sum': 1}
+                    }
+                }
+            ]
+            
+            activity_counts = await self.db.policy_access_logs \
+                .aggregate(pipeline) \
+                .to_list(None)
+
+            # Format results
+            summary = {
+                'user_id': user_id,
+                'period': {
+                    'start': start_time.isoformat() if start_time else None,
+                    'end': end_time.isoformat() if end_time else None
+                },
+                'activity_counts': {
+                    f"{item['_id']['action']}_{item['_id']['actor_type']}": item['count']
+                    for item in activity_counts
+                }
+            }
+
+            return summary
+        except Exception as e:
+            logger.error(f"Failed to get user activity summary: {str(e)}")
+            raise RuntimeError(f"Failed to get user activity summary: {str(e)}")
+
+    async def cleanup_old_logs(
+        self,
+        retention_days: int = 90
+    ) -> int:
+        """Clean up old access logs.
+        
+        Args:
+            retention_days: Number of days to retain logs
+            
+        Returns:
+            Number of deleted log entries
+        """
+        try:
+            cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
+            result = await self.db.policy_access_logs.delete_many({
+                'timestamp': {'$lt': cutoff_date.isoformat()}
+            })
+            
+            deleted_count = result.deleted_count
+            logger.info(f"Cleaned up {deleted_count} old access logs")
+            return deleted_count
+        except Exception as e:
+            logger.error(f"Failed to clean up old access logs: {str(e)}")
+            raise RuntimeError(f"Failed to clean up old access logs: {str(e)}")
 
     async def get_user_access_summary(
         self,

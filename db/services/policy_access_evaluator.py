@@ -1,134 +1,132 @@
-from typing import Any, Dict, List, Optional
+"""Policy access evaluation service."""
+
+from typing import Dict, Any, Optional
 from datetime import datetime
 import pytz
+import logging
+
+logger = logging.getLogger(__name__)
 
 class PolicyAccessEvaluator:
-    """
-    Evaluates whether a user has access to a given policy or resource based on roles, policy conditions, and RLS integration.
-    """
+    """Evaluates access permissions for policies."""
+
     def __init__(self, db_session):
-        """
-        Initialize the evaluator with a database session or connection.
+        """Initialize the policy access evaluator.
+        
+        Args:
+            db_session: Database session for access checks
         """
         self.db = db_session
 
-    def has_access(self, user_id: str, resource_id: str, action: str, context: Optional[Dict[str, Any]] = None) -> bool:
-        """
-        Check if the user has access to perform an action on a resource.
+    def has_access(
+        self,
+        user_id: str,
+        resource_id: str,
+        action: str,
+        context: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """Check if a user has access to perform an action.
+        
         Args:
-            user_id: The UUID of the user.
-            resource_id: The UUID of the resource (e.g., policy).
-            action: The action to check (e.g., 'read', 'write', 'delete').
-            context: Optional context for advanced policy checks.
-        Returns:
-            True if access is granted, False otherwise.
-        """
-        try:
-            # Get user roles and check if they have the required permissions
-            roles = self.get_user_roles(user_id)
-            if not roles:
-                return False
-
-            # Check RLS policies
-            if not self.rls_check(user_id, resource_id):
-                return False
-
-            # Get permissions for the roles
-            user_data = self.db.user_roles.get(user_id, {})
-            allowed_permissions = user_data.get('permissions', [])
+            user_id: UUID of the user
+            resource_id: UUID of the resource
+            action: Type of action ('read', 'write', 'delete')
+            context: Optional additional context for the access check
             
-            # Check if the action is allowed
-            if action not in allowed_permissions:
+        Returns:
+            True if access is granted, False otherwise
+        """
+        try:
+            # Get user roles and permissions
+            user_roles = self.db.user_roles.get(user_id, {})
+            
+            # Admin users have full access
+            if 'admin' in user_roles.get('roles', []):
+                return True
+            
+            # Check if user has required permission
+            if action not in user_roles.get('permissions', []):
                 return False
-
-            # Evaluate additional policy conditions if context is provided
-            if context and not self.evaluate_policy_conditions(user_id, resource_id, action, context):
+            
+            # Check resource-specific access
+            resource_access = self.db.resource_access.get(resource_id, {})
+            if not resource_access:
                 return False
-
+            
+            # Check time-based restrictions
+            if context and 'time' in context:
+                access_time = datetime.fromisoformat(context['time'])
+                if not self._check_time_restrictions(access_time, resource_access):
+                    return False
+            
+            # Check IP-based restrictions
+            if context and 'ip_address' in context:
+                if not self._check_ip_restrictions(context['ip_address'], resource_access):
+                    return False
+            
             return True
         except Exception as e:
-            # Log the error and return False for security
-            print(f"Error checking access: {str(e)}")
+            logger.error(f"Access check failed - User: {user_id}, Resource: {resource_id}, Error: {str(e)}")
             return False
 
-    def get_user_roles(self, user_id: str, resource_id: Optional[str] = None) -> List[str]:
-        """
-        Retrieve all roles a user has for a given resource.
+    def _check_time_restrictions(
+        self,
+        access_time: datetime,
+        resource_access: Dict[str, Any]
+    ) -> bool:
+        """Check time-based access restrictions.
+        
         Args:
-            user_id: The UUID of the user.
-            resource_id: Optional resource UUID to filter roles.
+            access_time: Time of access attempt
+            resource_access: Resource access configuration
+            
         Returns:
-            List of role names.
+            True if time restrictions are met
         """
-        try:
-            user_data = self.db.user_roles.get(user_id, {})
-            return user_data.get('roles', [])
-        except Exception as e:
-            print(f"Error retrieving user roles: {str(e)}")
-            return []
-
-    def evaluate_policy_conditions(self, user_id: str, resource_id: str, action: str, context: Optional[Dict[str, Any]] = None) -> bool:
-        """
-        Evaluate custom policy conditions for access control.
-        Args:
-            user_id: The UUID of the user.
-            resource_id: The UUID of the resource.
-            action: The action to check.
-            context: Optional context for advanced checks.
-        Returns:
-            True if conditions are met, False otherwise.
-        """
-        if not context:
+        restrictions = resource_access.get('time_restrictions', {})
+        if not restrictions:
             return True
-
-        try:
-            # Check IP address restrictions if specified
-            if 'ip_address' in context:
-                allowed_ips = self.db.policies.get('allowed_ips', ['192.168.1.1'])  # Example allowed IPs
-                if context['ip_address'] not in allowed_ips:
-                    return False
-
-            # Check time-based restrictions if specified
-            if 'time' in context:
-                try:
-                    access_time = datetime.fromisoformat(context['time'].replace('Z', '+00:00'))
-                    # Example: Only allow access during business hours (9 AM to 5 PM UTC)
-                    hour = access_time.hour
-                    if not (9 <= hour < 17):
-                        return False
-                except ValueError:
-                    return False
-
-            # Check request metadata if specified
-            if 'request_metadata' in context:
-                metadata = context['request_metadata']
-                # Example: Only allow internal requests
-                if metadata.get('source') != 'internal':
-                    return False
-
-            return True
-        except Exception as e:
-            print(f"Error evaluating policy conditions: {str(e)}")
-            return False
-
-    def rls_check(self, user_id: str, resource_id: str) -> bool:
-        """
-        Integrate with Row Level Security (RLS) to enforce database-level access control.
-        Args:
-            user_id: The UUID of the user.
-            resource_id: The UUID of the resource.
-        Returns:
-            True if RLS allows access, False otherwise.
-        """
-        try:
-            # Check if resource exists and has RLS rules
-            resource_rules = self.db.rls_rules.get(resource_id)
-            if not resource_rules:
+        
+        # Convert to UTC for comparison
+        utc_time = access_time.astimezone(pytz.UTC)
+        
+        # Check allowed hours
+        if 'allowed_hours' in restrictions:
+            start_hour = restrictions['allowed_hours']['start']
+            end_hour = restrictions['allowed_hours']['end']
+            current_hour = utc_time.hour
+            
+            if not (start_hour <= current_hour <= end_hour):
                 return False
+        
+        return True
 
-            # Check if user is in allowed users list
-            allowed_users = resource_rules.get('allowed_users', [])
-            return user_id in allowed_users
-        except Exception as e:
-            print(f"Error checking RLS: {str(e)}")
-            return False 
+    def _check_ip_restrictions(
+        self,
+        ip_address: str,
+        resource_access: Dict[str, Any]
+    ) -> bool:
+        """Check IP-based access restrictions.
+        
+        Args:
+            ip_address: IP address of the request
+            resource_access: Resource access configuration
+            
+        Returns:
+            True if IP restrictions are met
+        """
+        restrictions = resource_access.get('ip_restrictions', {})
+        if not restrictions:
+            return True
+        
+        # Check allowed IP ranges
+        allowed_ips = restrictions.get('allowed_ips', [])
+        if allowed_ips and ip_address not in allowed_ips:
+            return False
+        
+        # Check blocked IP ranges
+        blocked_ips = restrictions.get('blocked_ips', [])
+        if ip_address in blocked_ips:
+            return False
+        
+        return True 

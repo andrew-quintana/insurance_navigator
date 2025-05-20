@@ -9,31 +9,31 @@ INSERT INTO roles (name, description) VALUES
     ('user', 'Basic end-user role')
 ON CONFLICT (name) DO NOTHING;
 
--- 2. Generate and Store Admin User UUID
-DO $$
-DECLARE
-    admin_user_id UUID;
-BEGIN
-    -- Generate UUID for admin user
-    admin_user_id := gen_random_uuid();
-    
-    -- Store the UUID in a temporary table for reference
-    CREATE TEMP TABLE IF NOT EXISTS temp_admin_user (
-        user_id UUID PRIMARY KEY
-    );
-    
-    INSERT INTO temp_admin_user (user_id)
-    VALUES (admin_user_id);
-    
-    -- 3. Link Admin User to Role
-    INSERT INTO user_roles (user_id, role_id)
-    SELECT admin_user_id, id 
-    FROM roles 
-    WHERE name = 'admin';
-    
-    -- Log the admin user ID for reference
-    RAISE NOTICE 'Admin user ID: %', admin_user_id;
-END $$;
+-- 2. Create Admin User
+INSERT INTO users (
+    id,
+    email,
+    hashed_password,
+    full_name,
+    is_active,
+    metadata
+) VALUES (
+    '9d3a637a-58a4-4be0-bf0d-1d00260666d2',
+    'admin@insurance-navigator.local',
+    '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewKyBAQ/fzJ8ZzuC', -- Default password: changeme123
+    'System Administrator',
+    true,
+    jsonb_build_object(
+        'created_by', 'system',
+        'is_system_admin', true
+    )
+);
+
+-- 3. Link Admin User to Role
+INSERT INTO user_roles (user_id, role_id)
+SELECT '9d3a637a-58a4-4be0-bf0d-1d00260666d2', id 
+FROM roles 
+WHERE name = 'admin';
 
 -- 4. Seed Initial Encryption Key
 INSERT INTO encryption_keys (key_version, key_status, metadata)
