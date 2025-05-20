@@ -5,6 +5,7 @@ import json
 
 from .policy_access_evaluator import PolicyAccessEvaluator
 from .encryption_service import EncryptionService
+from .access_logging_service import AccessLoggingService
 
 class PolicyOperations:
     """
@@ -14,6 +15,7 @@ class PolicyOperations:
         self.db = db_session
         self.encryption_service = encryption_service
         self.access_evaluator = PolicyAccessEvaluator(db_session)
+        self.access_logger = AccessLoggingService(db_session)
 
     async def create_policy(
         self,
@@ -65,6 +67,17 @@ class PolicyOperations:
             # Store in database
             await self.db.policies.insert_one(policy_record)
 
+            # Log the creation
+            await self.access_logger.log_access(
+                policy_id=policy_id,
+                user_id=user_id,
+                action='create',
+                actor_type='user',
+                actor_id=user_id,
+                purpose='policy_creation',
+                metadata={'version': 1}
+            )
+
             # Return non-sensitive data
             return {k: v for k, v in policy_record.items() if k != 'encrypted_data'}
         except Exception as e:
@@ -94,6 +107,17 @@ class PolicyOperations:
             policy = await self.db.policies.find_one({'id': policy_id})
             if not policy:
                 raise ValueError(f"Policy {policy_id} not found")
+
+            # Log the access
+            await self.access_logger.log_access(
+                policy_id=policy_id,
+                user_id=user_id,
+                action='read',
+                actor_type='user',
+                actor_id=user_id,
+                purpose='policy_view',
+                metadata={'include_sensitive': include_sensitive}
+            )
 
             # Handle sensitive data if requested
             if include_sensitive and self.access_evaluator.has_access(user_id, policy_id, 'read_sensitive'):
@@ -163,19 +187,34 @@ class PolicyOperations:
                 encrypted_data = existing_policy.get('encrypted_data')
 
             # Prepare update record
+            new_version = existing_policy['version'] + 1
             update_record = {
                 'data': {**existing_policy['data'], **updates},
                 'encrypted_data': encrypted_data,
                 'metadata': {**existing_policy.get('metadata', {}), **(metadata or {})},
                 'updated_at': datetime.utcnow().isoformat(),
                 'updated_by': user_id,
-                'version': existing_policy['version'] + 1
+                'version': new_version
             }
 
             # Update in database
             await self.db.policies.update_one(
                 {'id': policy_id},
                 {'$set': update_record}
+            )
+
+            # Log the update
+            await self.access_logger.log_access(
+                policy_id=policy_id,
+                user_id=user_id,
+                action='update',
+                actor_type='user',
+                actor_id=user_id,
+                purpose='policy_update',
+                metadata={
+                    'version': new_version,
+                    'has_sensitive_updates': any(sensitive_updates.values())
+                }
             )
 
             # Return updated policy without sensitive data
@@ -210,6 +249,18 @@ class PolicyOperations:
             )
             if result.modified_count == 0:
                 raise ValueError(f"Policy {policy_id} not found")
+
+            # Log the deletion
+            await self.access_logger.log_access(
+                policy_id=policy_id,
+                user_id=user_id,
+                action='delete',
+                actor_type='user',
+                actor_id=user_id,
+                purpose='policy_deletion',
+                metadata={'soft_delete': True}
+            )
+
             return True
         except Exception as e:
             raise RuntimeError(f"Failed to delete policy: {str(e)}")
@@ -253,6 +304,22 @@ class PolicyOperations:
                 query,
                 {'encrypted_data': 0}  # Exclude encrypted data
             ).skip(skip).limit(page_size).to_list(length=page_size)
+
+            # Log the list access
+            await self.access_logger.log_access(
+                policy_id=None,
+                user_id=user_id,
+                action='list',
+                actor_type='user',
+                actor_id=user_id,
+                purpose='policy_list',
+                metadata={
+                    'filters': filters,
+                    'page': page,
+                    'page_size': page_size,
+                    'total_results': total
+                }
+            )
 
             return {
                 'items': policies,
