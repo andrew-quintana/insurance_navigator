@@ -9,6 +9,11 @@ db/
 ├── migrations/     # SQL migration files
 ├── models/        # Database models and types
 └── services/      # Database service implementations
+    ├── access_logging_service.py   # Access logging functionality
+    ├── db_pool.py                  # Database connection pooling
+    ├── encryption_service.py       # Data encryption handling
+    ├── policy_access_evaluator.py  # Access control evaluation
+    └── policy_operations.py        # Policy CRUD operations
 ```
 
 ## Core Tables
@@ -32,7 +37,16 @@ Links users to policies they have access to.
 Defines access control policies for different roles.
 
 ### policy_access_logs
-Logs all policy access attempts and actions.
+Logs all policy access attempts and actions. Each log entry contains:
+- Unique ID
+- Policy ID (if applicable)
+- User ID (who the access is for)
+- Action type (create, read, update, delete, list)
+- Actor type (user or agent)
+- Actor ID (who performed the action)
+- Timestamp
+- Purpose of access
+- Additional metadata
 
 ### agent_policy_context
 Stores encrypted context for agent sessions.
@@ -50,6 +64,34 @@ Stores encrypted context for agent sessions.
 3. **Access Control**
    - Role-based access control through user_roles
    - Granular permissions through policy_access_policies
+
+4. **Access Logging**
+   - Comprehensive audit trail of all policy operations
+   - Logs include who performed the action, who it was performed for, and why
+   - Support for both user and agent actions
+   - Detailed metadata for each operation
+   - Built-in aggregation for access pattern analysis
+
+## Access Logging Features
+
+1. **Log Entry Types**
+   - Policy creation
+   - Policy viewing (with sensitive data access tracking)
+   - Policy updates (with version tracking)
+   - Policy deletion
+   - Policy listing/searching
+
+2. **Access Analysis**
+   - User access patterns and statistics
+   - Policy access frequency and patterns
+   - Temporal access analysis
+   - Actor type distribution
+
+3. **Compliance Support**
+   - HIPAA audit trail requirements
+   - Access purpose tracking
+   - Sensitive data access monitoring
+   - Soft deletion tracking
 
 ## Migration Process
 
@@ -85,4 +127,27 @@ Stores encrypted context for agent sessions.
 2. Monitor encryption key rotation schedules
 3. Review and update RLS policies as needed
 4. Maintain and update indexes based on query patterns
-5. Regular backup of encryption keys and sensitive data 
+5. Regular backup of encryption keys and sensitive data
+
+## Access Log Monitoring
+
+1. **Regular Audits**
+   - Review access patterns daily
+   - Monitor for unusual activity
+   - Track sensitive data access
+
+2. **Performance Monitoring**
+   - Log storage and growth
+   - Query performance on log tables
+   - Index effectiveness
+
+3. **Compliance Reporting**
+   - Generate access reports
+   - Track purpose distribution
+   - Monitor sensitive data access patterns
+
+4. **Security Alerts**
+   - Unusual access patterns
+   - High-frequency access
+   - Off-hours activity
+   - Failed access attempts 
