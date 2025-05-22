@@ -51,8 +51,8 @@ def access_logging_service(db_pool):
 async def test_log_access(logging_service, mock_db_session, sample_log_entry):
     """Test logging an access event."""
     # Setup
-    mock_db_session.policy_access_logs.insert_one = AsyncMock(return_value=None)
-    
+    mock_db_session.execute_with_retry = AsyncMock(return_value=None)
+
     # Execute
     result = await logging_service.log_access(
         policy_id=sample_log_entry['policy_id'],
@@ -63,7 +63,7 @@ async def test_log_access(logging_service, mock_db_session, sample_log_entry):
         purpose=sample_log_entry['purpose'],
         metadata=sample_log_entry['metadata']
     )
-    
+
     # Verify
     assert result['policy_id'] == sample_log_entry['policy_id']
     assert result['user_id'] == sample_log_entry['user_id']
@@ -71,7 +71,7 @@ async def test_log_access(logging_service, mock_db_session, sample_log_entry):
     assert result['actor_type'] == sample_log_entry['actor_type']
     assert result['purpose'] == sample_log_entry['purpose']
     assert result['metadata'] == sample_log_entry['metadata']
-    mock_db_session.policy_access_logs.insert_one.assert_called_once()
+    mock_db_session.execute_with_retry.assert_called_once()
 
 @pytest.mark.asyncio
 async def test_log_access_invalid_actor_type(logging_service):
@@ -225,16 +225,42 @@ async def test_get_policy_access_summary(logging_service, mock_db_session):
     mock_db_session.policy_access_logs.aggregate.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_empty_access_history(logging_service):
+async def test_empty_access_history(access_logging_service, db_pool):
     """Test retrieving empty access history from the real database."""
-    # Use a random policy_id and user_id that should not exist
-    result = await logging_service.get_access_history(
-        policy_id=str(uuid4()),
-        user_id=str(uuid4()),
+    # Insert a policy record to satisfy FK constraint (but do not insert any logs)
+    policy_id = str(uuid4())
+    insert_policy_sql = '''
+        INSERT INTO policy_records (
+            policy_id, summary, structured_metadata, raw_policy_path, encrypted_policy_data, encryption_key_id, source_type, coverage_start_date, coverage_end_date, created_at, updated_at, version
+        ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW(), 1
+        )
+    '''
+    await db_pool.execute_with_retry(
+        insert_policy_sql,
+        policy_id,
+        json.dumps({}),
+        json.dumps({}),
+        '/dev/null',
+        json.dumps({}),
+        None,
+        'uploaded',
+        date.today(),
+        date.today(),
+    )
+    # Query for logs (should be empty)
+    result = await access_logging_service.get_access_history(
+        policy_id=policy_id,
         start_time=datetime.utcnow() - timedelta(days=1),
         end_time=datetime.utcnow()
     )
+    print(f"Empty access history query results: {result}")
     assert result == []
+    # Cleanup
+    await db_pool.execute_with_retry(
+        "DELETE FROM policy_records WHERE policy_id = $1",
+        policy_id
+    )
 
 @pytest.mark.asyncio
 async def test_empty_user_summary(logging_service, mock_db_session):
@@ -268,4 +294,56 @@ async def test_empty_policy_summary(logging_service, mock_db_session):
     # Verify
     assert result['total_accesses'] == 0
     assert result['unique_users'] == 0
-    assert result['action_breakdown'] == [] 
+    assert result['action_breakdown'] == []
+
+@pytest.mark.asyncio
+async def test_log_access_integration(access_logging_service, db_pool, sample_log_entry):
+    # Insert a policy record to satisfy FK constraint
+    insert_policy_sql = '''
+        INSERT INTO policy_records (
+            policy_id, summary, structured_metadata, raw_policy_path, encrypted_policy_data, encryption_key_id, source_type, coverage_start_date, coverage_end_date, created_at, updated_at, version
+        ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW(), 1
+        )
+    '''
+    await db_pool.execute_with_retry(
+        insert_policy_sql,
+        sample_log_entry['policy_id'],
+        json.dumps({}),
+        json.dumps({}),
+        '/dev/null',
+        json.dumps({}),
+        None,
+        'uploaded',
+        date.today(),
+        date.today(),
+    )
+    # Call log_access
+    await access_logging_service.log_access(
+        policy_id=sample_log_entry['policy_id'],
+        user_id=sample_log_entry['user_id'],
+        action=sample_log_entry['action'],
+        actor_type=sample_log_entry['actor_type'],
+        actor_id=sample_log_entry['actor_id'],
+        purpose=sample_log_entry['purpose'],
+        metadata=sample_log_entry['metadata']
+    )
+    # Verify the log is present
+    result = await access_logging_service.get_access_history(
+        policy_id=sample_log_entry['policy_id'],
+        user_id=sample_log_entry['user_id'],
+        start_time=datetime.utcnow() - timedelta(days=1),
+        end_time=datetime.utcnow()
+    )
+    print(f"log_access integration query results: {result}")
+    assert any(str(log['policy_id']) == sample_log_entry['policy_id'] for log in result)
+    # Cleanup
+    await db_pool.execute_with_retry(
+        "DELETE FROM policy_access_logs WHERE policy_id = $1 AND user_id = $2",
+        sample_log_entry['policy_id'],
+        sample_log_entry['user_id']
+    )
+    await db_pool.execute_with_retry(
+        "DELETE FROM policy_records WHERE policy_id = $1",
+        sample_log_entry['policy_id']
+    ) 

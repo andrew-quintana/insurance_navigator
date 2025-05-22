@@ -32,56 +32,45 @@ class AccessLoggingService:
         metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Log an access event to the policy_access_logs table.
-        
-        Args:
-            policy_id: UUID of the policy being accessed
-            user_id: UUID of the user the access is being performed for
-            action: Type of action being performed (e.g., 'read', 'write', 'delete')
-            actor_type: Type of actor performing the action ('user' or 'agent')
-            actor_id: UUID of the actor performing the action
-            purpose: Purpose of the access (e.g., 'policy_review', 'claim_processing')
-            metadata: Optional additional metadata about the access
-            
-        Returns:
-            The created access log entry
-            
-        Raises:
-            ValueError: If required parameters are invalid
-            RuntimeError: If logging fails
+        Log an access event to the policy_access_logs table (Postgres).
         """
         try:
-            # Validate actor_type
             if actor_type not in ['user', 'agent']:
                 raise ValueError("actor_type must be either 'user' or 'agent'")
-
-            # Create log entry
-            log_entry = {
-                'id': str(uuid4()),
+            log_id = str(uuid4())
+            timestamp = datetime.utcnow()
+            sql = '''
+                INSERT INTO policy_access_logs (
+                    id, policy_id, user_id, action, actor_type, actor_id, timestamp, purpose, metadata
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9
+                )
+            '''
+            await self.db.execute_with_retry(
+                sql,
+                log_id,
+                policy_id,
+                user_id,
+                action,
+                actor_type,
+                actor_id,
+                timestamp,
+                purpose,
+                json.dumps(metadata or {})
+            )
+            return {
+                'id': log_id,
                 'policy_id': policy_id,
                 'user_id': user_id,
                 'action': action,
                 'actor_type': actor_type,
                 'actor_id': actor_id,
-                'timestamp': datetime.utcnow().isoformat(),
+                'timestamp': timestamp.isoformat(),
                 'purpose': purpose,
                 'metadata': metadata or {}
             }
-
-            # Insert into database
-            await self.db.policy_access_logs.insert_one(log_entry)
-            
-            logger.info(
-                f"Access logged - Policy: {policy_id}, User: {user_id}, "
-                f"Action: {action}, Actor: {actor_type}:{actor_id}"
-            )
-
-            return log_entry
         except Exception as e:
-            logger.error(
-                f"Failed to log access - Policy: {policy_id}, User: {user_id}, "
-                f"Action: {action}, Error: {str(e)}"
-            )
+            logger.error(f"Failed to log access: {str(e)}")
             raise RuntimeError(f"Failed to log access: {str(e)}")
 
     async def get_access_history(

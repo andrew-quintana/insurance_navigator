@@ -28,7 +28,11 @@ class Config:
 
 def load_config() -> Config:
     """Load configuration from environment variables."""
-    load_dotenv()
+    # Load test environment if TEST_MODE is set
+    if os.getenv('TEST_MODE') == 'true':
+        load_dotenv('.env.test')
+    else:
+        load_dotenv()
 
     return Config(
         supabase=SupabaseConfig(
