@@ -221,7 +221,7 @@ class TestTaskRequirementsAgent(unittest.TestCase):
             # Check result
             self.assertEqual(result["status"], "complete")
             self.assertEqual(result["input"], TEST_INPUT)
-        self.assertIn("required_context", result)
+            self.assertIn("required_context", result)
             self.assertIn("insurance_id_card", result["required_context"])
     
     def test_parse_react_output(self):
