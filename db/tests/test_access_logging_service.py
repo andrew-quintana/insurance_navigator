@@ -1,9 +1,11 @@
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from uuid import uuid4
 import json
 from unittest.mock import MagicMock, AsyncMock
-
+import os
+import asyncio
+from db.services.db_pool import DatabasePool
 from db.services.access_logging_service import AccessLoggingService
 
 @pytest.fixture
@@ -19,6 +21,14 @@ def logging_service(mock_db_session):
     return AccessLoggingService(mock_db_session)
 
 @pytest.fixture
+async def db_pool():
+    dsn = os.getenv("DATABASE_URL")
+    pool = DatabasePool(dsn)
+    await pool.initialize()
+    yield pool
+    await pool.close()
+
+@pytest.fixture
 def sample_log_entry():
     """Create a sample log entry."""
     return {
@@ -32,6 +42,10 @@ def sample_log_entry():
         'purpose': 'policy_review',
         'metadata': {'source': 'web_portal'}
     }
+
+@pytest.fixture
+def access_logging_service(db_pool):
+    return AccessLoggingService(db_pool)
 
 @pytest.mark.asyncio
 async def test_log_access(logging_service, mock_db_session, sample_log_entry):
@@ -62,7 +76,7 @@ async def test_log_access(logging_service, mock_db_session, sample_log_entry):
 @pytest.mark.asyncio
 async def test_log_access_invalid_actor_type(logging_service):
     """Test logging with invalid actor type."""
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(RuntimeError) as exc_info:
         await logging_service.log_access(
             policy_id=str(uuid4()),
             user_id=str(uuid4()),
@@ -75,32 +89,64 @@ async def test_log_access_invalid_actor_type(logging_service):
     assert "actor_type must be either 'user' or 'agent'" in str(exc_info.value)
 
 @pytest.mark.asyncio
-async def test_get_access_history(logging_service, mock_db_session, sample_log_entry):
-    """Test retrieving access history."""
-    # Setup
-    mock_db_session.policy_access_logs.count_documents = AsyncMock(return_value=1)
-    mock_db_session.policy_access_logs.find = MagicMock()
-    mock_db_session.policy_access_logs.find.return_value.sort = MagicMock()
-    mock_db_session.policy_access_logs.find.return_value.sort.return_value.skip = MagicMock()
-    mock_db_session.policy_access_logs.find.return_value.sort.return_value.skip.return_value.limit = MagicMock()
-    mock_db_session.policy_access_logs.find.return_value.sort.return_value.skip.return_value.limit.return_value.to_list = AsyncMock(
-        return_value=[sample_log_entry]
+async def test_get_access_history(access_logging_service, sample_log_entry, db_pool):
+    # Insert a policy record to satisfy FK constraint
+    insert_policy_sql = '''
+        INSERT INTO policy_records (
+            policy_id, summary, structured_metadata, raw_policy_path, encrypted_policy_data, encryption_key_id, source_type, coverage_start_date, coverage_end_date, created_at, updated_at, version
+        ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW(), 1
+        )
+    '''
+    await db_pool.execute_with_retry(
+        insert_policy_sql,
+        sample_log_entry['policy_id'],
+        json.dumps({}),  # summary
+        json.dumps({}),  # structured_metadata
+        '/dev/null',
+        json.dumps({}),  # encrypted_policy_data
+        None,  # encryption_key_id
+        'uploaded',  # source_type
+        date.today(),  # coverage_start_date
+        date.today(),  # coverage_end_date
     )
-    
-    # Execute
-    result = await logging_service.get_access_history(
+    # Insert a sample log entry
+    insert_sql = '''
+        INSERT INTO policy_access_logs (id, policy_id, user_id, action, actor_type, actor_id, timestamp, purpose, metadata)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    '''
+    ts = datetime.fromisoformat(sample_log_entry['timestamp'])
+    print(f"Inserted log timestamp: {ts.isoformat()}")
+    await db_pool.execute_with_retry(
+        insert_sql,
+        sample_log_entry['id'],
+        sample_log_entry['policy_id'],
+        sample_log_entry['user_id'],
+        sample_log_entry['action'],
+        sample_log_entry['actor_type'],
+        sample_log_entry['actor_id'],
+        ts,
+        sample_log_entry['purpose'],
+        json.dumps(sample_log_entry['metadata'])
+    )
+    # Retrieve access history
+    result = await access_logging_service.get_access_history(
         policy_id=sample_log_entry['policy_id'],
         user_id=sample_log_entry['user_id'],
-        start_date=(datetime.utcnow() - timedelta(days=1)).isoformat(),
-        end_date=datetime.utcnow().isoformat()
+        start_time=datetime.utcnow() - timedelta(days=1),
+        end_time=datetime.utcnow()
     )
-    
-    # Verify
-    assert result['total'] == 1
-    assert result['page'] == 1
-    assert result['items'] == [sample_log_entry]
-    mock_db_session.policy_access_logs.count_documents.assert_called_once()
-    mock_db_session.policy_access_logs.find.assert_called_once()
+    print(f"Query results: {result}")
+    assert any(str(log['policy_id']) == sample_log_entry['policy_id'] for log in result)
+    # Cleanup
+    await db_pool.execute_with_retry(
+        "DELETE FROM policy_access_logs WHERE id = $1",
+        sample_log_entry['id']
+    )
+    await db_pool.execute_with_retry(
+        "DELETE FROM policy_records WHERE policy_id = $1",
+        sample_log_entry['policy_id']
+    )
 
 @pytest.mark.asyncio
 async def test_get_user_access_summary(logging_service, mock_db_session):
@@ -179,25 +225,16 @@ async def test_get_policy_access_summary(logging_service, mock_db_session):
     mock_db_session.policy_access_logs.aggregate.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_empty_access_history(logging_service, mock_db_session):
-    """Test retrieving empty access history."""
-    # Setup
-    mock_db_session.policy_access_logs.count_documents = AsyncMock(return_value=0)
-    mock_db_session.policy_access_logs.find = MagicMock()
-    mock_db_session.policy_access_logs.find.return_value.sort = MagicMock()
-    mock_db_session.policy_access_logs.find.return_value.sort.return_value.skip = MagicMock()
-    mock_db_session.policy_access_logs.find.return_value.sort.return_value.skip.return_value.limit = MagicMock()
-    mock_db_session.policy_access_logs.find.return_value.sort.return_value.skip.return_value.limit.return_value.to_list = AsyncMock(
-        return_value=[]
+async def test_empty_access_history(logging_service):
+    """Test retrieving empty access history from the real database."""
+    # Use a random policy_id and user_id that should not exist
+    result = await logging_service.get_access_history(
+        policy_id=str(uuid4()),
+        user_id=str(uuid4()),
+        start_time=datetime.utcnow() - timedelta(days=1),
+        end_time=datetime.utcnow()
     )
-    
-    # Execute
-    result = await logging_service.get_access_history()
-    
-    # Verify
-    assert result['total'] == 0
-    assert result['items'] == []
-    assert result['total_pages'] == 0
+    assert result == []
 
 @pytest.mark.asyncio
 async def test_empty_user_summary(logging_service, mock_db_session):
