@@ -93,42 +93,32 @@ class AccessLoggingService:
         end_time: Optional[datetime] = None,
         limit: int = 100
     ) -> List[Dict[str, Any]]:
-        """Get access history with optional filters.
-        
-        Args:
-            policy_id: Optional filter by policy ID
-            user_id: Optional filter by user ID
-            action: Optional filter by action type
-            start_time: Optional filter by start time
-            end_time: Optional filter by end time
-            limit: Maximum number of records to return
-            
-        Returns:
-            List of access log entries
-        """
+        """Get access history with optional filters using Postgres."""
         try:
-            # Build query
-            query = {}
+            # Build SQL query and parameters
+            sql = "SELECT * FROM policy_access_logs WHERE TRUE"
+            params = []
             if policy_id:
-                query['policy_id'] = policy_id
+                sql += " AND policy_id = $%d" % (len(params) + 1)
+                params.append(policy_id)
             if user_id:
-                query['user_id'] = user_id
+                sql += " AND user_id = $%d" % (len(params) + 1)
+                params.append(user_id)
             if action:
-                query['action'] = action
-            if start_time or end_time:
-                query['timestamp'] = {}
-                if start_time:
-                    query['timestamp']['$gte'] = start_time.isoformat()
-                if end_time:
-                    query['timestamp']['$lte'] = end_time.isoformat()
+                sql += " AND action = $%d" % (len(params) + 1)
+                params.append(action)
+            if start_time:
+                sql += " AND timestamp >= $%d" % (len(params) + 1)
+                params.append(start_time)
+            if end_time:
+                sql += " AND timestamp <= $%d" % (len(params) + 1)
+                params.append(end_time)
+            sql += " ORDER BY timestamp DESC LIMIT $%d" % (len(params) + 1)
+            params.append(limit)
 
-            # Execute query
-            logs = await self.db.policy_access_logs \
-                .find(query) \
-                .sort('timestamp', -1) \
-                .limit(limit) \
-                .to_list(None)
-
+            rows = await self.db.fetch_with_retry(sql, *params)
+            # Convert asyncpg.Record to dict
+            logs = [dict(row) for row in rows]
             return logs
         except Exception as e:
             logger.error(f"Failed to retrieve access history: {str(e)}")
