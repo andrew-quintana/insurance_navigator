@@ -1,0 +1,107 @@
+{
+    "strategies": [
+        {
+            "strategy_id": "DUAL-STRAT-001",
+            "patient_need": "Dual eligibility assessment for Medicare and Medicaid",
+            "recommended_service": "Medicare Savings Program Evaluation",
+            "estimated_timeline": "2-4 weeks",
+            "confidence": 0.9,
+            "action_plan": [
+                {
+                    "step_number": 1,
+                    "step_description": "Gather income documentation",
+                    "expected_timeline": "1-2 days",
+                    "required_resources": ["Income statements", "Tax returns"],
+                    "potential_obstacles": ["Missing recent statements"],
+                    "contingency_plan": "Request bank statements for last 3 months"
+                },
+                {
+                    "step_number": 2,
+                    "step_description": "Complete MSP application",
+                    "expected_timeline": "1 week",
+                    "required_resources": ["State MSP application form", "Medicare card"],
+                    "potential_obstacles": ["Form complexity"],
+                    "contingency_plan": "Schedule assistance with case worker"
+                }
+            ],
+            "matched_services": [
+                {
+                    "service_name": "QMB Program",
+                    "service_type": "Medicare Savings Program",
+                    "service_description": "Helps pay Medicare premiums, deductibles, and copayments",
+                    "is_covered": true,
+                    "coverage_details": {
+                        "premium_assistance": true,
+                        "deductible_coverage": true,
+                        "copay_coverage": true
+                    },
+                    "required_documentation": [
+                        "Proof of income",
+                        "Medicare card",
+                        "State ID"
+                    ],
+                    "compliance_score": 0.95
+                }
+            ],
+            "provider_options": [
+                {
+                    "name": "State Medicaid Office",
+                    "location": "Local county office",
+                    "application_method": "In-person or online"
+                }
+            ],
+            "compliance_assessment": {
+                "income_eligible": true,
+                "asset_eligible": true,
+                "documentation_complete": false
+            }
+        },
+        {
+            "strategy_id": "MSP-STRAT-001",
+            "patient_need": "Medicare premium assistance for low-income senior",
+            "recommended_service": "QMB Program Application",
+            "estimated_timeline": "3-5 weeks",
+            "confidence": 0.85,
+            "action_plan": [
+                {
+                    "step_number": 1,
+                    "step_description": "Income verification process",
+                    "expected_timeline": "1 week",
+                    "required_resources": ["Social Security statement", "Pension documentation"],
+                    "potential_obstacles": ["Outdated documentation"],
+                    "contingency_plan": "Request updated statements"
+                }
+            ],
+            "matched_services": [
+                {
+                    "service_name": "SLMB Program",
+                    "service_type": "Medicare Savings Program",
+                    "service_description": "Helps pay Medicare Part B premiums only",
+                    "is_covered": true,
+                    "coverage_details": {
+                        "premium_assistance": true,
+                        "deductible_coverage": false,
+                        "copay_coverage": false
+                    },
+                    "required_documentation": [
+                        "Proof of income",
+                        "Medicare card"
+                    ],
+                    "compliance_score": 0.88
+                }
+            ],
+            "provider_options": [
+                {
+                    "name": "Online Portal",
+                    "location": "State benefits website",
+                    "application_method": "Online submission"
+                }
+            ],
+            "compliance_assessment": {
+                "income_eligible": true,
+                "asset_eligible": "unknown",
+                "documentation_complete": false
+            }
+        }
+    ]
+} 

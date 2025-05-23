@@ -1,0 +1,85 @@
+{
+    "documents": [
+        {
+            "document_id": "MSP-CA-2024-001",
+            "title": "Medicare Savings Programs Eligibility Guidelines - California",
+            "jurisdiction": "state",
+            "state": "CA",
+            "program": "medicare",
+            "document_type": "policy",
+            "effective_date": "2024-01-01",
+            "status": "active",
+            "content": "Income limits for Medicare Savings Programs in California for 2024:\n1. QMB (Qualified Medicare Beneficiary): Individual monthly income limit $1,235; Couple $1,663\n2. SLMB (Specified Low-Income Medicare Beneficiary): Individual monthly income limit $1,478; Couple $1,992\n3. QI (Qualifying Individual): Individual monthly income limit $1,660; Couple $2,239\n\nAsset limits apply to all programs:\n- Individual: $9,090\n- Couple: $13,630",
+            "sections": [
+                {
+                    "section_id": "eligibility-001",
+                    "title": "Income Limits",
+                    "content": "QMB, SLMB, and QI programs have different income thresholds..."
+                }
+            ]
+        },
+        {
+            "document_id": "DUAL-FED-2024-001",
+            "title": "Federal Guidelines for Dual Eligible Beneficiaries",
+            "jurisdiction": "federal",
+            "program": "dual_eligible",
+            "document_type": "regulation",
+            "effective_date": "2024-01-01",
+            "status": "active",
+            "content": "Dual eligibility requirements:\n1. Must qualify for Medicare (age 65+ or certain disabilities)\n2. Must meet state Medicaid eligibility criteria\n3. Income must be at or below 135% Federal Poverty Level\n4. Must be U.S. citizen or legal resident\n\nApplication process requires:\n- Proof of Medicare eligibility\n- Income verification\n- Asset documentation\n- State residency proof",
+            "sections": [
+                {
+                    "section_id": "requirements-001",
+                    "title": "Basic Requirements",
+                    "content": "Core eligibility criteria for dual status..."
+                }
+            ]
+        },
+        {
+            "document_id": "MSP-APP-CA-2024-001",
+            "title": "Medicare Savings Program Application Process - California",
+            "jurisdiction": "state",
+            "state": "CA",
+            "program": "medicare",
+            "document_type": "guidance",
+            "effective_date": "2024-01-01",
+            "status": "active",
+            "content": "Application Steps for Medicare Savings Programs:\n1. Initial Screening (1-2 days)\n   - Verify Medicare enrollment\n   - Check income eligibility\n   - Review asset documentation\n\n2. Documentation Collection (3-5 days)\n   - Recent income statements\n   - Bank statements\n   - Property records\n   - Medicare card copy\n\n3. Application Submission (1-2 weeks)\n   - Complete state application form\n   - Submit supporting documents\n   - Sign required declarations\n\n4. Processing Period (2-3 weeks)\n   - Application review\n   - Eligibility determination\n   - Notification of decision",
+            "sections": [
+                {
+                    "section_id": "process-001",
+                    "title": "Application Timeline",
+                    "content": "Detailed timeline for MSP application process..."
+                },
+                {
+                    "section_id": "docs-001",
+                    "title": "Required Documentation",
+                    "content": "List of required documents and acceptable alternatives..."
+                }
+            ]
+        },
+        {
+            "document_id": "DUAL-CA-2024-001",
+            "title": "California Dual Eligible Program Guidelines",
+            "jurisdiction": "state",
+            "state": "CA",
+            "program": "dual_eligible",
+            "document_type": "policy",
+            "effective_date": "2024-01-01",
+            "status": "active",
+            "content": "California-specific requirements for dual eligibility:\n1. State residency verification required\n2. Medi-Cal income limits apply\n3. Asset documentation must be current (within 30 days)\n4. Annual renewal process required\n\nSpecial Provisions:\n- Retroactive coverage available (up to 3 months)\n- Expedited processing for certain medical conditions\n- Appeal rights within 60 days of determination",
+            "sections": [
+                {
+                    "section_id": "ca-specific-001",
+                    "title": "State Requirements",
+                    "content": "California-specific requirements for dual eligible status..."
+                },
+                {
+                    "section_id": "appeals-001",
+                    "title": "Appeals Process",
+                    "content": "Process for appealing eligibility determinations..."
+                }
+            ]
+        }
+    ]
+} 
