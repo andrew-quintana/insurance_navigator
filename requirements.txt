@@ -21,6 +21,7 @@ pydantic==2.6.3
 python-dotenv==1.0.1
 pytz==2024.1  # For timezone handling
 
+# AI/ML and Search (for agents that need them)
 langchain>=0.1.0
 langgraph>=0.0.15
 langchain-anthropic>=0.1.0
@@ -33,6 +34,13 @@ wikipedia>=1.4.0
 supabase>=2.3.0
 langsmith>=0.0.69
 anthropic>=0.8.0
+
+# Web scraping and HTTP
+aiohttp>=3.8.0
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+
+# Development tools
 black>=23.0.0
 isort>=5.12.0
 mypy>=1.0.0
