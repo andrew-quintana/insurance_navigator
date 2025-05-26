@@ -6,6 +6,7 @@ vibe_coding_directive.md
 .cursorignore
 .cursor/
 z_prompt_sops/
+.venv/
 
 # Python
 __pycache__/
@@ -33,6 +34,7 @@ wheels/
 venv/
 ENV/
 env/
+.venv/
 
 # IDE
 .idea/
@@ -74,4 +76,4 @@ out/
 
 # OS
 .DS_Store
-Thumbs.db .venv/
+Thumbs.db
