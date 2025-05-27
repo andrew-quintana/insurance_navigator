@@ -201,4 +201,18 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
                 f"Unexpected error: {error_detail.message}",
                 exc_info=error,
                 extra=error_context
-            ) 
+            )
+
+
+# Create a convenience function that can be imported
+def error_handler(request: Request, call_next):
+    """
+    Convenience function wrapper for ErrorHandlerMiddleware
+    This allows importing as: from db.middleware.error_handler import error_handler
+    """
+    middleware = ErrorHandlerMiddleware(app=None)
+    return middleware.dispatch(request, call_next)
+
+
+# Alternative: Create a middleware instance for direct use
+error_handler_middleware = ErrorHandlerMiddleware 

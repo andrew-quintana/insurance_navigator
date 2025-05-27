@@ -16,6 +16,8 @@ Based on FMEA analysis, this agent implements controls for:
 - Managing handoffs to other agents
 """
 
+# TODO: Add web search capability to find plan PDF based on the user's plan information
+
 import os
 import json
 import logging

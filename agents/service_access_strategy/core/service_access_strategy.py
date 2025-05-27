@@ -16,6 +16,8 @@ Based on FMEA analysis, this agent implements controls for:
 - Handling complex medical needs
 """
 
+# TODO: Add web search capability to find access strategies already outlined on service websites and other up-to-date reputable resources
+
 import os
 import json
 import logging
