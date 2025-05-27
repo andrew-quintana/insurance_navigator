@@ -1,6 +1,7 @@
 """
 LangGraph Agent Orchestrator for Medicare Navigator
 Handles orchestration of multiple agents based on intent routing.
+Integrates with persistent conversation service for workflow state management.
 """
 
 import logging
@@ -33,10 +34,13 @@ from agents.common.exceptions import (
 # Configuration import
 from utils.config_manager import ConfigManager
 
+# Database conversation service import
+from db.services.conversation_service import get_conversation_service
+
 logger = logging.getLogger(__name__)
 
 class AgentState:
-    """State object for LangGraph workflow"""
+    """State object for LangGraph workflow with database persistence"""
     def __init__(self):
         self.message: str = ""
         self.conversation_id: str = ""
@@ -47,14 +51,50 @@ class AgentState:
         self.metadata: Dict[str, Any] = {}
         self.security_check_passed: bool = False
         self.error: Optional[str] = None
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert state to dictionary for persistence."""
+        return {
+            "message": self.message,
+            "conversation_id": self.conversation_id,
+            "user_id": self.user_id,
+            "intent": self.intent,
+            "workflow_type": self.workflow_type,
+            "response_text": self.response_text,
+            "metadata": self.metadata,
+            "security_check_passed": self.security_check_passed,
+            "error": self.error
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'AgentState':
+        """Create state from dictionary for persistence."""
+        state = cls()
+        for key, value in data.items():
+            if hasattr(state, key):
+                setattr(state, key, value)
+        return state
         
 class AgentOrchestrator:
-    """Orchestrates multiple agents using LangGraph workflows"""
+    """Orchestrates multiple agents using LangGraph workflows with persistent state"""
     
     def __init__(self):
         self.config_manager = ConfigManager()
+        self.conversation_service = None
+        self._conversation_service_initialized = False
         self._initialize_agents()
         self._build_workflows()
+    
+    async def _ensure_conversation_service(self) -> None:
+        """Ensure conversation service is initialized."""
+        if not self._conversation_service_initialized:
+            try:
+                self.conversation_service = await get_conversation_service()
+                self._conversation_service_initialized = True
+                logger.info("Conversation service initialized in orchestrator")
+            except Exception as e:
+                logger.error(f"Failed to initialize conversation service: {e}")
+                self.conversation_service = None
         
     def _initialize_agents(self):
         """Initialize all required agents"""
@@ -123,17 +163,40 @@ class AgentOrchestrator:
     ) -> Dict[str, Any]:
         """
         Main entry point for processing user messages
-        Routes to appropriate workflow based on intent
+        Routes to appropriate workflow based on intent with persistent state management
         """
         if not conversation_id:
             conversation_id = f"conv_{uuid4().hex[:8]}"
-            
+        
         try:
+            # Ensure conversation service is available
+            await self._ensure_conversation_service()
+            
+            # Create or load conversation
+            if self.conversation_service:
+                await self.conversation_service.create_conversation(
+                    user_id=user_id,
+                    conversation_id=conversation_id,
+                    metadata={"orchestrator": "langgraph"}
+                )
+            
             # Initialize state
             state = AgentState()
             state.message = message
             state.user_id = user_id
             state.conversation_id = conversation_id
+            
+            # Try to load existing workflow state
+            if self.conversation_service:
+                try:
+                    existing_state = await self.conversation_service.get_workflow_state(conversation_id)
+                    if existing_state:
+                        # Resume from existing state
+                        state = AgentState.from_dict(existing_state["state_data"])
+                        state.message = message  # Update with new message
+                        logger.info(f"Resumed workflow from step: {existing_state['current_step']}")
+                except Exception as e:
+                    logger.warning(f"Could not load existing workflow state: {e}")
             
             # Determine workflow type based on message content
             workflow_type = self._determine_workflow_type(message)
@@ -141,11 +204,31 @@ class AgentOrchestrator:
             
             logger.info(f"Processing message with {workflow_type} workflow for user {user_id}")
             
+            # Save initial workflow state
+            if self.conversation_service:
+                await self.conversation_service.save_workflow_state(
+                    conversation_id=conversation_id,
+                    workflow_type=workflow_type,
+                    current_step="initialized",
+                    state_data=state.to_dict(),
+                    user_id=user_id
+                )
+            
             # Execute appropriate workflow
             if workflow_type == "strategy_request":
                 final_state = await self._execute_strategy_workflow(state)
             else:
                 final_state = await self._execute_navigator_workflow(state)
+            
+            # Save final workflow state
+            if self.conversation_service:
+                await self.conversation_service.save_workflow_state(
+                    conversation_id=conversation_id,
+                    workflow_type=workflow_type,
+                    current_step="completed",
+                    state_data=final_state.to_dict(),
+                    user_id=user_id
+                )
             
             # Handle errors
             if final_state.error:
@@ -182,8 +265,18 @@ class AgentOrchestrator:
         return "navigator_only"
     
     async def _execute_strategy_workflow(self, state: AgentState) -> AgentState:
-        """Execute the strategy request workflow"""
+        """Execute the strategy request workflow with state persistence"""
         try:
+            # Save workflow state at strategy execution
+            if self.conversation_service:
+                await self.conversation_service.save_workflow_state(
+                    conversation_id=state.conversation_id,
+                    workflow_type=state.workflow_type,
+                    current_step="strategy_workflow",
+                    state_data=state.to_dict(),
+                    user_id=state.user_id
+                )
+            
             result = await self.compiled_strategy_workflow.ainvoke({"state": state})
             return result["state"]
         except Exception as e:
@@ -191,8 +284,18 @@ class AgentOrchestrator:
             return state
     
     async def _execute_navigator_workflow(self, state: AgentState) -> AgentState:
-        """Execute the navigator-only workflow"""
+        """Execute the navigator-only workflow with state persistence"""
         try:
+            # Save workflow state at navigator execution
+            if self.conversation_service:
+                await self.conversation_service.save_workflow_state(
+                    conversation_id=state.conversation_id,
+                    workflow_type=state.workflow_type,
+                    current_step="navigator_workflow",
+                    state_data=state.to_dict(),
+                    user_id=state.user_id
+                )
+            
             result = await self.compiled_navigator_workflow.ainvoke({"state": state})
             return result["state"]
         except Exception as e:
@@ -204,6 +307,16 @@ class AgentOrchestrator:
         """Prompt security agent node"""
         try:
             logger.info("Executing security check")
+            
+            # Save agent state
+            if self.conversation_service:
+                await self.conversation_service.save_agent_state(
+                    conversation_id=state.conversation_id,
+                    agent_name="prompt_security",
+                    state_data={"step": "security_check", "message": state.message},
+                    workflow_step="security_check"
+                )
+            
             security_result = await self.prompt_security_agent.check_prompt_security(
                 state.message, state.user_id
             )
@@ -231,6 +344,16 @@ class AgentOrchestrator:
                 return state
                 
             logger.info("Executing navigator analysis")
+            
+            # Save agent state
+            if self.conversation_service:
+                await self.conversation_service.save_agent_state(
+                    conversation_id=state.conversation_id,
+                    agent_name="patient_navigator",
+                    state_data={"step": "analysis", "message": state.message},
+                    workflow_step="navigator_analysis"
+                )
+            
             navigator_result = await self.patient_navigator_agent.analyze_request(
                 state.message, state.conversation_id
             )
@@ -255,6 +378,16 @@ class AgentOrchestrator:
                 return state
                 
             logger.info("Executing navigator Q&A")
+            
+            # Save agent state
+            if self.conversation_service:
+                await self.conversation_service.save_agent_state(
+                    conversation_id=state.conversation_id,
+                    agent_name="patient_navigator",
+                    state_data={"step": "qa", "message": state.message},
+                    workflow_step="navigator_qa"
+                )
+            
             qa_result = await self.patient_navigator_agent.answer_question(
                 state.message, state.conversation_id
             )
@@ -275,6 +408,16 @@ class AgentOrchestrator:
         """Task requirements agent node"""
         try:
             logger.info("Executing task requirements analysis")
+            
+            # Save agent state
+            if self.conversation_service:
+                await self.conversation_service.save_agent_state(
+                    conversation_id=state.conversation_id,
+                    agent_name="task_requirements",
+                    state_data={"step": "requirements_analysis", "intent": state.intent},
+                    workflow_step="task_requirements"
+                )
+            
             task_result = await self.task_requirements_agent.analyze_requirements(
                 state.message, state.intent
             )
@@ -294,6 +437,16 @@ class AgentOrchestrator:
         """Service access strategy agent node"""
         try:
             logger.info("Executing service strategy development")
+            
+            # Save agent state
+            if self.conversation_service:
+                await self.conversation_service.save_agent_state(
+                    conversation_id=state.conversation_id,
+                    agent_name="service_access_strategy",
+                    state_data={"step": "strategy_development", "intent": state.intent},
+                    workflow_step="service_strategy"
+                )
+            
             strategy_result = await self.service_access_strategy_agent.develop_strategy(
                 state.message, state.intent
             )
@@ -313,6 +466,16 @@ class AgentOrchestrator:
         """Regulatory agent node"""
         try:
             logger.info("Executing regulatory compliance check")
+            
+            # Save agent state
+            if self.conversation_service:
+                await self.conversation_service.save_agent_state(
+                    conversation_id=state.conversation_id,
+                    agent_name="regulatory",
+                    state_data={"step": "compliance_check", "strategy": state.metadata.get("service_strategy", {})},
+                    workflow_step="regulatory_check"
+                )
+            
             regulatory_result = await self.regulatory_agent.check_compliance(
                 state.message, state.metadata.get("service_strategy", {})
             )
@@ -333,6 +496,15 @@ class AgentOrchestrator:
         try:
             logger.info("Generating final chat response")
             
+            # Save agent state
+            if self.conversation_service:
+                await self.conversation_service.save_agent_state(
+                    conversation_id=state.conversation_id,
+                    agent_name="chat_communicator",
+                    state_data={"step": "response_generation", "workflow_type": state.workflow_type},
+                    workflow_step="chat_response"
+                )
+            
             # Prepare context for chat communicator
             context = {
                 "original_message": state.message,
@@ -340,14 +512,17 @@ class AgentOrchestrator:
                 "metadata": state.metadata
             }
             
-            chat_result = await self.chat_communicator_agent.generate_response(
-                context, state.conversation_id
+            # Use the updated async method from chat communicator
+            chat_result = await self.chat_communicator_agent.process_navigator_output(
+                navigator_output=context,  # Pass context as navigator output
+                user_id=state.user_id,
+                session_id=state.conversation_id
             )
             
-            state.response_text = chat_result.response_text
+            state.response_text = chat_result.get("message", "I apologize, but I couldn't generate a response.")
             state.metadata["chat_response"] = {
-                "response_type": chat_result.response_type,
-                "confidence": chat_result.confidence_score
+                "response_type": chat_result.get("response_type", "error"),
+                "confidence": chat_result.get("confidence", 0.0)
             }
             
         except Exception as e:

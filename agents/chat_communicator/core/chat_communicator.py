@@ -14,6 +14,7 @@ Based on healthcare communication best practices, this agent implements:
 - Structured responses with actionable next steps
 - Emergency detection and appropriate escalation
 - Consistent formatting and accessibility
+- Persistent conversation management with database integration
 """
 
 import os
@@ -36,6 +37,9 @@ from agents.common.exceptions import AgentException
 
 # Import configuration handling
 from utils.config_manager import ConfigManager
+
+# Import database conversation service
+from db.services.conversation_service import get_conversation_service
 
 # Import models
 from agents.chat_communicator.core.models.chat_models import (
@@ -102,8 +106,9 @@ class ChatCommunicatorAgent(BaseAgent):
             use_mock=use_mock
         )
         
-        # Initialize conversation tracking
-        self.active_conversations = {}
+        # Initialize conversation service (will be async-initialized)
+        self.conversation_service = None
+        self._conversation_service_initialized = False
         
         # Initialize output parser
         self.output_parser = PydanticOutputParser(pydantic_object=ChatResponse)
@@ -116,6 +121,18 @@ class ChatCommunicatorAgent(BaseAgent):
         self._initialize_agent()
         
         logger.info(f"Chat Communicator Agent initialized with model {model_name}")
+    
+    async def _ensure_conversation_service(self) -> None:
+        """Ensure conversation service is initialized (async operation)."""
+        if not self._conversation_service_initialized:
+            try:
+                self.conversation_service = await get_conversation_service()
+                self._conversation_service_initialized = True
+                logger.info("Conversation service initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize conversation service: {e}")
+                # Use in-memory fallback for mock/testing
+                self.conversation_service = None
     
     def _initialize_agent(self) -> None:
         """Initialize agent-specific components."""
@@ -218,7 +235,7 @@ Please provide a conversational response in the specified JSON format.
             raise ChatCommunicatorException(f"Invalid input data: {str(e)}")
     
     @BaseAgent.track_performance
-    def _process_data(self, input_data: ChatInput) -> ChatResponse:
+    async def _process_data(self, input_data: ChatInput) -> ChatResponse:
         """
         Process the validated input data.
         
@@ -235,12 +252,26 @@ Please provide a conversational response in the specified JSON format.
             if self.use_mock:
                 return self._generate_mock_response(input_data)
             
+            # Ensure conversation service is available
+            await self._ensure_conversation_service()
+            
+            # Get conversation history from database if available
+            conversation_history = []
+            if self.conversation_service and input_data.user_id and input_data.session_id:
+                try:
+                    conversation_history = await self.conversation_service.get_conversation_history(
+                        input_data.session_id, 
+                        limit=10
+                    )
+                except Exception as e:
+                    logger.warning(f"Could not load conversation history: {e}")
+            
             # Prepare data for the LLM
             input_dict = {
                 "input_data": json.dumps(input_data.data.model_dump() if hasattr(input_data.data, 'model_dump') else input_data.data),
                 "user_id": input_data.user_id or "anonymous",
                 "session_id": input_data.session_id or "new_session",
-                "conversation_history": json.dumps(input_data.conversation_history or []),
+                "conversation_history": json.dumps(conversation_history),
                 "format_instructions": self.output_parser.get_format_instructions()
             }
             
@@ -304,7 +335,7 @@ Please provide a conversational response in the specified JSON format.
         """
         return processed_data.model_dump()
     
-    def process_navigator_output(
+    async def process_navigator_output(
         self,
         navigator_output: NavigatorOutput,
         user_id: Optional[str] = None,
@@ -318,11 +349,24 @@ Please provide a conversational response in the specified JSON format.
             navigator_output: NavigatorOutput from Patient Navigator Agent
             user_id: User identifier
             session_id: Session identifier
-            conversation_history: Previous conversation messages
+            conversation_history: Previous conversation messages (deprecated - loaded from DB)
             
         Returns:
             Conversational response dictionary
         """
+        # Create or ensure conversation exists
+        if user_id and session_id:
+            await self._ensure_conversation_service()
+            if self.conversation_service:
+                try:
+                    await self.conversation_service.create_conversation(
+                        user_id=user_id,
+                        conversation_id=session_id,
+                        metadata={"source": "navigator_output"}
+                    )
+                except Exception as e:
+                    logger.warning(f"Could not create conversation: {e}")
+        
         chat_input = ChatInput(
             source_type="navigator_output",
             data=navigator_output,
@@ -331,9 +375,34 @@ Please provide a conversational response in the specified JSON format.
             conversation_history=conversation_history or []
         )
         
-        return self.process(chat_input.model_dump())
+        result = await self.process(chat_input.model_dump())
+        
+        # Store the conversation in database
+        if user_id and session_id and self.conversation_service:
+            try:
+                # Store user message
+                await self.conversation_service.add_message(
+                    conversation_id=session_id,
+                    role="user",
+                    content=navigator_output.metadata.raw_user_text if hasattr(navigator_output, 'metadata') else "Navigator input",
+                    agent_name="patient_navigator",
+                    metadata={"source_type": "navigator_output"}
+                )
+                
+                # Store agent response
+                await self.conversation_service.add_message(
+                    conversation_id=session_id,
+                    role="assistant",
+                    content=result["message"],
+                    agent_name="chat_communicator",
+                    metadata=result.get("metadata", {})
+                )
+            except Exception as e:
+                logger.error(f"Failed to store conversation: {e}")
+        
+        return result
     
-    def process_service_strategy(
+    async def process_service_strategy(
         self,
         service_strategy: ServiceAccessStrategy,
         user_id: Optional[str] = None,
@@ -347,11 +416,24 @@ Please provide a conversational response in the specified JSON format.
             service_strategy: ServiceAccessStrategy from Service Access Strategy Agent
             user_id: User identifier
             session_id: Session identifier
-            conversation_history: Previous conversation messages
+            conversation_history: Previous conversation messages (deprecated - loaded from DB)
             
         Returns:
             Conversational response dictionary
         """
+        # Create or ensure conversation exists
+        if user_id and session_id:
+            await self._ensure_conversation_service()
+            if self.conversation_service:
+                try:
+                    await self.conversation_service.create_conversation(
+                        user_id=user_id,
+                        conversation_id=session_id,
+                        metadata={"source": "service_strategy"}
+                    )
+                except Exception as e:
+                    logger.warning(f"Could not create conversation: {e}")
+        
         chat_input = ChatInput(
             source_type="service_strategy",
             data=service_strategy,
@@ -360,87 +442,145 @@ Please provide a conversational response in the specified JSON format.
             conversation_history=conversation_history or []
         )
         
-        return self.process(chat_input.model_dump())
+        result = await self.process(chat_input.model_dump())
+        
+        # Store the conversation in database
+        if user_id and session_id and self.conversation_service:
+            try:
+                # Store user request
+                await self.conversation_service.add_message(
+                    conversation_id=session_id,
+                    role="user",
+                    content=f"Service strategy request: {service_strategy.patient_need}",
+                    agent_name="service_access_strategy",
+                    metadata={"source_type": "service_strategy"}
+                )
+                
+                # Store agent response
+                await self.conversation_service.add_message(
+                    conversation_id=session_id,
+                    role="assistant",
+                    content=result["message"],
+                    agent_name="chat_communicator",
+                    metadata=result.get("metadata", {})
+                )
+            except Exception as e:
+                logger.error(f"Failed to store conversation: {e}")
+        
+        return result
     
-    def update_conversation_context(
+    async def get_conversation_history(
         self,
         user_id: str,
         session_id: str,
-        message: str,
-        response: str
-    ) -> None:
+        limit: int = 20
+    ) -> List[Dict[str, Any]]:
         """
-        Update conversation context for future interactions.
+        Get conversation history from persistent storage.
         
         Args:
             user_id: User identifier
             session_id: Session identifier
-            message: User's message
-            response: Agent's response
+            limit: Maximum number of messages to retrieve
+            
+        Returns:
+            List of conversation messages
         """
-        conversation_key = f"{user_id}_{session_id}"
+        await self._ensure_conversation_service()
         
-        if conversation_key not in self.active_conversations:
-            self.active_conversations[conversation_key] = ConversationContext(
-                user_id=user_id,
-                session_id=session_id,
-                conversation_start=datetime.utcnow(),
-                last_interaction=datetime.utcnow(),
-                interaction_count=0
-            )
+        if self.conversation_service:
+            try:
+                return await self.conversation_service.get_conversation_history(
+                    conversation_id=session_id,
+                    limit=limit,
+                    include_metadata=True
+                )
+            except Exception as e:
+                logger.error(f"Failed to get conversation history: {e}")
         
-        context = self.active_conversations[conversation_key]
-        context.last_interaction = datetime.utcnow()
-        context.interaction_count += 1
-        
-        # Update conversation summary if needed
-        if context.interaction_count > 5:  # Summarize after 5 interactions
-            summary = f"User has had {context.interaction_count} interactions about healthcare navigation."
-            context.conversation_summary = summary
+        return []
     
-    def get_conversation_history(
-        self,
-        user_id: str,
-        session_id: str
-    ) -> List[Dict[str, str]]:
+    async def clear_conversation(self, user_id: str, session_id: str) -> bool:
         """
-        Get conversation history for a user session.
+        Clear conversation context from persistent storage.
         
         Args:
             user_id: User identifier
             session_id: Session identifier
             
         Returns:
-            List of conversation messages
+            True if conversation was cleared successfully
         """
-        conversation_key = f"{user_id}_{session_id}"
+        await self._ensure_conversation_service()
         
-        if conversation_key in self.active_conversations:
-            context = self.active_conversations[conversation_key]
-            return [
-                {
-                    "summary": context.conversation_summary or "New conversation",
-                    "interaction_count": str(context.interaction_count),
-                    "last_interaction": context.last_interaction.isoformat()
-                }
-            ]
+        if self.conversation_service:
+            try:
+                return await self.conversation_service.delete_conversation(
+                    conversation_id=session_id,
+                    user_id=user_id
+                )
+            except Exception as e:
+                logger.error(f"Failed to clear conversation: {e}")
         
-        return []
+        return False
     
-    def clear_conversation(self, user_id: str, session_id: str) -> None:
+    async def save_agent_state(
+        self,
+        conversation_id: str,
+        workflow_step: str,
+        state_data: Dict[str, Any]
+    ) -> None:
         """
-        Clear conversation context for a user session.
+        Save agent state for workflow persistence.
         
         Args:
-            user_id: User identifier
-            session_id: Session identifier
+            conversation_id: Conversation identifier
+            workflow_step: Current workflow step
+            state_data: State data to save
         """
-        conversation_key = f"{user_id}_{session_id}"
-        if conversation_key in self.active_conversations:
-            del self.active_conversations[conversation_key]
-            self.logger.info(f"Cleared conversation context for {conversation_key}")
+        await self._ensure_conversation_service()
+        
+        if self.conversation_service:
+            try:
+                await self.conversation_service.save_agent_state(
+                    conversation_id=conversation_id,
+                    agent_name="chat_communicator",
+                    state_data=state_data,
+                    workflow_step=workflow_step
+                )
+            except Exception as e:
+                logger.error(f"Failed to save agent state: {e}")
+    
+    async def get_agent_state(
+        self,
+        conversation_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get agent state from persistent storage.
+        
+        Args:
+            conversation_id: Conversation identifier
+            
+        Returns:
+            Agent state data or None if not found
+        """
+        await self._ensure_conversation_service()
+        
+        if self.conversation_service:
+            try:
+                return await self.conversation_service.get_agent_state(
+                    conversation_id=conversation_id,
+                    agent_name="chat_communicator"
+                )
+            except Exception as e:
+                logger.error(f"Failed to get agent state: {e}")
+        
+        return None
     
     def reset(self) -> None:
         """Reset the agent's state."""
-        self.active_conversations.clear()
+        # For database-backed persistence, we don't clear everything
+        # Only reset the conversation service initialization flag
+        self._conversation_service_initialized = False
+        self.conversation_service = None
         self.logger.info("Reset Chat Communicator Agent state") 
