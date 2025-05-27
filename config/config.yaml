@@ -103,4 +103,11 @@ security:
   blocked_patterns:
     - 'ignore previous instructions'
     - 'disregard all instructions'
-    - 'system prompt' 
+    - 'system prompt'
+  
+authentication:
+  jwt:
+    algorithm: "HS256"
+    access_token_expire_minutes: 30
+    # Note: JWT_SECRET_KEY should be set via environment variable
+    # Never commit actual secrets to version control 
