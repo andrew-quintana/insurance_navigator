@@ -1,7 +1,9 @@
 "use client"
 
+import React, { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import {
@@ -10,14 +12,31 @@ import {
   MessageSquare,
   FileText,
   PlayCircle,
-  User,
   Upload,
   Calendar,
   DollarSign,
   Activity,
+  LogIn,
 } from "lucide-react"
 
 export default function Home() {
+  const router = useRouter()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const token = localStorage.getItem("token")
+    setIsAuthenticated(!!token)
+  }, [])
+
+  const handleStartNow = () => {
+    if (isAuthenticated) {
+      router.push("/chat")
+    } else {
+      router.push("/register")
+    }
+  }
+
   return (
     <div className="min-h-screen bg-cream-50">
       {/* Navigation */}
@@ -25,16 +44,25 @@ export default function Home() {
         <div className="font-semibold text-xl text-teal-700">
           <span className="text-terracotta">Accessa</span> Medicare Navigator
         </div>
-        <Button variant="ghost" size="icon" className="rounded-full bg-white shadow-sm">
-          <User className="h-5 w-5 text-teal-700" />
-          <span className="sr-only">Profile</span>
-        </Button>
+        <div className="flex items-center space-x-3">
+          <Link href="/login">
+            <Button variant="outline" className="text-teal-700 border-teal-700 hover:bg-teal-50">
+              <LogIn className="h-4 w-4 mr-2" />
+              Sign In
+            </Button>
+          </Link>
+          <Link href="/register">
+            <Button className="bg-teal-700 hover:bg-teal-800 text-white">
+              Get Started
+            </Button>
+          </Link>
+        </div>
       </nav>
 
       {/* Hero Section */}
       <section className="py-16 md:py-24 relative">
         {/* Full-width watercolor background */}
-        <div className="absolute inset-0 bg-cream-50">
+        <div className="absolute inset-0 bg-gradient-to-br from-cream-100 to-sky-50">
           <div className="h-full w-full overflow-hidden">
             <Image
               src="/images/interface_banner.png"
@@ -42,6 +70,10 @@ export default function Home() {
               fill
               className="object-cover object-center opacity-90"
               priority
+              onError={(e) => {
+                // Hide image on error, fallback to gradient background
+                e.currentTarget.style.display = 'none'
+              }}
             />
           </div>
         </div>
@@ -55,11 +87,11 @@ export default function Home() {
               all in one secure place.
             </p>
             <Button
+              onClick={handleStartNow}
               size="lg"
               className="bg-terracotta hover:bg-terracotta-600 text-white px-8 py-6 text-lg rounded-xl shadow-lg transition-all"
-              onClick={() => window.open("/chat", "_blank")}
             >
-              Start Now
+              {isAuthenticated ? "Continue to Chat" : "Get Started"}
               <ChevronRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
@@ -75,8 +107,8 @@ export default function Home() {
             <Card className="p-6 shadow-lg rounded-xl bg-white">
               <div className="mb-6 p-4 bg-sky-50 rounded-lg">
                 <p className="text-teal-800 italic">
-                  "I've been having lower back pain for a few weeks — what should I ask my doctor during my Medicare
-                  visit?"
+                  &ldquo;I&rsquo;ve been having lower back pain for a few weeks — what should I ask my doctor during my Medicare
+                  visit?&rdquo;
                 </p>
               </div>
               <div className="space-y-6">
@@ -118,7 +150,7 @@ export default function Home() {
                   </ul>
                 </div>
                 <p className="text-teal-700 italic mt-4 p-3 bg-cream-50 rounded-lg">
-                  Some next steps may depend on what's covered with your Medicare Part B insurance.
+                  Some next steps may depend on what&rsquo;s covered with your Medicare Part B insurance.
                 </p>
               </div>
             </Card>
@@ -160,9 +192,11 @@ export default function Home() {
             </div>
 
             {/* Video directly under How It Works */}
-            <div className="aspect-w-16 aspect-h-9 bg-sky-50 rounded-xl overflow-hidden relative">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <PlayCircle className="h-20 w-20 text-teal-700 opacity-80" />
+            <div className="aspect-w-16 aspect-h-9 bg-sky-50 rounded-xl overflow-hidden relative border border-sky-200">
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <PlayCircle className="h-20 w-20 text-teal-700 opacity-80 mb-4" />
+                <p className="text-teal-800 font-medium">Demo Video</p>
+                <p className="text-teal-600 text-sm">Coming Soon</p>
               </div>
             </div>
             <p className="text-center text-teal-700 mt-4">See how Medicare Navigator helps you stay one step ahead.</p>
@@ -172,7 +206,7 @@ export default function Home() {
 
       {/* What's Coming */}
       <section className="container mx-auto px-4 py-16 bg-gradient-to-b from-white to-cream-50">
-        <h2 className="text-3xl font-bold text-center text-teal-800 mb-6">What's Coming</h2>
+        <h2 className="text-3xl font-bold text-center text-teal-800 mb-6">What&rsquo;s Coming</h2>
         <p className="text-center text-teal-700 mb-12 max-w-2xl mx-auto">
           More tools coming soon to help you plan, prepare, and follow up on care.
         </p>
@@ -181,7 +215,7 @@ export default function Home() {
             <div className="bg-sky-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <Calendar className="h-8 w-8 text-sky-600" />
             </div>
-            <h3 className="text-xl font-semibold text-teal-800 mb-2">Doctor's Office Scheduling</h3>
+            <h3 className="text-xl font-semibold text-teal-800 mb-2">Doctor&rsquo;s Office Scheduling</h3>
             <p className="text-teal-700">
               Easily request appointments through Medicare Navigator, with scheduling and doctor research handled automatically through the chat.
             </p>
