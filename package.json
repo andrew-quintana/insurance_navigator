@@ -1,0 +1,40 @@
+{
+  "name": "insurance-navigator",
+  "version": "1.0.0",
+  "description": "Insurance Navigator - Full Stack Application with FastAPI backend and Next.js frontend",
+  "main": "main.py",
+  "scripts": {
+    "start:backend": "python main.py",
+    "start:frontend": "cd ui && npm run dev -- --port 3000",
+    "start": "concurrently -n \"BACKEND,FRONTEND\" -c \"blue,green\" -p \"[{name}]\" \"npm run start:backend\" \"npm run start:frontend\"",
+    "dev": "npm run start",
+    "install:frontend": "cd ui && npm install",
+    "build:frontend": "cd ui && npm run build",
+    "lint:frontend": "cd ui && npm run lint",
+    "clean": "rm -rf ui/.next ui/node_modules/.cache",
+    "setup": "npm run install:frontend && echo 'Setup complete! Run npm run dev to start both servers.'"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "insurance",
+    "navigator",
+    "react",
+    "nextjs",
+    "fastapi",
+    "healthcare",
+    "medicare",
+    "fullstack"
+  ],
+  "author": "Accessa",
+  "license": "PROPRIETARY",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "private"
+  }
+} 
