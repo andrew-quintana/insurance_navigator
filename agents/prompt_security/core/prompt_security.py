@@ -22,7 +22,7 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field, field_validator, constr, ConfigDict
-from langsmith import Client, RunTree, traceable
+from langsmith import Client, RunTree
 
 from agents.base_agent import BaseAgent
 from agents.prompt_security.core.models.security_models import SecurityCheck
@@ -32,7 +32,7 @@ from agents.common.exceptions import (
     PromptSecurityValidationError
 )
 from utils.prompt_loader import load_prompt
-from config.langsmith_config import get_langsmith_client
+from utils.langsmith_config import get_langsmith_client, traceable
 from utils.agent_config_manager import get_config_manager
 from utils.error_handling import ValidationError, SecurityError, ProcessingError
 

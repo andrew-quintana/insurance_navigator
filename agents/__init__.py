@@ -13,6 +13,8 @@ from agents.prompt_security.core.prompt_security import PromptSecurityAgent
 from agents.patient_navigator.core.patient_navigator import PatientNavigatorAgent
 from agents.task_requirements.core.task_requirements import TaskRequirementsAgent
 from agents.service_access_strategy.core.service_access_strategy import ServiceAccessStrategyAgent
+from agents.chat_communicator.core.chat_communicator import ChatCommunicatorAgent
+from agents.regulatory.core.regulatory import RegulatoryAgent
 
 # Import models
 from agents.prompt_security.core.models.security_models import SecurityCheck
@@ -62,6 +64,8 @@ __all__ = [
     'PatientNavigatorAgent',
     'TaskRequirementsAgent',
     'ServiceAccessStrategyAgent',
+    'ChatCommunicatorAgent',
+    'RegulatoryAgent',
     
     # Model classes
     'SecurityCheck',
