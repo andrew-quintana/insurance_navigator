@@ -1,189 +1,194 @@
-from typing import Optional, Dict, Any
-import asyncio
-from contextlib import asynccontextmanager
-import logging
-from datetime import datetime, timedelta
-import json
+"""
+Database connection pool and session management for Supabase PostgreSQL.
+Provides async database operations with connection pooling and error handling.
+"""
 
-from asyncpg.pool import Pool
+import asyncio
+import logging
+from typing import AsyncGenerator, Optional, Dict, Any, List
+from contextlib import asynccontextmanager
 import asyncpg
-from tenacity import retry, stop_after_attempt, wait_exponential
+from asyncpg import Pool, Connection
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import MetaData
+
+from ..config import config
 
 logger = logging.getLogger(__name__)
 
-class DatabasePool:
-    """
-    Manages database connections with connection pooling, monitoring, and retry logic.
-    """
-    def __init__(
-        self,
-        dsn: str,
-        min_size: int = 10,
-        max_size: int = 50,
-        max_queries: int = 50000,
-        max_inactive_connection_lifetime: float = 300.0,
-        setup_queries: Optional[list[str]] = None
-    ):
-        self.dsn = dsn
-        self.min_size = min_size
-        self.max_size = max_size
-        self.max_queries = max_queries
-        self.max_inactive_connection_lifetime = max_inactive_connection_lifetime
-        self.setup_queries = setup_queries or []
-        self._pool: Optional[Pool] = None
-        self._stats: Dict[str, Any] = {
-            'created_at': datetime.utcnow().isoformat(),
-            'total_connections': 0,
-            'active_connections': 0,
-            'queries_executed': 0,
-            'last_error': None,
-            'error_count': 0
-        }
+Base = declarative_base()
+metadata = MetaData()
 
-    async def initialize(self):
-        """Initialize the connection pool."""
+class DatabasePool:
+    """Manages PostgreSQL connection pool for Supabase database."""
+    
+    def __init__(self):
+        self.pool: Optional[Pool] = None
+        self.engine = None
+        self.session_maker = None
+        self._initialized = False
+    
+    async def initialize(self) -> None:
+        """Initialize database connection pool and SQLAlchemy engine."""
+        if self._initialized:
+            return
+        
         try:
-            self._pool = await asyncpg.create_pool(
-                dsn=self.dsn,
-                min_size=self.min_size,
-                max_size=self.max_size,
-                max_queries=self.max_queries,
-                max_inactive_connection_lifetime=self.max_inactive_connection_lifetime,
-                setup=self._connection_setup
+            # Extract connection parameters from DATABASE_URL
+            db_url = config.database.url
+            if not db_url:
+                raise ValueError("DATABASE_URL not configured")
+            
+            # Create asyncpg connection pool
+            self.pool = await asyncpg.create_pool(
+                db_url,
+                min_size=5,
+                max_size=20,
+                command_timeout=60,
+                server_settings={
+                    'jit': 'off',  # Disable JIT for better compatibility
+                    'application_name': 'insurance_navigator'
+                }
             )
-            logger.info(f"Database pool initialized with {self.min_size} to {self.max_size} connections")
+            
+            # Create SQLAlchemy async engine
+            # Convert postgresql:// to postgresql+asyncpg://
+            if db_url.startswith('postgresql://'):
+                sqlalchemy_url = db_url.replace('postgresql://', 'postgresql+asyncpg://', 1)
+            else:
+                sqlalchemy_url = db_url
+                
+            self.engine = create_async_engine(
+                sqlalchemy_url,
+                echo=False,  # Set to True for SQL debugging
+                pool_size=10,
+                max_overflow=20,
+                pool_pre_ping=True,
+                pool_recycle=3600,  # Recycle connections after 1 hour
+            )
+            
+            # Create session maker
+            self.session_maker = async_sessionmaker(
+                self.engine,
+                class_=AsyncSession,
+                expire_on_commit=False
+            )
+            
+            self._initialized = True
+            logger.info("Database pool initialized successfully")
+            
         except Exception as e:
             logger.error(f"Failed to initialize database pool: {str(e)}")
-            self._update_error_stats(e)
             raise
-
-    async def _connection_setup(self, connection: asyncpg.Connection):
-        """Setup a new database connection with initial queries."""
-        try:
-            # Set session parameters
-            await connection.execute("SET application_name = 'insurance_navigator'")
-            await connection.execute("SET timezone = 'UTC'")
-            
-            # Execute any additional setup queries
-            for query in self.setup_queries:
-                await connection.execute(query)
-            
-            self._stats['total_connections'] += 1
-        except Exception as e:
-            logger.error(f"Failed to setup database connection: {str(e)}")
-            self._update_error_stats(e)
-            raise
-
-    def _update_error_stats(self, error: Exception):
-        """Update error statistics."""
-        self._stats['last_error'] = {
-            'timestamp': datetime.utcnow().isoformat(),
-            'error': str(error),
-            'type': error.__class__.__name__
-        }
-        self._stats['error_count'] += 1
-
+    
+    async def close(self) -> None:
+        """Close database connections and clean up resources."""
+        if self.pool:
+            await self.pool.close()
+            logger.info("AsyncPG pool closed")
+        
+        if self.engine:
+            await self.engine.dispose()
+            logger.info("SQLAlchemy engine disposed")
+        
+        self._initialized = False
+    
     @asynccontextmanager
-    async def acquire(self):
-        """
-        Acquire a database connection from the pool.
+    async def get_connection(self) -> AsyncGenerator[Connection, None]:
+        """Get a raw asyncpg connection from the pool."""
+        if not self._initialized:
+            await self.initialize()
         
-        Usage:
-            async with pool.acquire() as connection:
-                await connection.execute(query)
-        """
-        if not self._pool:
+        if not self.pool:
             raise RuntimeError("Database pool not initialized")
-
-        try:
-            self._stats['active_connections'] += 1
-            async with self._pool.acquire() as connection:
-                yield connection
-        except Exception as e:
-            self._update_error_stats(e)
-            raise
-        finally:
-            self._stats['active_connections'] -= 1
-
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-        reraise=True
-    )
-    async def execute_with_retry(self, query: str, *args, timeout: Optional[float] = None):
-        """Execute a query with retry logic."""
-        try:
-            async with self.acquire() as connection:
-                result = await connection.execute(query, *args, timeout=timeout)
-                self._stats['queries_executed'] += 1
-                return result
-        except Exception as e:
-            logger.error(f"Query execution failed: {str(e)}")
-            self._update_error_stats(e)
-            raise
-
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-        reraise=True
-    )
-    async def fetch_with_retry(self, query: str, *args, timeout: Optional[float] = None):
-        """Fetch results with retry logic."""
-        try:
-            async with self.acquire() as connection:
-                result = await connection.fetch(query, *args, timeout=timeout)
-                self._stats['queries_executed'] += 1
-                return result
-        except Exception as e:
-            logger.error(f"Query fetch failed: {str(e)}")
-            self._update_error_stats(e)
-            raise
-
-    async def get_stats(self) -> Dict[str, Any]:
-        """Get current pool statistics."""
-        if not self._pool:
-            return self._stats
-
-        pool_stats = {
-            'pool_size': len(self._pool._holders),
-            'free_size': len(self._pool._free),
-            'max_size': self._pool._max_size,
-        }
         
-        return {**self._stats, **pool_stats}
-
-    async def close(self):
-        """Close the connection pool."""
-        if self._pool:
-            await self._pool.close()
-            logger.info("Database pool closed")
-
-    async def health_check(self) -> Dict[str, Any]:
-        """
-        Perform a health check on the database connection.
-        Returns:
-            Dict containing health status and metrics.
-        """
+        async with self.pool.acquire() as connection:
+            try:
+                yield connection
+            except Exception as e:
+                logger.error(f"Database connection error: {str(e)}")
+                raise
+    
+    @asynccontextmanager
+    async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
+        """Get a SQLAlchemy async session."""
+        if not self._initialized:
+            await self.initialize()
+        
+        if not self.session_maker:
+            raise RuntimeError("Session maker not initialized")
+        
+        async with self.session_maker() as session:
+            try:
+                yield session
+            except Exception as e:
+                await session.rollback()
+                logger.error(f"Database session error: {str(e)}")
+                raise
+            finally:
+                await session.close()
+    
+    async def execute_query(
+        self, 
+        query: str, 
+        params: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
+        """Execute a raw SQL query and return results."""
+        async with self.get_connection() as conn:
+            if params:
+                result = await conn.fetch(query, *params.values())
+            else:
+                result = await conn.fetch(query)
+            
+            return [dict(row) for row in result]
+    
+    async def execute_command(
+        self, 
+        command: str, 
+        params: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """Execute a SQL command (INSERT, UPDATE, DELETE) and return status."""
+        async with self.get_connection() as conn:
+            if params:
+                result = await conn.execute(command, *params.values())
+            else:
+                result = await conn.execute(command)
+            
+            return result
+    
+    async def test_connection(self) -> bool:
+        """Test database connectivity."""
         try:
-            start_time = datetime.utcnow()
-            async with self.acquire() as connection:
-                await connection.execute('SELECT 1')
-            
-            response_time = (datetime.utcnow() - start_time).total_seconds()
-            
-            stats = await self.get_stats()
-            return {
-                'status': 'healthy',
-                'response_time_seconds': response_time,
-                'last_checked': datetime.utcnow().isoformat(),
-                'pool_stats': stats
-            }
+            async with self.get_connection() as conn:
+                result = await conn.fetchval("SELECT 1")
+                return result == 1
         except Exception as e:
-            logger.error(f"Database health check failed: {str(e)}")
-            self._update_error_stats(e)
-            return {
-                'status': 'unhealthy',
-                'error': str(e),
-                'last_checked': datetime.utcnow().isoformat(),
-                'pool_stats': await self.get_stats()
-            } 
+            logger.error(f"Database connection test failed: {str(e)}")
+            return False
+
+# Global database pool instance
+db_pool = DatabasePool()
+
+async def get_db_pool() -> DatabasePool:
+    """Get the global database pool instance."""
+    if not db_pool._initialized:
+        await db_pool.initialize()
+    return db_pool
+
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+    """Dependency function for getting database sessions."""
+    pool = await get_db_pool()
+    async with pool.get_session() as session:
+        yield session
+
+async def get_db_connection() -> AsyncGenerator[Connection, None]:
+    """Dependency function for getting raw database connections."""
+    pool = await get_db_pool()
+    async with pool.get_connection() as conn:
+        yield conn
+
+# Cleanup function for application shutdown
+async def close_db_pool():
+    """Close the global database pool."""
+    await db_pool.close() 
