@@ -1,0 +1,218 @@
+{
+  "timestamp": "2025-05-27T16:04:57.902667",
+  "summary": {
+    "total_tests": 19,
+    "passed": 18,
+    "failed": 1,
+    "success_rate": 94.73684210526315
+  },
+  "security_levels": {
+    "HIGH": {
+      "total": 12,
+      "passed": 11,
+      "failed": 1
+    },
+    "CRITICAL": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    "MEDIUM": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    }
+  },
+  "vulnerabilities": [
+    {
+      "test": "get_current_user_id() returns null without context",
+      "type": "authentication_bypass",
+      "level": "HIGH",
+      "message": "Function returned fea927a6-22ca-4440-a559-a1fee897f070 instead of null"
+    }
+  ],
+  "detailed_results": [
+    {
+      "test_name": "Function can_access_policy uses SECURITY INVOKER",
+      "passed": true,
+      "security_level": "HIGH",
+      "vulnerability_type": null,
+      "error_message": null,
+      "details": {
+        "function": "can_access_policy",
+        "security_mode": "INVOKER"
+      }
+    },
+    {
+      "test_name": "Function get_current_user_id uses SECURITY INVOKER",
+      "passed": true,
+      "security_level": "HIGH",
+      "vulnerability_type": null,
+      "error_message": null,
+      "details": {
+        "function": "get_current_user_id",
+        "security_mode": "INVOKER"
+      }
+    },
+    {
+      "test_name": "Function has_role uses SECURITY INVOKER",
+      "passed": true,
+      "security_level": "HIGH",
+      "vulnerability_type": null,
+      "error_message": null,
+      "details": {
+        "function": "has_role",
+        "security_mode": "INVOKER"
+      }
+    },
+    {
+      "test_name": "Function is_admin uses SECURITY INVOKER",
+      "passed": true,
+      "security_level": "HIGH",
+      "vulnerability_type": null,
+      "error_message": null,
+      "details": {
+        "function": "is_admin",
+        "security_mode": "INVOKER"
+      }
+    },
+    {
+      "test_name": "Function log_policy_access uses SECURITY INVOKER",
+      "passed": true,
+      "security_level": "HIGH",
+      "vulnerability_type": null,
+      "error_message": null,
+      "details": {
+        "function": "log_policy_access",
+        "security_mode": "INVOKER"
+      }
+    },
+    {
+      "test_name": "Function set_current_user_context uses SECURITY INVOKER",
+      "passed": true,
+      "security_level": "HIGH",
+      "vulnerability_type": null,
+      "error_message": null,
+      "details": {
+        "function": "set_current_user_context",
+        "security_mode": "INVOKER"
+      }
+    },
+    {
+      "test_name": "Function is_admin resistant to search path injection",
+      "passed": true,
+      "security_level": "HIGH",
+      "vulnerability_type": null,
+      "error_message": null,
+      "details": {
+        "function": "is_admin",
+        "result": "False"
+      }
+    },
+    {
+      "test_name": "Function get_current_user_id resistant to search path injection",
+      "passed": true,
+      "security_level": "HIGH",
+      "vulnerability_type": null,
+      "error_message": null,
+      "details": {
+        "function": "get_current_user_id",
+        "result": "None"
+      }
+    },
+    {
+      "test_name": "Function has_role resistant to search path injection",
+      "passed": true,
+      "security_level": "HIGH",
+      "vulnerability_type": null,
+      "error_message": null,
+      "details": {
+        "function": "has_role",
+        "result": "False"
+      }
+    },
+    {
+      "test_name": "is_admin() returns false without user context",
+      "passed": true,
+      "security_level": "CRITICAL",
+      "vulnerability_type": null,
+      "error_message": null,
+      "details": null
+    },
+    {
+      "test_name": "is_admin() returns false for regular user",
+      "passed": true,
+      "security_level": "CRITICAL",
+      "vulnerability_type": null,
+      "error_message": null,
+      "details": null
+    },
+    {
+      "test_name": "is_admin() returns true for admin user",
+      "passed": true,
+      "security_level": "MEDIUM",
+      "vulnerability_type": null,
+      "error_message": null,
+      "details": null
+    },
+    {
+      "test_name": "get_current_user_id() returns null without context",
+      "passed": false,
+      "security_level": "HIGH",
+      "vulnerability_type": "authentication_bypass",
+      "error_message": "Function returned fea927a6-22ca-4440-a559-a1fee897f070 instead of null",
+      "details": null
+    },
+    {
+      "test_name": "get_current_user_id() returns correct user ID",
+      "passed": true,
+      "security_level": "HIGH",
+      "vulnerability_type": null,
+      "error_message": null,
+      "details": null
+    },
+    {
+      "test_name": "get_current_user_id() doesn't return hardcoded UUID",
+      "passed": true,
+      "security_level": "CRITICAL",
+      "vulnerability_type": null,
+      "error_message": null,
+      "details": null
+    },
+    {
+      "test_name": "has_role() handles null input securely",
+      "passed": true,
+      "security_level": "MEDIUM",
+      "vulnerability_type": null,
+      "error_message": null,
+      "details": null
+    },
+    {
+      "test_name": "has_role() handles empty string securely",
+      "passed": true,
+      "security_level": "MEDIUM",
+      "vulnerability_type": null,
+      "error_message": null,
+      "details": null
+    },
+    {
+      "test_name": "can_access_policy() handles null input securely",
+      "passed": true,
+      "security_level": "MEDIUM",
+      "vulnerability_type": null,
+      "error_message": null,
+      "details": null
+    },
+    {
+      "test_name": "set_current_user_context() rejects null input",
+      "passed": true,
+      "security_level": "HIGH",
+      "vulnerability_type": null,
+      "error_message": null,
+      "details": null
+    }
+  ],
+  "recommendations": [
+    "HIGH: 1 high-severity security issues found. Address urgently."
+  ]
+}

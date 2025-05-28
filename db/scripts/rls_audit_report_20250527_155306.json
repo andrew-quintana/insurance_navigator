@@ -1,0 +1,395 @@
+{
+  "audit_summary": {
+    "timestamp": "2025-05-27T15:53:05.578466",
+    "tables_analyzed": 15,
+    "tables_without_rls": [
+      "agent_policy_context",
+      "policy_access_policies",
+      "system_metadata"
+    ],
+    "tables_with_incomplete_policies": [
+      "agent_policy_context",
+      "conversations",
+      "encryption_keys",
+      "policy_access_logs",
+      "policy_access_policies",
+      "roles",
+      "system_metadata",
+      "user_policy_links",
+      "user_roles",
+      "users"
+    ],
+    "recommended_actions": [],
+    "errors": []
+  },
+  "tables_details": [
+    {
+      "schema": "public",
+      "name": "agent_policy_context",
+      "has_rls": false,
+      "policies": [],
+      "columns": [
+        "id",
+        "agent_id",
+        "session_id",
+        "policy_id",
+        "user_id",
+        "context_type",
+        "created_at",
+        "expires_at",
+        "encrypted_context",
+        "encryption_key_id",
+        "metadata"
+      ],
+      "references_users": true,
+      "needs_user_access_policy": true,
+      "needs_admin_access_policy": false
+    },
+    {
+      "schema": "public",
+      "name": "conversation_messages",
+      "has_rls": true,
+      "policies": [
+        {
+          "policyname": "messages_admin_delete",
+          "cmd": "DELETE",
+          "permissive": "PERMISSIVE",
+          "qual": "((auth.jwt() ->> 'role'::text) = 'admin'::text)",
+          "with_check": null
+        },
+        {
+          "policyname": "messages_admin_modify",
+          "cmd": "UPDATE",
+          "permissive": "PERMISSIVE",
+          "qual": "((auth.jwt() ->> 'role'::text) = 'admin'::text)",
+          "with_check": null
+        }
+      ],
+      "columns": [
+        "id",
+        "conversation_id",
+        "role",
+        "content",
+        "agent_name",
+        "metadata",
+        "created_at"
+      ],
+      "references_users": false,
+      "needs_user_access_policy": false,
+      "needs_admin_access_policy": false
+    },
+    {
+      "schema": "public",
+      "name": "conversations",
+      "has_rls": true,
+      "policies": [],
+      "columns": [
+        "id",
+        "user_id",
+        "metadata",
+        "created_at",
+        "updated_at"
+      ],
+      "references_users": true,
+      "needs_user_access_policy": true,
+      "needs_admin_access_policy": false
+    },
+    {
+      "schema": "public",
+      "name": "encryption_keys",
+      "has_rls": true,
+      "policies": [],
+      "columns": [
+        "id",
+        "key_version",
+        "key_status",
+        "created_at",
+        "rotated_at",
+        "retired_at",
+        "metadata"
+      ],
+      "references_users": false,
+      "needs_user_access_policy": false,
+      "needs_admin_access_policy": true
+    },
+    {
+      "schema": "public",
+      "name": "policy_access_logs",
+      "has_rls": true,
+      "policies": [],
+      "columns": [
+        "id",
+        "policy_id",
+        "user_id",
+        "action",
+        "actor_type",
+        "actor_id",
+        "timestamp",
+        "purpose",
+        "metadata"
+      ],
+      "references_users": true,
+      "needs_user_access_policy": true,
+      "needs_admin_access_policy": true
+    },
+    {
+      "schema": "public",
+      "name": "policy_access_policies",
+      "has_rls": false,
+      "policies": [],
+      "columns": [
+        "id",
+        "role_id",
+        "policy_type",
+        "action",
+        "conditions",
+        "created_at"
+      ],
+      "references_users": false,
+      "needs_user_access_policy": false,
+      "needs_admin_access_policy": false
+    },
+    {
+      "schema": "public",
+      "name": "policy_documents",
+      "has_rls": true,
+      "policies": [],
+      "columns": [
+        "id",
+        "policy_id",
+        "file_path",
+        "original_filename",
+        "content_type",
+        "file_size",
+        "document_type",
+        "uploaded_by",
+        "uploaded_at",
+        "metadata",
+        "is_active"
+      ],
+      "references_users": false,
+      "needs_user_access_policy": false,
+      "needs_admin_access_policy": false
+    },
+    {
+      "schema": "public",
+      "name": "policy_records",
+      "has_rls": true,
+      "policies": [],
+      "columns": [
+        "policy_id",
+        "raw_policy_path",
+        "summary",
+        "structured_metadata",
+        "encrypted_policy_data",
+        "encryption_key_id",
+        "source_type",
+        "coverage_start_date",
+        "coverage_end_date",
+        "created_at",
+        "updated_at",
+        "version"
+      ],
+      "references_users": false,
+      "needs_user_access_policy": false,
+      "needs_admin_access_policy": false
+    },
+    {
+      "schema": "public",
+      "name": "regulatory_documents",
+      "has_rls": true,
+      "policies": [
+        {
+          "policyname": "regulatory_docs_read",
+          "cmd": "SELECT",
+          "permissive": "PERMISSIVE",
+          "qual": "(EXISTS ( SELECT 1\n   FROM (user_roles ur\n     JOIN roles r ON ((r.id = ur.role_id)))\n  WHERE ((ur.user_id = (CURRENT_USER)::uuid) AND ((r.name = 'admin'::text) OR (r.name = 'regulatory_agent'::text)))))",
+          "with_check": null
+        },
+        {
+          "policyname": "regulatory_docs_update",
+          "cmd": "UPDATE",
+          "permissive": "PERMISSIVE",
+          "qual": "(EXISTS ( SELECT 1\n   FROM (user_roles ur\n     JOIN roles r ON ((r.id = ur.role_id)))\n  WHERE ((ur.user_id = (CURRENT_USER)::uuid) AND (r.name = 'admin'::text))))",
+          "with_check": null
+        },
+        {
+          "policyname": "regulatory_docs_write",
+          "cmd": "INSERT",
+          "permissive": "PERMISSIVE",
+          "qual": null,
+          "with_check": "(EXISTS ( SELECT 1\n   FROM (user_roles ur\n     JOIN roles r ON ((r.id = ur.role_id)))\n  WHERE ((ur.user_id = (CURRENT_USER)::uuid) AND (r.name = 'admin'::text))))"
+        }
+      ],
+      "columns": [
+        "document_id",
+        "raw_document_path",
+        "title",
+        "jurisdiction",
+        "program",
+        "document_type",
+        "effective_date",
+        "expiration_date",
+        "structured_contents",
+        "summary",
+        "source_url",
+        "encrypted_restrictions",
+        "encryption_key_id",
+        "tags",
+        "created_at",
+        "updated_at",
+        "version"
+      ],
+      "references_users": false,
+      "needs_user_access_policy": false,
+      "needs_admin_access_policy": false
+    },
+    {
+      "schema": "public",
+      "name": "roles",
+      "has_rls": true,
+      "policies": [],
+      "columns": [
+        "id",
+        "name",
+        "description",
+        "created_at"
+      ],
+      "references_users": false,
+      "needs_user_access_policy": false,
+      "needs_admin_access_policy": true
+    },
+    {
+      "schema": "public",
+      "name": "schema_migrations",
+      "has_rls": true,
+      "policies": [
+        {
+          "policyname": "select_schema_migrations",
+          "cmd": "SELECT",
+          "permissive": "PERMISSIVE",
+          "qual": "(auth.uid() IS NOT NULL)",
+          "with_check": null
+        }
+      ],
+      "columns": [
+        "version",
+        "applied_at"
+      ],
+      "references_users": false,
+      "needs_user_access_policy": false,
+      "needs_admin_access_policy": false
+    },
+    {
+      "schema": "public",
+      "name": "system_metadata",
+      "has_rls": false,
+      "policies": [],
+      "columns": [
+        "key",
+        "value",
+        "updated_at"
+      ],
+      "references_users": false,
+      "needs_user_access_policy": false,
+      "needs_admin_access_policy": false
+    },
+    {
+      "schema": "public",
+      "name": "user_policy_links",
+      "has_rls": true,
+      "policies": [],
+      "columns": [
+        "id",
+        "user_id",
+        "policy_id",
+        "role",
+        "relationship_verified",
+        "linked_at",
+        "metadata"
+      ],
+      "references_users": true,
+      "needs_user_access_policy": true,
+      "needs_admin_access_policy": false
+    },
+    {
+      "schema": "public",
+      "name": "user_roles",
+      "has_rls": true,
+      "policies": [],
+      "columns": [
+        "user_id",
+        "role_id",
+        "created_at"
+      ],
+      "references_users": true,
+      "needs_user_access_policy": true,
+      "needs_admin_access_policy": true
+    },
+    {
+      "schema": "public",
+      "name": "users",
+      "has_rls": true,
+      "policies": [
+        {
+          "policyname": "user_is_self",
+          "cmd": "ALL",
+          "permissive": "PERMISSIVE",
+          "qual": "(auth.uid() = id)",
+          "with_check": null
+        },
+        {
+          "policyname": "users_delete_admin_only",
+          "cmd": "DELETE",
+          "permissive": "PERMISSIVE",
+          "qual": "((auth.jwt() ->> 'role'::text) = 'admin'::text)",
+          "with_check": null
+        },
+        {
+          "policyname": "users_insert_registration",
+          "cmd": "INSERT",
+          "permissive": "PERMISSIVE",
+          "qual": null,
+          "with_check": "true"
+        }
+      ],
+      "columns": [
+        "id",
+        "email",
+        "hashed_password",
+        "full_name",
+        "is_active",
+        "created_at",
+        "updated_at",
+        "last_login",
+        "metadata"
+      ],
+      "references_users": true,
+      "needs_user_access_policy": false,
+      "needs_admin_access_policy": false
+    }
+  ],
+  "fixes_applied": {
+    "successful": [],
+    "failed": [],
+    "dry_run": true
+  },
+  "test_results": {
+    "passed": [
+      "RLS enabled on users",
+      "RLS enabled on policy_records",
+      "RLS enabled on user_policy_links",
+      "RLS enabled on policy_access_logs"
+    ],
+    "failed": [],
+    "skipped": []
+  },
+  "recommendations": [
+    "Enable RLS on all tables that contain user-specific or sensitive data",
+    "Create comprehensive RLS policies for all tables with user data",
+    "Regularly audit RLS policies to ensure they meet security requirements",
+    "Test RLS policies with different user roles to verify access controls",
+    "Monitor access logs for any suspicious activity",
+    "Consider implementing additional policies for specific business requirements"
+  ]
+}
