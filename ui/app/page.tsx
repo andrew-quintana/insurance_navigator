@@ -30,6 +30,7 @@ export default function Home() {
   const router = useRouter()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     // Check if user is authenticated and get user info
@@ -39,6 +40,7 @@ export default function Home() {
       
       if (!token) {
         setIsAuthenticated(false)
+        setIsLoading(false)
         return
       }
 
@@ -64,6 +66,8 @@ export default function Home() {
         console.error("Auth verification error:", err)
         setIsAuthenticated(false)
         setUserInfo(null)
+      } finally {
+        setIsLoading(false)
       }
     }
 
@@ -94,7 +98,13 @@ export default function Home() {
           <span className="text-terracotta">Accessa</span> Medicare Navigator
         </div>
         <div className="flex items-center space-x-3">
-          {isAuthenticated && userInfo ? (
+          {isLoading ? (
+            // Loading placeholder - prevent flash
+            <div className="flex items-center space-x-3">
+              <div className="w-20 h-10 bg-gray-200 animate-pulse rounded"></div>
+              <div className="w-24 h-10 bg-gray-200 animate-pulse rounded"></div>
+            </div>
+          ) : isAuthenticated && userInfo ? (
             // Authenticated user menu
             <>
               <div className="flex items-center space-x-4">
@@ -168,8 +178,9 @@ export default function Home() {
               onClick={handleStartNow}
               size="lg"
               className="bg-terracotta hover:bg-terracotta-600 text-white px-8 py-6 text-lg rounded-xl shadow-lg transition-all"
+              disabled={isLoading}
             >
-              {isAuthenticated ? "Continue to Chat" : "Get Started"}
+              {isLoading ? "Loading..." : isAuthenticated ? "Continue to Chat" : "Get Started"}
               <ChevronRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
