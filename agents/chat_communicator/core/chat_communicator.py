@@ -110,7 +110,7 @@ class ChatCommunicatorAgent(BaseAgent):
         self.conversation_service = None
         self._conversation_service_initialized = False
         
-        # Initialize output parser
+        # Initialize the output parser for ChatResponse
         self.output_parser = PydanticOutputParser(pydantic_object=ChatResponse)
         
         # Set default paths (will be overridden in _initialize_agent if config available)
