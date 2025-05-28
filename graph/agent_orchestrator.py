@@ -99,12 +99,15 @@ class AgentOrchestrator:
     def _initialize_agents(self):
         """Initialize all required agents"""
         try:
+            # Agents that don't accept config_manager parameter
             self.prompt_security_agent = PromptSecurityAgent()
-            self.patient_navigator_agent = PatientNavigatorAgent()
-            self.task_requirements_agent = TaskRequirementsAgent()
-            self.service_access_strategy_agent = ServiceAccessStrategyAgent()
             self.regulatory_agent = RegulatoryAgent()
-            self.chat_communicator_agent = ChatCommunicatorAgent()
+            
+            # Agents that accept config_manager parameter
+            self.patient_navigator_agent = PatientNavigatorAgent(config_manager=self.config_manager)
+            self.task_requirements_agent = TaskRequirementsAgent(config_manager=self.config_manager)
+            self.service_access_strategy_agent = ServiceAccessStrategyAgent(config_manager=self.config_manager)
+            self.chat_communicator_agent = ChatCommunicatorAgent(config_manager=self.config_manager)
             
             logger.info("All agents initialized successfully")
         except Exception as e:
