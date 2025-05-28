@@ -19,14 +19,55 @@ import {
   LogIn,
 } from "lucide-react"
 
+interface UserInfo {
+  id: string
+  email: string
+  full_name?: string
+  roles: string[]
+}
+
 export default function Home() {
   const router = useRouter()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
 
   useEffect(() => {
-    // Check if user is authenticated
-    const token = localStorage.getItem("token")
-    setIsAuthenticated(!!token)
+    // Check if user is authenticated and get user info
+    const checkAuthAndGetUser = async () => {
+      const token = localStorage.getItem("token")
+      const tokenType = localStorage.getItem("tokenType")
+      
+      if (!token) {
+        setIsAuthenticated(false)
+        return
+      }
+
+      try {
+        const response = await fetch("http://localhost:8000/me", {
+          headers: {
+            "Authorization": `${tokenType || "Bearer"} ${token}`,
+          },
+        })
+
+        if (response.ok) {
+          const userData = await response.json()
+          setIsAuthenticated(true)
+          setUserInfo(userData)
+        } else {
+          // Invalid token - clear it
+          localStorage.removeItem("token")
+          localStorage.removeItem("tokenType")
+          setIsAuthenticated(false)
+          setUserInfo(null)
+        }
+      } catch (err) {
+        console.error("Auth verification error:", err)
+        setIsAuthenticated(false)
+        setUserInfo(null)
+      }
+    }
+
+    checkAuthAndGetUser()
   }, [])
 
   const handleStartNow = () => {
@@ -37,6 +78,14 @@ export default function Home() {
     }
   }
 
+  const handleLogout = () => {
+    localStorage.removeItem("token")
+    localStorage.removeItem("tokenType")
+    setIsAuthenticated(false)
+    setUserInfo(null)
+    router.push("/")
+  }
+
   return (
     <div className="min-h-screen bg-cream-50">
       {/* Navigation */}
@@ -45,17 +94,46 @@ export default function Home() {
           <span className="text-terracotta">Accessa</span> Medicare Navigator
         </div>
         <div className="flex items-center space-x-3">
-          <Link href="/login">
-            <Button variant="outline" className="text-teal-700 border-teal-700 hover:bg-teal-50">
-              <LogIn className="h-4 w-4 mr-2" />
-              Sign In
-            </Button>
-          </Link>
-          <Link href="/register">
-            <Button className="bg-teal-700 hover:bg-teal-800 text-white">
-              Get Started
-            </Button>
-          </Link>
+          {isAuthenticated && userInfo ? (
+            // Authenticated user menu
+            <>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center text-teal-700">
+                  <span className="text-sm font-medium">Welcome, {userInfo.full_name || userInfo.email}</span>
+                </div>
+                <Button
+                  variant="outline"
+                  className="text-teal-700 border-teal-700 hover:bg-teal-50"
+                  onClick={() => router.push("/chat")}
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Chat
+                </Button>
+                <Button
+                  variant="outline"
+                  className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                  onClick={handleLogout}
+                >
+                  Sign Out
+                </Button>
+              </div>
+            </>
+          ) : (
+            // Unauthenticated user buttons
+            <>
+              <Link href="/login">
+                <Button variant="outline" className="text-teal-700 border-teal-700 hover:bg-teal-50">
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/register">
+                <Button className="bg-teal-700 hover:bg-teal-800 text-white">
+                  Get Started
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </nav>
 
