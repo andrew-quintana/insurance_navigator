@@ -1,0 +1,21 @@
+{
+  "migration_completed_at": "2025-05-28T12:25:25.236914",
+  "migration_type": "vector_encryption",
+  "statistics": {
+    "policy_vectors_processed": 0,
+    "policy_vectors_encrypted": 0,
+    "user_vectors_processed": 0,
+    "user_vectors_encrypted": 0,
+    "errors": []
+  },
+  "success_rate": {
+    "policy_vectors": "0.0%",
+    "user_vectors": "0.0%"
+  },
+  "next_steps": [
+    "Test vector search functionality with encrypted data",
+    "Verify RLS policies work correctly with new schema",
+    "Monitor performance impact of encryption/decryption",
+    "Consider implementing decryption caching for performance"
+  ]
+}
