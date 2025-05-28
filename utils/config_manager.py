@@ -6,6 +6,7 @@ This module provides a centralized configuration manager for all agents in the s
 
 import os
 import json
+import yaml
 import logging
 from typing import Dict, Any, Optional
 
@@ -23,9 +24,9 @@ class ConfigManager:
         Initialize the config manager.
         
         Args:
-            config_path: Path to the configuration file (defaults to 'config/agent_config.json')
+            config_path: Path to the configuration file (defaults to 'config/config.yaml')
         """
-        self.config_path = config_path or os.path.join("config", "agent_config.json")
+        self.config_path = config_path or os.path.join("config", "config.yaml")
         self.config = self.load_config()
         
     def load_config(self) -> Dict[str, Any]:
@@ -38,7 +39,10 @@ class ConfigManager:
         try:
             if os.path.exists(self.config_path):
                 with open(self.config_path, "r") as f:
-                    return json.load(f)
+                    if self.config_path.endswith('.yaml') or self.config_path.endswith('.yml'):
+                        return yaml.safe_load(f)
+                    else:
+                        return json.load(f)
             else:
                 logger.warning(f"Configuration file not found at {self.config_path}. Using default configuration.")
                 return {}
