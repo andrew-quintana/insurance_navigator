@@ -1,0 +1,70 @@
+{
+  "migration_timestamp": "2025-05-28T11:56:11.732200",
+  "migration_mode": "full_migration",
+  "backup_info": {
+    "success": false,
+    "error": "pg_dump: error: server version: 15.8; pg_dump version: 14.17 (Homebrew)\npg_dump: error: aborting because of server version mismatch\n"
+  },
+  "migration_report": {
+    "migration_completed_at": "2025-05-28T11:56:10.951284",
+    "original_data": {
+      "policy_records": 0,
+      "policy_documents": 0
+    },
+    "migrated_data": {
+      "policy_content_vectors": 4,
+      "user_document_vectors": 0
+    },
+    "migration_stats": {
+      "policies_processed": 0,
+      "policies_successful": 0,
+      "policies_failed": 0,
+      "documents_processed": 0,
+      "documents_successful": 0,
+      "documents_failed": 0,
+      "errors": []
+    },
+    "embedding_stats": {
+      "policy_vectors": 4,
+      "user_document_vectors": 0,
+      "total_vectors": 4,
+      "embedding_dimension": 1536,
+      "model_dimension": 384
+    },
+    "success_rate": "0.0%"
+  },
+  "validation_results": {
+    "vector_tables_created": true,
+    "data_migrated": true,
+    "vector_search_working": true,
+    "row_counts": {
+      "policy_content_vectors": 4,
+      "user_document_vectors": 0
+    },
+    "sample_queries": [
+      {
+        "query": "insurance coverage benefits",
+        "results_count": 3,
+        "max_relevance": 0.4668658375740051
+      }
+    ]
+  },
+  "migration_log": [
+    {
+      "step": "pre_migration_checks",
+      "status": "completed",
+      "details": {
+        "legacy_tables_exist": false,
+        "vector_tables_exist": true,
+        "policy_count": 0,
+        "document_count": 0
+      }
+    }
+  ],
+  "next_steps": [
+    "Update agent configurations to use new VectorRAG interface",
+    "Test agent functionality with new vector system",
+    "Monitor performance and adjust vector indexes if needed",
+    "Schedule deprecation of old tables after validation period"
+  ]
+}
