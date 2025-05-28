@@ -289,7 +289,7 @@ async def register(request: RegisterRequest):
         token = user_service_instance.create_access_token(user_data)
         
         logger.info(f"User registered: {request.email}")
-        return Token(access_token=token, token_type="bearer")
+        return Token(access_token=token, token_type="Bearer")
         
     except ValueError as e:
         logger.warning(f"Registration failed for {request.email}: {str(e)}")
@@ -327,7 +327,7 @@ async def login(request: LoginRequest):
         token = user_service_instance.create_access_token(user_data)
         
         logger.info(f"User logged in: {request.email}")
-        return Token(access_token=token, token_type="bearer")
+        return Token(access_token=token, token_type="Bearer")
         
     except HTTPException:
         raise
