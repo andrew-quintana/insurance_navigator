@@ -463,8 +463,27 @@ class AgentOrchestrator:
                     workflow_step="service_strategy"
                 )
             
+            # Prepare parameters for strategy development
+            patient_info = state.metadata.get("patient_info", {
+                "user_id": state.user_id,
+                "message": state.message
+            })
+            
+            medical_need = state.message  # The user's question/request
+            
+            policy_info = state.metadata.get("policy_info", {
+                "policy_type": "Medicare",  # Default assumption for healthcare navigator
+                "plan_name": "Unknown",
+                "member_id": "Unknown"
+            })
+            
+            location = state.metadata.get("location", "United States")  # Default location
+            
             strategy_result = await self.service_access_strategy_agent.develop_strategy(
-                state.message, state.intent
+                patient_info=patient_info,
+                medical_need=medical_need,
+                policy_info=policy_info,
+                location=location
             )
             
             state.metadata["service_strategy"] = {
@@ -498,8 +517,8 @@ class AgentOrchestrator:
             )
             
             state.metadata["regulatory_check"] = {
-                "compliance_status": regulatory_result.status,
-                "regulations_checked": regulatory_result.regulations_count
+                "compliance_status": regulatory_result.get("status", "unknown"),
+                "regulations_checked": regulatory_result.get("regulations_count", 0)
             }
             
         except Exception as e:
