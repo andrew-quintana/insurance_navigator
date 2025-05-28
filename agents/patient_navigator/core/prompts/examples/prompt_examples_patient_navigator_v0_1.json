@@ -1,0 +1,23 @@
+[
+  {
+    "id": "medicare_part_b_question",
+    "input": "What does Medicare Part B cover?",
+    "output": "Medicare Part B covers medically necessary services like doctor visits, outpatient care, medical equipment, and preventive services. It includes doctor services, outpatient hospital care, medical equipment, and some preventive services.",
+    "intent": "medicare_information",
+    "confidence": 0.95
+  },
+  {
+    "id": "find_doctor_request",
+    "input": "I need to find a cardiologist that accepts Medicare",
+    "output": "I can help you find Medicare-accepting cardiologists in your area. To provide the most accurate results, I'll need to know your location and specific Medicare plan type.",
+    "intent": "provider_search",
+    "confidence": 0.90
+  },
+  {
+    "id": "insurance_coverage_question",
+    "input": "Does my insurance cover physical therapy?",
+    "output": "Coverage for physical therapy depends on your specific insurance plan and whether it's deemed medically necessary. Most Medicare plans cover physical therapy when prescribed by a doctor and provided by a Medicare-approved provider.",
+    "intent": "coverage_inquiry",
+    "confidence": 0.85
+  }
+] 
