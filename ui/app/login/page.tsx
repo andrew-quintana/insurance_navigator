@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -32,53 +32,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-  const [backendStatus, setBackendStatus] = useState<"checking" | "online" | "offline">("checking")
-
-  // Check backend status on component mount
-  useEffect(() => {
-    const checkBackendStatus = async () => {
-      try {
-        console.log("🏥 Checking backend health...")
-        const response = await fetch("http://localhost:8000/health", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        })
-        
-        if (response.ok) {
-          console.log("✅ Backend is online")
-          setBackendStatus("online")
-        } else {
-          console.log("⚠️ Backend responded but not healthy")
-          setBackendStatus("offline")
-        }
-      } catch (err) {
-        console.log("❌ Backend is offline:", err)
-        setBackendStatus("offline")
-      }
-    }
-
-    checkBackendStatus()
-  }, [])
-
-  // Helper function to format API errors
-  const formatApiError = (errorData: ErrorResponse): string => {
-    if (typeof errorData.detail === "string") {
-      return errorData.detail
-    }
-    
-    if (Array.isArray(errorData.detail)) {
-      // Handle FastAPI validation errors
-      const messages = errorData.detail.map((err: ValidationError) => {
-        const field = err.loc.join(" → ")
-        return `${field}: ${err.msg}`
-      })
-      return messages.join(", ")
-    }
-    
-    return "Login failed. Please try again."
-  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -159,6 +112,24 @@ export default function LoginPage() {
     }
   }
 
+  // Helper function to format API errors
+  const formatApiError = (errorData: ErrorResponse): string => {
+    if (typeof errorData.detail === "string") {
+      return errorData.detail
+    }
+    
+    if (Array.isArray(errorData.detail)) {
+      // Handle FastAPI validation errors
+      const messages = errorData.detail.map((err: ValidationError) => {
+        const field = err.loc.join(" → ")
+        return `${field}: ${err.msg}`
+      })
+      return messages.join(", ")
+    }
+    
+    return "Login failed. Please try again."
+  }
+
   return (
     <div className="min-h-screen bg-cream-50 flex flex-col">
       {/* Header */}
@@ -183,27 +154,6 @@ export default function LoginPage() {
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-red-800 text-sm">{error}</p>
-            </div>
-          )}
-
-          {backendStatus === "offline" && (
-            <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-              <p className="text-orange-800 text-sm font-medium">⚠️ Server Connection Issue</p>
-              <p className="text-orange-700 text-sm mt-1">
-                Unable to connect to the backend server. Please ensure the server is running on port 8000.
-              </p>
-            </div>
-          )}
-
-          {backendStatus === "checking" && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-blue-800 text-sm">🔍 Checking server connection...</p>
-            </div>
-          )}
-
-          {backendStatus === "online" && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-green-800 text-sm">✅ Server connection healthy</p>
             </div>
           )}
 

@@ -108,6 +108,6 @@ security:
 authentication:
   jwt:
     algorithm: "HS256"
-    access_token_expire_minutes: 30
+    access_token_expire_minutes: 1440  # Changed to 24 hours (daily)
     # Note: JWT_SECRET_KEY should be set via environment variable
     # Never commit actual secrets to version control 
