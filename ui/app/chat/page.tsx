@@ -422,13 +422,6 @@ export default function ChatPage() {
                   >
                     <p className="whitespace-pre-wrap">{message.text}</p>
                     
-                    {/* Show workflow type for debugging */}
-                    {message.workflow_type && process.env.NODE_ENV === "development" && (
-                      <div className="mt-2 text-xs opacity-70">
-                        Workflow: {message.workflow_type}
-                      </div>
-                    )}
-                    
                     {message.options && (
                       <div className="mt-4 flex flex-wrap gap-2">
                         {message.options.map((option, index) => (
