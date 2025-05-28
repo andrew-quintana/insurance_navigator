@@ -1,0 +1,34 @@
+{
+  "migration_timestamp": "2025-05-28T11:35:12.013314",
+  "migration_mode": "dry_run",
+  "backup_info": {
+    "note": "Backup skipped in dry run"
+  },
+  "migration_report": {
+    "note": "Skipped due to dry run"
+  },
+  "validation_results": {
+    "vector_tables_created": false,
+    "data_migrated": false,
+    "vector_search_working": false,
+    "row_counts": {},
+    "sample_queries": []
+  },
+  "migration_log": [
+    {
+      "step": "pre_migration_checks",
+      "status": "completed",
+      "details": {
+        "legacy_tables_exist": true,
+        "vector_tables_exist": false,
+        "policy_count": 4,
+        "document_count": 0
+      }
+    }
+  ],
+  "next_steps": [
+    "Run migration without --dry-run flag to execute changes",
+    "Ensure all dependencies are installed",
+    "Review backup procedures"
+  ]
+}

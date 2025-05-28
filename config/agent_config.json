@@ -11,11 +11,11 @@
       },
       "prompt": {
         "version": "0.1",
-        "path": "agents/prompt_security/prompts/prompt_security_v0_2.md"
+        "path": "agents/prompt_security/core/prompts/prompt_prompt_security_v0_1.md"
       },
       "examples": {
         "version": "0.1",
-        "path": "agents/prompt_security/prompts/examples/security_examples_v0_1.md"
+        "path": "agents/prompt_security/core/prompts/examples/prompt_examples_prompt_security_v0_1.json"
       },
       "test_examples": {
         "version": "0.1",

@@ -240,121 +240,128 @@ class StorageService:
             raise
 
     async def list_policy_documents(
-        self,
+        self, 
         policy_id: str,
-        document_type: Optional[str] = None,
-        user_id: Optional[str] = None,
-        include_inactive: bool = False
+        user_id: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
-        List documents for a policy with optional filtering.
+        List documents for a specific policy using the new vector storage.
         
         Args:
-            policy_id: UUID of the policy
-            document_type: Optional filter by document type
-            user_id: Optional filter by user who uploaded
-            include_inactive: Whether to include deleted/inactive documents
+            policy_id: Policy ID to filter by
+            user_id: Optional user ID for filtering
             
         Returns:
-            List of document information
+            List of policy documents with metadata
         """
         try:
             pool = await get_db_pool()
-            
-            # Build query with filters
-            conditions = ["policy_id = $1"]
-            params = [policy_id]
-            param_count = 1
-            
-            if document_type:
-                param_count += 1
-                conditions.append(f"document_type = ${param_count}")
-                params.append(document_type)
-            
-            if user_id:
-                param_count += 1
-                conditions.append(f"uploaded_by = ${param_count}")
-                params.append(user_id)
-            
-            if not include_inactive:
-                conditions.append("is_active = true")
-            
-            query = f"""
-                SELECT id, policy_id, file_path, original_filename, content_type, 
-                       file_size, document_type, uploaded_by, uploaded_at, metadata
-                FROM policy_documents 
-                WHERE {' AND '.join(conditions)}
-                ORDER BY uploaded_at DESC
-            """
-            
             async with pool.get_connection() as conn:
-                rows = await conn.fetch(query, *params)
+                # Query the new policy_content_vectors table
+                where_conditions = ["policy_id = $1", "is_active = true"]
+                params = [policy_id]
+                
+                if user_id:
+                    where_conditions.append("user_id = $2")
+                    params.append(user_id)
+                
+                sql = f"""
+                    SELECT 
+                        id,
+                        policy_id,
+                        user_id,
+                        content_text,
+                        policy_metadata,
+                        document_metadata,
+                        created_at,
+                        updated_at
+                    FROM policy_content_vectors
+                    WHERE {' AND '.join(where_conditions)}
+                    ORDER BY created_at DESC
+                """
+                
+                rows = await conn.fetch(sql, *params)
                 
                 documents = []
                 for row in rows:
-                    doc = {
-                        'id': row['id'],
-                        'policy_id': row['policy_id'],
-                        'file_path': row['file_path'],
-                        'original_filename': row['original_filename'],
-                        'content_type': row['content_type'],
-                        'file_size': row['file_size'],
-                        'document_type': row['document_type'],
-                        'uploaded_by': row['uploaded_by'],
-                        'uploaded_at': row['uploaded_at'],
-                        'metadata': json.loads(row['metadata']) if row['metadata'] else {}
-                    }
-                    documents.append(doc)
+                    # Handle JSONB fields properly
+                    policy_metadata = row['policy_metadata'] if isinstance(row['policy_metadata'], dict) else {}
+                    document_metadata = row['document_metadata'] if isinstance(row['document_metadata'], dict) else {}
+                    
+                    documents.append({
+                        'id': str(row['id']),
+                        'policy_id': str(row['policy_id']),
+                        'user_id': str(row['user_id']),
+                        'content_text': row['content_text'],
+                        'policy_metadata': policy_metadata,
+                        'document_metadata': document_metadata,
+                        'created_at': row['created_at'],
+                        'updated_at': row['updated_at'],
+                        'file_path': document_metadata.get('file_path', ''),
+                        'file_size': document_metadata.get('file_size', 0),
+                        'file_type': document_metadata.get('file_type', 'unknown')
+                    })
                 
                 return documents
                 
         except Exception as e:
-            logger.error(f"Failed to list documents for policy {policy_id}: {str(e)}")
-            raise RuntimeError(f"Failed to list documents: {str(e)}")
+            logger.error(f"Error listing policy documents: {str(e)}")
+            return []
 
     async def get_document_metadata(self, file_path: str) -> Dict[str, Any]:
         """
-        Get metadata for a document.
+        Get document metadata from vector storage.
         
         Args:
             file_path: Path to the document
             
         Returns:
-            Document metadata
-            
-        Raises:
-            ValueError: If document not found
+            Document metadata dictionary
         """
         try:
             pool = await get_db_pool()
-            
             async with pool.get_connection() as conn:
                 row = await conn.fetchrow("""
-                    SELECT id, policy_id, original_filename, content_type, file_size,
-                           document_type, uploaded_by, uploaded_at, metadata
-                    FROM policy_documents 
-                    WHERE file_path = $1 AND is_active = true
+                    SELECT document_metadata, policy_metadata
+                    FROM policy_content_vectors 
+                    WHERE document_metadata->>'file_path' = $1 AND is_active = true
+                    LIMIT 1
                 """, file_path)
                 
-                if not row:
-                    raise ValueError(f"Document not found: {file_path}")
-                
-                return {
-                    'id': row['id'],
-                    'policy_id': row['policy_id'],
-                    'file_path': file_path,
-                    'original_filename': row['original_filename'],
-                    'content_type': row['content_type'],
-                    'file_size': row['file_size'],
-                    'document_type': row['document_type'],
-                    'uploaded_by': row['uploaded_by'],
-                    'uploaded_at': row['uploaded_at'],
-                    'metadata': json.loads(row['metadata']) if row['metadata'] else {}
-                }
-                
+                if row:
+                    metadata = dict(row['document_metadata'])
+                    metadata.update(dict(row['policy_metadata']))
+                    return metadata
+                else:
+                    return {}
+                    
         except Exception as e:
-            logger.error(f"Failed to get metadata for {file_path}: {str(e)}")
-            raise
+            logger.error(f"Error getting document metadata: {str(e)}")
+            return {}
+
+    async def document_exists(self, file_path: str) -> bool:
+        """
+        Check if a document exists in vector storage.
+        
+        Args:
+            file_path: Path to check
+            
+        Returns:
+            True if document exists, False otherwise
+        """
+        try:
+            pool = await get_db_pool()
+            async with pool.get_connection() as conn:
+                exists = await conn.fetchval("""
+                    SELECT EXISTS(
+                        SELECT 1 FROM policy_content_vectors 
+                        WHERE document_metadata->>'file_path' = $1 AND is_active = true
+                    )
+                """, file_path)
+                return bool(exists)
+        except Exception as e:
+            logger.error(f"Error checking document existence: {str(e)}")
+            return False
 
     async def delete_document(self, file_path: str, user_id: str, hard_delete: bool = False) -> bool:
         """
@@ -523,6 +530,331 @@ class StorageService:
         except Exception as e:
             logger.error(f"Failed to get permissions for {file_path}: {str(e)}")
             return {"read": False, "write": False, "delete": False}
+
+    async def upload_policy_document_with_vectors(
+        self,
+        policy_id: str,
+        file_data: bytes,
+        filename: str,
+        user_id: str,
+        document_type: str = "policy",
+        policy_metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Upload policy document and automatically generate vectors.
+        Combines file storage with vector generation.
+        
+        Args:
+            policy_id: UUID of the policy
+            file_data: Raw file data
+            filename: Original filename
+            user_id: ID of user uploading the file
+            document_type: Type of document
+            policy_metadata: Policy-specific metadata for vector storage
+            metadata: Optional metadata about the document
+            
+        Returns:
+            Dict containing upload information including vector processing status
+        """
+        try:
+            # First, upload to storage (existing functionality)
+            upload_result = await self.upload_policy_document(
+                policy_id, file_data, filename, user_id, document_type, metadata
+            )
+            
+            # Parse document content
+            content_text = await self._extract_text_content(file_data, filename)
+            
+            if content_text and content_text.strip():
+                # Generate vectors
+                from db.services.encryption_aware_embedding_service import get_encryption_aware_embedding_service
+                embedding_service = await get_encryption_aware_embedding_service()
+                
+                # Determine if this is a policy document or user document
+                if document_type in ['policy', 'policy_summary', 'benefits_detail', 'claims_history']:
+                    # Store as policy content vector
+                    vector_id = await embedding_service.process_policy_document(
+                        policy_id=policy_id,
+                        user_id=user_id,
+                        content_text=content_text,
+                        policy_metadata=policy_metadata or {},
+                        document_metadata={
+                            **upload_result,
+                            "document_type": document_type,
+                            "processing_method": "automatic_upload",
+                            "content_extracted": True
+                        }
+                    )
+                    upload_result['vector_storage_type'] = 'policy_content'
+                else:
+                    # Store as user document vector
+                    document_id = upload_result['document_id']
+                    vector_ids = await embedding_service.process_user_document(
+                        user_id=user_id,
+                        document_id=str(document_id),
+                        content_text=content_text,
+                        document_metadata={
+                            **upload_result,
+                            "document_type": document_type,
+                            "processing_method": "automatic_upload",
+                            "content_extracted": True
+                        }
+                    )
+                    vector_id = vector_ids[0] if vector_ids else None
+                    upload_result['vector_storage_type'] = 'user_document'
+                    upload_result['vector_chunk_count'] = len(vector_ids) if vector_ids else 0
+                
+                upload_result['vector_id'] = vector_id
+                upload_result['content_processed'] = True
+                logger.info(f"Successfully processed vectors for document {filename}: {vector_id}")
+            else:
+                upload_result['content_processed'] = False
+                upload_result['vector_id'] = None
+                logger.warning(f"Could not extract content from {filename} for vector processing")
+            
+            return upload_result
+            
+        except Exception as e:
+            logger.error(f"Error uploading document with vectors: {str(e)}")
+            # Still return upload result even if vector processing fails
+            upload_result['content_processed'] = False
+            upload_result['vector_error'] = str(e)
+            return upload_result
+
+    async def upload_user_document_with_vectors(
+        self,
+        user_id: str,
+        file_data: bytes,
+        filename: str,
+        document_type: str = "user_document",
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Upload user document and automatically generate chunked vectors.
+        
+        Args:
+            user_id: ID of user uploading the file
+            file_data: Raw file data
+            filename: Original filename
+            document_type: Type of document
+            metadata: Optional metadata about the document
+            
+        Returns:
+            Dict containing upload information and vector processing results
+        """
+        try:
+            # Generate a document ID for this upload
+            document_id = str(uuid.uuid4())
+            
+            # Upload using existing method (with document_id as policy_id for now)
+            upload_result = await self.upload_policy_document(
+                document_id, file_data, filename, user_id, document_type, metadata
+            )
+            
+            # Parse document content
+            content_text = await self._extract_text_content(file_data, filename)
+            
+            if content_text and content_text.strip():
+                # Generate vectors
+                from db.services.encryption_aware_embedding_service import get_encryption_aware_embedding_service
+                embedding_service = await get_encryption_aware_embedding_service()
+                
+                # Store as user document vector (chunked)
+                vector_ids = await embedding_service.process_user_document(
+                    user_id=user_id,
+                    document_id=document_id,
+                    content_text=content_text,
+                    document_metadata={
+                        **upload_result,
+                        "document_type": document_type,
+                        "processing_method": "user_upload",
+                        "content_extracted": True
+                    }
+                )
+                
+                upload_result['document_id'] = document_id
+                upload_result['vector_ids'] = vector_ids
+                upload_result['vector_chunk_count'] = len(vector_ids)
+                upload_result['content_processed'] = True
+                logger.info(f"Successfully processed {len(vector_ids)} chunks for document {filename}")
+            else:
+                upload_result['content_processed'] = False
+                upload_result['vector_ids'] = []
+                upload_result['vector_chunk_count'] = 0
+                logger.warning(f"Could not extract content from {filename} for vector processing")
+            
+            return upload_result
+            
+        except Exception as e:
+            logger.error(f"Error uploading user document with vectors: {str(e)}")
+            raise
+
+    async def search_documents_by_content(
+        self,
+        query: str,
+        user_id: str,
+        document_type: Optional[str] = None,
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Search documents using semantic similarity.
+        
+        Args:
+            query: Search query
+            user_id: User ID for filtering
+            document_type: Optional document type filter
+            limit: Maximum number of results
+            
+        Returns:
+            List of matching documents with similarity scores
+        """
+        try:
+            from db.services.encryption_aware_embedding_service import get_encryption_aware_embedding_service
+            embedding_service = await get_encryption_aware_embedding_service()
+            
+            # Search both policy content and user documents
+            policy_results = await embedding_service.search_policy_content(
+                query=query,
+                user_id=user_id,
+                policy_filters={"document_type": document_type} if document_type else None,
+                limit=limit // 2
+            )
+            
+            user_doc_results = await embedding_service.search_user_documents(
+                query=query,
+                user_id=user_id,
+                document_filters={"document_type": document_type} if document_type else None,
+                limit=limit // 2
+            )
+            
+            # Combine and sort by similarity
+            all_results = []
+            
+            # Format policy results
+            for result in policy_results:
+                all_results.append({
+                    **result,
+                    'source_type': 'policy_content',
+                    'document_info': result.get('document_metadata', {})
+                })
+            
+            # Format user document results
+            for result in user_doc_results:
+                all_results.append({
+                    **result,
+                    'source_type': 'user_document',
+                    'document_info': result.get('chunk_metadata', {})
+                })
+            
+            # Sort by similarity score (lower is better for cosine distance)
+            all_results.sort(key=lambda x: x['similarity_score'])
+            
+            return all_results[:limit]
+            
+        except Exception as e:
+            logger.error(f"Error searching documents by content: {str(e)}")
+            return []
+
+    async def _extract_text_content(self, file_data: bytes, filename: str) -> str:
+        """
+        Extract text content from uploaded file.
+        
+        Args:
+            file_data: Raw file data
+            filename: Original filename
+            
+        Returns:
+            Extracted text content
+        """
+        try:
+            from pathlib import Path
+            import tempfile
+            
+            # Check if we have a document parser
+            try:
+                # Try to import document parser from config
+                from config.parser import DocumentParser
+                parser = DocumentParser()
+                
+                # Save temporarily to parse
+                with tempfile.NamedTemporaryFile(suffix=Path(filename).suffix) as tmp_file:
+                    tmp_file.write(file_data)
+                    tmp_file.flush()
+                    
+                    documents = parser.parse_document(tmp_file.name)
+                    return "\n".join([doc.page_content for doc in documents])
+                    
+            except ImportError:
+                # Fallback to basic text extraction for PDFs and text files
+                return await self._basic_text_extraction(file_data, filename)
+                
+        except Exception as e:
+            logger.warning(f"Could not extract text from {filename}: {str(e)}")
+            return ""
+
+    async def _basic_text_extraction(self, file_data: bytes, filename: str) -> str:
+        """
+        Basic text extraction fallback for common file types.
+        
+        Args:
+            file_data: Raw file data
+            filename: Original filename
+            
+        Returns:
+            Extracted text content
+        """
+        try:
+            file_extension = Path(filename).suffix.lower()
+            
+            if file_extension == '.txt':
+                # Plain text file
+                return file_data.decode('utf-8', errors='ignore')
+            
+            elif file_extension == '.pdf':
+                # Try to extract from PDF using PyPDF2 or similar
+                try:
+                    import PyPDF2
+                    import io
+                    
+                    pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_data))
+                    text_parts = []
+                    
+                    for page in pdf_reader.pages:
+                        text_parts.append(page.extract_text())
+                    
+                    return "\n".join(text_parts)
+                    
+                except ImportError:
+                    logger.warning("PyPDF2 not available for PDF text extraction")
+                    return ""
+            
+            elif file_extension in ['.doc', '.docx']:
+                # Try to extract from Word documents
+                try:
+                    import docx
+                    import io
+                    
+                    doc = docx.Document(io.BytesIO(file_data))
+                    text_parts = []
+                    
+                    for paragraph in doc.paragraphs:
+                        text_parts.append(paragraph.text)
+                    
+                    return "\n".join(text_parts)
+                    
+                except ImportError:
+                    logger.warning("python-docx not available for Word document extraction")
+                    return ""
+            
+            else:
+                # Unsupported file type
+                logger.warning(f"Text extraction not supported for file type: {file_extension}")
+                return ""
+                
+        except Exception as e:
+            logger.warning(f"Error in basic text extraction: {str(e)}")
+            return ""
 
 
 # Global storage service instance

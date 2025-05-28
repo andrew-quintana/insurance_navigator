@@ -97,7 +97,7 @@ class PromptSecurityAgent(BaseAgent):
         except Exception as e:
             # If there's an error, log it and attempt to load from a default location
             self.logger.error(f"Error loading security prompt: {e}")
-            self.security_system_prompt = self._load_prompt("agents/prompt_security/prompts/security_prompt_v0_1.md")
+            self.security_system_prompt = self._load_prompt("agents/prompt_security/core/prompts/prompt_prompt_security_v0_1.md")
         
         # Load examples
         try:
