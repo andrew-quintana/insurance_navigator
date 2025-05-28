@@ -364,8 +364,8 @@ class PatientNavigatorAgent(BaseAgent):
             examples_path = self.custom_examples_path
         except AttributeError:
             # Use default paths if not available
-            prompt_path = "agents/patient_navigator/prompts/prompt_navigator_v0_1.md"
-            examples_path = "agents/patient_navigator/prompts/examples/navigator_examples_v0_1.json"
+            prompt_path = "agents/patient_navigator/core/prompts/prompt_patient_navigator_v0_1.md"
+            examples_path = "agents/patient_navigator/core/prompts/examples/prompt_examples_patient_navigator_v0_1.json"
             
         # Load prompt from file using BaseAgent's method
         self.system_prompt = self._load_prompt(prompt_path)
