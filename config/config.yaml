@@ -85,22 +85,6 @@ agents:
       temperature: 0.2
     metrics:
       latest_run: agents/service_access_strategy/metrics/performance_metrics_20250515_153019.json
-  chat_communicator:
-    active: true
-    description: Agent responsible for converting technical information to conversational language
-    core_file:
-      path: agents/chat_communicator/core/chat_communicator.py
-      version: '0.1'
-    prompt:
-      version: '0.1'
-      path: agents/chat_communicator/core/prompts/prompt_chat_communicator_v0_1.md
-      description: Chat communicator prompt for converting technical data to user-friendly responses
-    examples:
-      version: '0.1'
-      path: agents/chat_communicator/core/prompts/examples/chat_examples_v0_1.json
-    model:
-      name: claude-3-sonnet-20240229-v1h
-      temperature: 0.2
 performance_metrics:
   enabled: true
   save_directory: metrics

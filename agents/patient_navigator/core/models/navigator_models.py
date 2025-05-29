@@ -23,6 +23,14 @@ class MetaIntent(BaseModel):
         default=False,
         description="Whether the request appears to be an emergency"
     )
+    location: Optional[str] = Field(
+        default=None,
+        description="Geographic location mentioned by user (city, state, area)"
+    )
+    insurance: Optional[str] = Field(
+        default=None,
+        description="Insurance provider or plan type mentioned by user"
+    )
 
 
 class BodyLocation(BaseModel):

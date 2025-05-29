@@ -178,7 +178,7 @@ class ServiceAccessStrategyAgent(BaseAgent):
                         patient_info: Dict[str, Any],
                         medical_need: str,
                         policy_info: Dict[str, Any],
-                        location: str,
+                        location: str = None,
                         constraints: str = "") -> Dict[str, Any]:
         """
         Develop a service access strategy.
@@ -187,7 +187,7 @@ class ServiceAccessStrategyAgent(BaseAgent):
             patient_info: Patient information
             medical_need: Description of the medical need
             policy_info: Policy information
-            location: Patient's location
+            location: Patient's location (optional - for policy navigation focus)
             constraints: Additional constraints
             
         Returns:
@@ -223,19 +223,18 @@ class ServiceAccessStrategyAgent(BaseAgent):
                     "confidence": 0.0
                 }
             
-            # Find providers
-            try:
-                providers = self.find_providers(service_type, location)
-            except ProviderLookupError as e:
-                # Handle provider lookup error but continue with development
-                logger.warning(f"Provider lookup error: {str(e)}")
-                providers = [{
-                    "name": "Provider information unavailable",
-                    "address": "Please contact customer support for provider information",
-                    "distance": None,
-                    "in_network": None,
-                    "specialties": [service_type]
-                }]
+            # Find providers only if location is provided
+            providers = []
+            if location:
+                try:
+                    providers = self.find_providers(service_type, location)
+                except ProviderLookupError as e:
+                    # Handle provider lookup error but continue with development
+                    logger.warning(f"Provider lookup error: {str(e)}")
+                    providers = []
+            else:
+                # Focus on policy navigation without specific providers
+                logger.info("No location provided - focusing on policy navigation guidance")
             
             # Prepare input for the strategy chain
             input_dict = {
@@ -243,7 +242,8 @@ class ServiceAccessStrategyAgent(BaseAgent):
                 "medical_need": medical_need,
                 "policy_info": json.dumps(policy_info),
                 "compliance_info": json.dumps(compliance_info),
-                "provider_info": json.dumps(providers),
+                "provider_info": json.dumps(providers) if providers else "[]",
+                "location": location or "Not specified - focus on policy guidance",
                 "constraints": constraints
             }
             
@@ -252,15 +252,113 @@ class ServiceAccessStrategyAgent(BaseAgent):
                 strategy_response = self.strategy_chain.invoke(input_dict)
                 
                 # Handle different response formats
-                if isinstance(strategy_response, str):
+                if hasattr(strategy_response, 'content'):
+                    # AIMessage object - extract content
+                    content = strategy_response.content
+                    try:
+                        raw_result = json.loads(content)
+                    except json.JSONDecodeError:
+                        # If content isn't valid JSON, create a fallback response
+                        logger.warning(f"Could not parse LLM response as JSON: {content[:200]}...")
+                        raw_result = {
+                            "access_strategy": {
+                                "summary": {
+                                    "primary_approach": "Information gathering required before service search",
+                                    "confidence_score": 0.3,
+                                    "estimated_timeline": "Additional information needed",
+                                    "key_benefits": ["Targeted search once details provided", "Better insurance coverage verification", "Location-specific recommendations"]
+                                },
+                                "coverage_details": {
+                                    "service_type": "healthcare consultation", 
+                                    "is_covered": None,
+                                    "coverage_details": {
+                                        "copay": "Cannot determine without insurance details",
+                                        "requires_referral": "Unknown - depends on plan type",
+                                        "prior_authorization": "Unknown - depends on plan type",
+                                        "coverage_notes": ["Insurance plan information required", "Location needed for network verification"]
+                                    }
+                                },
+                                "action_plan": [
+                                    {
+                                        "step_number": 1,
+                                        "step_description": "Please provide your insurance plan details (Medicare, Medicaid, private insurance name)",
+                                        "expected_timeline": "Immediate",
+                                        "required_resources": ["Insurance card", "Plan documentation"],
+                                        "potential_obstacles": ["Don't have insurance card available"],
+                                        "contingency_plan": "Contact insurance provider for member portal access"
+                                    },
+                                    {
+                                        "step_number": 2,
+                                        "step_description": "Please specify your location (city, state, or ZIP code)",
+                                        "expected_timeline": "Immediate",
+                                        "required_resources": ["Current address or preferred search area"],
+                                        "potential_obstacles": ["Unsure of preferred location"],
+                                        "contingency_plan": "Use current residence address as starting point"
+                                    }
+                                ],
+                                "provider_options": []
+                            }
+                        }
+                elif isinstance(strategy_response, str):
                     # Parse string response
-                    result = json.loads(strategy_response)
+                    raw_result = json.loads(strategy_response)
                 elif hasattr(strategy_response, 'model_dump'):
                     # Handle Pydantic model response
-                    result = strategy_response.model_dump()
+                    raw_result = strategy_response.model_dump()
                 else:
-                    # Fallback
-                    result = strategy_response
+                    # Direct dict response
+                    raw_result = strategy_response
+                
+                # Convert nested LLM response to ServiceAccessStrategy format
+                if "access_strategy" in raw_result:
+                    # Extract from nested structure
+                    nested_data = raw_result["access_strategy"]
+                    summary = nested_data.get("summary", {})
+                    coverage = nested_data.get("coverage_details", {})
+                    action_plan = nested_data.get("action_plan", [])
+                    provider_options = nested_data.get("provider_options", [])
+                    
+                    # Create properly formatted result
+                    result = {
+                        "patient_need": medical_need,
+                        "matched_services": [
+                            {
+                                "service_name": coverage.get("service_type", "Healthcare Service"),
+                                "service_type": coverage.get("service_type", "general"),
+                                "service_description": summary.get("primary_approach", "Healthcare service"),
+                                "is_covered": coverage.get("is_covered", True),
+                                "coverage_details": coverage.get("coverage_details", {}),
+                                "estimated_cost": coverage.get("coverage_details", {}).get("copay", "Contact insurance"),
+                                "required_documentation": [],
+                                "prerequisites": [],
+                                "alternatives": [],
+                                "compliance_score": summary.get("confidence_score", 0.8)
+                            }
+                        ],
+                        "recommended_service": summary.get("primary_approach", "Service access strategy"),
+                        "action_plan": [
+                            {
+                                "step_number": step.get("step_number", i+1),
+                                "step_description": step.get("step_description", "Action required"),
+                                "expected_timeline": step.get("expected_timeline", "TBD"),
+                                "required_resources": step.get("required_resources", []),
+                                "potential_obstacles": step.get("potential_obstacles", []),
+                                "contingency_plan": step.get("contingency_plan", "Review and adjust approach")
+                            } for i, step in enumerate(action_plan)
+                        ],
+                        "estimated_timeline": summary.get("estimated_timeline", "TBD"),
+                        "provider_options": provider_options,
+                        "compliance_assessment": {
+                            "is_compliant": coverage.get("is_covered", True),
+                            "compliance_notes": coverage.get("coverage_details", {}).get("coverage_notes", [])
+                        },
+                        "guidance_notes": summary.get("key_benefits", []),
+                        "confidence": summary.get("confidence_score", 0.8)
+                    }
+                else:
+                    # Direct format - use as is
+                    result = raw_result
+                    
             except Exception as e:
                 logger.error(f"Strategy generation error: {str(e)}")
                 raise StrategyDevelopmentError(f"Failed to generate strategy: {str(e)}") from e
@@ -288,7 +386,7 @@ class ServiceAccessStrategyAgent(BaseAgent):
                patient_info: Dict[str, Any],
                medical_need: str,
                policy_info: Dict[str, Any],
-               location: str,
+               location: str = None,
                constraints: str = "") -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
         """
         Process a strategy development request.
@@ -297,7 +395,7 @@ class ServiceAccessStrategyAgent(BaseAgent):
             patient_info: Patient information
             medical_need: Description of the medical need
             policy_info: Policy information
-            location: Patient's location
+            location: Patient's location (optional - for policy navigation focus)
             constraints: Additional constraints
             
         Returns:
@@ -355,6 +453,8 @@ class ServiceAccessStrategyAgent(BaseAgent):
         
         Provider Information: {provider_info}
         
+        Location: {location}
+        
         Additional Constraints: {constraints}
         
         Please provide a comprehensive service access strategy in JSON format according to the schema provided.
@@ -365,11 +465,10 @@ class ServiceAccessStrategyAgent(BaseAgent):
             human_template
         ])
         
-        # Create strategy chain
+        # Create strategy chain without parser (we'll handle parsing manually)
         self.strategy_chain = (
             self.prompt_template
             | self.llm
-            | self.strategy_parser
         )
         
         logger.info(f"Service Access Strategy Agent initialized with model {self.llm.model if hasattr(self.llm, 'model') else 'unknown'}")

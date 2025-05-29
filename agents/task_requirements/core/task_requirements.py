@@ -139,7 +139,33 @@ class TaskRequirementsAgent(BaseAgent):
             self.examples = self._load_examples(self.custom_examples_path)
         except Exception as e:
             self.logger.warning(f"Failed to load examples: {e}")
-            self.examples = ""
+            self.examples = []  # Should be empty list, not empty string
+
+    def _format_examples_for_prompt(self, examples: List[Dict[str, Any]]) -> str:
+        """
+        Format the examples list into a string suitable for prompt insertion.
+        
+        Args:
+            examples: List of example dictionaries
+            
+        Returns:
+            Formatted examples string
+        """
+        if not examples:
+            return ""
+        
+        formatted_examples = []
+        for i, example in enumerate(examples):
+            example_name = example.get("example_name", f"example_{i+1}")
+            input_data = example.get("input", {})
+            expected_output = example.get("expected_output", {})
+            
+            formatted_example = f"## Example {i+1}: {example_name}\n\n"
+            formatted_example += f"**Input:**\n```json\n{json.dumps(input_data, indent=2)}\n```\n\n"
+            formatted_example += f"**Expected Output:**\n```json\n{json.dumps(expected_output, indent=2)}\n```\n"
+            formatted_examples.append(formatted_example)
+        
+        return "\n".join(formatted_examples)
 
     def _build_specific_prompt(self, input_json: Dict[str, Any]) -> str:
         """
@@ -156,7 +182,9 @@ class TaskRequirementsAgent(BaseAgent):
         """
         try:
             if "{Examples}" in self.prompt_template and self.examples:
-                prompt = self.prompt_template.replace("{Examples}", self.examples)
+                # Format examples as string for prompt replacement
+                examples_string = self._format_examples_for_prompt(self.examples)
+                prompt = self.prompt_template.replace("{Examples}", examples_string)
             else:
                 prompt = self.prompt_template
                 
@@ -736,6 +764,185 @@ class TaskRequirementsAgent(BaseAgent):
         self.last_input = None
         self.last_required_context = None
         logger.info("Reset TaskRequirementsAgent state")
+
+    async def analyze_requirements(self, message: str, intent: str) -> 'TaskRequirementsResult':
+        """
+        Analyze task requirements based on user message and intent.
+        
+        Args:
+            message: The user's message
+            intent: The determined intent type
+            
+        Returns:
+            TaskRequirementsResult with requirements analysis
+        """
+        try:
+            # Create a mock input structure for the process method
+            input_data = {
+                "meta_intent": {
+                    "request_type": intent,
+                    "summary": message
+                },
+                "clinical_context": {},
+                "service_intent": {
+                    "specialty": "general",
+                    "service": "consultation"
+                },
+                "metadata": {
+                    "raw_user_text": message
+                }
+            }
+            
+            # Use existing process method
+            result = self.process(input_data)
+            
+            # Extract requirements information
+            required_context = result.get("required_context", {})
+            requirements_count = len(required_context)
+            documents_needed = [k for k, v in required_context.items() if v.get("type") == "document"]
+            
+            # Create result object
+            class TaskRequirementsResult:
+                def __init__(self, requirements_count: int, documents_needed: List[str], analysis_details: Dict[str, Any] = None):
+                    self.requirements_count = requirements_count
+                    self.documents_needed = documents_needed
+                    self.analysis_details = analysis_details or {}
+            
+            return TaskRequirementsResult(
+                requirements_count=requirements_count,
+                documents_needed=documents_needed,
+                analysis_details=result
+            )
+            
+        except Exception as e:
+            logger.error(f"Error analyzing requirements: {str(e)}")
+            
+            # Return fallback result
+            class TaskRequirementsResult:
+                def __init__(self, requirements_count: int, documents_needed: List[str], analysis_details: Dict[str, Any] = None):
+                    self.requirements_count = requirements_count
+                    self.documents_needed = documents_needed
+                    self.analysis_details = analysis_details or {}
+            
+            return TaskRequirementsResult(
+                requirements_count=0,
+                documents_needed=[],
+                analysis_details={"error": str(e)}
+            )
+
+    async def analyze_requirements_structured(self, navigator_result: Dict[str, Any], original_message: str) -> 'TaskRequirementsResult':
+        """
+        Analyze task requirements using structured navigator output.
+        
+        Args:
+            navigator_result: The structured output from Patient Navigator
+            original_message: The original user message
+            
+        Returns:
+            TaskRequirementsResult with requirements analysis including sufficiency determination
+        """
+        try:
+            # Extract structured information from navigator result
+            meta_intent = navigator_result.get("meta_intent", {})
+            clinical_context = navigator_result.get("clinical_context", {})
+            service_intent = navigator_result.get("service_intent", {})
+            
+            # Create proper input structure that matches our examples
+            input_data = {
+                "meta_intent": {
+                    "request_type": meta_intent.get("request_type", "service_request"),
+                    "information_sufficiency": "unknown",  # To be determined
+                    "specific_need": service_intent.get("specialty") or meta_intent.get("summary", ""),
+                    "location": meta_intent.get("location"),
+                    "insurance": meta_intent.get("insurance"),
+                    "urgency": meta_intent.get("urgency", "routine"),
+                    "missing_information": []
+                },
+                "clinical_context": clinical_context,
+                "service_context": {
+                    "specialty": service_intent.get("specialty", "general"),
+                    "service_type": service_intent.get("service_type", "consultation")
+                },
+                "metadata": {
+                    "original_query": original_message,
+                    "timestamp": datetime.now().isoformat()
+                }
+            }
+            
+            # Use existing process method with proper input structure
+            result = self.process(input_data)
+            
+            # Parse the result to determine sufficiency
+            required_context = result.get("required_context", {})
+            status = result.get("status", "complete")
+            
+            # Determine if information is sufficient based on our new logic
+            missing_context = []
+            message_for_navigator = ""
+            
+            # Check for missing critical information based on request type
+            request_type = input_data["meta_intent"]["request_type"]
+            
+            if request_type in ["service_request", "expert_request"]:
+                # For provider searches, check mandatory requirements
+                if not input_data["meta_intent"]["location"]:
+                    missing_context.append("location")
+                if not input_data["meta_intent"]["insurance"]:
+                    missing_context.append("insurance_type")
+                if not input_data["meta_intent"]["specific_need"]:
+                    missing_context.append("specialty_or_service")
+            
+            # Determine status based on missing information
+            if missing_context:
+                status = "insufficient_information"
+                message_for_navigator = f"Need to ask user for: {', '.join(missing_context)}"
+            else:
+                status = "sufficient_information"
+            
+            # Create result object with sufficiency determination
+            class TaskRequirementsResult:
+                def __init__(self, requirements_count: int, documents_needed: List[str], 
+                           analysis_details: Dict[str, Any] = None, status: str = "complete",
+                           missing_context: List[str] = None, message_for_patient_navigator: str = ""):
+                    self.requirements_count = requirements_count
+                    self.documents_needed = documents_needed
+                    self.analysis_details = analysis_details or {}
+                    self.status = status
+                    self.missing_context = missing_context or []
+                    self.message_for_patient_navigator = message_for_patient_navigator
+            
+            return TaskRequirementsResult(
+                requirements_count=len(required_context),
+                documents_needed=[k for k, v in required_context.items() if v.get("type") == "document"],
+                analysis_details=result,
+                status=status,
+                missing_context=missing_context,
+                message_for_patient_navigator=message_for_navigator
+            )
+            
+        except Exception as e:
+            logger.error(f"Error analyzing requirements with structured input: {str(e)}")
+            
+            # Return fallback result
+            class TaskRequirementsResult:
+                def __init__(self, requirements_count: int, documents_needed: List[str], 
+                           analysis_details: Dict[str, Any] = None, status: str = "complete",
+                           missing_context: List[str] = None, message_for_patient_navigator: str = ""):
+                    self.requirements_count = requirements_count
+                    self.documents_needed = documents_needed
+                    self.analysis_details = analysis_details or {}
+                    self.status = status
+                    self.missing_context = missing_context or []
+                    self.message_for_patient_navigator = message_for_patient_navigator
+            
+            return TaskRequirementsResult(
+                requirements_count=0,
+                documents_needed=[],
+                analysis_details={"error": str(e)},
+                status="error",
+                missing_context=[],
+                message_for_patient_navigator="Error processing requirements"
+            )
 
 def test_with_anthropic():
     """

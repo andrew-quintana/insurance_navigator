@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import ReactMarkdown from "react-markdown"
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
@@ -313,28 +314,128 @@ export default function ChatPage() {
 
   const handleFileUpload = async () => {
     try {
-      const token = localStorage.getItem("token")
-      const tokenType = localStorage.getItem("tokenType")
-
-      const response = await fetch("http://localhost:8000/upload-policy", {
-        method: "POST",
-        headers: {
-          "Authorization": `${tokenType || "Bearer"} ${token}`,
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        const uploadMessage: Message = {
+      // Create a file input element
+      const fileInput = document.createElement("input")
+      fileInput.type = "file"
+      fileInput.accept = ".pdf,.txt,.md"
+      fileInput.style.display = "none"
+      
+      fileInput.onchange = async (event) => {
+        const target = event.target as HTMLInputElement
+        const file = target.files?.[0]
+        
+        if (!file) return
+        
+        // Add upload status message
+        const uploadStatusMessage: Message = {
           id: messages.length + 1,
           sender: "bot",
-          text: data.message,
+          text: `📄 Uploading "${file.name}"... Please wait.`,
         }
-        setMessages(prevMessages => [...prevMessages, uploadMessage])
+        setMessages(prevMessages => [...prevMessages, uploadStatusMessage])
+        setIsLoading(true)
+        updateActivity()
+        
+        try {
+          const token = localStorage.getItem("token")
+          const tokenType = localStorage.getItem("tokenType")
+          
+          // Create FormData for file upload
+          const formData = new FormData()
+          formData.append("file", file)
+          
+          const response = await fetch("http://localhost:8000/upload-policy", {
+            method: "POST",
+            headers: {
+              "Authorization": `${tokenType || "Bearer"} ${token}`,
+            },
+            body: formData
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            const successMessage: Message = {
+              id: messages.length + 2,
+              sender: "bot",
+              text: `✅ **Document Upload Successful!**
+
+**${data.filename}** has been processed and vectorized for search.
+
+📊 **Processing Results:**
+• **Text extracted:** ${data.text_length} characters
+• **Chunks created:** ${data.chunks_processed} of ${data.total_chunks}
+• **Document ID:** ${data.document_id}
+
+Your document is now available for semantic search. You can ask me questions about its contents!
+
+**Try asking:** "What does my uploaded document say about..." or "Search my documents for..."`,
+            }
+            // Replace the upload status message with success message
+            setMessages(prevMessages => [...prevMessages.slice(0, -1), successMessage])
+          } else {
+            const errorData = await response.json().catch(() => ({}))
+            const errorMessage: Message = {
+              id: messages.length + 2,
+              sender: "bot",
+              text: `❌ **Upload Failed**
+
+Sorry, there was an error uploading "${file.name}".
+
+**Error:** ${errorData.detail || "Unknown error"}
+
+Please try again with a different file or contact support if the issue persists.`,
+            }
+            // Replace the upload status message with error message
+            setMessages(prevMessages => [...prevMessages.slice(0, -1), errorMessage])
+          }
+        } catch (error) {
+          console.error("Upload error:", error)
+          const errorMessage: Message = {
+            id: messages.length + 2,
+            sender: "bot",
+            text: `❌ **Upload Failed**
+
+Network error while uploading "${file.name}". Please check your connection and try again.`,
+          }
+          // Replace the upload status message with error message
+          setMessages(prevMessages => [...prevMessages.slice(0, -1), errorMessage])
+        } finally {
+          setIsLoading(false)
+        }
       }
+      
+      // Trigger file selection dialog
+      document.body.appendChild(fileInput)
+      fileInput.click()
+      document.body.removeChild(fileInput)
+      
     } catch (err) {
-      console.error("Upload error:", err)
+      console.error("File upload error:", err)
+      setIsLoading(false)
     }
+  }
+
+  // Simple markdown renderer that handles line breaks
+  const renderMessage = (text: string) => {
+    // Convert **bold** to <strong>
+    const withBold = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    
+    // Split by lines and render each line
+    const lines = withBold.split('\n')
+    
+    return (
+      <div>
+        {lines.map((line, index) => (
+          <div key={index} className={index > 0 ? "mt-1" : ""}>
+            {line ? (
+              <span dangerouslySetInnerHTML={{ __html: line }} />
+            ) : (
+              <br />
+            )}
+          </div>
+        ))}
+      </div>
+    )
   }
 
   // Show loading screen while checking authentication
@@ -420,7 +521,9 @@ export default function ChatPage() {
                       message.sender === "bot" ? "bg-teal-100 text-teal-800" : "bg-sky-100 text-sky-800"
                     }`}
                   >
-                    <p className="whitespace-pre-wrap">{message.text}</p>
+                    <div className="whitespace-pre-wrap">
+                      {renderMessage(message.text)}
+                    </div>
                     
                     {message.options && (
                       <div className="mt-4 flex flex-wrap gap-2">
