@@ -116,6 +116,152 @@ To extend or modify the system:
 5. Write comprehensive tests
 6. Update the config file
 
+## Troubleshooting
+
+### Database Connection Issues
+
+#### Problem: "role 'postgres' does not exist"
+
+**Symptoms:**
+```
+ERROR: role "postgres" does not exist
+asyncpg.exceptions.InvalidAuthorizationSpecificationError: role "postgres" does not exist
+```
+
+**Root Cause:** The application is trying to connect to a PostgreSQL database using the `postgres` user, but you're running a local PostgreSQL instance that uses your system user.
+
+**Solution:**
+
+The system supports both local development and Supabase environments with automatic database URL selection:
+
+1. **For Local Development:** Set `DATABASE_URL_LOCAL` in your `.env` file:
+   ```env
+   DATABASE_URL_LOCAL="postgresql://your_username@localhost:5432/insurance_navigator"
+   ```
+
+2. **For Supabase/Production:** Keep `DATABASE_URL` for Supabase:
+   ```env
+   DATABASE_URL="postgresql://postgres:password@localhost:5432/insurance_navigator"
+   ```
+
+**Precedence:** The system will use `DATABASE_URL_LOCAL` if available, otherwise fall back to `DATABASE_URL`.
+
+#### Problem: "Address already in use" (Port 8000)
+
+**Symptoms:**
+```
+ERROR: [Errno 48] Address already in use
+```
+
+**Solutions:**
+
+1. **Kill existing processes:**
+   ```bash
+   lsof -ti:8000 | xargs kill -9
+   ```
+
+2. **Use a different port:**
+   ```bash
+   uvicorn main:app --host 0.0.0.0 --port 8001
+   ```
+
+3. **Find what's using the port:**
+   ```bash
+   lsof -i:8000
+   ```
+
+### Environment Variable Issues
+
+#### Problem: "supabase_url is required"
+
+**Symptoms:**
+```
+ERROR: supabase_url is required
+```
+
+**Solution:** Ensure Supabase environment variables are set in `.env`:
+```env
+SUPABASE_URL="https://your-project.supabase.co"
+SUPABASE_ANON_KEY="your-anon-key"
+SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
+SUPABASE_STORAGE_BUCKET="documents"
+```
+
+#### Problem: "Examples file not found"
+
+**Symptoms:**
+```
+WARNING - Failed to load examples: Examples file not found: agents/task_requirements/core/prompts/examples/prompt_examples_task_requirements_v0_1.json
+```
+
+**Solution:** Ensure all agent example files exist. If missing, check if there's a corresponding `.md` file and convert it, or create the missing JSON file with proper structure.
+
+### Server Startup Issues
+
+#### Problem: Server starts but doesn't respond
+
+**Diagnostic Steps:**
+
+1. **Check if server is running:**
+   ```bash
+   ps aux | grep "python main.py"
+   ```
+
+2. **Check logs for errors:**
+   ```bash
+   tail -f logs/*.log
+   ```
+
+3. **Test health endpoint:**
+   ```bash
+   curl http://localhost:8000/health
+   ```
+
+4. **Check server binding:**
+   ```bash
+   netstat -an | grep 8000
+   ```
+
+### Quick Diagnostic Commands
+
+```bash
+# Check environment variables
+env | grep -E "(DATABASE|SUPABASE|JWT)" | sort
+
+# Kill all Python processes (use with caution)
+pkill -f python
+
+# Start server with verbose output
+python main.py 2>&1 | tee server.log
+
+# Test with minimal environment
+export DATABASE_URL_LOCAL="postgresql://$(whoami)@localhost:5432/insurance_navigator"
+export SUPABASE_URL="https://placeholder.supabase.co"
+export SUPABASE_SERVICE_ROLE_KEY="placeholder_key"
+python main.py
+```
+
+### Environment Setup Verification
+
+Use this checklist to verify your environment:
+
+- [ ] `.env` file exists and is loaded
+- [ ] Database URL is set (local or production)
+- [ ] Supabase credentials are configured
+- [ ] All required agent example files exist
+- [ ] No port conflicts on 8000
+- [ ] PostgreSQL is running (for local development)
+- [ ] All Python dependencies are installed
+
+### Getting Help
+
+If you encounter issues not covered here:
+
+1. Check the logs in the `logs/` directory
+2. Verify your `.env` configuration matches `.env.example`
+3. Ensure all dependencies are installed: `pip install -r requirements.txt`
+4. Try starting the server on a different port to isolate port conflicts
+
 ## License
 
 MIT 

@@ -103,19 +103,22 @@ class ChatCommunicatorAgent(BaseAgent):
         self.conversation_service = None
         self._conversation_service_initialized = False
         
-        # Initialize the output parser for ChatResponse BEFORE calling super().__init__()
+        # Initialize the output parser for ChatResponse BEFORE calling super().__init__
         self.output_parser = PydanticOutputParser(pydantic_object=ChatResponse)
         
         # Set default paths (will be overridden in _initialize_agent if config available)
         self.prompt_path = "agents/chat_communicator/core/prompts/prompt_chat_communicator_v0_1.md"
-        self.examples_path = "agents/chat_communicator/core/prompts/examples/chat_examples_v0_1.json"
+        self.examples_path = "agents/chat_communicator/core/prompts/examples/prompt_examples_chat_communicator_v0_1.json"
         
-        # Initialize the base agent (this calls _initialize_agent automatically)
+        # Initialize the base agent
         super().__init__(
             name="chat_communicator",
             llm=llm or (None if use_mock else ChatAnthropic(model=model_name, temperature=temperature)),
             use_mock=use_mock
         )
+        
+        # Initialize agent-specific components
+        self._initialize_agent()
         
         logger.info(f"Chat Communicator Agent initialized with model {model_name}")
     

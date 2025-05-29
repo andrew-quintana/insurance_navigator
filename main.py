@@ -14,13 +14,15 @@ Comprehensive async FastAPI application with:
 import os
 import sys
 import uuid
-from fastapi import FastAPI, HTTPException, Depends, Request, status, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Depends, Request, status, UploadFile, File, Form, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 import logging
+import json
+import asyncio
 
 # Database service imports
 from db.services.user_service import get_user_service, UserService
@@ -43,6 +45,11 @@ try:
 except ImportError:
     ERROR_HANDLER_AVAILABLE = False
     logging.warning("Error handler middleware not available")
+
+# Fast imports for document processing
+from sentence_transformers import SentenceTransformer
+import PyPDF2
+import io
 
 # Set up logging
 logging.basicConfig(
@@ -142,6 +149,89 @@ user_service_instance: Optional[UserService] = None
 conversation_service_instance: Optional[ConversationService] = None
 storage_service_instance: Optional[StorageService] = None
 agent_orchestrator_instance: Optional[AgentOrchestrator] = None
+
+# Global embedding model (loaded once)
+embedding_model = None
+
+async def get_embedding_model():
+    """Get or load the sentence transformer model."""
+    global embedding_model
+    if embedding_model is None:
+        try:
+            logger.info("Loading SBERT model: all-MiniLM-L6-v2...")
+            embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+            logger.info("✅ SBERT model loaded successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to load SBERT model: {e}")
+            # Return a mock model for demo purposes
+            class MockModel:
+                def encode(self, text):
+                    import random
+                    # Return random 384-dimensional vector for demo
+                    return [random.uniform(-1, 1) for _ in range(384)]
+            embedding_model = MockModel()
+            logger.warning("⚠️ Using mock embedding model for demo")
+    return embedding_model
+
+def extract_text_from_pdf(file_data: bytes) -> str:
+    """Extract text from PDF file."""
+    try:
+        pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_data))
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text() + "\n"
+        return text.strip()
+    except Exception as e:
+        logger.error(f"Error extracting PDF text: {e}")
+        return ""
+
+def extract_text_from_file(file_data: bytes, filename: str) -> str:
+    """Extract text from various file types."""
+    if filename.lower().endswith('.pdf'):
+        return extract_text_from_pdf(file_data)
+    elif filename.lower().endswith(('.txt', '.md')):
+        try:
+            return file_data.decode('utf-8')
+        except UnicodeDecodeError:
+            try:
+                return file_data.decode('latin-1')
+            except:
+                return ""
+    else:
+        # Try to decode as text for other file types
+        try:
+            return file_data.decode('utf-8')
+        except:
+            return ""
+
+def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
+    """Split text into overlapping chunks."""
+    if len(text) <= chunk_size:
+        return [text]
+    
+    chunks = []
+    start = 0
+    while start < len(text):
+        end = start + chunk_size
+        if end >= len(text):
+            chunks.append(text[start:])
+            break
+        else:
+            # Try to break at a sentence or word boundary
+            break_point = text.rfind('.', start, end)
+            if break_point == -1:
+                break_point = text.rfind(' ', start, end)
+            if break_point == -1:
+                break_point = end
+            else:
+                break_point += 1  # Include the period/space
+            
+            chunks.append(text[start:break_point].strip())
+            start = break_point - overlap
+            if start < 0:
+                start = 0
+    
+    return [chunk for chunk in chunks if chunk.strip()]
 
 # Fallback orchestrator for when agents are not available
 class FallbackOrchestrator:
@@ -385,7 +475,7 @@ async def chat(
                     user_id=current_user.id,
                     conversation_id=conversation_id
                 )
-                response_text = result.get("response", "I'm processing your request...")
+                response_text = result.get("text", "I'm processing your request...")
                 sources = result.get("sources", [])
                 metadata = result.get("metadata", {})
                 agent_state = result.get("agent_state")
@@ -431,7 +521,7 @@ async def chat(
             conversation_id=conversation_id,
             sources=sources,
             metadata=metadata,
-            workflow_type="medicare_navigator",
+            workflow_type=result.get('workflow_type', 'medicare_navigator'),
             agent_state=agent_state
         )
         
@@ -756,6 +846,268 @@ async def shutdown_event():
     
     logger.info("✅ Shutdown complete")
 
+# Debug endpoint for development
+@app.get("/debug/workflow/{conversation_id}")
+async def debug_workflow(
+    conversation_id: str,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Debug endpoint to view complete workflow execution details."""
+    global conversation_service_instance
+    
+    try:
+        if not conversation_service_instance:
+            conversation_service_instance = await get_conversation_service()
+        
+        # Get conversation messages
+        messages = await conversation_service_instance.get_conversation_history(
+            conversation_id=conversation_id,
+            limit=50
+        )
+        
+        # Get workflow states
+        workflow_states = await conversation_service_instance.get_workflow_state(conversation_id)
+        
+        # Get agent states
+        agent_states = []
+        agent_names = ["prompt_security", "patient_navigator", "task_requirements", 
+                      "service_access_strategy", "regulatory", "chat_communicator"]
+        
+        for agent_name in agent_names:
+            try:
+                state = await conversation_service_instance.get_agent_state(
+                    conversation_id=conversation_id,
+                    agent_name=agent_name
+                )
+                if state:
+                    agent_states.append({
+                        "agent_name": agent_name,
+                        "state": state
+                    })
+            except Exception as e:
+                # Agent state might not exist, continue
+                continue
+        
+        return {
+            "conversation_id": conversation_id,
+            "user_id": current_user.id,
+            "messages": messages,
+            "workflow_states": workflow_states,
+            "agent_states": agent_states,
+            "debug_info": {
+                "total_messages": len(messages),
+                "agents_executed": len(agent_states),
+                "workflow_available": workflow_states is not None
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Debug workflow error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Debug error: {str(e)}"
+        )
+
+@app.get("/debug/latest-workflow")
+async def debug_latest_workflow(
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Get debug info for the user's latest conversation."""
+    global conversation_service_instance
+    
+    try:
+        if not conversation_service_instance:
+            conversation_service_instance = await get_conversation_service()
+        
+        # Get user's latest conversation
+        conversations = await conversation_service_instance.get_user_conversations(
+            user_id=current_user.id,
+            limit=1
+        )
+        
+        if not conversations:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No conversations found"
+            )
+        
+        latest_conversation = conversations[0]
+        conversation_id = latest_conversation["id"]
+        
+        # Redirect to the full debug endpoint
+        return await debug_workflow(conversation_id, current_user)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Debug latest workflow error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Debug error: {str(e)}"
+        )
+
+@app.get("/debug/latest-workflow/readable")
+async def debug_latest_workflow_readable(
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Get debug info for the user's latest conversation in human-readable format."""
+    global conversation_service_instance
+    
+    try:
+        # Get the raw debug data
+        debug_data = await debug_latest_workflow(current_user)
+        
+        # Format it in a readable way
+        readable_output = []
+        
+        # Header
+        readable_output.append("🔍 AGENT WORKFLOW DEBUG REPORT")
+        readable_output.append("=" * 50)
+        readable_output.append(f"📋 Conversation ID: {debug_data['conversation_id']}")
+        readable_output.append(f"👤 User ID: {debug_data['user_id']}")
+        readable_output.append("")
+        
+        # Summary
+        debug_info = debug_data.get('debug_info', {})
+        readable_output.append("📊 WORKFLOW SUMMARY")
+        readable_output.append("-" * 25)
+        readable_output.append(f"• Total Messages: {debug_info.get('total_messages', 0)}")
+        readable_output.append(f"• Agents Executed: {debug_info.get('agents_executed', 0)}")
+        readable_output.append(f"• Workflow Available: {debug_info.get('workflow_available', False)}")
+        readable_output.append("")
+        
+        # Messages
+        messages = debug_data.get('messages', [])
+        if messages:
+            readable_output.append("💬 CONVERSATION MESSAGES")
+            readable_output.append("-" * 30)
+            for i, msg in enumerate(messages, 1):
+                role_icon = "👤" if msg['role'] == 'user' else "🤖"
+                readable_output.append(f"{i}. {role_icon} {msg['role'].upper()}:")
+                readable_output.append(f"   📝 {msg['content'][:100]}{'...' if len(msg['content']) > 100 else ''}")
+                readable_output.append(f"   🕒 {msg['created_at']}")
+                readable_output.append("")
+        
+        # Workflow Results
+        workflow_states = debug_data.get('workflow_states', {})
+        if workflow_states:
+            state_data = workflow_states.get('state_data', {})
+            readable_output.append("🔄 WORKFLOW EXECUTION")
+            readable_output.append("-" * 25)
+            readable_output.append(f"• Workflow Type: {workflow_states.get('workflow_type', 'N/A')}")
+            readable_output.append(f"• Current Step: {workflow_states.get('current_step', 'N/A')}")
+            readable_output.append(f"• Intent Detected: {state_data.get('intent', 'N/A')}")
+            readable_output.append(f"• Security Check: {'✅ Passed' if state_data.get('security_check_passed') else '❌ Failed'}")
+            
+            error = state_data.get('error')
+            if error:
+                readable_output.append(f"• ⚠️ Error: {error}")
+            readable_output.append("")
+            
+            # Strategy Results (if available)
+            strategy_result = state_data.get('strategy_result')
+            if strategy_result:
+                readable_output.append("🎯 STRATEGY RESULTS")
+                readable_output.append("-" * 20)
+                readable_output.append(f"• Recommended Service: {strategy_result.get('recommended_service', 'N/A')}")
+                readable_output.append(f"• Estimated Timeline: {strategy_result.get('estimated_timeline', 'N/A')}")
+                readable_output.append(f"• Confidence Score: {strategy_result.get('confidence', 'N/A')}")
+                
+                action_plan = strategy_result.get('action_plan', [])
+                if action_plan:
+                    readable_output.append(f"• Action Steps: {len(action_plan)} steps")
+                    for step in action_plan:
+                        readable_output.append(f"  {step.get('step_number', '?')}. {step.get('step_description', 'N/A')}")
+                        readable_output.append(f"     ⏱ Timeline: {step.get('expected_timeline', 'N/A')}")
+                        resources = step.get('required_resources', [])
+                        if resources:
+                            readable_output.append(f"     📋 Resources: {', '.join(resources)}")
+                
+                matched_services = strategy_result.get('matched_services', [])
+                if matched_services:
+                    readable_output.append(f"• Matched Services: {len(matched_services)} found")
+                    for service in matched_services:
+                        covered = "✅ Covered" if service.get('is_covered') else "❌ Not Covered"
+                        readable_output.append(f"  • {service.get('service_name', 'N/A')} - {covered}")
+                readable_output.append("")
+        
+        # Agent-by-Agent Breakdown
+        agent_states = debug_data.get('agent_states', [])
+        if agent_states:
+            readable_output.append("🤖 AGENT EXECUTION DETAILS")
+            readable_output.append("-" * 35)
+            
+            for agent in agent_states:
+                agent_name = agent.get('agent_name', 'Unknown')
+                state = agent.get('state', {})
+                state_data = state.get('state_data', {})
+                
+                # Agent header with icon
+                agent_icons = {
+                    'prompt_security': '🛡️',
+                    'patient_navigator': '🧭', 
+                    'task_requirements': '📋',
+                    'service_access_strategy': '🎯',
+                    'regulatory': '⚖️',
+                    'chat_communicator': '💬'
+                }
+                icon = agent_icons.get(agent_name, '🤖')
+                readable_output.append(f"{icon} {agent_name.upper().replace('_', ' ')}")
+                readable_output.append("  " + "-" * (len(agent_name) + 2))
+                
+                # Execution step
+                step = state_data.get('step', 'N/A')
+                readable_output.append(f"  • Step: {step}")
+                
+                # Timestamp
+                updated_at = state.get('updated_at', 'N/A')
+                readable_output.append(f"  • Updated: {updated_at}")
+                
+                # Results (if available)
+                result = state_data.get('result')
+                if result:
+                    if agent_name == 'prompt_security':
+                        passed = result.get('passed', False)
+                        readable_output.append(f"  • Security Check: {'✅ Passed' if passed else '❌ Failed'}")
+                    
+                    elif agent_name == 'patient_navigator':
+                        intent = result.get('intent_type', 'N/A')
+                        confidence = result.get('confidence_score', 'N/A')
+                        readable_output.append(f"  • Intent Detected: {intent}")
+                        readable_output.append(f"  • Confidence: {confidence}")
+                    
+                    elif agent_name == 'service_access_strategy':
+                        service = result.get('recommended_service', 'N/A')
+                        timeline = result.get('estimated_timeline', 'N/A')
+                        readable_output.append(f"  • Recommended: {service}")
+                        readable_output.append(f"  • Timeline: {timeline}")
+                        
+                        action_plan = result.get('action_plan', [])
+                        if action_plan:
+                            readable_output.append(f"  • Action Steps: {len(action_plan)} steps")
+                
+                readable_output.append("")
+        
+        # Footer
+        readable_output.append("✅ Debug report generated successfully!")
+        readable_output.append(f"🕒 Generated at: {datetime.utcnow().isoformat()}Z")
+        
+        # Return as plain text
+        return Response(
+            content="\n".join(readable_output),
+            media_type="text/plain",
+            headers={"Content-Disposition": "inline"}
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Debug readable workflow error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Debug error: {str(e)}"
+        )
+
 # Root endpoint
 @app.get("/")
 async def root():
@@ -779,6 +1131,152 @@ async def root():
             "storage": ["/upload-document", "/documents"]
         }
     }
+
+@app.post("/upload-policy", response_model=Dict[str, Any])
+async def upload_policy_demo(
+    file: UploadFile = File(...),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Demo-ready document upload with vectorization."""
+    try:
+        logger.info(f"Starting document upload for user {current_user.id}: {file.filename}")
+        
+        # Read file data
+        file_data = await file.read()
+        if len(file_data) == 0:
+            raise HTTPException(status_code=400, detail="Empty file")
+        
+        # Extract text content
+        text_content = extract_text_from_file(file_data, file.filename)
+        if not text_content.strip():
+            raise HTTPException(status_code=400, detail="Could not extract text from file")
+        
+        # Generate document ID
+        document_id = str(uuid.uuid4())
+        
+        # Chunk the text
+        chunks = chunk_text(text_content)
+        logger.info(f"Created {len(chunks)} chunks from document")
+        
+        # Get embedding model
+        model = await get_embedding_model()
+        
+        # Get database connection
+        pool = await get_db_pool()
+        
+        vector_ids = []
+        async with pool.get_connection() as conn:
+            # Process each chunk
+            for i, chunk in enumerate(chunks):
+                try:
+                    # Generate embedding
+                    embedding = model.encode(chunk).tolist()
+                    
+                    # Store in user_document_vectors table
+                    vector_id = await conn.fetchval("""
+                        INSERT INTO user_document_vectors 
+                        (user_id, document_id, chunk_index, chunk_embedding, chunk_text, chunk_metadata)
+                        VALUES ($1, $2, $3, $4::vector, $5, $6)
+                        RETURNING id
+                    """, 
+                    current_user.id, 
+                    document_id,
+                    i,
+                    str(embedding),
+                    chunk,
+                    json.dumps({
+                        "filename": file.filename,
+                        "file_size": len(file_data),
+                        "content_type": file.content_type,
+                        "chunk_length": len(chunk),
+                        "total_chunks": len(chunks),
+                        "uploaded_at": datetime.utcnow().isoformat()
+                    }))
+                    
+                    vector_ids.append(vector_id)
+                    
+                except Exception as e:
+                    logger.error(f"Error processing chunk {i}: {e}")
+                    continue
+        
+        logger.info(f"Successfully stored {len(vector_ids)} vectors for document {document_id}")
+        
+        return {
+            "success": True,
+            "document_id": document_id,
+            "filename": file.filename,
+            "chunks_processed": len(vector_ids),
+            "total_chunks": len(chunks),
+            "text_length": len(text_content),
+            "message": f"Successfully uploaded and vectorized {file.filename}"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Document upload error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Upload failed: {str(e)}"
+        )
+
+@app.post("/search-documents", response_model=Dict[str, Any])
+async def search_documents(
+    query: str = Form(...),
+    limit: int = Form(default=5),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Search uploaded documents using semantic similarity."""
+    try:
+        logger.info(f"Searching documents for user {current_user.id}: {query}")
+        
+        # Get embedding model
+        model = await get_embedding_model()
+        
+        # Generate query embedding
+        query_embedding = model.encode(query).tolist()
+        
+        # Get database connection
+        pool = await get_db_pool()
+        
+        results = []
+        async with pool.get_connection() as conn:
+            # Search using vector similarity
+            rows = await conn.fetch("""
+                SELECT 
+                    document_id,
+                    chunk_text,
+                    chunk_metadata,
+                    chunk_embedding <=> $1::vector as similarity_score
+                FROM user_document_vectors 
+                WHERE user_id = $2 AND is_active = true
+                ORDER BY chunk_embedding <=> $1::vector
+                LIMIT $3
+            """, str(query_embedding), current_user.id, limit)
+            
+            for row in rows:
+                metadata = json.loads(row['chunk_metadata'])
+                results.append({
+                    "document_id": row['document_id'],
+                    "text": row['chunk_text'],
+                    "filename": metadata.get('filename', 'Unknown'),
+                    "similarity_score": float(row['similarity_score']),
+                    "metadata": metadata
+                })
+        
+        return {
+            "success": True,
+            "query": query,
+            "results": results,
+            "total_results": len(results)
+        }
+        
+    except Exception as e:
+        logger.error(f"Document search error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Search failed: {str(e)}"
+        )
 
 if __name__ == "__main__":
     import uvicorn

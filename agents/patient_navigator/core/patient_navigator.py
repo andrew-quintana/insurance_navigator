@@ -23,6 +23,7 @@ import json
 import logging
 import time
 import traceback
+import re
 from datetime import datetime
 from typing import Dict, List, Any, Tuple, Optional, Union
 from langchain_core.prompts import PromptTemplate
@@ -202,6 +203,44 @@ class PatientNavigatorAgent(BaseAgent):
         # Update last updated timestamp
         self.active_conversations[conversation_key]["last_updated"] = datetime.utcnow().isoformat() + "Z"
     
+    def _extract_json_from_response(self, response_text: str) -> str:
+        """
+        Extract JSON from markdown-wrapped responses.
+        
+        Args:
+            response_text: The raw response text that may contain markdown-wrapped JSON
+            
+        Returns:
+            Clean JSON string
+        """
+        # First, try to extract JSON from markdown code blocks
+        json_pattern = r'```json\n(.*?)\n```'
+        match = re.search(json_pattern, response_text, re.DOTALL)
+        if match:
+            return match.group(1).strip()
+        
+        # If no markdown wrapper, try to find JSON object boundaries
+        # Look for { ... } pattern
+        json_start = response_text.find('{')
+        if json_start != -1:
+            # Find the matching closing brace
+            brace_count = 0
+            json_end = json_start
+            for i, char in enumerate(response_text[json_start:], json_start):
+                if char == '{':
+                    brace_count += 1
+                elif char == '}':
+                    brace_count -= 1
+                    if brace_count == 0:
+                        json_end = i + 1
+                        break
+            
+            if brace_count == 0:  # Found complete JSON object
+                return response_text[json_start:json_end]
+        
+        # Return original if no JSON structure found
+        return response_text.strip()
+
     @BaseAgent.track_performance
     def process(self, user_query: str, user_id: str, session_id: str) -> Tuple[str, Dict[str, Any]]:
         """
@@ -267,7 +306,18 @@ class PatientNavigatorAgent(BaseAgent):
             # Try to parse the response
             try:
                 logger.info("Parsing response with output parser...")
-                result = self.output_parser.parse(str(raw_response))
+                
+                # Extract JSON from response text if needed
+                if hasattr(raw_response, 'content'):
+                    response_text = raw_response.content
+                else:
+                    response_text = str(raw_response)
+                
+                # Clean the JSON response
+                clean_json = self._extract_json_from_response(response_text)
+                logger.info(f"Extracted JSON length: {len(clean_json)} chars")
+                
+                result = self.output_parser.parse(clean_json)
                 logger.info("Successfully parsed LLM response to NavigatorOutput")
                 
                 # Convert to dict for return
@@ -275,7 +325,12 @@ class PatientNavigatorAgent(BaseAgent):
                 
             except Exception as e:
                 logger.error(f"Parser error: {str(e)}")
-                logger.error(f"Failed to parse text: {str(raw_response)[:500]}")
+                logger.error(f"Raw response type: {type(raw_response)}")
+                if hasattr(raw_response, 'content'):
+                    logger.error(f"Raw response content (first 200 chars): {raw_response.content[:200]}")
+                else:
+                    logger.error(f"Raw response (first 200 chars): {str(raw_response)[:200]}")
+                logger.error(f"Clean JSON (first 200 chars): {clean_json[:200] if 'clean_json' in locals() else 'Not extracted'}")
                 raise PatientNavigatorOutputParsingError(f"Failed to parse model output: {str(e)}")
             
             # Add timestamp if not present
@@ -353,8 +408,8 @@ class PatientNavigatorAgent(BaseAgent):
 
     def reset(self) -> None:
         """Reset the agent's state."""
-        self.active_conversations = {}
-        logger.info("Reset PatientNavigatorAgent state - all conversations cleared")
+        self.active_conversations.clear()
+        logger.info("Reset Patient Navigator Agent state")
 
     def _initialize_agent(self):
         """Initialize agent-specific components."""
@@ -370,17 +425,126 @@ class PatientNavigatorAgent(BaseAgent):
         # Load prompt from file using BaseAgent's method
         self.system_prompt = self._load_prompt(prompt_path)
         
-        # Load examples if available
+        # Load examples and substitute into the prompt template
         try:
             examples = self._load_examples(examples_path)
             if examples:
-                examples_text = "\n\nExamples:\n\n" + json.dumps(examples, indent=2)
-                self.system_prompt += examples_text
+                examples_text = json.dumps(examples, indent=2)
+                # Replace the {Examples} placeholder with actual examples
+                self.system_prompt = self.system_prompt.replace("{Examples}", examples_text)
+                # Debug: log that examples were loaded
+                self.logger.info(f"Loaded {len(examples)} examples into Patient Navigator prompt")
+            else:
+                # If no examples, provide a placeholder
+                self.system_prompt = self.system_prompt.replace("{Examples}", "No examples available")
+                self.logger.warning("No examples found for Patient Navigator")
         except Exception as e:
             self.logger.warning(f"Failed to load examples: {e}")
+            # If examples fail to load, provide a placeholder
+            self.system_prompt = self.system_prompt.replace("{Examples}", "No examples available")
         
         # Initialize conversation tracking
         self.active_conversations = {}
+
+    async def analyze_request(self, message: str, conversation_id: str) -> 'NavigatorAnalysisResult':
+        """
+        Analyze a user request to determine intent and next steps.
+        
+        Args:
+            message: The user's message to analyze
+            conversation_id: The conversation ID for context
+            
+        Returns:
+            NavigatorAnalysisResult with intent and analysis details
+        """
+        try:
+            # Use the existing process method to analyze the request
+            response, metadata = self.process(message, "system", conversation_id)
+            
+            # Extract intent information
+            intent_type = metadata.get("meta_intent", {}).get("request_type", "general_question")
+            confidence_score = 0.8  # Default confidence
+            
+            # Create result object
+            class NavigatorAnalysisResult:
+                def __init__(self, intent_type: str, confidence_score: float, analysis_details: Dict[str, Any] = None):
+                    self.intent_type = intent_type
+                    self.confidence_score = confidence_score
+                    self.analysis_details = analysis_details or {}
+            
+            return NavigatorAnalysisResult(
+                intent_type=intent_type,
+                confidence_score=confidence_score,
+                analysis_details=metadata
+            )
+            
+        except Exception as e:
+            logger.error(f"Error analyzing request: {str(e)}")
+            
+            # Return fallback result
+            class NavigatorAnalysisResult:
+                def __init__(self, intent_type: str, confidence_score: float, analysis_details: Dict[str, Any] = None):
+                    self.intent_type = intent_type
+                    self.confidence_score = confidence_score
+                    self.analysis_details = analysis_details or {}
+            
+            return NavigatorAnalysisResult(
+                intent_type="general_question",
+                confidence_score=0.5,
+                analysis_details={"error": str(e)}
+            )
+
+    async def answer_question(self, message: str, conversation_id: str) -> 'NavigatorQAResult':
+        """
+        Answer a user question directly.
+        
+        Args:
+            message: The user's question
+            conversation_id: The conversation ID for context
+            
+        Returns:
+            NavigatorQAResult with the answer and related information
+        """
+        try:
+            # Use the existing process method to answer the question
+            response, metadata = self.process(message, "system", conversation_id)
+            
+            # Extract question type and confidence
+            question_type = metadata.get("meta_intent", {}).get("request_type", "general_question")
+            confidence_score = 0.8  # Default confidence
+            
+            # Create result object
+            class NavigatorQAResult:
+                def __init__(self, answer: str, question_type: str, confidence_score: float, metadata: Dict[str, Any] = None):
+                    self.answer = answer
+                    self.question_type = question_type
+                    self.confidence_score = confidence_score
+                    self.metadata = metadata or {}
+            
+            return NavigatorQAResult(
+                answer=response,
+                question_type=question_type,
+                confidence_score=confidence_score,
+                metadata=metadata
+            )
+            
+        except Exception as e:
+            logger.error(f"Error answering question: {str(e)}")
+            
+            # Return fallback result
+            class NavigatorQAResult:
+                def __init__(self, answer: str, question_type: str, confidence_score: float, metadata: Dict[str, Any] = None):
+                    self.answer = answer
+                    self.question_type = question_type
+                    self.confidence_score = confidence_score
+                    self.metadata = metadata or {}
+            
+            return NavigatorQAResult(
+                answer="I apologize, but I'm experiencing some technical difficulties. Please try rephrasing your question.",
+                question_type="error",
+                confidence_score=0.0,
+                metadata={"error": str(e)}
+            )
 
 # Example usage
 if __name__ == "__main__":

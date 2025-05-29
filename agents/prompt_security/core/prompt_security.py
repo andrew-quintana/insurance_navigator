@@ -60,7 +60,8 @@ class PromptSecurityAgent(BaseAgent):
         name: str = "prompt_security",
         llm: Optional[BaseLanguageModel] = None,
         logger: Optional[logging.Logger] = None,
-        use_mock: bool = False
+        use_mock: bool = False,
+        bypass_security: bool = False
     ):
         """Initialize the prompt security agent."""
         super().__init__(
@@ -69,6 +70,12 @@ class PromptSecurityAgent(BaseAgent):
             logger=logger,
             use_mock=use_mock
         )
+        self.bypass_security = bypass_security
+        if bypass_security:
+            if self.logger:
+                self.logger.warning("⚠️  SECURITY BYPASS ENABLED - All prompts will be marked as safe!")
+            else:
+                print("⚠️  SECURITY BYPASS ENABLED - All prompts will be marked as safe!")
     
     def _initialize_agent(self):
         """Initialize agent-specific components."""
@@ -343,4 +350,52 @@ class PromptSecurityAgent(BaseAgent):
         sanitized_input = result["sanitized_input"]
         security_check = result["security_check"]
         
-        return is_safe, sanitized_input, security_check 
+        return is_safe, sanitized_input, security_check
+    
+    async def check_prompt_security(self, message: str, user_id: str = None) -> 'SecurityCheckResult':
+        """
+        Check prompt security asynchronously
+        
+        Args:
+            message: The message to check
+            user_id: Optional user ID for context
+            
+        Returns:
+            SecurityCheckResult with is_safe property
+        """
+        # Security bypass check
+        if self.bypass_security:
+            self.logger.info(f"🚫 Security bypass enabled - marking message as safe: '{message[:50]}...'")
+            class SecurityCheckResult:
+                def __init__(self, is_safe: bool, sanitized_input: str = None, details: Dict[str, Any] = None):
+                    self.is_safe = is_safe
+                    self.sanitized_input = sanitized_input or message
+                    self.details = details or {"bypass_enabled": True}
+            
+            return SecurityCheckResult(is_safe=True, sanitized_input=message, details={"bypass_enabled": True})
+        
+        # Original security check logic
+        try:
+            # Perform security check
+            is_safe, sanitized_input, details = self.process(message)
+            
+            # Create result object
+            class SecurityCheckResult:
+                def __init__(self, is_safe: bool, sanitized_input: str = None, details: Dict[str, Any] = None):
+                    self.is_safe = is_safe
+                    self.sanitized_input = sanitized_input or message
+                    self.details = details or {}
+            
+            return SecurityCheckResult(is_safe=is_safe, sanitized_input=sanitized_input, details=details)
+            
+        except Exception as e:
+            self.logger.error(f"Error in check_prompt_security: {e}")
+            
+            # Return safe result as fallback when bypass is enabled
+            class SecurityCheckResult:
+                def __init__(self, is_safe: bool, sanitized_input: str = None, details: Dict[str, Any] = None):
+                    self.is_safe = is_safe
+                    self.sanitized_input = sanitized_input or message
+                    self.details = details or {}
+            
+            return SecurityCheckResult(is_safe=False, sanitized_input=message, details={"error": str(e)}) 
