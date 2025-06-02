@@ -5,7 +5,8 @@ services:
     plan: free
     dockerfilePath: ./Dockerfile
     region: oregon
-    branch: main
+    branch: buildout/mvp-integration
+    port: 8000
     healthCheckPath: /health
     envVars:
       - key: SUPABASE_URL
@@ -17,7 +18,7 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET_KEY
-        generateValue: true
+        sync: false
       - key: ENVIRONMENT
         value: production
       - key: LOG_LEVEL
