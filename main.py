@@ -176,32 +176,57 @@ async def get_embedding_model():
 def extract_text_from_pdf(file_data: bytes) -> str:
     """Extract text from PDF file."""
     try:
+        logger.info(f"📄 Starting PDF text extraction (file size: {len(file_data)} bytes)...")
         pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_data))
+        logger.info(f"📄 PDF loaded, found {len(pdf_reader.pages)} pages")
+        
         text = ""
-        for page in pdf_reader.pages:
-            text += page.extract_text() + "\n"
-        return text.strip()
+        for i, page in enumerate(pdf_reader.pages):
+            logger.info(f"📄 Processing page {i+1}/{len(pdf_reader.pages)}...")
+            page_text = page.extract_text()
+            text += page_text + "\n"
+            logger.info(f"📄 Page {i+1} processed: {len(page_text)} characters extracted")
+        
+        result = text.strip()
+        logger.info(f"✅ PDF text extraction complete: {len(result)} total characters")
+        return result
     except Exception as e:
-        logger.error(f"Error extracting PDF text: {e}")
+        logger.error(f"❌ Error extracting PDF text: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return ""
 
 def extract_text_from_file(file_data: bytes, filename: str) -> str:
     """Extract text from various file types."""
+    logger.info(f"🔍 Starting text extraction from {filename} (size: {len(file_data)} bytes)")
+    
     if filename.lower().endswith('.pdf'):
+        logger.info(f"📄 Detected PDF file, using PDF extraction...")
         return extract_text_from_pdf(file_data)
     elif filename.lower().endswith(('.txt', '.md')):
+        logger.info(f"📝 Detected text file, using UTF-8 decoding...")
         try:
-            return file_data.decode('utf-8')
+            result = file_data.decode('utf-8')
+            logger.info(f"✅ UTF-8 decoding successful: {len(result)} characters")
+            return result
         except UnicodeDecodeError:
+            logger.warning(f"⚠️  UTF-8 failed, trying latin-1...")
             try:
-                return file_data.decode('latin-1')
-            except:
+                result = file_data.decode('latin-1')
+                logger.info(f"✅ Latin-1 decoding successful: {len(result)} characters")
+                return result
+            except Exception as e:
+                logger.error(f"❌ Text decoding failed: {e}")
                 return ""
     else:
+        logger.info(f"❓ Unknown file type, attempting UTF-8 decoding...")
         # Try to decode as text for other file types
         try:
-            return file_data.decode('utf-8')
-        except:
+            result = file_data.decode('utf-8')
+            logger.info(f"✅ UTF-8 decoding successful: {len(result)} characters")
+            return result
+        except Exception as e:
+            logger.warning(f"⚠️  UTF-8 decoding failed for unknown file type: {e}")
             return ""
 
 def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
@@ -1139,40 +1164,59 @@ async def upload_policy_demo(
 ):
     """Demo-ready document upload with vectorization."""
     try:
-        logger.info(f"Starting document upload for user {current_user.id}: {file.filename}")
+        logger.info(f"🚀 Starting document upload for user {current_user.id}: {file.filename}")
         
         # Read file data
+        logger.info(f"📖 Step 1: Reading file data...")
         file_data = await file.read()
+        logger.info(f"✅ Step 1 complete: Read {len(file_data)} bytes")
+        
         if len(file_data) == 0:
             raise HTTPException(status_code=400, detail="Empty file")
         
         # Extract text content
+        logger.info(f"🔍 Step 2: Extracting text content from {file.filename}...")
         text_content = extract_text_from_file(file_data, file.filename)
+        logger.info(f"✅ Step 2 complete: Extracted {len(text_content)} characters")
+        
         if not text_content.strip():
             raise HTTPException(status_code=400, detail="Could not extract text from file")
         
         # Generate document ID
         document_id = str(uuid.uuid4())
+        logger.info(f"🆔 Generated document ID: {document_id}")
         
         # Chunk the text
+        logger.info(f"✂️  Step 3: Chunking text (length: {len(text_content)})...")
         chunks = chunk_text(text_content)
-        logger.info(f"Created {len(chunks)} chunks from document")
+        logger.info(f"✅ Step 3 complete: Created {len(chunks)} chunks from document")
         
         # Get embedding model
+        logger.info(f"🧠 Step 4: Loading embedding model...")
         model = await get_embedding_model()
+        logger.info(f"✅ Step 4 complete: Embedding model loaded")
         
         # Get database connection
+        logger.info(f"🗄️  Step 5: Connecting to database...")
         pool = await get_db_pool()
+        logger.info(f"✅ Step 5 complete: Database connection established")
         
         vector_ids = []
+        logger.info(f"🔄 Step 6: Processing {len(chunks)} chunks for embeddings...")
+        
         async with pool.get_connection() as conn:
             # Process each chunk
             for i, chunk in enumerate(chunks):
                 try:
+                    logger.info(f"  📝 Processing chunk {i+1}/{len(chunks)} (length: {len(chunk)})...")
+                    
                     # Generate embedding
+                    logger.info(f"  🧮 Generating embedding for chunk {i+1}...")
                     embedding = model.encode(chunk).tolist()
+                    logger.info(f"  ✅ Embedding generated: {len(embedding)} dimensions")
                     
                     # Store in user_document_vectors table
+                    logger.info(f"  💾 Storing chunk {i+1} in database...")
                     vector_id = await conn.fetchval("""
                         INSERT INTO user_document_vectors 
                         (user_id, document_id, chunk_index, chunk_embedding, chunk_text, chunk_metadata)
@@ -1194,14 +1238,16 @@ async def upload_policy_demo(
                     }))
                     
                     vector_ids.append(vector_id)
+                    logger.info(f"  ✅ Chunk {i+1} stored with vector ID: {vector_id}")
                     
                 except Exception as e:
-                    logger.error(f"Error processing chunk {i}: {e}")
+                    logger.error(f"  ❌ Error processing chunk {i+1}: {e}")
+                    logger.error(f"  📊 Chunk details: length={len(chunk)}, content_preview='{chunk[:100]}...'")
                     continue
         
-        logger.info(f"Successfully stored {len(vector_ids)} vectors for document {document_id}")
+        logger.info(f"🎉 Step 6 complete: Successfully stored {len(vector_ids)} vectors for document {document_id}")
         
-        return {
+        result = {
             "success": True,
             "document_id": document_id,
             "filename": file.filename,
@@ -1211,10 +1257,16 @@ async def upload_policy_demo(
             "message": f"Successfully uploaded and vectorized {file.filename}"
         }
         
+        logger.info(f"✅ Upload complete: {result}")
+        return result
+        
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Document upload error: {str(e)}")
+        logger.error(f"❌ Document upload error: {str(e)}")
+        logger.error(f"📊 Error details: type={type(e).__name__}, traceback follows...")
+        import traceback
+        logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Upload failed: {str(e)}"
