@@ -35,6 +35,10 @@ supabase>=2.3.0
 langsmith>=0.0.69
 anthropic>=0.8.0
 
+# Document processing (used in main.py)
+sentence-transformers>=2.2.0
+PyPDF2>=3.0.0
+
 # Web scraping and HTTP
 aiohttp>=3.8.0
 beautifulsoup4>=4.12.0

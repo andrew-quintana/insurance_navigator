@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: insurance-navigator-api
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    region: oregon
+    branch: main
+    healthCheckPath: /health
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: SECURITY_BYPASS_ENABLED
+        value: false
+      - key: API_BASE_URL
+        value: https://insurance-navigator-api.onrender.com 
