@@ -5,18 +5,18 @@ agents:
     active: true
     description: Agent responsible for ensuring prompt security and content safety
     core_file:
-      path: agents/prompt_security/core/prompt_security.py
+      path: agents/prompt_security/prompt_security.py
       version: '0.1'
     prompt:
-      version: '0.1'
-      path: agents/prompt_security/core/prompts/prompt_prompt_security_v0_1.md
+      version: 'v*****'
+      path: agents/prompt_security/prompt_prompt_security_v*****.md
       description: Security prompt for detecting and handling injection attacks
     examples:
-      version: '0.1'
-      path: agents/prompt_security/core/prompts/examples/prompt_examples_prompt_security_v0_1.json
+      version: 'v*****'
+      path: agents/prompt_security/prompt_examples_prompt_security_v*****.json
     test_examples:
-      version: '0.1'
-      path: agents/prompt_security/tests/data/examples/test_examples_prompt_security_v0_1.json
+      version: 'v*****'
+      path: agents/prompt_security/tests/data/examples/test_examples_prompt_security_v*****.json
     model:
       name: claude-3-7-sonnet-20250219
       temperature: 0.0
@@ -26,18 +26,18 @@ agents:
     active: true
     description: Agent responsible for guiding patients through insurance processes
     core_file:
-      path: agents/patient_navigator/core/patient_navigator.py
+      path: agents/patient_navigator/patient_navigator.py
       version: '0.1'
     prompt:
-      version: '0.1'
-      path: agents/patient_navigator/core/prompts/prompt_patient_navigator_v0_1.md
+      version: 'v*****'
+      path: agents/patient_navigator/prompt_patient_navigator_v*****.md
       description: Navigator prompt for guiding patients through insurance processes
     examples:
-      version: '0.1'
-      path: agents/patient_navigator/core/prompts/examples/prompt_examples_patient_navigator_v0_1.json
+      version: 'v*****'
+      path: agents/patient_navigator/prompt_examples_patient_navigator_v*****.json
     test_examples:
-      version: '0.1'
-      path: agents/patient_navigator/tests/data/examples/test_examples_patient_navigator_v0_1.json
+      version: 'v*****'
+      path: agents/patient_navigator/tests/data/examples/test_examples_patient_navigator_v*****.json
     model:
       name: claude-3-7-sonnet-20250219
       temperature: 0.7
@@ -47,18 +47,18 @@ agents:
     active: true
     description: Agent responsible for determining required documentation for tasks
     core_file:
-      path: agents/task_requirements/core/task_requirements.py
+      path: agents/task_requirements/task_requirements.py
       version: '0.1'
     prompt:
-      version: '0.1'
-      path: agents/task_requirements/core/prompts/prompt_task_requirements_v0_1.md
+      version: 'v*****'
+      path: agents/task_requirements/prompt_task_requirements_v*****.md
       description: Task requirements prompt for determining needed documentation
     examples:
-      version: '0.1'
-      path: agents/task_requirements/core/prompts/examples/prompt_examples_task_requirements_v0_1.json
+      version: 'v*****'
+      path: agents/task_requirements/prompt_examples_task_requirements_v*****.json
     test_examples:
-      version: '0.1'
-      path: agents/task_requirements/tests/data/examples/test_examples_task_requirements_v0_1.json
+      version: 'v*****'
+      path: agents/task_requirements/tests/data/examples/test_examples_task_requirements_v*****.json
     model:
       name: claude-3-7-sonnet-20250219
       temperature: 0.2
@@ -68,23 +68,59 @@ agents:
     active: true
     description: Agent responsible for coming up with strategies for accessing services
     core_file:
-      path: agents/service_access_strategy/core/service_access_strategy.py
+      path: agents/service_access_strategy/service_access_strategy.py
       version: '0.2'
     prompt:
-      version: '0.1'
-      path: agents/service_access_strategy/core/prompts/prompt_service_access_strategy_v0_2.md
+      version: 'v*****'
+      path: agents/service_access_strategy/prompt_service_access_strategy_v*****.md
       description: Service access strategy prompt for developing access plans
     examples:
-      version: '0.1'
-      path: agents/service_access_strategy/core/examples/prompt_examples_service_access_strategy_v0_1.json
+      version: 'v*****'
+      path: agents/service_access_strategy/prompt_examples_service_access_strategy_v*****.json
     test_examples:
-      version: '0.1'
-      path: agents/service_access_strategy/tests/data/examples/test_examples_service_access_strategy_v0_1.json
+      version: 'v*****'
+      path: agents/service_access_strategy/tests/data/examples/test_examples_service_access_strategy_v*****.json
     model:
       name: claude-3-7-sonnet-20250219
       temperature: 0.2
     metrics:
       latest_run: agents/service_access_strategy/metrics/performance_metrics_20250515_153019.json
+  chat_communicator:
+    active: true
+    description: Agent responsible for communicating with users in conversational language
+    core_file:
+      path: agents/chat_communicator/chat_communicator.py
+      version: '0.1'
+    prompt:
+      version: 'v*****'
+      path: agents/chat_communicator/prompt_chat_communicator_v*****.md
+      description: Chat communicator prompt for translating technical info to conversational language
+    examples:
+      version: 'v*****'
+      path: agents/chat_communicator/prompt_examples_chat_communicator_v*****.json
+    model:
+      name: claude-3-sonnet-20240229-v1h
+      temperature: 0.2
+    metrics:
+      latest_run: agents/chat_communicator/metrics/performance_metrics_latest.json
+  regulatory:
+    active: true
+    description: Agent responsible for regulatory research and compliance analysis
+    core_file:
+      path: agents/regulatory/regulatory.py
+      version: '0.1'
+    prompt:
+      version: 'v*****'
+      path: agents/regulatory/prompt_regulatory_v*****.md
+      description: Regulatory prompt for research and compliance analysis
+    examples:
+      version: 'v*****'
+      path: agents/regulatory/prompt_examples_regulatory_v*****.json
+    model:
+      name: claude-3-7-sonnet-20250219
+      temperature: 0.1
+    metrics:
+      latest_run: agents/regulatory/metrics/performance_metrics_latest.json
 performance_metrics:
   enabled: true
   save_directory: metrics
@@ -95,19 +131,16 @@ logging:
   format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
   save_directory: logs
   file_rotation: daily
-  max_file_size: 10485760  # 10MB in bytes
+  max_file_size: 10485760
 security:
   validate_inputs: true
   sanitize_outputs: true
   max_token_limit: 4096
   blocked_patterns:
-    - 'ignore previous instructions'
-    - 'disregard all instructions'
-    - 'system prompt'
-  
+  - ignore previous instructions
+  - disregard all instructions
+  - system prompt
 authentication:
   jwt:
-    algorithm: "HS256"
-    access_token_expire_minutes: 1440  # Changed to 24 hours (daily)
-    # Note: JWT_SECRET_KEY should be set via environment variable
-    # Never commit actual secrets to version control 
+    algorithm: HS256
+    access_token_expire_minutes: 1440
