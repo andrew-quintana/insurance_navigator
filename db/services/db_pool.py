@@ -4,6 +4,7 @@ Provides async database operations with connection pooling and error handling.
 """
 
 import asyncio
+import os
 import logging
 from typing import AsyncGenerator, Optional, Dict, Any, List
 from contextlib import asynccontextmanager
@@ -40,17 +41,42 @@ class DatabasePool:
             if not db_url:
                 raise ValueError("DATABASE_URL not configured")
             
-            # Create asyncpg connection pool
-            self.pool = await asyncpg.create_pool(
-                db_url,
-                min_size=5,
-                max_size=20,
-                command_timeout=60,
-                server_settings={
+            # Prepare asyncpg connection pool kwargs
+            pool_kwargs = {
+                'min_size': 5,
+                'max_size': 20,
+                'command_timeout': 60,
+                'server_settings': {
                     'jit': 'off',  # Disable JIT for better compatibility
                     'application_name': 'insurance_navigator'
                 }
-            )
+            }
+            
+            # Critical fix for Supabase transaction pooler (render.com deployment)
+            # Disable prepared statements when using transaction poolers like Supavisor
+            if os.getenv('ASYNCPG_DISABLE_PREPARED_STATEMENTS') == '1':
+                pool_kwargs['statement_cache_size'] = 0
+                logger.info("🔧 Prepared statements DISABLED for transaction pooler compatibility")
+            else:
+                logger.info("🔧 Prepared statements ENABLED for direct connections")
+            
+            # Create asyncpg connection pool
+            self.pool = await asyncpg.create_pool(db_url, **pool_kwargs)
+            
+            # Prepare SQLAlchemy engine kwargs
+            sqlalchemy_kwargs = {
+                'echo': False,  # Set to True for SQL debugging
+                'pool_size': 10,
+                'max_overflow': 20,
+                'pool_pre_ping': True,
+                'pool_recycle': 3600,  # Recycle connections after 1 hour
+            }
+            
+            # Apply prepared statement settings to SQLAlchemy as well
+            connect_args = {}
+            if os.getenv('ASYNCPG_DISABLE_PREPARED_STATEMENTS') == '1':
+                connect_args['statement_cache_size'] = 0
+                logger.info("🔧 SQLAlchemy prepared statements DISABLED for transaction pooler")
             
             # Create SQLAlchemy async engine
             # Convert postgresql:// to postgresql+asyncpg://
@@ -61,11 +87,8 @@ class DatabasePool:
                 
             self.engine = create_async_engine(
                 sqlalchemy_url,
-                echo=False,  # Set to True for SQL debugging
-                pool_size=10,
-                max_overflow=20,
-                pool_pre_ping=True,
-                pool_recycle=3600,  # Recycle connections after 1 hour
+                connect_args=connect_args,
+                **sqlalchemy_kwargs
             )
             
             # Create session maker
