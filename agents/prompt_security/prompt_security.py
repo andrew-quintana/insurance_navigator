@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field, field_validator, constr, ConfigDict
 from langsmith import Client, RunTree
 
 from agents.base_agent import BaseAgent
-from agents.prompt_security.models.security_models import SecurityCheck
+from agents.prompt_security.security_models import SecurityCheck
 from agents.common.exceptions import (
     PromptSecurityException,
     PromptInjectionDetected,
