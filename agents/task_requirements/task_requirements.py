@@ -34,7 +34,7 @@ from agents.common.exceptions import (
 from utils.config_manager import ConfigManager
 
 # Import models
-from agents.task_requirements.models.task_models import (
+from agents.task_requirements.task_models import (
     DocumentStatus,
     ReactStep,
     TaskProcessingResult

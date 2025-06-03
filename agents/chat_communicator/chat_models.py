@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 
 # Import existing models that this agent consumes
-from agents.patient_navigator.models.navigator_models import NavigatorOutput
-from agents.service_access_strategy.models.strategy_models import ServiceAccessStrategy
+from agents.patient_navigator.navigator_models import NavigatorOutput
+from agents.service_access_strategy.strategy_models import ServiceAccessStrategy
 
 
 class ChatInput(BaseModel):

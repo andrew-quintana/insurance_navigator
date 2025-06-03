@@ -44,7 +44,7 @@ from agents.common.exceptions import (
 from utils.config_manager import ConfigManager
 
 # Import models
-from agents.service_access_strategy.models.strategy_models import (
+from agents.service_access_strategy.strategy_models import (
     ServiceAccessStrategy, ServiceMatch, ActionStep
 )
 
