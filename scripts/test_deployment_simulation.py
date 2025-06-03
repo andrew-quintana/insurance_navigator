@@ -266,9 +266,27 @@ def test_database_connection():
                                     else:
                                         print("  ❌ Query results unexpected")
                                         return False
+                                        
+                                # CRITICAL TEST: Simulate render.com health check pattern that causes the error
+                                print("  🔍 Testing render.com-style health check pattern...")
+                                for i in range(5):
+                                    async with pool.get_connection() as conn:
+                                        # This exact pattern triggers prepared statement errors on render.com
+                                        await conn.fetchval("SELECT 1")
+                                        print(f"    ✓ Health check {i+1}/5 completed")
+                                
+                                print("  ✅ Health check simulation successful (no prepared statement conflicts)")
+                                
                             except Exception as e:
                                 error_msg = str(e).lower()
-                                if 'prepared statement' in error_msg or 'does not exist' in error_msg:
+                                if 'prepared statement' in error_msg and 'does not exist' in error_msg:
+                                    print(f"  🚨 CRITICAL: Render.com error reproduced! {e}")
+                                    print(f"      This is the exact error seen in production:")
+                                    print(f"      'prepared statement \"__asyncpg_stmt_1__\" does not exist'")
+                                    print(f"      HINT: pgbouncer transaction pooler detected")
+                                    print(f"      SOLUTION: Need DEALLOCATE ALL + statement_cache_size=0")
+                                    return False
+                                elif 'prepared statement' in error_msg or 'does not exist' in error_msg:
                                     print(f"  ❌ CRITICAL: Prepared statement error detected: {e}")
                                     print(f"      This indicates ASYNCPG_DISABLE_PREPARED_STATEMENTS is not working")
                                     return False
