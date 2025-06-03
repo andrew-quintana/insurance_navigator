@@ -4,7 +4,7 @@ Tests for the Database Guard Agent.
 
 import unittest
 from unittest.mock import MagicMock, patch
-from agents.database_guard.core.logic import DatabaseGuardAgent
+from agents.database_guard.logic import DatabaseGuardAgent
 from tests.agents.test_base import BaseAgentTest
 
 class TestDatabaseGuardAgent(BaseAgentTest):

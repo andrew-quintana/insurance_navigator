@@ -45,7 +45,7 @@ from agents.common.exceptions import (
 from utils.config_manager import ConfigManager
 
 # Import models
-from agents.patient_navigator.core.models.navigator_models import (
+from agents.patient_navigator.models.navigator_models import (
     NavigatorOutput, MetaIntent, ClinicalContext, 
     ServiceIntent, Metadata, BodyLocation
 )

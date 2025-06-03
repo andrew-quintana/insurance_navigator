@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from agents.prompt_security.core.prompt_security import PromptSecurityAgent
+from agents.prompt_security.prompt_security import PromptSecurityAgent
 from tests.agents.test_base import BaseAgentTest
 
 class TestPromptSecurityAgent(BaseAgentTest):

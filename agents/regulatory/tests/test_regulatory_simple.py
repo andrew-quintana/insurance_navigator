@@ -18,10 +18,10 @@ async def test_basic_imports():
     
     try:
         # Test search components
-        from agents.regulatory.core.search.domain_filters import TrustedDomainFilter
+        from agents.regulatory.search.domain_filters import TrustedDomainFilter
         print("  ✅ Domain filters imported")
         
-        from agents.regulatory.core.search.web_searcher import RegulatoryWebSearcher
+        from agents.regulatory.search.web_searcher import RegulatoryWebSearcher
         print("  ✅ Web searcher imported")
         
         # Test database config
@@ -38,7 +38,7 @@ async def test_domain_filtering():
     print("\n🔒 Testing domain filtering...")
     
     try:
-        from agents.regulatory.core.search.domain_filters import TrustedDomainFilter
+        from agents.regulatory.search.domain_filters import TrustedDomainFilter
         
         filter_obj = TrustedDomainFilter()
         
@@ -70,7 +70,7 @@ async def test_web_search():
     print("\n🌐 Testing web search setup...")
     
     try:
-        from agents.regulatory.core.search.web_searcher import RegulatoryWebSearcher
+        from agents.regulatory.search.web_searcher import RegulatoryWebSearcher
         
         searcher = RegulatoryWebSearcher()
         print("  ✅ Web searcher created successfully")

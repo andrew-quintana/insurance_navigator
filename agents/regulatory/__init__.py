@@ -1,3 +1,3 @@
-from .core.regulatory import RegulatoryAgent
+from .regulatory import RegulatoryAgent
 
 __all__ = ['RegulatoryAgent']

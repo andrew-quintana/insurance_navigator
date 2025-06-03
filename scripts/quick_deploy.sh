@@ -34,9 +34,56 @@ fi
 
 echo -e "${GREEN}✅ All required files found${NC}"
 
-# Generate JWT secret
-echo -e "${BLUE}🔐 Generating JWT secret...${NC}"
-python3 scripts/generate_jwt_secret.py
+# Check and validate .env file
+echo -e "${BLUE}🔐 Checking environment configuration...${NC}"
+if [ -f ".env" ]; then
+    echo -e "${GREEN}✅ .env file found${NC}"
+    
+    # Source .env file to check variables
+    source .env 2>/dev/null || true
+    
+    # Check for required environment variables
+    missing_vars=()
+    
+    if [ -z "$SUPABASE_URL" ]; then
+        missing_vars+=("SUPABASE_URL")
+    fi
+    
+    if [ -z "$SUPABASE_ANON_KEY" ]; then
+        missing_vars+=("SUPABASE_ANON_KEY")
+    fi
+    
+    if [ -z "$DATABASE_URL" ]; then
+        missing_vars+=("DATABASE_URL")
+    fi
+    
+    if [ -z "$JWT_SECRET_KEY" ]; then
+        missing_vars+=("JWT_SECRET_KEY")
+    fi
+    
+    if [ ${#missing_vars[@]} -eq 0 ]; then
+        echo -e "${GREEN}✅ All required environment variables found${NC}"
+        echo -e "${BLUE}🔑 Using JWT secret from .env file${NC}"
+        echo -e "${BLUE}🔗 Supabase URL: ${SUPABASE_URL}${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Missing environment variables: ${missing_vars[*]}${NC}"
+        echo -e "${BLUE}📝 Add these to your .env file:${NC}"
+        for var in "${missing_vars[@]}"; do
+            echo "$var=your-value-here"
+        done
+        echo
+    fi
+else
+    echo -e "${YELLOW}⚠️  .env file not found${NC}"
+    echo -e "${BLUE}📝 Create a .env file with your Supabase credentials:${NC}"
+    echo
+    echo "SUPABASE_URL=https://your-project-ref.supabase.co"
+    echo "SUPABASE_ANON_KEY=your-anon-key"
+    echo "SUPABASE_SERVICE_ROLE_KEY=your-service-role-key"
+    echo "DATABASE_URL=postgresql://postgres.your-project-ref:password@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
+    echo "JWT_SECRET_KEY=your-existing-supabase-jwt-secret"
+    echo
+fi
 
 # Test Docker build locally
 echo -e "${BLUE}🐳 Testing Docker build...${NC}"
@@ -47,19 +94,6 @@ else
     echo -e "${RED}❌ Docker build failed${NC}"
     echo "Check your Dockerfile and requirements.txt"
     exit 1
-fi
-
-# Check if .env exists
-if [ ! -f ".env" ]; then
-    echo -e "${YELLOW}⚠️  .env file not found${NC}"
-    echo -e "${BLUE}📝 Create a .env file with your Supabase credentials:${NC}"
-    echo
-    echo "SUPABASE_URL=https://your-project-ref.supabase.co"
-    echo "SUPABASE_ANON_KEY=your-anon-key"
-    echo "SUPABASE_SERVICE_ROLE_KEY=your-service-role-key"
-    echo "DATABASE_URL=postgresql://postgres.your-project-ref:password@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
-    echo "JWT_SECRET_KEY=your-jwt-secret-from-above"
-    echo
 fi
 
 # Git status check
@@ -77,11 +111,10 @@ fi
 echo
 echo -e "${GREEN}🎉 Pre-deployment checks complete!${NC}"
 echo
-echo -e "${BLUE}📋 Next steps:${NC}"
-echo "1. Create Supabase project: https://supabase.com"
-echo "2. Create Render account: https://render.com"
-echo "3. Push to GitHub if not already done"
-echo "4. Create new Blueprint in Render with your repo"
-echo "5. Configure environment variables in Render"
+echo -e "${BLUE}📋 Since you've already deployed the Blueprint on Render:${NC}"
+echo "1. ✅ Render Blueprint created"
+echo "2. 🔐 Add environment variables from your .env to Render dashboard"
+echo "3. 🚀 Wait for deployment to complete"
+echo "4. 🧪 Test your API endpoints"
 echo
-echo -e "${BLUE}📖 See deploy-guide.md for detailed instructions${NC}" 
+echo -e "${BLUE}📖 See DEPLOYMENT_SUMMARY.md for next steps${NC}" 
