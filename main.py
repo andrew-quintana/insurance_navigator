@@ -34,12 +34,10 @@ from db.services.db_pool import get_db_pool
 try:
     from graph.agent_orchestrator import AgentOrchestrator
     AGENT_ORCHESTRATOR_AVAILABLE = True
-except ImportError:
-    # Create a placeholder class for type annotations
-    class AgentOrchestrator:
-        pass
+except ImportError as e:
+    AgentOrchestrator = None  # Define as None when import fails
     AGENT_ORCHESTRATOR_AVAILABLE = False
-    logging.warning("Agent orchestrator not available, using fallback")
+    logging.warning(f"Agent orchestrator not available, using fallback: {e}")
 
 # Middleware import
 try:
@@ -152,7 +150,7 @@ class UploadResponse(BaseModel):
 user_service_instance: Optional[UserService] = None
 conversation_service_instance: Optional[ConversationService] = None
 storage_service_instance: Optional[StorageService] = None
-agent_orchestrator_instance: Optional[AgentOrchestrator] = None
+agent_orchestrator_instance: Optional[Any] = None  # Use Any to handle when AgentOrchestrator is None
 
 # Global embedding model (loaded once)
 embedding_model = None
