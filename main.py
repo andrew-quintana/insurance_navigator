@@ -1143,25 +1143,22 @@ async def debug_latest_workflow_readable(
 # Root endpoint
 @app.get("/")
 async def root():
-    """API root endpoint with service information."""
+    """Root endpoint with basic API information."""
     return {
         "service": "Insurance Navigator API",
         "version": "2.0.0",
-        "status": "running",
-        "features": [
-            "Persistent user authentication",
-            "Conversation history",
-            "Document storage",
-            "Agent orchestration",
-            "Role-based access control"
-        ],
-        "endpoints": {
-            "docs": "/docs",
-            "health": "/health",
-            "auth": ["/register", "/login", "/me"],
-            "chat": ["/chat", "/conversations"],
-            "storage": ["/upload-document", "/documents"]
-        }
+        "status": "active",
+        "documentation": "/docs",
+        "deployment_info": {
+            "prepared_statements_fix": "ACTIVE",
+            "commit_hash": "5eaaf6c",
+            "fix_description": "Supabase transaction pooler prepared statement fix deployed",
+            "environment_vars": {
+                "ASYNCPG_DISABLE_PREPARED_STATEMENTS": os.getenv('ASYNCPG_DISABLE_PREPARED_STATEMENTS'),
+                "DATABASE_URL_contains_pooler": 'pooler.supabase.com' in os.getenv('DATABASE_URL', ''),
+            }
+        },
+        "message": "Welcome to the Insurance Navigator API! Use /docs for interactive documentation."
     }
 
 @app.post("/upload-policy", response_model=Dict[str, Any])
