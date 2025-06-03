@@ -74,7 +74,8 @@ app.add_middleware(
         "http://localhost:3000",
         "http://localhost:3001",
         "https://insurance-navigator.vercel.app",  # Production frontend
-        "https://*.vercel.app"  # Vercel preview deployments
+        "https://*.vercel.app",  # Vercel preview deployments
+        "***REMOVED***",  # Render API (for docs/testing)
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
