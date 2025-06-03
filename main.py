@@ -352,11 +352,13 @@ async def health_check():
     }
     
     try:
-        # Check database connectivity
+        # Check database connectivity with transaction pooler compatibility
         pool = await get_db_pool()
-        async with pool.get_connection() as conn:
-            await conn.fetchval("SELECT 1")
-        health_status["services"]["database"] = "healthy"
+        # Use test_connection method which is designed for transaction poolers
+        connection_test = await pool.test_connection()
+        health_status["services"]["database"] = "healthy" if connection_test else "unhealthy"
+        if not connection_test:
+            health_status["status"] = "degraded"
     except Exception as e:
         health_status["services"]["database"] = f"unhealthy: {str(e)}"
         health_status["status"] = "degraded"

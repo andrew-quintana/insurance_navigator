@@ -12,7 +12,7 @@ import asyncpg
 from asyncpg import Pool, Connection
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import MetaData
+from sqlalchemy import MetaData, event
 
 from ..config import config
 
@@ -29,6 +29,7 @@ class DatabasePool:
         self.engine = None
         self.session_maker = None
         self._initialized = False
+        self._transaction_pooler_mode = False
     
     async def initialize(self) -> None:
         """Initialize database connection pool and SQLAlchemy engine."""
@@ -40,6 +41,12 @@ class DatabasePool:
             db_url = config.database.url
             if not db_url:
                 raise ValueError("DATABASE_URL not configured")
+            
+            # Check if using transaction pooler (Supavisor/pgbouncer)
+            self._transaction_pooler_mode = (
+                os.getenv('ASYNCPG_DISABLE_PREPARED_STATEMENTS') == '1' or
+                'pooler.supabase.com' in db_url
+            )
             
             # Prepare asyncpg connection pool kwargs
             pool_kwargs = {
@@ -54,7 +61,7 @@ class DatabasePool:
             
             # Critical fix for Supabase transaction pooler (render.com deployment)
             # Disable prepared statements when using transaction poolers like Supavisor
-            if os.getenv('ASYNCPG_DISABLE_PREPARED_STATEMENTS') == '1':
+            if self._transaction_pooler_mode:
                 pool_kwargs['statement_cache_size'] = 0
                 logger.info("🔧 Prepared statements DISABLED for transaction pooler compatibility")
             else:
@@ -74,7 +81,7 @@ class DatabasePool:
             
             # Apply prepared statement settings to SQLAlchemy as well
             connect_args = {}
-            if os.getenv('ASYNCPG_DISABLE_PREPARED_STATEMENTS') == '1':
+            if self._transaction_pooler_mode:
                 connect_args['statement_cache_size'] = 0
                 logger.info("🔧 SQLAlchemy prepared statements DISABLED for transaction pooler")
             
@@ -90,6 +97,22 @@ class DatabasePool:
                 connect_args=connect_args,
                 **sqlalchemy_kwargs
             )
+            
+            # CRITICAL FIX: Add event handler to clear prepared statements for transaction poolers
+            # This is the key solution from SQLAlchemy issue #6467
+            if self._transaction_pooler_mode:
+                @event.listens_for(self.engine.sync_engine, "begin")
+                def clear_prepared_statements_on_begin(conn):
+                    """Clear prepared statements at transaction start for pooler compatibility."""
+                    try:
+                        conn.exec_driver_sql("DEALLOCATE ALL")
+                        logger.debug("🔧 Cleared prepared statements for transaction pooler")
+                    except Exception as e:
+                        # Ignore errors if no statements exist to deallocate
+                        if "does not exist" not in str(e).lower():
+                            logger.warning(f"DEALLOCATE ALL failed: {e}")
+                
+                logger.info("🔧 SQLAlchemy event handler added: DEALLOCATE ALL on transaction begin")
             
             # Create session maker
             self.session_maker = async_sessionmaker(
@@ -128,9 +151,25 @@ class DatabasePool:
         
         async with self.pool.acquire() as connection:
             try:
+                # For transaction poolers, clear any existing prepared statements
+                if self._transaction_pooler_mode:
+                    try:
+                        await connection.execute("DEALLOCATE ALL")
+                        logger.debug("🔧 Cleared prepared statements for raw connection")
+                    except Exception:
+                        # Ignore errors if no statements exist
+                        pass
+                
                 yield connection
             except Exception as e:
-                logger.error(f"Database connection error: {str(e)}")
+                error_msg = str(e).lower()
+                if 'prepared statement' in error_msg and 'does not exist' in error_msg:
+                    logger.error(f"🚨 CRITICAL: Prepared statement error detected: {e}")
+                    logger.error(f"   This indicates transaction pooler compatibility issue")
+                    logger.error(f"   Environment: ASYNCPG_DISABLE_PREPARED_STATEMENTS={os.getenv('ASYNCPG_DISABLE_PREPARED_STATEMENTS')}")
+                    logger.error(f"   Transaction pooler mode: {self._transaction_pooler_mode}")
+                else:
+                    logger.error(f"Database connection error: {str(e)}")
                 raise
     
     @asynccontextmanager
@@ -181,13 +220,21 @@ class DatabasePool:
             return result
     
     async def test_connection(self) -> bool:
-        """Test database connectivity."""
+        """Test database connectivity with transaction pooler compatibility."""
         try:
             async with self.get_connection() as conn:
-                result = await conn.fetchval("SELECT 1")
-                return result == 1
+                # Use simple execute() instead of fetchval() to avoid prepared statements
+                # This is recommended for transaction poolers
+                await conn.execute("SELECT 1")
+                return True
         except Exception as e:
-            logger.error(f"Database connection test failed: {str(e)}")
+            error_msg = str(e).lower()
+            if 'prepared statement' in error_msg:
+                logger.error(f"🚨 CRITICAL: Prepared statement error in health check: {e}")
+                logger.error(f"   This will cause render.com deployment to fail")
+                logger.error(f"   Transaction pooler mode: {self._transaction_pooler_mode}")
+            else:
+                logger.error(f"Database connection test failed: {str(e)}")
             return False
 
 # Global database pool instance
