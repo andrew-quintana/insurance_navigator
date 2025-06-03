@@ -17,7 +17,6 @@ from agents.chat_communicator.chat_communicator import ChatCommunicatorAgent
 from agents.regulatory.regulatory import RegulatoryAgent
 
 # Import models
-from agents.prompt_security.models.security_models import SecurityCheck
 from agents.patient_navigator.navigator_models import (
     NavigatorOutput, MetaIntent, ClinicalContext, 
     ServiceIntent, Metadata, BodyLocation
@@ -57,6 +56,11 @@ from agents.common.exceptions import (
     ExternalServiceException
 )
 
+# Import key model classes
+from agents.prompt_security.security_models import SecurityCheck
+from agents.task_requirements.task_models import TaskProcessingResult
+from agents.service_access_strategy.strategy_models import ServiceAccessStrategy
+
 __all__ = [
     # Agent classes
     'BaseAgent', 
@@ -78,7 +82,6 @@ __all__ = [
     'ConfigurationException',
     'InvalidConfigurationError',
     'MissingConfigurationError',
-    'AgentException',
     'APIException',
     'ModelAPIException',
     'ExternalServiceException',

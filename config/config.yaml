@@ -9,7 +9,7 @@ agents:
       version: '0.1'
     prompt:
       version: 'v0_1'
-      path: agents/prompt_security/prompts/prompt_prompt_security_v0_1.md
+      path: agents/prompt_security/prompt_prompt_security_v0_1.md
       description: Security prompt for detecting and handling injection attacks
     examples:
       version: 'v0_1'

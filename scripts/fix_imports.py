@@ -6,6 +6,8 @@ Updates all __init__.py files to use the new flattened structure.
 
 import os
 from pathlib import Path
+import uuid
+from datetime import datetime
 
 def update_main_agents_init():
     """Update the main agents/__init__.py file"""
@@ -30,7 +32,7 @@ from agents.chat_communicator.chat_communicator import ChatCommunicatorAgent
 from agents.regulatory.regulatory import RegulatoryAgent
 
 # Import models
-from agents.prompt_security.models.security_models import SecurityCheck
+from agents.prompt_security.security_models import SecurityCheck
 from agents.patient_navigator.navigator_models import (
     NavigatorOutput, MetaIntent, ClinicalContext, 
     ServiceIntent, Metadata, BodyLocation
