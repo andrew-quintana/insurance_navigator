@@ -26,6 +26,7 @@ from datetime import datetime
 import requests
 import threading
 import signal
+import urllib.parse
 
 # Ensure the current directory is in Python path for imports
 current_dir = os.getcwd()
@@ -186,22 +187,124 @@ def validate_environment_variables():
     return True
 
 def test_database_connection():
-    """Test database connectivity like render.com environment."""
+    """Test database connectivity like render.com environment with enhanced logging."""
     print_step("Database Connection Test")
     
     try:
-        from db.database import get_db_session
-        print("  ✅ Database module imported successfully")
+        # Enhanced logging for database configuration
+        print("  🔍 Checking database configuration...")
         
-        # Try to create a session
-        session = next(get_db_session())
-        print("  ✅ Database session created successfully")
-        session.close()
-        print("  ✅ Database connection test passed")
-        return True
+        # Check environment variables
+        db_url = os.getenv('DATABASE_URL', '')
+        db_url_local = os.getenv('DATABASE_URL_LOCAL', '')
+        db_port_env = os.getenv('DB_PORT', '')
+        asyncpg_disable = os.getenv('ASYNCPG_DISABLE_PREPARED_STATEMENTS', '')
+        
+        print(f"  📊 DATABASE_URL configured: {bool(db_url)}")
+        print(f"  📊 DATABASE_URL_LOCAL configured: {bool(db_url_local)}")
+        print(f"  📊 DB_PORT env var: {db_port_env}")
+        print(f"  📊 ASYNCPG_DISABLE_PREPARED_STATEMENTS: {asyncpg_disable}")
+        
+        if db_url:
+            # Parse URL to check port
+            parsed = urllib.parse.urlparse(db_url)
+            print(f"  📊 DATABASE_URL host: {parsed.hostname}")
+            print(f"  📊 DATABASE_URL port: {parsed.port}")
+            print(f"  📊 DATABASE_URL scheme: {parsed.scheme}")
+            
+            # Check for transaction pooler indicator
+            if 'pooler.supabase.com' in parsed.hostname:
+                print(f"  ✅ Using Supabase transaction pooler (port {parsed.port})")
+                
+                # Critical test: Check prepared statement configuration for transaction pooler
+                if asyncpg_disable != '1':
+                    print(f"  ❌ CRITICAL: ASYNCPG_DISABLE_PREPARED_STATEMENTS should be '1' for transaction pooler!")
+                    print(f"      Current value: '{asyncpg_disable}'")
+                    print(f"      This will cause 'prepared statement does not exist' errors on render.com")
+                    return False
+                else:
+                    print(f"  ✅ Prepared statements correctly disabled for transaction pooler")
+            else:
+                print(f"  ℹ️  Using direct connection")
+                if asyncpg_disable == '1':
+                    print(f"  ⚠️  Prepared statements disabled for direct connection (may impact performance)")
+        
+        # Test import of actual database modules
+        try:
+            from db.services.db_pool import get_db_pool, DatabasePool
+            print("  ✅ Database pool module imported successfully")
+        except ImportError as e:
+            print(f"  ❌ Database pool import failed: {e}")
+            return False
+        
+        # Test connection using the actual database pool
+        try:
+            import asyncio
+            
+            async def test_db_connection():
+                try:
+                    pool = await get_db_pool()
+                    print("  ✅ Database pool initialized")
+                    
+                    # Test actual connection
+                    connection_test = await pool.test_connection()
+                    if connection_test:
+                        print("  ✅ Database connection test successful")
+                        
+                        # Additional test: Verify prepared statement configuration is applied
+                        if hasattr(pool, 'pool') and pool.pool:
+                            print("  ✅ AsyncPG pool created successfully")
+                            
+                            # Test a simple query that would fail if prepared statements aren't handled correctly
+                            try:
+                                async with pool.get_connection() as conn:
+                                    # This type of query pattern often triggers prepared statement issues
+                                    result1 = await conn.fetchval("SELECT 1 as test")
+                                    result2 = await conn.fetchval("SELECT 2 as test") 
+                                    if result1 == 1 and result2 == 2:
+                                        print("  ✅ Multiple queries successful (no prepared statement conflicts)")
+                                    else:
+                                        print("  ❌ Query results unexpected")
+                                        return False
+                            except Exception as e:
+                                error_msg = str(e).lower()
+                                if 'prepared statement' in error_msg or 'does not exist' in error_msg:
+                                    print(f"  ❌ CRITICAL: Prepared statement error detected: {e}")
+                                    print(f"      This indicates ASYNCPG_DISABLE_PREPARED_STATEMENTS is not working")
+                                    return False
+                                else:
+                                    print(f"  ⚠️  Query test failed (non-prepared-statement error): {e}")
+                        
+                        return True
+                    else:
+                        print("  ❌ Database connection test failed")
+                        return False
+                        
+                except Exception as e:
+                    print(f"  ❌ Database pool connection failed: {e}")
+                    print(f"      Error type: {type(e).__name__}")
+                    print(f"      Error details: {str(e)}")
+                    
+                    # Check if this is a prepared statement error
+                    error_msg = str(e).lower()
+                    if 'prepared statement' in error_msg or 'does not exist' in error_msg:
+                        print(f"  🚨 RENDER.COM DEPLOYMENT BLOCKER: Prepared statement error!")
+                        print(f"      Set ASYNCPG_DISABLE_PREPARED_STATEMENTS=1 for transaction pooler")
+                    
+                    return False
+            
+            # Run async test
+            result = asyncio.run(test_db_connection())
+            return result
+            
+        except Exception as e:
+            print(f"  ❌ Async database test failed: {e}")
+            print(f"      Error type: {type(e).__name__}")
+            return False
     
     except Exception as e:
         print(f"  ❌ Database connection failed: {e}")
+        print(f"      Error type: {type(e).__name__}")
         print("     This may cause deployment issues if DB is required at startup")
         return False
 

@@ -21,7 +21,7 @@ def get_db_config() -> Dict[str, Any]:
     """
     config = {
         'host': os.getenv('DB_HOST', 'localhost'),
-        'port': int(os.getenv('DB_PORT', 5432)),
+        'port': int(os.getenv('DB_PORT', 6543)),
         'user': os.getenv('DB_USER', 'postgres'),
         'password': os.getenv('DB_PASSWORD', ''),
         'database': os.getenv('DB_NAME', 'insurance_navigator')
