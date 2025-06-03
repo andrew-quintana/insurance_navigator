@@ -789,8 +789,8 @@ class AgentOrchestrator:
                 }
             elif self.chat_communicator_agent.use_mock:
                 # Use mock response for simple Q&A
-                from agents.chat_communicator.core.models.chat_models import ChatInput
-                from agents.patient_navigator.core.models.navigator_models import NavigatorOutput, MetaIntent, ClinicalContext, ServiceIntent, Metadata, BodyLocation
+                from agents.chat_communicator.models.chat_models import ChatInput
+                from agents.patient_navigator.models.navigator_models import NavigatorOutput, MetaIntent, ClinicalContext, ServiceIntent, Metadata, BodyLocation
                 
                 # Create a proper mock NavigatorOutput
                 mock_navigator = NavigatorOutput(

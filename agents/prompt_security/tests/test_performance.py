@@ -13,7 +13,7 @@ from pathlib import Path
 # Add the project root to the Python path
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
-from agents.prompt_security.core.prompt_security import PromptSecurityAgent
+from agents.prompt_security.prompt_security import PromptSecurityAgent
 from utils.performance_metrics import PerformanceEvaluator, TestCase, estimate_tokens
 from utils.agent_config_manager import get_config_manager
 

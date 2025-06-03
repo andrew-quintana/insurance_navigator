@@ -18,7 +18,7 @@ async def test_minimal_agent_creation():
     print("🔧 Testing minimal agent creation...")
     
     try:
-        from agents.regulatory.core.regulatory_minimal import MinimalRegulatoryAgent
+        from agents.regulatory.regulatory_minimal import MinimalRegulatoryAgent
         
         # Test with minimal config
         agent = MinimalRegulatoryAgent()
@@ -42,7 +42,7 @@ async def test_url_filtering():
     print("\n🔒 Testing URL filtering...")
     
     try:
-        from agents.regulatory.core.regulatory_minimal import MinimalRegulatoryAgent
+        from agents.regulatory.regulatory_minimal import MinimalRegulatoryAgent
         
         agent = MinimalRegulatoryAgent()
         
@@ -79,7 +79,7 @@ async def test_search_query_creation():
     print("\n🔍 Testing search query creation...")
     
     try:
-        from agents.regulatory.core.regulatory_minimal import MinimalRegulatoryAgent
+        from agents.regulatory.regulatory_minimal import MinimalRegulatoryAgent
         
         agent = MinimalRegulatoryAgent()
         
@@ -104,7 +104,7 @@ async def test_document_type_estimation():
     print("\n📄 Testing document type estimation...")
     
     try:
-        from agents.regulatory.core.regulatory_minimal import MinimalRegulatoryAgent
+        from agents.regulatory.regulatory_minimal import MinimalRegulatoryAgent
         
         agent = MinimalRegulatoryAgent()
         
@@ -135,7 +135,7 @@ async def test_live_search(limited=True):
         return True
     
     try:
-        from agents.regulatory.core.regulatory_minimal import MinimalRegulatoryAgent
+        from agents.regulatory.regulatory_minimal import MinimalRegulatoryAgent
         
         agent = MinimalRegulatoryAgent()
         
@@ -167,7 +167,7 @@ async def test_content_extraction():
     print("\n📋 Testing content extraction...")
     
     try:
-        from agents.regulatory.core.regulatory_minimal import MinimalRegulatoryAgent
+        from agents.regulatory.regulatory_minimal import MinimalRegulatoryAgent
         
         agent = MinimalRegulatoryAgent()
         
@@ -206,7 +206,7 @@ async def test_strategy_analysis():
     print("\n🎯 Testing strategy analysis...")
     
     try:
-        from agents.regulatory.core.regulatory_minimal import MinimalRegulatoryAgent
+        from agents.regulatory.regulatory_minimal import MinimalRegulatoryAgent
         
         # Mock the database operations for testing
         class TestAgent(MinimalRegulatoryAgent):

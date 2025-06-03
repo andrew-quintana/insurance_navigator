@@ -1,3 +1,3 @@
-from .core.patient_navigator import PatientNavigatorAgent
+from .patient_navigator import PatientNavigatorAgent
 
 __all__ = ['PatientNavigatorAgent']

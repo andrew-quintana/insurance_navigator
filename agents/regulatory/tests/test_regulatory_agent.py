@@ -13,12 +13,12 @@ from typing import Dict, Any
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../..'))
 
-from agents.regulatory.core.regulatory import (
+from agents.regulatory.regulatory import (
     RegulatoryAgent,
     create_regulatory_agent,
     analyze_regulatory_strategy
 )
-from agents.regulatory.core.search.orchestrator import SearchRequest, SearchResponse
+from agents.regulatory.search.orchestrator import SearchRequest, SearchResponse
 
 
 class TestRegulatoryAgent:

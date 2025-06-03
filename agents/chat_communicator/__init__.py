@@ -1,3 +1,3 @@
-from .core.chat_communicator import ChatCommunicatorAgent
+from .chat_communicator import ChatCommunicatorAgent
 
-__all__ = ['ChatCommunicatorAgent'] 
+__all__ = ['ChatCommunicatorAgent']

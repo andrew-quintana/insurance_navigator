@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 from typing import Dict, Any
 
 from agents.prompt_security import PromptSecurityAgent
-from agents.prompt_security.core.prompt_security import SecurityCheck
+from agents.prompt_security.prompt_security import SecurityCheck
 
 class TestPromptSecurityAgent:
     @pytest.fixture

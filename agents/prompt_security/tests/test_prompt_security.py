@@ -13,11 +13,11 @@ import logging
 from unittest.mock import patch, MagicMock
 import json
 
-from agents.prompt_security.core.prompt_security import PromptSecurityAgent
+from agents.prompt_security.prompt_security import PromptSecurityAgent
 from agents.base_agent import BaseAgent
 from utils.test_utils import BaseAgentTest, MockLogger, MockLanguageModel
 from utils.error_handling import ValidationError, SecurityError, ProcessingError
-from agents.prompt_security.core.models.security_models import SecurityCheck
+from agents.prompt_security.models.security_models import SecurityCheck
 from agents.common.exceptions import (
     PromptSecurityException,
     PromptInjectionDetected,

@@ -18,7 +18,7 @@ from typing import List, Dict, Any, Tuple
 # Add the project root to the Python path
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
-from agents.prompt_security.core.prompt_security import PromptSecurityAgent
+from agents.prompt_security.prompt_security import PromptSecurityAgent
 
 def load_test_cases() -> List[Dict[str, Any]]:
     """Load test cases from the test examples file."""

@@ -16,7 +16,7 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..
 sys.path.insert(0, project_root)
 
 from agents.patient_navigator import PatientNavigatorAgent, NavigatorOutput
-from agents.prompt_security.core.prompt_security import PromptSecurityAgent
+from agents.prompt_security.prompt_security import PromptSecurityAgent
 from langchain_core.messages import AIMessage
 
 class TestPatientNavigatorAgent(unittest.TestCase):

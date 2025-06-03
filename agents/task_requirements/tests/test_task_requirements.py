@@ -11,8 +11,8 @@ import json
 import re
 from datetime import datetime
 
-from agents.task_requirements.core.task_requirements import TaskRequirementsAgent
-from agents.task_requirements.core.models.task_models import (
+from agents.task_requirements.task_requirements import TaskRequirementsAgent
+from agents.task_requirements.models.task_models import (
     DocumentStatus, ReactStep, TaskProcessingResult
 )
 from agents.common.exceptions import (

@@ -4,7 +4,7 @@ Tests for the Policy Compliance Agent.
 
 import unittest
 from unittest.mock import MagicMock, patch
-from agents.policy_compliance.core.logic import PolicyComplianceAgent
+from agents.policy_compliance.logic import PolicyComplianceAgent
 from tests.agents.test_base import BaseAgentTest
 
 class TestPolicyComplianceAgent(BaseAgentTest):

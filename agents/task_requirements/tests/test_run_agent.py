@@ -17,7 +17,7 @@ from unittest.mock import MagicMock
 # Add the project root to the path so we can import the agent
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from agents.task_requirements.core.task_requirements import TaskRequirementsReactAgent
+from agents.task_requirements.task_requirements import TaskRequirementsReactAgent
 
 class MockPatientNavigator:
     """Mock Patient Navigator Agent for testing."""

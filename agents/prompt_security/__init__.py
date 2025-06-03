@@ -1,3 +1,3 @@
-from .core.prompt_security import PromptSecurityAgent
+from .prompt_security import PromptSecurityAgent
 
 __all__ = ['PromptSecurityAgent']
