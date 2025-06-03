@@ -35,6 +35,9 @@ try:
     from graph.agent_orchestrator import AgentOrchestrator
     AGENT_ORCHESTRATOR_AVAILABLE = True
 except ImportError:
+    # Create a placeholder class for type annotations
+    class AgentOrchestrator:
+        pass
     AGENT_ORCHESTRATOR_AVAILABLE = False
     logging.warning("Agent orchestrator not available, using fallback")
 
