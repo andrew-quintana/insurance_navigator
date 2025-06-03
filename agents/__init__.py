@@ -18,14 +18,14 @@ from agents.regulatory.regulatory import RegulatoryAgent
 
 # Import models
 from agents.prompt_security.models.security_models import SecurityCheck
-from agents.patient_navigator.models.navigator_models import (
+from agents.patient_navigator.navigator_models import (
     NavigatorOutput, MetaIntent, ClinicalContext, 
     ServiceIntent, Metadata, BodyLocation
 )
-from agents.task_requirements.models.task_models import (
+from agents.task_requirements.task_models import (
     DocumentStatus, ReactStep, TaskProcessingResult
 )
-from agents.service_access_strategy.models.strategy_models import (
+from agents.service_access_strategy.strategy_models import (
     ServiceAccessStrategy, ServiceMatch, ActionStep
 )
 

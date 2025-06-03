@@ -12,13 +12,13 @@ import json
 from datetime import datetime
 
 from agents.chat_communicator.chat_communicator import ChatCommunicatorAgent, ChatCommunicatorException
-from agents.chat_communicator.models.chat_models import (
+from agents.chat_communicator.chat_models import (
     ChatInput, ChatResponse, ConversationContext
 )
-from agents.patient_navigator.models.navigator_models import (
+from agents.patient_navigator.navigator_models import (
     NavigatorOutput, MetaIntent, ClinicalContext, ServiceIntent, Metadata, BodyLocation
 )
-from agents.service_access_strategy.models.strategy_models import (
+from agents.service_access_strategy.strategy_models import (
     ServiceAccessStrategy, ServiceMatch, ActionStep
 )
 

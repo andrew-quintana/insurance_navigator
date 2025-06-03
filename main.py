@@ -30,14 +30,24 @@ from db.services.conversation_service import get_conversation_service, Conversat
 from db.services.storage_service import get_storage_service, StorageService
 from db.services.db_pool import get_db_pool
 
+# Set up logging first
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 # Agent orchestration import
 try:
     from graph.agent_orchestrator import AgentOrchestrator
     AGENT_ORCHESTRATOR_AVAILABLE = True
+    logger.info("✅ AgentOrchestrator imported successfully")
 except ImportError as e:
-    AgentOrchestrator = None  # Define as None when import fails
+    logger.error(f"❌ CRITICAL: AgentOrchestrator import failed: {e}")
+    logger.error("This is a critical error that must be fixed. Agent orchestration is required.")
+    # Don't define AgentOrchestrator as None - let it fail properly
     AGENT_ORCHESTRATOR_AVAILABLE = False
-    logging.warning(f"Agent orchestrator not available, using fallback: {e}")
+    raise ImportError(f"AgentOrchestrator import failed: {e}. This is a critical error.")
 
 # Middleware import
 try:
@@ -51,13 +61,6 @@ except ImportError:
 from sentence_transformers import SentenceTransformer
 import PyPDF2
 import io
-
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -150,7 +153,7 @@ class UploadResponse(BaseModel):
 user_service_instance: Optional[UserService] = None
 conversation_service_instance: Optional[ConversationService] = None
 storage_service_instance: Optional[StorageService] = None
-agent_orchestrator_instance: Optional[Any] = None  # Use Any to handle when AgentOrchestrator is None
+agent_orchestrator_instance: Optional[AgentOrchestrator] = None
 
 # Global embedding model (loaded once)
 embedding_model = None

@@ -42,11 +42,11 @@ from utils.config_manager import ConfigManager
 from db.services.conversation_service import get_conversation_service
 
 # Import models
-from agents.chat_communicator.models.chat_models import (
+from agents.chat_communicator.chat_models import (
     ChatInput, ChatResponse, ConversationContext, CommunicationPreferences
 )
-from agents.patient_navigator.models.navigator_models import NavigatorOutput
-from agents.service_access_strategy.models.strategy_models import ServiceAccessStrategy
+from agents.patient_navigator.navigator_models import NavigatorOutput
+from agents.service_access_strategy.strategy_models import ServiceAccessStrategy
 
 # Setup logger
 logger = logging.getLogger(__name__)

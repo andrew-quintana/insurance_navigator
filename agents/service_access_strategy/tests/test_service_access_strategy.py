@@ -11,7 +11,7 @@ import json
 from datetime import datetime
 
 from agents.service_access_strategy.service_access_strategy import ServiceAccessStrategyAgent
-from agents.service_access_strategy.models.strategy_models import (
+from agents.service_access_strategy.strategy_models import (
     ServiceAccessStrategy, ServiceMatch, ActionStep
 )
 from agents.common.exceptions import (
