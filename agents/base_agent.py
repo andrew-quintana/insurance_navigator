@@ -129,12 +129,8 @@ class BaseAgent:
         
         # Set up logging
         if logger is None:
-            # Set default log directory based on agent name
-            module_path = os.path.dirname(os.path.dirname(__file__))
-            agent_dir = os.path.join(module_path, self.name.lower().replace("agent", ""))
-            log_dir = os.path.join(agent_dir, "logs")
-            os.makedirs(log_dir, exist_ok=True)
-            self.logger = self._setup_logger(self.name, log_dir)
+            # Use centralized logs directory instead of agent-specific directories
+            self.logger = self._setup_logger(self.name)
         else:
             self.logger = logger
         
@@ -172,18 +168,17 @@ class BaseAgent:
         """
         pass
     
-    def _setup_logger(self, name: str, log_dir: str) -> logging.Logger:
+    def _setup_logger(self, name: str) -> logging.Logger:
         """Set up a logger for the agent."""
-        # Create log directory if it doesn't exist
-        log_dir = os.path.join("logs")
-        os.makedirs(log_dir, exist_ok=True)
+        # Ensure centralized logs directory exists
+        os.makedirs("logs", exist_ok=True)
         
         # Create logger
         logger = logging.getLogger(f"agent.{name}")
         
         # Add file handler if none exists
         if not logger.handlers:
-            log_file = os.path.join(log_dir, f"{name}.log")
+            log_file = os.path.join("logs", f"{name}.log")
             handler = logging.FileHandler(log_file)
             formatter = logging.Formatter(
                 '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -322,10 +317,8 @@ class BaseAgent:
         """
         # Determine the output path
         if file_path is None:
-            # Create the metrics directory if it doesn't exist
-            module_path = os.path.dirname(os.path.dirname(__file__))
-            agent_dir = os.path.join(module_path, self.name.lower().replace("agent", ""))
-            metrics_dir = os.path.join(agent_dir, "metrics")
+            # Use centralized metrics directory structure
+            metrics_dir = os.path.join("metrics", self.name.lower().replace("agent", ""))
             os.makedirs(metrics_dir, exist_ok=True)
             
             # Create a timestamp-based filename
