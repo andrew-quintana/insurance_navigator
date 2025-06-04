@@ -75,6 +75,7 @@ export default function ChatPage() {
           const userData: UserInfo = await response.json()
           setUserInfo(userData)
           setIsAuthenticated(true)
+          setIsCheckingAuth(false)
           setAuthError("")
           
           // Add initial bot message only if no messages exist
@@ -92,12 +93,14 @@ export default function ChatPage() {
           // Token is invalid, redirect to login
           localStorage.removeItem("token")
           localStorage.removeItem("tokenType")
+          setIsCheckingAuth(false)
           router.push("/login")
         }
       } catch (error) {
         console.error("Auth check failed:", error)
         localStorage.removeItem("token")
         localStorage.removeItem("tokenType")
+        setIsCheckingAuth(false)
         router.push("/login")
       }
     }
