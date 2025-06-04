@@ -5,9 +5,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { SendHorizontal, ArrowLeft, Upload, User, Bot, LogOut, X, FileText, CheckCircle, AlertCircle, Menu } from "lucide-react"
+import { SendHorizontal, ArrowLeft, Upload, User, Bot, LogOut, X, FileText, CheckCircle, AlertCircle } from "lucide-react"
 import DocumentUploadModal from "@/components/DocumentUploadModal"
-import DocumentManager from "@/components/DocumentManager"
 
 type Message = {
   id: number
@@ -60,7 +59,6 @@ export default function ChatPage() {
   const lastActivityTime = useRef<number>(Date.now())
   const isCheckingAuthRef = useRef(false)
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   // Check authentication on component mount
   useEffect(() => {
@@ -374,13 +372,6 @@ export default function ChatPage() {
           </Link>
           <h1 className="text-xl font-semibold text-teal-800">Medicare Navigator Chat</h1>
           <div className="flex items-center space-x-4">
-            <Button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              variant="outline"
-              className="text-teal-700 border-teal-300 hover:bg-teal-50 lg:hidden"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
             <div className="flex items-center text-teal-700">
               <User className="h-5 w-5 mr-2" />
               <span className="text-sm">{userInfo?.name}</span>
@@ -398,76 +389,8 @@ export default function ChatPage() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex">
-        {/* Sidebar */}
-        <div className={`
-          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-          fixed lg:relative z-40 lg:z-auto
-          w-80 h-full bg-white shadow-lg lg:shadow-none
-          transition-transform duration-300 ease-in-out
-          flex flex-col
-        `}>
-          {/* Sidebar Header */}
-          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-teal-800">Document Tools</h2>
-            <Button
-              onClick={() => setIsSidebarOpen(false)}
-              variant="outline"
-              size="sm"
-              className="lg:hidden"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Sidebar Content */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Upload Button */}
-            <Button
-              onClick={handleFileUpload}
-              className="w-full bg-teal-700 hover:bg-teal-800 text-white"
-              disabled={isLoading}
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Upload New Document
-            </Button>
-
-            {/* Document Manager */}
-            <DocumentManager
-              className="border-0 shadow-none bg-transparent p-0"
-              onSearchResult={(results) => {
-                console.log('Search results:', results)
-                // Optionally close sidebar on mobile after search
-                if (window.innerWidth < 1024) {
-                  setIsSidebarOpen(false)
-                }
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Sidebar Overlay (Mobile) */}
-        {isSidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-        )}
-
         {/* Chat Container */}
         <div className="flex-1 container mx-auto max-w-4xl p-4 flex flex-col">
-          {/* Desktop Sidebar Toggle */}
-          <div className="hidden lg:flex justify-end mb-4">
-            <Button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              variant="outline"
-              size="sm"
-              className="text-teal-700 border-teal-300 hover:bg-teal-50"
-            >
-              <Menu className="h-4 w-4 mr-2" />
-              {isSidebarOpen ? 'Hide' : 'Show'} Document Tools
-            </Button>
-          </div>
-
           <Card className="flex-1 flex flex-col overflow-hidden bg-white rounded-xl shadow-md mb-4">
             {/* Messages Area */}
             <div className="flex-1 p-4 overflow-y-auto">
