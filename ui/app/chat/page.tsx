@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-import ReactMarkdown from "react-markdown"
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
