@@ -15,7 +15,7 @@ COPY requirements.txt .
 
 # Install Python dependencies with cache enabled for faster builds
 # Use pip cache mount for better performance on Render
-# Cache-buster: 2025-06-04-v3 (database connection resilience and health check caching)
+# Cache-buster: 2025-06-04-v4 (JWT authentication fix for /me endpoint 401 error)
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --upgrade pip && \
     pip install -r requirements.txt
