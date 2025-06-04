@@ -318,7 +318,8 @@ async def get_current_user(request: Request) -> UserResponse:
         if not user_service_instance:
             user_service_instance = await get_user_service()
         
-        user_data = user_service_instance.verify_token(token)
+        # Use validate_session which returns full user data from database
+        user_data = await user_service_instance.validate_session(token)
         if not user_data:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -377,8 +378,12 @@ async def health_check():
         if db_pool:
             # Use a more resilient connection test
             try:
-                async with asyncio.wait_for(db_pool.get_connection(), timeout=5.0) as conn:
-                    await asyncio.wait_for(conn.execute("SELECT 1"), timeout=3.0)
+                # Fix: Use timeout for the entire operation
+                async def test_db_connection():
+                    async with db_pool.get_connection() as conn:
+                        await conn.execute("SELECT 1")
+                
+                await asyncio.wait_for(test_db_connection(), timeout=5.0)
                 db_status = "connected"
                 logger.debug("✅ Health check: Database connection successful")
             except asyncio.TimeoutError:
