@@ -19,7 +19,7 @@ export default function ForgotPasswordPage() {
 
     // Get API URL from environment variables (Vercel best practice)
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
-    const forgotPasswordUrl = `${apiBaseUrl}/api/v1/auth/forgot-password`
+    const forgotPasswordUrl = `${apiBaseUrl}/forgot-password`
     
     console.log("🌐 API Base URL:", apiBaseUrl)
     console.log("🔗 Forgot Password URL:", forgotPasswordUrl)

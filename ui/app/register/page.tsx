@@ -112,7 +112,7 @@ export default function RegisterPage() {
 
     // Get API URL from environment variables (Vercel best practice)
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
-    const registerUrl = `${apiBaseUrl}/api/v1/auth/register`
+    const registerUrl = `${apiBaseUrl}/register`
     
     console.log("🌐 API Base URL:", apiBaseUrl)
     console.log("🔗 Register URL:", registerUrl)
