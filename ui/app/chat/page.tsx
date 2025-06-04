@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { SendHorizontal, ArrowLeft, Upload, User, Bot, LogOut, X, FileText, CheckCircle, AlertCircle } from "lucide-react"
-import { api } from "@/lib/api-client"
+import { api } from "../../lib/api-client"
 
 type Message = {
   id: number
@@ -66,10 +66,11 @@ export default function ChatPage() {
           
           // Add initial bot message only if no messages exist
           if (messages.length === 0) {
+            const userName = (response.data as UserInfo).name || 'there'
             const initialMessage: Message = {
               id: 1,
               sender: "bot",
-              text: `Hello ${response.data.name}! I'm your Medicare Navigator. I can help you with Medicare questions, find healthcare providers, understand your benefits, and more. What would you like to know today?`,
+              text: `Hello ${userName}! I'm your Medicare Navigator. I can help you with Medicare questions, find healthcare providers, understand your benefits, and more. What would you like to know today?`,
             }
             setMessages([initialMessage])
           }
@@ -141,10 +142,9 @@ export default function ChatPage() {
     if (!messageText.trim()) return
 
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: messages.length + 1,
       text: messageText,
       sender: "user",
-      timestamp: new Date(),
     }
 
     setMessages(prev => [...prev, userMessage])
@@ -158,10 +158,9 @@ export default function ChatPage() {
 
       if (response.success && response.data) {
         const botMessage: Message = {
-          id: (Date.now() + 1).toString(),
+          id: messages.length + 2,
           text: response.data.response,
           sender: "bot",
-          timestamp: new Date(),
         }
         setMessages(prev => [...prev, botMessage])
       } else {
@@ -170,10 +169,9 @@ export default function ChatPage() {
     } catch (error) {
       console.error("Chat error:", error)
       const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: messages.length + 2,
         text: "I'm sorry, I'm having trouble connecting right now. Please try again in a moment.",
         sender: "bot",
-        timestamp: new Date(),
       }
       setMessages(prev => [...prev, errorMessage])
     } finally {
@@ -204,60 +202,9 @@ export default function ChatPage() {
     updateActivity()
   }
 
-  const handleFileUpload = async (file: File) => {
-    if (!file) return
-
-    setUploadProgress(0)
-    setUploadError("")
-
-    const uploadedFile: UploadedFile = {
-      id: Date.now().toString(),
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      progress: 0,
-    }
-
-    setUploadedFiles(prev => [...prev, uploadedFile])
-
-    try {
-      const formData = new FormData()
-      formData.append("file", file)
-
-      const response = await api.post<{ file_id: string; analysis?: string }>('/chat/upload-policy', formData, {
-        headers: {
-          // Remove Content-Type to let the browser set it for FormData
-        }
-      })
-
-      if (response.success && response.data) {
-        setUploadedFiles(prev =>
-          prev.map(f =>
-            f.id === uploadedFile.id
-              ? { ...f, progress: 100, fileId: response.data!.file_id }
-              : f
-          )
-        )
-
-        if (response.data.analysis) {
-          const analysisMessage: Message = {
-            id: Date.now().toString(),
-            text: `I've analyzed your uploaded document "${file.name}". Here's what I found:\n\n${response.data.analysis}`,
-            sender: "bot",
-            timestamp: new Date(),
-          }
-          setMessages(prev => [...prev, analysisMessage])
-        }
-      } else {
-        throw new Error(response.error?.message || "Upload failed")
-      }
-    } catch (error) {
-      console.error("Upload error:", error)
-      setUploadError(`Failed to upload ${file.name}. Please try again.`)
-      setUploadedFiles(prev => prev.filter(f => f.id !== uploadedFile.id))
-    } finally {
-      setUploadProgress(0)
-    }
+  const handleFileUpload = async () => {
+    // Simple file upload placeholder for now
+    console.log("File upload feature coming soon!")
   }
 
   // Simple markdown renderer that handles line breaks
