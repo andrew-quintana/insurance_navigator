@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ArrowLeft, Mail, Lock, Eye, EyeOff } from "lucide-react"
-import { api } from "@/lib/api-client"
+import { api } from "../../lib/api-client"
 
 interface LoginResponse {
   access_token: string

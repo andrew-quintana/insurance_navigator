@@ -23,7 +23,7 @@ import {
   Users,
   Heart,
 } from "lucide-react"
-import { api } from "@/lib/api-client"
+import { api } from "../lib/api-client"
 
 interface UserInfo {
   id: string
