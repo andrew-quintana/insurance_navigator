@@ -16,7 +16,7 @@ interface ValidationError {
   type: string
   loc: string[]
   msg: string
-  input?: any
+  input?: unknown
 }
 
 interface ErrorResponse {
