@@ -5,54 +5,54 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { ArrowLeft, PlayCircle, ChevronRight, CheckCircle } from "lucide-react"
+import { ArrowLeft, PlayCircle, ChevronRight, CheckCircle, User, ArrowRight } from "lucide-react"
+import { api } from "@/lib/api-client"
+
+interface UserInfo {
+  id: string
+  email: string
+  name: string
+}
 
 export default function WelcomePage() {
   const router = useRouter()
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [user, setUser] = useState<UserInfo | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Properly verify authentication with backend
-    const verifyAuthentication = async () => {
+    const checkAuth = async () => {
       const token = localStorage.getItem("token")
-      const tokenType = localStorage.getItem("tokenType")
-      
       if (!token) {
-        setIsAuthenticated(false)
-        setIsLoading(false)
+        router.push("/login")
         return
       }
 
       try {
-        const response = await fetch("http://localhost:8000/me", {
-          headers: {
-            "Authorization": `${tokenType || "Bearer"} ${token}`,
-          },
-        })
-
-        if (response.ok) {
-          setIsAuthenticated(true)
+        const response = await api.get<UserInfo>('/auth/me')
+        
+        if (response.success && response.data) {
+          setUser(response.data)
         } else {
-          // Invalid token - clear it
+          // Token is invalid, redirect to login
           localStorage.removeItem("token")
           localStorage.removeItem("tokenType")
-          setIsAuthenticated(false)
+          router.push("/login")
         }
-      } catch (err) {
-        console.error("Auth verification error:", err)
-        // On network error, assume not authenticated to be safe
-        setIsAuthenticated(false)
+      } catch (error) {
+        console.error("Auth check failed:", error)
+        localStorage.removeItem("token")
+        localStorage.removeItem("tokenType")
+        router.push("/login")
       } finally {
         setIsLoading(false)
       }
     }
 
-    verifyAuthentication()
-  }, [])
+    checkAuth()
+  }, [router])
 
   const handleNext = () => {
-    if (isAuthenticated) {
+    if (user) {
       router.push("/chat")
     } else {
       router.push("/login")
@@ -198,7 +198,7 @@ export default function WelcomePage() {
           >
             {isLoading 
               ? "Loading..." 
-              : isAuthenticated 
+              : user 
                 ? "Start Chat" 
                 : "Sign In"
             }
@@ -208,7 +208,7 @@ export default function WelcomePage() {
           <p className="mt-4 text-gray-600">
             {isLoading
               ? "Verifying your session..."
-              : isAuthenticated 
+              : user 
                 ? "You're all set! Click to start your Medicare conversation."
                 : "Please sign in to begin your Medicare journey."
             }
