@@ -189,10 +189,10 @@ export default function ChatPage() {
       })
 
       if (response.ok) {
-        const data: { response: string } = await response.json()
+        const data: { text: string } = await response.json()
         const botMessage: Message = {
           id: messages.length + 2,
-          text: data.response,
+          text: data.text || "I received your message but couldn't generate a response.",
           sender: "bot",
         }
         setMessages(prev => [...prev, botMessage])
@@ -242,6 +242,11 @@ export default function ChatPage() {
 
   // Simple markdown renderer that handles line breaks
   const renderMessage = (text: string) => {
+    // Add null safety
+    if (!text || typeof text !== 'string') {
+      return <div>Message content unavailable</div>
+    }
+    
     // Convert **bold** to <strong>
     const withBold = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     
