@@ -79,6 +79,7 @@ app.add_middleware(
         "http://localhost:3001",
         "https://insurance-navigator.vercel.app",  # Production frontend
         "https://insurance-navigator-hrf0s88oh-andrew-quintanas-projects.vercel.app",  # Preview deployment
+        "https://insurance-navigator-q2ukn6eih-andrew-quintanas-projects.vercel.app",  # New development deployment
         "https://*.vercel.app",  # Vercel preview deployments pattern
         "https://insurance-navigator-api.onrender.com",  # Render API (for docs/testing)
         "*",  # Allow all origins for debugging - remove in production
