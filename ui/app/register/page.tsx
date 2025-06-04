@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, Check } from "lucide-react"
-import { api } from "../../lib/api-client"
 
 interface RegisterResponse {
   access_token: string
@@ -111,23 +110,43 @@ export default function RegisterPage() {
     console.log("📝 Registration attempt started")
     console.log("📧 Email:", formData.email)
 
+    // Get API URL from environment variables (Vercel best practice)
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+    const registerUrl = `${apiBaseUrl}/api/v1/auth/register`
+    
+    console.log("🌐 API Base URL:", apiBaseUrl)
+    console.log("🔗 Register URL:", registerUrl)
+
     try {
       console.log("🚀 Sending registration request...")
-      const response = await api.post<RegisterResponse>('/auth/register', formData)
+      const response = await fetch(registerUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
 
-      if (response.success && response.data) {
+      if (response.ok) {
+        const data: RegisterResponse = await response.json()
         console.log("✅ Registration successful")
         
         // Store the JWT token securely
-        localStorage.setItem("token", response.data.access_token)
-        localStorage.setItem("tokenType", response.data.token_type)
+        localStorage.setItem("token", data.access_token)
+        localStorage.setItem("tokenType", data.token_type)
         
         console.log("🚀 Redirecting to welcome...")
         // Redirect to welcome page for first-time users
         router.push("/welcome")
-      } else if (response.error) {
-        console.log("❌ Registration failed:", response.error)
-        setError(response.error.message || "Registration failed. Please try again.")
+      } else {
+        console.log("❌ Registration failed with status:", response.status)
+        try {
+          const errorData: ErrorResponse = await response.json()
+          setError(formatApiError(errorData))
+        } catch (parseError) {
+          setError(`Registration failed with status ${response.status}. Please try again.`)
+        }
       }
     } catch (err) {
       console.error("🔥 Network/Connection error:", err)

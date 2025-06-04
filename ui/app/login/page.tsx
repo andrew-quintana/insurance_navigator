@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ArrowLeft, Mail, Lock, Eye, EyeOff } from "lucide-react"
-import { api } from "../../lib/api-client"
 
 interface LoginResponse {
   access_token: string
@@ -52,23 +51,43 @@ export default function LoginPage() {
     console.log("🔐 Login attempt started")
     console.log("📧 Email:", formData.email)
 
+    // Get API URL from environment variables (Vercel best practice)
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+    const loginUrl = `${apiBaseUrl}/api/v1/auth/login`
+    
+    console.log("🌐 API Base URL:", apiBaseUrl)
+    console.log("🔗 Login URL:", loginUrl)
+
     try {
       console.log("🚀 Sending login request...")
-      const response = await api.post<LoginResponse>('/auth/login', formData)
+      const response = await fetch(loginUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
 
-      if (response.success && response.data) {
+      if (response.ok) {
+        const data: LoginResponse = await response.json()
         console.log("✅ Login successful, token received")
         
         // Store the JWT token securely
-        localStorage.setItem("token", response.data.access_token)
-        localStorage.setItem("tokenType", response.data.token_type)
+        localStorage.setItem("token", data.access_token)
+        localStorage.setItem("tokenType", data.token_type)
         
         console.log("🚀 Redirecting to chat...")
         // Redirect to chat page for returning users
         router.push("/chat")
-      } else if (response.error) {
-        console.log("❌ Login failed:", response.error)
-        setError(response.error.message || "Login failed. Please try again.")
+      } else {
+        console.log("❌ Login failed with status:", response.status)
+        try {
+          const errorData: ErrorResponse = await response.json()
+          setError(formatApiError(errorData))
+        } catch (parseError) {
+          setError(`Login failed with status ${response.status}. Please try again.`)
+        }
         
         // Clear any existing invalid tokens
         localStorage.removeItem("token")

@@ -25,6 +25,12 @@ const nextConfig: NextConfig = {
     };
     return config;
   },
+
+  // Improved experimental features for better builds
+  experimental: {
+    // Ensure proper module resolution
+    esmExternals: true,
+  },
 };
 
 export default nextConfig;
