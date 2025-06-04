@@ -28,7 +28,7 @@ export default function WelcomePage() {
 
       // Get API URL from environment variables (Vercel best practice)
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
-      const authMeUrl = `${apiBaseUrl}/api/v1/auth/me`
+      const authMeUrl = `${apiBaseUrl}/me`
       
       console.log("🌐 API Base URL:", apiBaseUrl)
       console.log("🔗 Auth Me URL:", authMeUrl)
