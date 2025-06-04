@@ -220,22 +220,38 @@ class DatabasePool:
             return result
     
     async def test_connection(self) -> bool:
-        """Test database connectivity with transaction pooler compatibility."""
-        try:
-            async with self.get_connection() as conn:
-                # Use simple execute() instead of fetchval() to avoid prepared statements
-                # This is recommended for transaction poolers
-                await conn.execute("SELECT 1")
-                return True
-        except Exception as e:
-            error_msg = str(e).lower()
-            if 'prepared statement' in error_msg:
-                logger.error(f"🚨 CRITICAL: Prepared statement error in health check: {e}")
-                logger.error(f"   This will cause render.com deployment to fail")
-                logger.error(f"   Transaction pooler mode: {self._transaction_pooler_mode}")
-            else:
-                logger.error(f"Database connection test failed: {str(e)}")
-            return False
+        """Test database connectivity with transaction pooler compatibility and retry logic."""
+        max_retries = 3
+        retry_delay = 0.5
+        
+        for attempt in range(max_retries):
+            try:
+                async with self.get_connection() as conn:
+                    # Use simple execute() instead of fetchval() to avoid prepared statements
+                    # This is recommended for transaction poolers
+                    await conn.execute("SELECT 1")
+                    return True
+                    
+            except Exception as e:
+                error_msg = str(e).lower()
+                
+                if 'prepared statement' in error_msg:
+                    logger.error(f"🚨 CRITICAL: Prepared statement error in health check: {e}")
+                    logger.error(f"   This will cause render.com deployment to fail")
+                    logger.error(f"   Transaction pooler mode: {self._transaction_pooler_mode}")
+                elif 'connection was closed' in error_msg or 'connection lost' in error_msg:
+                    logger.warning(f"⚠️ Connection dropped (attempt {attempt + 1}/{max_retries}): {e}")
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(retry_delay)
+                        continue
+                else:
+                    logger.error(f"Database connection test failed: {str(e)}")
+                
+                # If this is the last attempt, return False
+                if attempt == max_retries - 1:
+                    return False
+                    
+        return False
 
 # Global database pool instance
 db_pool = DatabasePool()
