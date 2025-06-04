@@ -353,34 +353,74 @@ async def options_handler(request: Request):
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
+    """Health check endpoint with caching to reduce database load."""
+    # Cache health check results for 30 seconds to reduce DB pressure
+    cache_key = "health_check_cache"
+    cache_duration = 30  # seconds
+    
+    # Simple in-memory cache using global variable
+    global _health_cache
+    if not hasattr(health_check, '_health_cache'):
+        health_check._health_cache = {"result": None, "timestamp": 0}
+    
+    current_time = datetime.utcnow().timestamp()
+    cache = health_check._health_cache
+    
+    # Return cached result if still valid
+    if cache["result"] and (current_time - cache["timestamp"]) < cache_duration:
+        return cache["result"]
+    
+    # Perform actual health check
     try:
-        # Test database connection
+        # Test database connection with timeout
         db_pool = await get_db_pool()
         if db_pool:
-            logger.info("✅ Database connection successful")
-            return {
-                "status": "healthy",
-                "timestamp": datetime.utcnow().isoformat(),
-                "database": "connected",
-                "version": "2.0.0"
-            }
+            # Use a more resilient connection test
+            try:
+                async with asyncio.wait_for(db_pool.get_connection(), timeout=5.0) as conn:
+                    await asyncio.wait_for(conn.execute("SELECT 1"), timeout=3.0)
+                db_status = "connected"
+                logger.debug("✅ Health check: Database connection successful")
+            except asyncio.TimeoutError:
+                db_status = "timeout"
+                logger.warning("⚠️ Health check: Database connection timeout")
+            except Exception as e:
+                db_status = f"error: {str(e)[:50]}"
+                logger.warning(f"⚠️ Health check: Database connection error: {e}")
         else:
-            logger.warning("⚠️ Database connection failed")
-            return {
-                "status": "unhealthy",
-                "timestamp": datetime.utcnow().isoformat(),
-                "database": "disconnected",
-                "version": "2.0.0"
-            }
+            db_status = "unavailable"
+            logger.warning("⚠️ Health check: Database pool unavailable")
+
+        result = {
+            "status": "healthy" if db_status == "connected" else "degraded",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database": db_status,
+            "version": "2.0.0",
+            "cached": False
+        }
+        
+        # Cache the result
+        cache["result"] = result
+        cache["timestamp"] = current_time
+        
+        return result
+        
     except Exception as e:
         logger.error(f"Health check error: {str(e)}")
-        return {
+        error_result = {
             "status": "unhealthy",
             "timestamp": datetime.utcnow().isoformat(),
-            "error": str(e),
-            "version": "2.0.0"
+            "database": f"error: {str(e)[:50]}",
+            "version": "2.0.0",
+            "cached": False
         }
+        
+        # Cache error result for shorter duration (10 seconds)
+        if (current_time - cache["timestamp"]) > 10:
+            cache["result"] = error_result
+            cache["timestamp"] = current_time
+            
+        return error_result
 
 # Authentication endpoints
 @app.post("/register", response_model=Token)
