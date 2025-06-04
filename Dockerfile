@@ -3,7 +3,7 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies (separate layer for better caching)
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
@@ -13,10 +13,14 @@ RUN apt-get update && apt-get install -y \
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies with cache enabled for faster builds
+# Use pip cache mount for better performance on Render
+# Cache-buster: 2025-06-04-v1 (force rebuild to use pip cache optimization)
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip && \
+    pip install -r requirements.txt
 
-# Copy application code
+# Copy application code (separate from requirements for better caching)
 COPY . .
 
 # Create non-root user for security
