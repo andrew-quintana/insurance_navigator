@@ -5,7 +5,6 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ArrowLeft, Mail, CheckCircle } from "lucide-react"
-import { api } from "@/lib/api-client"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
@@ -18,13 +17,28 @@ export default function ForgotPasswordPage() {
     setIsLoading(true)
     setError("")
 
+    // Get API URL from environment variables (Vercel best practice)
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+    const forgotPasswordUrl = `${apiBaseUrl}/api/v1/auth/forgot-password`
+    
+    console.log("🌐 API Base URL:", apiBaseUrl)
+    console.log("🔗 Forgot Password URL:", forgotPasswordUrl)
+
     try {
-      const response = await api.post('/auth/forgot-password', { email })
+      const response = await fetch(forgotPasswordUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      })
       
-      if (response.success) {
+      if (response.ok) {
         setIsSubmitted(true)
-      } else if (response.error) {
-        setError(response.error.message || "Failed to send reset email. Please try again.")
+      } else {
+        console.log("❌ Forgot password failed with status:", response.status)
+        setError("Failed to send reset email. Please try again.")
       }
     } catch (err) {
       console.error("Password reset error:", err)

@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { SendHorizontal, ArrowLeft, Upload, User, Bot, LogOut, X, FileText, CheckCircle, AlertCircle } from "lucide-react"
-import { api } from "@/lib/api-client"
 
 type Message = {
   id: number
@@ -56,17 +55,31 @@ export default function ChatPage() {
         return
       }
 
+      // Get API URL from environment variables (Vercel best practice)
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+      const authMeUrl = `${apiBaseUrl}/api/v1/auth/me`
+      
+      console.log("🌐 API Base URL:", apiBaseUrl)
+      console.log("🔗 Auth Me URL:", authMeUrl)
+
       try {
-        const response = await api.get('/auth/me')
+        const response = await fetch(authMeUrl, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          },
+        })
         
-        if (response.success && response.data) {
-          setUserInfo(response.data as UserInfo)
+        if (response.ok) {
+          const userData: UserInfo = await response.json()
+          setUserInfo(userData)
           setIsAuthenticated(true)
           setAuthError("")
           
           // Add initial bot message only if no messages exist
           if (messages.length === 0) {
-            const userName = (response.data as UserInfo).name || 'there'
+            const userName = userData.name || 'there'
             const initialMessage: Message = {
               id: 1,
               sender: "bot",
@@ -150,21 +163,38 @@ export default function ChatPage() {
     setMessages(prev => [...prev, userMessage])
     setIsLoading(true)
 
+    // Get API URL from environment variables (Vercel best practice)
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+    const chatUrl = `${apiBaseUrl}/api/v1/chat/message`
+    const token = localStorage.getItem("token")
+    
+    console.log("🌐 API Base URL:", apiBaseUrl)
+    console.log("🔗 Chat URL:", chatUrl)
+
     try {
-      const response = await api.post<{ response: string }>('/chat/message', {
-        message: messageText,
-        conversation_id: conversationId,
+      const response = await fetch(chatUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          message: messageText,
+          conversation_id: conversationId,
+        }),
       })
 
-      if (response.success && response.data) {
+      if (response.ok) {
+        const data: { response: string } = await response.json()
         const botMessage: Message = {
           id: messages.length + 2,
-          text: response.data.response,
+          text: data.response,
           sender: "bot",
         }
         setMessages(prev => [...prev, botMessage])
       } else {
-        throw new Error(response.error?.message || "Failed to get response")
+        throw new Error(`Failed to get response: ${response.status}`)
       }
     } catch (error) {
       console.error("Chat error:", error)

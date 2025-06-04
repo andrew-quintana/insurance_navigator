@@ -23,7 +23,6 @@ import {
   Users,
   Heart,
 } from "lucide-react"
-import { api } from "@/lib/api-client"
 
 interface UserInfo {
   id: string
@@ -45,12 +44,26 @@ export default function Home() {
         return
       }
 
+      // Get API URL from environment variables (Vercel best practice)
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+      const authMeUrl = `${apiBaseUrl}/api/v1/auth/me`
+      
+      console.log("🌐 API Base URL:", apiBaseUrl)
+      console.log("🔗 Auth Me URL:", authMeUrl)
+
       try {
-        const response = await api.get<UserInfo>('/auth/me')
+        const response = await fetch(authMeUrl, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          },
+        })
         
-        if (response.success && response.data) {
+        if (response.ok) {
+          const userData: UserInfo = await response.json()
           setIsAuthenticated(true)
-          setUserInfo(response.data)
+          setUserInfo(userData)
         } else {
           // Token is invalid, clear it
           localStorage.removeItem("token")
