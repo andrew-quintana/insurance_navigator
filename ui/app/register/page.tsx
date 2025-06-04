@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, Check } from "lucide-react"
+import { api } from "@/lib/api-client"
 
 interface RegisterResponse {
   access_token: string
@@ -107,42 +108,37 @@ export default function RegisterPage() {
     setIsLoading(true)
     setError("")
 
-    // Validate form
-    if (!validateForm()) {
-      setIsLoading(false)
-      return
-    }
+    console.log("📝 Registration attempt started")
+    console.log("📧 Email:", formData.email)
 
     try {
-      const response = await fetch("http://localhost:8000/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          full_name: formData.full_name,
-        }),
-      })
+      console.log("🚀 Sending registration request...")
+      const response = await api.post<RegisterResponse>('/auth/register', formData)
 
-      if (response.ok) {
-        const data: RegisterResponse = await response.json()
+      if (response.success && response.data) {
+        console.log("✅ Registration successful")
         
-        // Store the JWT token
-        localStorage.setItem("token", data.access_token)
-        localStorage.setItem("tokenType", data.token_type)
+        // Store the JWT token securely
+        localStorage.setItem("token", response.data.access_token)
+        localStorage.setItem("tokenType", response.data.token_type)
         
-        // Redirect to welcome page for new users
+        console.log("🚀 Redirecting to welcome...")
+        // Redirect to welcome page for first-time users
         router.push("/welcome")
-      } else {
-        const errorData: ErrorResponse = await response.json()
-        setError(formatApiError(errorData))
+      } else if (response.error) {
+        console.log("❌ Registration failed:", response.error)
+        setError(response.error.message || "Registration failed. Please try again.")
       }
     } catch (err) {
-      console.error("Registration error:", err)
-      setError("Network error. Please check your connection and try again.")
+      console.error("🔥 Network/Connection error:", err)
+      
+      if (err instanceof Error) {
+        setError(`Connection error: ${err.message}. Please check your network connection.`)
+      } else {
+        setError("Network error. Please check your connection and try again.")
+      }
     } finally {
+      console.log("🏁 Registration attempt completed")
       setIsLoading(false)
     }
   }

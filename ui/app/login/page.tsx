@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ArrowLeft, Mail, Lock, Eye, EyeOff } from "lucide-react"
+import { api } from "@/lib/api-client"
 
 interface LoginResponse {
   access_token: string
@@ -50,42 +51,24 @@ export default function LoginPage() {
 
     console.log("🔐 Login attempt started")
     console.log("📧 Email:", formData.email)
-    console.log("🌐 Backend URL:", "http://localhost:8000/login")
 
     try {
       console.log("🚀 Sending login request...")
-      const response = await fetch("http://localhost:8000/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      })
+      const response = await api.post<LoginResponse>('/auth/login', formData)
 
-      console.log("📡 Response status:", response.status)
-      console.log("📡 Response ok:", response.ok)
-
-      if (response.ok) {
-        const data: LoginResponse = await response.json()
+      if (response.success && response.data) {
         console.log("✅ Login successful, token received")
         
         // Store the JWT token securely
-        localStorage.setItem("token", data.access_token)
-        localStorage.setItem("tokenType", data.token_type)
+        localStorage.setItem("token", response.data.access_token)
+        localStorage.setItem("tokenType", response.data.token_type)
         
         console.log("🚀 Redirecting to chat...")
         // Redirect to chat page for returning users
         router.push("/chat")
-      } else {
-        console.log("❌ Login failed with status:", response.status)
-        try {
-          const errorData: ErrorResponse = await response.json()
-          console.log("📄 Error response:", errorData)
-          setError(formatApiError(errorData))
-        } catch (parseError) {
-          console.log("⚠️ Could not parse error response:", parseError)
-          setError(`Login failed with status ${response.status}. Please try again.`)
-        }
+      } else if (response.error) {
+        console.log("❌ Login failed:", response.error)
+        setError(response.error.message || "Login failed. Please try again.")
         
         // Clear any existing invalid tokens
         localStorage.removeItem("token")

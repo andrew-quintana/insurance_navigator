@@ -17,13 +17,18 @@ import {
   DollarSign,
   Activity,
   LogIn,
+  ArrowRight,
+  Shield,
+  Brain,
+  Users,
+  Heart,
 } from "lucide-react"
+import { api } from "@/lib/api-client"
 
 interface UserInfo {
   id: string
   email: string
-  full_name?: string
-  roles: string[]
+  name: string
 }
 
 export default function Home() {
@@ -33,37 +38,30 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Check if user is authenticated and get user info
-    const checkAuthAndGetUser = async () => {
+    const checkAuthStatus = async () => {
       const token = localStorage.getItem("token")
-      const tokenType = localStorage.getItem("tokenType")
-      
       if (!token) {
-        setIsAuthenticated(false)
         setIsLoading(false)
         return
       }
 
       try {
-        const response = await fetch("http://localhost:8000/me", {
-          headers: {
-            "Authorization": `${tokenType || "Bearer"} ${token}`,
-          },
-        })
-
-        if (response.ok) {
-          const userData = await response.json()
+        const response = await api.get<UserInfo>('/auth/me')
+        
+        if (response.success && response.data) {
           setIsAuthenticated(true)
-          setUserInfo(userData)
+          setUserInfo(response.data)
         } else {
-          // Invalid token - clear it
+          // Token is invalid, clear it
           localStorage.removeItem("token")
           localStorage.removeItem("tokenType")
           setIsAuthenticated(false)
           setUserInfo(null)
         }
-      } catch (err) {
-        console.error("Auth verification error:", err)
+      } catch (error) {
+        console.error("Auth check failed:", error)
+        localStorage.removeItem("token")
+        localStorage.removeItem("tokenType")
         setIsAuthenticated(false)
         setUserInfo(null)
       } finally {
@@ -71,7 +69,7 @@ export default function Home() {
       }
     }
 
-    checkAuthAndGetUser()
+    checkAuthStatus()
   }, [])
 
   const handleStartNow = () => {
@@ -109,7 +107,7 @@ export default function Home() {
             <>
               <div className="flex items-center space-x-4">
                 <div className="flex items-center text-teal-700">
-                  <span className="text-sm font-medium">Welcome, {userInfo.full_name || userInfo.email}</span>
+                  <span className="text-sm font-medium">Welcome, {userInfo.name}</span>
                 </div>
                 <Button
                   variant="outline"

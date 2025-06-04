@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ArrowLeft, Mail, CheckCircle } from "lucide-react"
+import { api } from "@/lib/api-client"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
@@ -18,25 +19,20 @@ export default function ForgotPasswordPage() {
     setError("")
 
     try {
-      // TODO: Implement actual password reset API call
-      const response = await fetch("http://localhost:8000/forgot-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      })
-
-      if (response.ok) {
+      const response = await api.post('/auth/forgot-password', { email })
+      
+      if (response.success) {
         setIsSubmitted(true)
-      } else {
-        const errorData = await response.json()
-        setError(errorData.detail || "Failed to send reset email. Please try again.")
+      } else if (response.error) {
+        setError(response.error.message || "Failed to send reset email. Please try again.")
       }
     } catch (err) {
-      console.error("Forgot password error:", err)
-      // For now, simulate success since backend endpoint might not exist yet
-      setIsSubmitted(true)
+      console.error("Password reset error:", err)
+      if (err instanceof Error) {
+        setError(`Connection error: ${err.message}. Please check your network connection.`)
+      } else {
+        setError("Network error. Please check your connection and try again.")
+      }
     } finally {
       setIsLoading(false)
     }

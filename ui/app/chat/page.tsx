@@ -1,13 +1,12 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { SendHorizontal, ArrowLeft, Upload, User } from "lucide-react"
+import { SendHorizontal, ArrowLeft, Upload, User, Bot, LogOut, X, FileText, CheckCircle, AlertCircle } from "lucide-react"
+import { api } from "@/lib/api-client"
 
 type Message = {
   id: number
@@ -50,7 +49,46 @@ export default function ChatPage() {
 
   // Check authentication on component mount
   useEffect(() => {
-    checkAuthentication()
+    const checkAuth = async () => {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        router.push("/login")
+        return
+      }
+
+      try {
+        const response = await api.get('/auth/me')
+        
+        if (response.success && response.data) {
+          setUserInfo(response.data as UserInfo)
+          setIsAuthenticated(true)
+          setAuthError("")
+          
+          // Add initial bot message only if no messages exist
+          if (messages.length === 0) {
+            const initialMessage: Message = {
+              id: 1,
+              sender: "bot",
+              text: `Hello ${response.data.name}! I'm your Medicare Navigator. I can help you with Medicare questions, find healthcare providers, understand your benefits, and more. What would you like to know today?`,
+            }
+            setMessages([initialMessage])
+          }
+          setIsLoading(false)
+        } else {
+          // Token is invalid, redirect to login
+          localStorage.removeItem("token")
+          localStorage.removeItem("tokenType")
+          router.push("/login")
+        }
+      } catch (error) {
+        console.error("Auth check failed:", error)
+        localStorage.removeItem("token")
+        localStorage.removeItem("tokenType")
+        router.push("/login")
+      }
+    }
+
+    checkAuth()
     
     // Set up session monitoring (OWASP recommendation)
     sessionCheckInterval.current = setInterval(() => {
@@ -73,7 +111,7 @@ export default function ChatPage() {
         clearInterval(sessionCheckInterval.current)
       }
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [router])
 
   // Auto-scroll to the bottom of messages
   useEffect(() => {
@@ -93,111 +131,6 @@ export default function ChatPage() {
     setSessionWarning("") // Clear any session warnings
   }
 
-  const checkAuthentication = async () => {
-    // Prevent multiple simultaneous authentication checks
-    if (isCheckingAuthRef.current) {
-      console.log("🔄 Auth check already in progress, skipping...")
-      return
-    }
-    
-    isCheckingAuthRef.current = true
-    setIsCheckingAuth(true) // Show loading state
-    let shouldRetry = false
-    
-    try {
-      const token = localStorage.getItem("token")
-      const tokenType = localStorage.getItem("tokenType")
-
-      console.log("🔐 Chat: Checking authentication...")
-      console.log("🎫 Token exists:", !!token)
-
-      if (!token) {
-        console.log("❌ No token found, redirecting to login")
-        router.push("/login")
-        return
-      }
-
-      console.log("🚀 Validating token with backend...")
-      const response = await fetch("http://localhost:8000/me", {
-        headers: {
-          "Authorization": `${tokenType || "Bearer"} ${token}`,
-        },
-      })
-
-      console.log("📡 Auth response status:", response.status)
-
-      if (response.ok) {
-        const userData: UserInfo = await response.json()
-        console.log("✅ Authentication successful, user:", userData.name)
-        setUserInfo(userData)
-        setIsAuthenticated(true)
-        setAuthError("") // Clear any previous errors
-        
-        // Add initial bot message only if no messages exist
-        if (messages.length === 0) {
-          const initialMessage: Message = {
-            id: 1,
-            sender: "bot",
-            text: `Hello ${userData.name}! I'm your Medicare Navigator. I can help you with Medicare questions, find healthcare providers, understand your benefits, and more. What would you like to know today?`,
-          }
-          setMessages([initialMessage])
-        }
-      } else {
-        console.log("❌ Auth failed with status:", response.status)
-        // Handle specific error cases
-        if (response.status === 401) {
-          // Token expired or invalid - clear and redirect
-          console.log("🗑️ Clearing invalid token")
-          localStorage.removeItem("token")
-          localStorage.removeItem("tokenType")
-          router.push("/login")
-        } else if (response.status >= 500) {
-          // Server error - show error but don't clear session yet
-          console.log("🔥 Server error, retrying...")
-          setAuthError("Server temporarily unavailable. Please try again in a moment.")
-        } else {
-          // Other errors - clear session
-          console.log("🗑️ Clearing session due to auth error")
-          setAuthError("Authentication failed. Please log in again.")
-          localStorage.removeItem("token")
-          localStorage.removeItem("tokenType")
-          router.push("/login")
-        }
-      }
-    } catch (err) {
-      console.error("🔥 Auth check network error:", err)
-      
-      // Better error handling for specific error types
-      if (err instanceof TypeError && err.message.includes("fetch")) {
-        setAuthError("Unable to connect to server. Retrying in 3 seconds...")
-        shouldRetry = true
-        // Retry after 3 seconds
-        setTimeout(() => {
-          console.log("🔄 Retrying authentication...")
-          isCheckingAuthRef.current = false // Reset flag before retry
-          checkAuthentication()
-        }, 3000)
-      } else {
-        // Network error - don't immediately clear session, allow retry
-        setAuthError("Network error. Checking connection... Please wait.")
-        shouldRetry = true
-        
-        // Retry after 2 seconds
-        setTimeout(() => {
-          console.log("🔄 Retrying authentication...")
-          isCheckingAuthRef.current = false // Reset flag before retry
-          checkAuthentication()
-        }, 2000)
-      }
-    } finally {
-      // Only reset the flag and loading state if we're not retrying
-      if (!shouldRetry) {
-        isCheckingAuthRef.current = false
-        setIsCheckingAuth(false)
-      }
-    }
-  }
-
   const logout = () => {
     localStorage.removeItem("token")
     localStorage.removeItem("tokenType")
@@ -205,84 +138,44 @@ export default function ChatPage() {
   }
 
   const sendMessage = async (messageText: string) => {
-    if (!messageText.trim() || isLoading) return
+    if (!messageText.trim()) return
 
-    // Track user activity
-    updateActivity()
-
-    // Add user message
     const userMessage: Message = {
-      id: messages.length + 1,
-      sender: "user",
+      id: Date.now().toString(),
       text: messageText,
+      sender: "user",
+      timestamp: new Date(),
     }
 
-    setMessages(prevMessages => [...prevMessages, userMessage])
+    setMessages(prev => [...prev, userMessage])
     setIsLoading(true)
 
     try {
-      const token = localStorage.getItem("token")
-      const tokenType = localStorage.getItem("tokenType")
-
-      // Validate session before sending message
-      if (!token) {
-        router.push("/login")
-        return
-      }
-
-      const response = await fetch("http://localhost:8000/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `${tokenType || "Bearer"} ${token}`,
-        },
-        body: JSON.stringify({
-          message: messageText,
-          conversation_id: conversationId,
-        }),
+      const response = await api.post<{ response: string }>('/chat/message', {
+        message: messageText,
+        conversation_id: conversationId,
       })
 
-      if (response.ok) {
-        const data: ChatResponse = await response.json()
-        
-        // Update conversation ID if this is the first message
-        if (!conversationId) {
-          setConversationId(data.conversation_id)
-        }
-
-        // Add bot response
+      if (response.success && response.data) {
         const botMessage: Message = {
-          id: messages.length + 2,
+          id: (Date.now() + 1).toString(),
+          text: response.data.response,
           sender: "bot",
-          text: data.text,
-          metadata: data.metadata,
-          workflow_type: data.workflow_type,
+          timestamp: new Date(),
         }
-
-        setMessages(prevMessages => [...prevMessages, botMessage])
+        setMessages(prev => [...prev, botMessage])
       } else {
-        if (response.status === 401) {
-          setAuthError("Your session has expired. Please log in again.")
-          logout()
-          return
-        }
-
-        // Handle error response
-        const errorMessage: Message = {
-          id: messages.length + 2,
-          sender: "bot",
-          text: "I apologize, but I'm experiencing some technical difficulties. Please try rephrasing your question or contact support if the issue persists.",
-        }
-        setMessages(prevMessages => [...prevMessages, errorMessage])
+        throw new Error(response.error?.message || "Failed to get response")
       }
-    } catch (err) {
-      console.error("Chat error:", err)
+    } catch (error) {
+      console.error("Chat error:", error)
       const errorMessage: Message = {
-        id: messages.length + 2,
+        id: (Date.now() + 1).toString(),
+        text: "I'm sorry, I'm having trouble connecting right now. Please try again in a moment.",
         sender: "bot",
-        text: "I'm having trouble connecting right now. Please check your internet connection and try again.",
+        timestamp: new Date(),
       }
-      setMessages(prevMessages => [...prevMessages, errorMessage])
+      setMessages(prev => [...prev, errorMessage])
     } finally {
       setIsLoading(false)
     }
@@ -311,106 +204,59 @@ export default function ChatPage() {
     updateActivity()
   }
 
-  const handleFileUpload = async () => {
+  const handleFileUpload = async (file: File) => {
+    if (!file) return
+
+    setUploadProgress(0)
+    setUploadError("")
+
+    const uploadedFile: UploadedFile = {
+      id: Date.now().toString(),
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      progress: 0,
+    }
+
+    setUploadedFiles(prev => [...prev, uploadedFile])
+
     try {
-      // Create a file input element
-      const fileInput = document.createElement("input")
-      fileInput.type = "file"
-      fileInput.accept = ".pdf,.txt,.md"
-      fileInput.style.display = "none"
-      
-      fileInput.onchange = async (event) => {
-        const target = event.target as HTMLInputElement
-        const file = target.files?.[0]
-        
-        if (!file) return
-        
-        // Add upload status message
-        const uploadStatusMessage: Message = {
-          id: messages.length + 1,
-          sender: "bot",
-          text: `📄 Uploading "${file.name}"... Please wait.`,
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const response = await api.post<{ file_id: string; analysis?: string }>('/chat/upload-policy', formData, {
+        headers: {
+          // Remove Content-Type to let the browser set it for FormData
         }
-        setMessages(prevMessages => [...prevMessages, uploadStatusMessage])
-        setIsLoading(true)
-        updateActivity()
-        
-        try {
-          const token = localStorage.getItem("token")
-          const tokenType = localStorage.getItem("tokenType")
-          
-          // Create FormData for file upload
-          const formData = new FormData()
-          formData.append("file", file)
-          
-          const response = await fetch("http://localhost:8000/upload-policy", {
-            method: "POST",
-            headers: {
-              "Authorization": `${tokenType || "Bearer"} ${token}`,
-            },
-            body: formData
-          })
-          
-          if (response.ok) {
-            const data = await response.json()
-            const successMessage: Message = {
-              id: messages.length + 2,
-              sender: "bot",
-              text: `✅ **Document Upload Successful!**
+      })
 
-**${data.filename}** has been processed and vectorized for search.
+      if (response.success && response.data) {
+        setUploadedFiles(prev =>
+          prev.map(f =>
+            f.id === uploadedFile.id
+              ? { ...f, progress: 100, fileId: response.data!.file_id }
+              : f
+          )
+        )
 
-📊 **Processing Results:**
-• **Text extracted:** ${data.text_length} characters
-• **Chunks created:** ${data.chunks_processed} of ${data.total_chunks}
-• **Document ID:** ${data.document_id}
-
-Your document is now available for semantic search. You can ask me questions about its contents!
-
-**Try asking:** "What does my uploaded document say about..." or "Search my documents for..."`,
-            }
-            // Replace the upload status message with success message
-            setMessages(prevMessages => [...prevMessages.slice(0, -1), successMessage])
-          } else {
-            const errorData = await response.json().catch(() => ({}))
-            const errorMessage: Message = {
-              id: messages.length + 2,
-              sender: "bot",
-              text: `❌ **Upload Failed**
-
-Sorry, there was an error uploading "${file.name}".
-
-**Error:** ${errorData.detail || "Unknown error"}
-
-Please try again with a different file or contact support if the issue persists.`,
-            }
-            // Replace the upload status message with error message
-            setMessages(prevMessages => [...prevMessages.slice(0, -1), errorMessage])
-          }
-        } catch (error) {
-          console.error("Upload error:", error)
-          const errorMessage: Message = {
-            id: messages.length + 2,
+        if (response.data.analysis) {
+          const analysisMessage: Message = {
+            id: Date.now().toString(),
+            text: `I've analyzed your uploaded document "${file.name}". Here's what I found:\n\n${response.data.analysis}`,
             sender: "bot",
-            text: `❌ **Upload Failed**
-
-Network error while uploading "${file.name}". Please check your connection and try again.`,
+            timestamp: new Date(),
           }
-          // Replace the upload status message with error message
-          setMessages(prevMessages => [...prevMessages.slice(0, -1), errorMessage])
-        } finally {
-          setIsLoading(false)
+          setMessages(prev => [...prev, analysisMessage])
         }
+      } else {
+        throw new Error(response.error?.message || "Upload failed")
       }
-      
-      // Trigger file selection dialog
-      document.body.appendChild(fileInput)
-      fileInput.click()
-      document.body.removeChild(fileInput)
-      
-    } catch (err) {
-      console.error("File upload error:", err)
-      setIsLoading(false)
+    } catch (error) {
+      console.error("Upload error:", error)
+      setUploadError(`Failed to upload ${file.name}. Please try again.`)
+      setUploadedFiles(prev => prev.filter(f => f.id !== uploadedFile.id))
+    } finally {
+      setUploadProgress(0)
     }
   }
 
