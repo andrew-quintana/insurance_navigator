@@ -15,7 +15,7 @@ COPY requirements.txt .
 
 # Install Python dependencies with cache enabled for faster builds
 # Use pip cache mount for better performance on Render
-# Cache-buster: 2025-06-04-v1 (force rebuild to use pip cache optimization)
+# Cache-buster: 2025-06-04-v2 (CORS and forgot-password endpoint fixes)
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --upgrade pip && \
     pip install -r requirements.txt
