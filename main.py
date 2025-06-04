@@ -25,6 +25,9 @@ import json
 import asyncio
 import re
 from urllib.parse import urlparse
+from starlette.middleware.base import BaseHTTPMiddleware
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 # Database service imports
 from db.services.user_service import get_user_service, UserService
@@ -64,6 +67,110 @@ from sentence_transformers import SentenceTransformer
 import PyPDF2
 import io
 
+# Custom CORS middleware for better control
+class CustomCORSMiddleware(BaseHTTPMiddleware):
+    """Custom CORS middleware with better error handling and validation."""
+    
+    def __init__(self, app):
+        super().__init__(app)
+        self.allowed_origins = self._compile_patterns()
+    
+    def _compile_patterns(self):
+        """Compile regex patterns for efficient matching."""
+        import re
+        return {
+            'localhost': re.compile(r'^localhost(:\d+)?$'),
+            'production': [
+                'insurance-navigator.vercel.app',
+                'insurance-navigator-api.onrender.com'
+            ],
+            'vercel_preview': re.compile(r'^insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app$'),
+            'vercel_all': re.compile(r'^[a-z0-9-]+\.vercel\.app$'),
+        }
+    
+    def _validate_origin(self, origin: str) -> bool:
+        """Validate origin with comprehensive pattern matching."""
+        if not origin:
+            return False
+        
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(origin)
+            domain = parsed.netloc.lower()
+            
+            # Check localhost
+            if self.allowed_origins['localhost'].match(domain):
+                return True
+            
+            # Check production domains
+            if domain in self.allowed_origins['production']:
+                return True
+            
+            # Check Vercel preview pattern (specific project)
+            if self.allowed_origins['vercel_preview'].match(domain):
+                return True
+            
+            # Check any Vercel deployment (broader)
+            if self.allowed_origins['vercel_all'].match(domain):
+                return True
+            
+        except Exception as e:
+            logger.warning(f"Origin validation error for {origin}: {e}")
+            return False
+        
+        return False
+    
+    def _add_cors_headers(self, response: Response, origin: str = None):
+        """Add comprehensive CORS headers."""
+        # Always add basic CORS headers for better compatibility
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, HEAD"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Expose-Headers"] = "*"
+        response.headers["Access-Control-Max-Age"] = "86400"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        
+        # Set origin-specific header
+        if origin and self._validate_origin(origin):
+            response.headers["Access-Control-Allow-Origin"] = origin
+        else:
+            # Fallback for development
+            response.headers["Access-Control-Allow-Origin"] = "*"
+    
+    async def dispatch(self, request: Request, call_next):
+        """Process request with enhanced CORS handling."""
+        origin = request.headers.get("origin")
+        
+        # Handle preflight requests
+        if request.method == "OPTIONS":
+            response = Response()
+            self._add_cors_headers(response, origin)
+            return response
+        
+        try:
+            # Process the request
+            start_time = time.time()
+            response = await call_next(request)
+            processing_time = time.time() - start_time
+            
+            # Add CORS headers to all responses
+            self._add_cors_headers(response, origin)
+            
+            # Add timing header for monitoring
+            response.headers["X-Processing-Time"] = f"{processing_time:.3f}"
+            
+            return response
+            
+        except Exception as e:
+            # Even on error, return CORS headers
+            logger.error(f"Request processing error: {e}")
+            error_response = Response(
+                content=json.dumps({"error": "Internal server error", "message": str(e)}),
+                status_code=500,
+                media_type="application/json"
+            )
+            self._add_cors_headers(error_response, origin)
+            return error_response
+
 # Initialize FastAPI app
 app = FastAPI(
     title="Insurance Navigator API",
@@ -73,48 +180,10 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Dynamic CORS origin validation
-def validate_cors_origin(origin: str) -> bool:
-    """Validate if an origin should be allowed for CORS."""
-    if not origin:
-        return False
-    
-    # Parse the origin URL
-    try:
-        parsed = urlparse(origin)
-        domain = parsed.netloc.lower()
-        
-        # Allow localhost for development
-        if domain.startswith('localhost:') or domain == 'localhost':
-            return True
-        
-        # Allow production domains
-        production_domains = [
-            'insurance-navigator.vercel.app',
-            'insurance-navigator-api.onrender.com'
-        ]
-        if domain in production_domains:
-            return True
-        
-        # Allow Vercel preview deployments with pattern matching
-        # Pattern: insurance-navigator-{hash}-andrew-quintanas-projects.vercel.app
-        vercel_pattern = re.compile(
-            r'^insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app$'
-        )
-        if vercel_pattern.match(domain):
-            return True
-        
-        # Allow any Vercel deployment for this project (broader pattern) - must be exact user match
-        if (domain.endswith('andrew-quintanas-projects.vercel.app') and 
-            domain.startswith('insurance-navigator-')):
-            return True
-            
-    except Exception:
-        return False
-    
-    return False
+# Add custom CORS middleware FIRST
+app.add_middleware(CustomCORSMiddleware)
 
-# CORS middleware configuration with dynamic validation
+# Keep the original CORS middleware as backup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -124,7 +193,7 @@ app.add_middleware(
         "https://insurance-navigator.vercel.app",
         "***REMOVED***",
         
-        # Known preview deployments
+        # Known preview deployments - add the failing one explicitly
         "https://insurance-navigator-hrf0s88oh-andrew-quintanas-projects.vercel.app",
         "https://insurance-navigator-q2ukn6eih-andrew-quintanas-projects.vercel.app", 
         "https://insurance-navigator-cylkkqsmn-andrew-quintanas-projects.vercel.app",
@@ -1279,121 +1348,236 @@ async def upload_policy_demo(
     file: UploadFile = File(...),
     current_user: UserResponse = Depends(get_current_user)
 ):
-    """Demo-ready document upload with vectorization."""
+    """Demo-ready document upload with vectorization and enhanced error handling."""
     try:
         logger.info(f"🚀 Starting document upload for user {current_user.id}: {file.filename}")
         
-        # Read file data
+        # Validate file size (limit to 50MB to prevent memory issues)
+        MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+        file_size_estimate = getattr(file, 'size', 0)
+        
+        # Read file data with size limit
         logger.info(f"📖 Step 1: Reading file data...")
         file_data = await file.read()
+        
+        if len(file_data) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)}MB"
+            )
+        
         logger.info(f"✅ Step 1 complete: Read {len(file_data)} bytes")
         
         if len(file_data) == 0:
             raise HTTPException(status_code=400, detail="Empty file")
         
-        # Extract text content
+        # Extract text content with timeout
         logger.info(f"🔍 Step 2: Extracting text content from {file.filename}...")
-        text_content = extract_text_from_file(file_data, file.filename)
+        
+        try:
+            # Use thread pool for CPU-intensive text extraction
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                text_content = await asyncio.wait_for(
+                    asyncio.get_event_loop().run_in_executor(
+                        executor, extract_text_from_file, file_data, file.filename
+                    ),
+                    timeout=60.0  # 60 second timeout for text extraction
+                )
+        except asyncio.TimeoutError:
+            logger.error(f"❌ Text extraction timeout for {file.filename}")
+            raise HTTPException(
+                status_code=408,
+                detail="File processing timeout. Please try a smaller file or contact support."
+            )
+        
         logger.info(f"✅ Step 2 complete: Extracted {len(text_content)} characters")
         
         if not text_content.strip():
             raise HTTPException(status_code=400, detail="Could not extract text from file")
         
+        # Limit text content for very large documents
+        MAX_TEXT_LENGTH = 1_000_000  # 1MB of text
+        if len(text_content) > MAX_TEXT_LENGTH:
+            logger.warning(f"⚠️ Truncating large document: {len(text_content)} -> {MAX_TEXT_LENGTH} chars")
+            text_content = text_content[:MAX_TEXT_LENGTH] + "\n\n[Document truncated due to size limit]"
+        
         # Generate document ID
         document_id = str(uuid.uuid4())
         logger.info(f"🆔 Generated document ID: {document_id}")
         
-        # Chunk the text
+        # Chunk the text with progress tracking
         logger.info(f"✂️  Step 3: Chunking text (length: {len(text_content)})...")
-        chunks = chunk_text(text_content)
+        
+        try:
+            # Use thread pool for chunking to avoid blocking
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                chunks = await asyncio.wait_for(
+                    asyncio.get_event_loop().run_in_executor(
+                        executor, chunk_text, text_content
+                    ),
+                    timeout=30.0  # 30 second timeout for chunking
+                )
+        except asyncio.TimeoutError:
+            logger.error(f"❌ Text chunking timeout")
+            raise HTTPException(
+                status_code=408,
+                detail="Text processing timeout. Please try a smaller file."
+            )
+        
         logger.info(f"✅ Step 3 complete: Created {len(chunks)} chunks from document")
+        
+        # Limit number of chunks to prevent resource exhaustion
+        MAX_CHUNKS = 500
+        if len(chunks) > MAX_CHUNKS:
+            logger.warning(f"⚠️ Limiting chunks: {len(chunks)} -> {MAX_CHUNKS}")
+            chunks = chunks[:MAX_CHUNKS]
         
         # Get embedding model
         logger.info(f"🧠 Step 4: Loading embedding model...")
         model = await get_embedding_model()
         logger.info(f"✅ Step 4 complete: Embedding model loaded")
         
-        # Get database connection
+        # Get database connection with retry logic
         logger.info(f"🗄️  Step 5: Connecting to database...")
-        pool = await get_db_pool()
+        
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                pool = await get_db_pool()
+                if pool:
+                    break
+            except Exception as e:
+                logger.warning(f"Database connection attempt {attempt + 1} failed: {e}")
+                if attempt == max_retries - 1:
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Database temporarily unavailable. Please try again later."
+                    )
+                await asyncio.sleep(1)  # Wait before retry
+        
         logger.info(f"✅ Step 5 complete: Database connection established")
         
         vector_ids = []
+        failed_chunks = 0
+        
         logger.info(f"🔄 Step 6: Processing {len(chunks)} chunks for embeddings...")
         logger.info(f"📊 Document processing breakdown:")
         logger.info(f"   • Total text: {len(text_content):,} characters")
         logger.info(f"   • Chunk size: {len(chunks):,} pieces")
         logger.info(f"   • Estimated time: {len(chunks) * 0.5:.1f} seconds")
         
-        # More granular progress tracking
-        progress_milestones = [10, 25, 50, 75, 90]  # Percentage milestones
+        # Process chunks in batches to avoid overwhelming the system
+        BATCH_SIZE = 10
+        progress_milestones = [10, 25, 50, 75, 90]
         last_milestone = 0
         
-        async with pool.get_connection() as conn:
-            # Process each chunk
-            for i, chunk in enumerate(chunks):
-                try:
-                    # Calculate progress percentage
-                    progress_pct = int(((i + 1) / len(chunks)) * 100)
+        try:
+            async with pool.get_connection() as conn:
+                # Process chunks in batches
+                for batch_start in range(0, len(chunks), BATCH_SIZE):
+                    batch_end = min(batch_start + BATCH_SIZE, len(chunks))
+                    batch_chunks = chunks[batch_start:batch_end]
                     
-                    # Log at major milestones
-                    if progress_pct >= progress_milestones[0] and progress_pct > last_milestone:
-                        milestone = progress_milestones.pop(0)
-                        last_milestone = milestone
-                        chunks_remaining = len(chunks) - i - 1
-                        time_remaining = chunks_remaining * 0.5  # Rough estimate
-                        logger.info(f"  🎯 Milestone: {milestone}% complete ({i+1}/{len(chunks)} chunks)")
-                        logger.info(f"     ⏱️ Estimated time remaining: {time_remaining:.1f} seconds")
-                        logger.info(f"     📝 Current chunk: {len(chunk)} characters")
+                    # Process batch
+                    for i, chunk in enumerate(batch_chunks):
+                        absolute_index = batch_start + i
+                        
+                        try:
+                            # Calculate progress percentage
+                            progress_pct = int(((absolute_index + 1) / len(chunks)) * 100)
+                            
+                            # Log at major milestones
+                            if progress_pct >= progress_milestones[0] and progress_pct > last_milestone:
+                                milestone = progress_milestones.pop(0)
+                                last_milestone = milestone
+                                chunks_remaining = len(chunks) - absolute_index - 1
+                                time_remaining = chunks_remaining * 0.5
+                                logger.info(f"  🎯 Milestone: {milestone}% complete ({absolute_index+1}/{len(chunks)} chunks)")
+                                logger.info(f"     ⏱️ Estimated time remaining: {time_remaining:.1f} seconds")
+                                logger.info(f"     📝 Current chunk: {len(chunk)} characters")
+                            
+                            # Generate embedding with timeout
+                            try:
+                                embedding_task = asyncio.get_event_loop().run_in_executor(
+                                    None, lambda: model.encode(chunk).tolist()
+                                )
+                                embedding = await asyncio.wait_for(embedding_task, timeout=10.0)
+                            except asyncio.TimeoutError:
+                                logger.warning(f"  ⚠️ Embedding timeout for chunk {absolute_index+1}, skipping...")
+                                failed_chunks += 1
+                                continue
+                            
+                            # Store in database with error handling
+                            try:
+                                vector_id = await asyncio.wait_for(
+                                    conn.fetchval("""
+                                        INSERT INTO user_document_vectors 
+                                        (user_id, document_id, chunk_index, chunk_embedding, chunk_text, chunk_metadata)
+                                        VALUES ($1, $2, $3, $4::vector, $5, $6)
+                                        RETURNING id
+                                    """, 
+                                    current_user.id, 
+                                    document_id,
+                                    absolute_index,
+                                    str(embedding),
+                                    chunk,
+                                    json.dumps({
+                                        "filename": file.filename,
+                                        "file_size": len(file_data),
+                                        "content_type": file.content_type,
+                                        "chunk_length": len(chunk),
+                                        "total_chunks": len(chunks),
+                                        "uploaded_at": datetime.utcnow().isoformat()
+                                    })),
+                                    timeout=5.0  # 5 second timeout for DB insert
+                                )
+                                
+                                vector_ids.append(vector_id)
+                                
+                            except asyncio.TimeoutError:
+                                logger.warning(f"  ⚠️ Database insert timeout for chunk {absolute_index+1}")
+                                failed_chunks += 1
+                                continue
+                            except Exception as e:
+                                logger.warning(f"  ⚠️ Database error for chunk {absolute_index+1}: {e}")
+                                failed_chunks += 1
+                                continue
+                            
+                        except Exception as e:
+                            logger.warning(f"  ⚠️ Error processing chunk {absolute_index+1}: {e}")
+                            failed_chunks += 1
+                            continue
                     
-                    # Generate embedding
-                    logger.debug(f"  🧮 Generating embedding for chunk {i+1}...")
-                    embedding = model.encode(chunk).tolist()
-                    logger.debug(f"  ✅ Embedding generated: {len(embedding)} dimensions")
-                    
-                    # Store in user_document_vectors table
-                    logger.debug(f"  💾 Storing chunk {i+1} in database...")
-                    vector_id = await conn.fetchval("""
-                        INSERT INTO user_document_vectors 
-                        (user_id, document_id, chunk_index, chunk_embedding, chunk_text, chunk_metadata)
-                        VALUES ($1, $2, $3, $4::vector, $5, $6)
-                        RETURNING id
-                    """, 
-                    current_user.id, 
-                    document_id,
-                    i,
-                    str(embedding),
-                    chunk,
-                    json.dumps({
-                        "filename": file.filename,
-                        "file_size": len(file_data),
-                        "content_type": file.content_type,
-                        "chunk_length": len(chunk),
-                        "total_chunks": len(chunks),
-                        "uploaded_at": datetime.utcnow().isoformat()
-                    }))
-                    
-                    vector_ids.append(vector_id)
-                    
-                    # Log individual chunk completion for very small documents
-                    if len(chunks) <= 5:
-                        logger.info(f"  ✅ Chunk {i+1}/{len(chunks)} completed ({progress_pct}%)")
-                    
-                except Exception as e:
-                    logger.error(f"  ❌ Error processing chunk {i+1}: {e}")
-                    logger.error(f"  📊 Chunk details: length={len(chunk)}, content_preview='{chunk[:100]}...'")
-                    continue
+                    # Small delay between batches to prevent overwhelming the system
+                    if batch_end < len(chunks):
+                        await asyncio.sleep(0.1)
+        
+        except Exception as e:
+            logger.error(f"❌ Critical error during chunk processing: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Processing failed: {str(e)[:100]}... Please try again or contact support."
+            )
+        
+        success_rate = (len(vector_ids) / len(chunks)) * 100 if chunks else 0
         
         logger.info(f"🎉 Step 6 complete: Successfully stored {len(vector_ids)} vectors for document {document_id}")
+        if failed_chunks > 0:
+            logger.warning(f"⚠️ {failed_chunks} chunks failed processing (success rate: {success_rate:.1f}%)")
         
+        # Return comprehensive result
         result = {
             "success": True,
             "document_id": document_id,
             "filename": file.filename,
             "chunks_processed": len(vector_ids),
+            "chunks_failed": failed_chunks,
             "total_chunks": len(chunks),
+            "success_rate": round(success_rate, 1),
             "text_length": len(text_content),
-            "message": f"Successfully uploaded and vectorized {file.filename}"
+            "file_size": len(file_data),
+            "processing_time": f"~{len(chunks) * 0.5:.1f}s estimated",
+            "message": f"Successfully uploaded and vectorized {file.filename} ({success_rate:.1f}% success rate)"
         }
         
         logger.info(f"✅ Upload complete: {result}")
@@ -1403,12 +1587,14 @@ async def upload_policy_demo(
         raise
     except Exception as e:
         logger.error(f"❌ Document upload error: {str(e)}")
-        logger.error(f"📊 Error details: type={type(e).__name__}, traceback follows...")
+        logger.error(f"📊 Error details: type={type(e).__name__}")
         import traceback
         logger.error(traceback.format_exc())
+        
+        # Return a user-friendly error with CORS headers
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Upload failed: {str(e)}"
+            detail=f"Upload processing failed. Please try a smaller file or contact support. Error: {str(e)[:100]}"
         )
 
 @app.post("/search-documents", response_model=Dict[str, Any])
