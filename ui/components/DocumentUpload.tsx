@@ -112,15 +112,43 @@ export default function DocumentUpload({
     setUploadError(null)
 
     try {
-      // Progress simulation for better UX
+      // Better progress simulation based on document processing stages
+      const progressStages = [
+        { stage: "Uploading", maxProgress: 20, duration: 1000 },      // File upload: 1 second
+        { stage: "Extracting text", maxProgress: 40, duration: 2000 }, // Text extraction: 2 seconds  
+        { stage: "Chunking content", maxProgress: 60, duration: 2000 }, // Text chunking: 2 seconds
+        { stage: "Generating embeddings", maxProgress: 95, duration: 8000 }, // Embeddings: 8 seconds (longest)
+      ]
+      
+      let currentStage = 0
+      let stageStartTime = Date.now()
+      
       const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev < 30) return prev + 5  // Quick initial progress
-          if (prev < 60) return prev + 2  // Slower middle progress  
-          if (prev < 90) return prev + 1  // Very slow final progress
-          return prev // Stay at 90% until completion
-        })
-      }, 500)
+        if (currentStage >= progressStages.length) {
+          clearInterval(progressInterval)
+          return
+        }
+        
+        const stage = progressStages[currentStage]
+        const elapsedTime = Date.now() - stageStartTime
+        const stageProgress = Math.min(elapsedTime / stage.duration, 1)
+        
+        // Calculate new progress within current stage
+        const previousMax = currentStage > 0 ? progressStages[currentStage - 1].maxProgress : 0
+        const currentMax = stage.maxProgress
+        const newProgress = previousMax + (currentMax - previousMax) * stageProgress
+        
+        setUploadProgress(Math.round(newProgress))
+        
+        // Update message based on current stage
+        setUploadMessage(`🚀 ${stage.stage}...`)
+        
+        // Move to next stage when current stage is complete
+        if (stageProgress >= 1) {
+          currentStage++
+          stageStartTime = Date.now()
+        }
+      }, 200) // Update every 200ms for smoother progress
 
       const token = localStorage.getItem("token")
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
