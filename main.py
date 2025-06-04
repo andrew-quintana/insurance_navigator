@@ -79,7 +79,8 @@ app.add_middleware(
         "http://localhost:3001",
         "https://insurance-navigator.vercel.app",  # Production frontend
         "https://insurance-navigator-hrf0s88oh-andrew-quintanas-projects.vercel.app",  # Preview deployment
-        "https://insurance-navigator-q2ukn6eih-andrew-quintanas-projects.vercel.app",  # New development deployment
+        "https://insurance-navigator-q2ukn6eih-andrew-quintanas-projects.vercel.app",  # Development deployment
+        "https://insurance-navigator-cylkkqsmn-andrew-quintanas-projects.vercel.app",  # New development deployment
         "https://*.vercel.app",  # Vercel preview deployments pattern
         "***REMOVED***",  # Render API (for docs/testing)
         "*",  # Allow all origins for debugging - remove in production
@@ -1270,19 +1271,25 @@ async def upload_policy_demo(
         vector_ids = []
         logger.info(f"🔄 Step 6: Processing {len(chunks)} chunks for embeddings...")
         
+        # Log progress every 10 chunks to avoid spam
+        progress_interval = max(1, len(chunks) // 10)
+        
         async with pool.get_connection() as conn:
             # Process each chunk
             for i, chunk in enumerate(chunks):
                 try:
-                    logger.info(f"  📝 Processing chunk {i+1}/{len(chunks)} (length: {len(chunk)})...")
+                    # Progress logging
+                    if i % progress_interval == 0 or i == len(chunks) - 1:
+                        progress_pct = int((i / len(chunks)) * 100)
+                        logger.info(f"  📊 Processing progress: {i+1}/{len(chunks)} chunks ({progress_pct}%) - Current chunk: {len(chunk)} chars")
                     
                     # Generate embedding
-                    logger.info(f"  🧮 Generating embedding for chunk {i+1}...")
+                    logger.debug(f"  🧮 Generating embedding for chunk {i+1}...")
                     embedding = model.encode(chunk).tolist()
-                    logger.info(f"  ✅ Embedding generated: {len(embedding)} dimensions")
+                    logger.debug(f"  ✅ Embedding generated: {len(embedding)} dimensions")
                     
                     # Store in user_document_vectors table
-                    logger.info(f"  💾 Storing chunk {i+1} in database...")
+                    logger.debug(f"  💾 Storing chunk {i+1} in database...")
                     vector_id = await conn.fetchval("""
                         INSERT INTO user_document_vectors 
                         (user_id, document_id, chunk_index, chunk_embedding, chunk_text, chunk_metadata)
@@ -1304,7 +1311,10 @@ async def upload_policy_demo(
                     }))
                     
                     vector_ids.append(vector_id)
-                    logger.info(f"  ✅ Chunk {i+1} stored with vector ID: {vector_id}")
+                    
+                    # Log completion of significant milestones
+                    if (i + 1) % progress_interval == 0 or i == len(chunks) - 1:
+                        logger.info(f"  ✅ Milestone: {i+1}/{len(chunks)} chunks processed ({int(((i+1) / len(chunks)) * 100)}%)")
                     
                 except Exception as e:
                     logger.error(f"  ❌ Error processing chunk {i+1}: {e}")
