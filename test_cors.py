@@ -11,6 +11,8 @@ import aiohttp
 import json
 from typing import List, Dict, Any
 import time
+import re
+from urllib.parse import urlparse
 
 # Test URLs
 BACKEND_URLS = [
@@ -19,12 +21,32 @@ BACKEND_URLS = [
 ]
 
 FRONTEND_ORIGINS = [
+    # Development origins
     "http://localhost:3000",
+    "http://localhost:3001",
+    
+    # Production origins  
     "https://insurance-navigator.vercel.app",
+    
+    # Known Vercel preview deployments (from actual deployments)
     "https://insurance-navigator-hrf0s88oh-andrew-quintanas-projects.vercel.app",
     "https://insurance-navigator-q2ukn6eih-andrew-quintanas-projects.vercel.app", 
     "https://insurance-navigator-cylkkqsmn-andrew-quintanas-projects.vercel.app",
-    # Add more as needed
+    "https://insurance-navigator-k2ui23iaj-andrew-quintanas-projects.vercel.app",
+    
+    # Future Vercel deployments (simulated with different hashes)
+    "https://insurance-navigator-abc123def4-andrew-quintanas-projects.vercel.app",
+    "https://insurance-navigator-xyz789ghi0-andrew-quintanas-projects.vercel.app",
+    "https://insurance-navigator-test123456-andrew-quintanas-projects.vercel.app",
+    
+    # Edge cases to test regex patterns
+    "https://insurance-navigator-short-andrew-quintanas-projects.vercel.app",
+    "https://insurance-navigator-verylonghash123456789-andrew-quintanas-projects.vercel.app",
+    
+    # Invalid cases (should fail)
+    "https://different-app-abc123-andrew-quintanas-projects.vercel.app",  # Wrong app name
+    "https://insurance-navigator-abc123-different-user.vercel.app",  # Wrong user
+    "https://malicious-site.com",  # Completely different domain
 ]
 
 async def test_cors_preflight(session: aiohttp.ClientSession, backend_url: str, origin: str) -> Dict[str, Any]:
@@ -185,6 +207,70 @@ async def main():
         print("✅ All tests passed! CORS configuration looks good.")
     
     print(f"\n🕒 Test completed at {time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+# Add pattern validation test function
+def test_cors_pattern_validation():
+    """Test the CORS pattern validation logic locally."""
+    def validate_cors_origin(origin: str) -> bool:
+        """Local copy of the validation function for testing."""
+        if not origin:
+            return False
+        
+        try:
+            parsed = urlparse(origin)
+            domain = parsed.netloc.lower()
+            
+            # Allow localhost for development
+            if domain.startswith('localhost:') or domain == 'localhost':
+                return True
+            
+            # Allow production domains
+            production_domains = [
+                'insurance-navigator.vercel.app',
+                'insurance-navigator-api.onrender.com'
+            ]
+            if domain in production_domains:
+                return True
+            
+            # Allow Vercel preview deployments with pattern matching
+            vercel_pattern = re.compile(
+                r'^insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app$'
+            )
+            if vercel_pattern.match(domain):
+                return True
+            
+            # Allow any Vercel deployment for this project (broader pattern) - must be exact user match
+            if (domain.endswith('andrew-quintanas-projects.vercel.app') and 
+                domain.startswith('insurance-navigator-')):
+                return True
+                
+        except Exception:
+            return False
+        
+        return False
+    
+    print("🧪 Testing CORS Pattern Validation")
+    print("-" * 40)
+    
+    valid_count = 0
+    invalid_count = 0
+    
+    for origin in FRONTEND_ORIGINS:
+        is_valid = validate_cors_origin(origin)
+        status = "✅ VALID" if is_valid else "❌ INVALID"
+        print(f"{status} - {origin}")
+        
+        if is_valid:
+            valid_count += 1
+        else:
+            invalid_count += 1
+    
+    print(f"\n📊 Pattern Validation Results:")
+    print(f"Valid origins: {valid_count}")
+    print(f"Invalid origins: {invalid_count}")
+    print(f"Total tested: {len(FRONTEND_ORIGINS)}")
+    
+    return valid_count, invalid_count
 
 if __name__ == "__main__":
     asyncio.run(main()) 

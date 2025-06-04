@@ -23,6 +23,8 @@ from datetime import datetime
 import logging
 import json
 import asyncio
+import re
+from urllib.parse import urlparse
 
 # Database service imports
 from db.services.user_service import get_user_service, UserService
@@ -71,24 +73,72 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS middleware configuration
+# Dynamic CORS origin validation
+def validate_cors_origin(origin: str) -> bool:
+    """Validate if an origin should be allowed for CORS."""
+    if not origin:
+        return False
+    
+    # Parse the origin URL
+    try:
+        parsed = urlparse(origin)
+        domain = parsed.netloc.lower()
+        
+        # Allow localhost for development
+        if domain.startswith('localhost:') or domain == 'localhost':
+            return True
+        
+        # Allow production domains
+        production_domains = [
+            'insurance-navigator.vercel.app',
+            'insurance-navigator-api.onrender.com'
+        ]
+        if domain in production_domains:
+            return True
+        
+        # Allow Vercel preview deployments with pattern matching
+        # Pattern: insurance-navigator-{hash}-andrew-quintanas-projects.vercel.app
+        vercel_pattern = re.compile(
+            r'^insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app$'
+        )
+        if vercel_pattern.match(domain):
+            return True
+        
+        # Allow any Vercel deployment for this project (broader pattern) - must be exact user match
+        if (domain.endswith('andrew-quintanas-projects.vercel.app') and 
+            domain.startswith('insurance-navigator-')):
+            return True
+            
+    except Exception:
+        return False
+    
+    return False
+
+# CORS middleware configuration with dynamic validation
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        # Explicit origins for production
         "http://localhost:3000",
-        "http://localhost:3001",
-        "https://insurance-navigator.vercel.app",  # Production frontend
-        "https://insurance-navigator-hrf0s88oh-andrew-quintanas-projects.vercel.app",  # Preview deployment
-        "https://insurance-navigator-q2ukn6eih-andrew-quintanas-projects.vercel.app",  # Development deployment
-        "https://insurance-navigator-cylkkqsmn-andrew-quintanas-projects.vercel.app",  # New development deployment
-        "https://*.vercel.app",  # Vercel preview deployments pattern
-        "***REMOVED***",  # Render API (for docs/testing)
-        "*",  # Allow all origins for debugging - remove in production
+        "http://localhost:3001", 
+        "https://insurance-navigator.vercel.app",
+        "***REMOVED***",
+        
+        # Known preview deployments
+        "https://insurance-navigator-hrf0s88oh-andrew-quintanas-projects.vercel.app",
+        "https://insurance-navigator-q2ukn6eih-andrew-quintanas-projects.vercel.app", 
+        "https://insurance-navigator-cylkkqsmn-andrew-quintanas-projects.vercel.app",
+        "https://insurance-navigator-k2ui23iaj-andrew-quintanas-projects.vercel.app",
+        
+        # Wildcard patterns for Vercel deployments
+        "https://*.vercel.app",  # Allow all Vercel deployments
     ],
+    allow_origin_regex=r"https://insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
     allow_headers=["*"],
     expose_headers=["*"],
+    max_age=86400,  # Cache preflight for 24 hours
 )
 
 # Add error handling middleware if available
@@ -1270,18 +1320,31 @@ async def upload_policy_demo(
         
         vector_ids = []
         logger.info(f"🔄 Step 6: Processing {len(chunks)} chunks for embeddings...")
+        logger.info(f"📊 Document processing breakdown:")
+        logger.info(f"   • Total text: {len(text_content):,} characters")
+        logger.info(f"   • Chunk size: {len(chunks):,} pieces")
+        logger.info(f"   • Estimated time: {len(chunks) * 0.5:.1f} seconds")
         
-        # Log progress every 10 chunks to avoid spam
-        progress_interval = max(1, len(chunks) // 10)
+        # More granular progress tracking
+        progress_milestones = [10, 25, 50, 75, 90]  # Percentage milestones
+        last_milestone = 0
         
         async with pool.get_connection() as conn:
             # Process each chunk
             for i, chunk in enumerate(chunks):
                 try:
-                    # Progress logging
-                    if i % progress_interval == 0 or i == len(chunks) - 1:
-                        progress_pct = int((i / len(chunks)) * 100)
-                        logger.info(f"  📊 Processing progress: {i+1}/{len(chunks)} chunks ({progress_pct}%) - Current chunk: {len(chunk)} chars")
+                    # Calculate progress percentage
+                    progress_pct = int(((i + 1) / len(chunks)) * 100)
+                    
+                    # Log at major milestones
+                    if progress_pct >= progress_milestones[0] and progress_pct > last_milestone:
+                        milestone = progress_milestones.pop(0)
+                        last_milestone = milestone
+                        chunks_remaining = len(chunks) - i - 1
+                        time_remaining = chunks_remaining * 0.5  # Rough estimate
+                        logger.info(f"  🎯 Milestone: {milestone}% complete ({i+1}/{len(chunks)} chunks)")
+                        logger.info(f"     ⏱️ Estimated time remaining: {time_remaining:.1f} seconds")
+                        logger.info(f"     📝 Current chunk: {len(chunk)} characters")
                     
                     # Generate embedding
                     logger.debug(f"  🧮 Generating embedding for chunk {i+1}...")
@@ -1312,9 +1375,9 @@ async def upload_policy_demo(
                     
                     vector_ids.append(vector_id)
                     
-                    # Log completion of significant milestones
-                    if (i + 1) % progress_interval == 0 or i == len(chunks) - 1:
-                        logger.info(f"  ✅ Milestone: {i+1}/{len(chunks)} chunks processed ({int(((i+1) / len(chunks)) * 100)}%)")
+                    # Log individual chunk completion for very small documents
+                    if len(chunks) <= 5:
+                        logger.info(f"  ✅ Chunk {i+1}/{len(chunks)} completed ({progress_pct}%)")
                     
                 except Exception as e:
                     logger.error(f"  ❌ Error processing chunk {i+1}: {e}")
