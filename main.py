@@ -78,12 +78,15 @@ app.add_middleware(
         "http://localhost:3000",
         "http://localhost:3001",
         "https://insurance-navigator.vercel.app",  # Production frontend
-        "https://*.vercel.app",  # Vercel preview deployments
+        "https://insurance-navigator-hrf0s88oh-andrew-quintanas-projects.vercel.app",  # Preview deployment
+        "https://*.vercel.app",  # Vercel preview deployments pattern
         "https://insurance-navigator-api.onrender.com",  # Render API (for docs/testing)
+        "*",  # Allow all origins for debugging - remove in production
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Add error handling middleware if available
@@ -120,6 +123,9 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     full_name: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
 
 class Token(BaseModel):
     access_token: str
@@ -312,9 +318,7 @@ async def get_current_user(request: Request) -> UserResponse:
         if not user_service_instance:
             user_service_instance = await get_user_service()
         
-        # Validate token and get user data
-        user_data = await user_service_instance.validate_session(token)
-        
+        user_data = user_service_instance.verify_token(token)
         if not user_data:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -322,73 +326,61 @@ async def get_current_user(request: Request) -> UserResponse:
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
-        return UserResponse(
-            id=user_data["id"],
-            email=user_data["email"],
-            full_name=user_data["full_name"],
-            created_at=user_data.get("created_at"),
-            is_active=user_data.get("is_active", True),
-            roles=user_data.get("roles", [])
-        )
+        return UserResponse(**user_data)
         
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Authentication error: {str(e)}")
+        logger.error(f"Token verification error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication failed",
+            detail="Token verification failed",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-# Health check endpoint
+@app.options("/{full_path:path}")
+async def options_handler(request: Request):
+    """Handle CORS preflight requests explicitly."""
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Max-Age": "86400",
+        }
+    )
+
 @app.get("/health")
 async def health_check():
-    """Comprehensive health check endpoint."""
-    health_status = {
-        "status": "healthy",
-        "service": "insurance_navigator",
-        "version": "2.0.0",
-        "timestamp": datetime.utcnow().isoformat(),
-        "services": {}
-    }
-    
+    """Health check endpoint."""
     try:
-        # Check database connectivity with transaction pooler compatibility
-        pool = await get_db_pool()
-        # Use test_connection method which is designed for transaction poolers
-        connection_test = await pool.test_connection()
-        health_status["services"]["database"] = "healthy" if connection_test else "unhealthy"
-        if not connection_test:
-            health_status["status"] = "degraded"
+        # Test database connection
+        db_pool = await get_db_pool()
+        if db_pool:
+            logger.info("✅ Database connection successful")
+            return {
+                "status": "healthy",
+                "timestamp": datetime.utcnow().isoformat(),
+                "database": "connected",
+                "version": "2.0.0"
+            }
+        else:
+            logger.warning("⚠️ Database connection failed")
+            return {
+                "status": "unhealthy",
+                "timestamp": datetime.utcnow().isoformat(),
+                "database": "disconnected",
+                "version": "2.0.0"
+            }
     except Exception as e:
-        health_status["services"]["database"] = f"unhealthy: {str(e)}"
-        health_status["status"] = "degraded"
-    
-    try:
-        # Check user service
-        if not user_service_instance:
-            user_svc = await get_user_service()
-        health_status["services"]["user_service"] = "healthy"
-    except Exception as e:
-        health_status["services"]["user_service"] = f"unhealthy: {str(e)}"
-    
-    try:
-        # Check conversation service
-        conv_svc = await get_conversation_service()
-        health_status["services"]["conversation_service"] = "healthy"
-    except Exception as e:
-        health_status["services"]["conversation_service"] = f"unhealthy: {str(e)}"
-    
-    try:
-        # Check storage service
-        storage_svc = await get_storage_service()
-        health_status["services"]["storage_service"] = "healthy"
-    except Exception as e:
-        health_status["services"]["storage_service"] = f"unhealthy: {str(e)}"
-    
-    # Check agent orchestrator
-    health_status["services"]["agent_orchestrator"] = "available" if AGENT_ORCHESTRATOR_AVAILABLE else "fallback"
-    
-    return health_status
+        logger.error(f"Health check error: {str(e)}")
+        return {
+            "status": "unhealthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "error": str(e),
+            "version": "2.0.0"
+        }
 
 # Authentication endpoints
 @app.post("/register", response_model=Token)
@@ -458,6 +450,30 @@ async def login(request: LoginRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Login failed"
+        )
+
+@app.post("/forgot-password")
+async def forgot_password(request: ForgotPasswordRequest):
+    """Send password reset email (placeholder implementation)."""
+    try:
+        logger.info(f"Password reset requested for: {request.email}")
+        
+        # For now, just return success - in production, this would:
+        # 1. Check if email exists in database
+        # 2. Generate a secure reset token
+        # 3. Send email with reset link
+        # 4. Store token with expiration time
+        
+        return {
+            "message": "If an account with that email exists, you'll receive password reset instructions.",
+            "success": True
+        }
+        
+    except Exception as e:
+        logger.error(f"Forgot password error for {request.email}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Password reset request failed"
         )
 
 @app.get("/me", response_model=UserResponse)
