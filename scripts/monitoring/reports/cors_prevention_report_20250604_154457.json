@@ -1,0 +1,40 @@
+{
+  "scan_metadata": {
+    "timestamp": "2025-06-04T15:44:57.399655",
+    "total_tested": 28,
+    "scan_type": "automated_prevention"
+  },
+  "cors_analysis": {
+    "working": 28,
+    "failing": 0,
+    "success_rate": 100.0,
+    "server_errors": 0
+  },
+  "security_analysis": {
+    "threats_detected": 1,
+    "active_threats": [
+      "https://insurance-navigator-test123-andrew-quintanas-projects.vercel.app"
+    ],
+    "threat_level": "HIGH"
+  },
+  "server_health": {
+    "timestamp": "2025-06-04T15:44:57.297743",
+    "overall_status": "healthy",
+    "response_time": 54.34,
+    "can_handle_uploads": true,
+    "memory_pressure": false,
+    "recommendations": []
+  },
+  "recommendations": [
+    {
+      "priority": "CRITICAL",
+      "category": "security",
+      "message": "1 unauthorized deployments detected",
+      "action": "Block unauthorized origins immediately"
+    }
+  ],
+  "prevention_actions": [
+    "AUTO: Update security patterns to block unauthorized deployments"
+  ],
+  "next_scan_in": 60
+}

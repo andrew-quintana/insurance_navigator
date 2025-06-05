@@ -1,0 +1,762 @@
+{
+  "test_suite": "comprehensive_cors_validation",
+  "backend_url": "https://insurance-navigator-api.onrender.com",
+  "timestamp": "2025-06-04T22:36:59.262894",
+  "total_urls": 20,
+  "results": [
+    {
+      "origin": "http://localhost:3000",
+      "timestamp": "2025-06-04T22:36:59.262936",
+      "tests": {
+        "preflight": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "http://localhost:3000",
+            "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "access_control_allow_headers": "Content-Type, Authorization",
+            "access_control_allow_credentials": "true",
+            "access_control_max_age": "86400"
+          }
+        },
+        "health_check": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "http://localhost:3000"
+          },
+          "response_time": "0.000"
+        }
+      },
+      "validation": {
+        "valid": true,
+        "reason": "Localhost development",
+        "pattern": "localhost",
+        "risk_level": "low"
+      },
+      "overall": {
+        "cors_working": true,
+        "pattern_valid": true,
+        "risk_level": "low",
+        "needs_attention": false
+      }
+    },
+    {
+      "origin": "http://localhost:3001",
+      "timestamp": "2025-06-04T22:36:59.482964",
+      "tests": {
+        "preflight": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "http://localhost:3001",
+            "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "access_control_allow_headers": "Content-Type, Authorization",
+            "access_control_allow_credentials": "true",
+            "access_control_max_age": "86400"
+          }
+        },
+        "health_check": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "http://localhost:3001"
+          },
+          "response_time": "0.000"
+        }
+      },
+      "validation": {
+        "valid": true,
+        "reason": "Localhost development",
+        "pattern": "localhost",
+        "risk_level": "low"
+      },
+      "overall": {
+        "cors_working": true,
+        "pattern_valid": true,
+        "risk_level": "low",
+        "needs_attention": false
+      }
+    },
+    {
+      "origin": "https://insurance-navigator.vercel.app",
+      "timestamp": "2025-06-04T22:36:59.688847",
+      "tests": {
+        "preflight": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator.vercel.app",
+            "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "access_control_allow_headers": "Content-Type, Authorization",
+            "access_control_allow_credentials": "true",
+            "access_control_max_age": "86400"
+          }
+        },
+        "health_check": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator.vercel.app"
+          },
+          "response_time": "0.000"
+        }
+      },
+      "validation": {
+        "valid": true,
+        "reason": "Production domain",
+        "pattern": "production",
+        "risk_level": "low"
+      },
+      "overall": {
+        "cors_working": true,
+        "pattern_valid": true,
+        "risk_level": "low",
+        "needs_attention": false
+      }
+    },
+    {
+      "origin": "https://insurance-navigator-hrf0s88oh-andrew-quintanas-projects.vercel.app",
+      "timestamp": "2025-06-04T22:36:59.843603",
+      "tests": {
+        "preflight": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-hrf0s88oh-andrew-quintanas-projects.vercel.app",
+            "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "access_control_allow_headers": "Content-Type, Authorization",
+            "access_control_allow_credentials": "true",
+            "access_control_max_age": "86400"
+          }
+        },
+        "health_check": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-hrf0s88oh-andrew-quintanas-projects.vercel.app"
+          },
+          "response_time": "0.000"
+        }
+      },
+      "validation": {
+        "valid": true,
+        "reason": "Authorized Vercel preview deployment",
+        "pattern": "vercel_preview",
+        "risk_level": "low"
+      },
+      "overall": {
+        "cors_working": true,
+        "pattern_valid": true,
+        "risk_level": "low",
+        "needs_attention": false
+      }
+    },
+    {
+      "origin": "https://insurance-navigator-q2ukn6eih-andrew-quintanas-projects.vercel.app",
+      "timestamp": "2025-06-04T22:36:59.954032",
+      "tests": {
+        "preflight": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-q2ukn6eih-andrew-quintanas-projects.vercel.app",
+            "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "access_control_allow_headers": "Content-Type, Authorization",
+            "access_control_allow_credentials": "true",
+            "access_control_max_age": "86400"
+          }
+        },
+        "health_check": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-q2ukn6eih-andrew-quintanas-projects.vercel.app"
+          },
+          "response_time": "0.000"
+        }
+      },
+      "validation": {
+        "valid": true,
+        "reason": "Authorized Vercel preview deployment",
+        "pattern": "vercel_preview",
+        "risk_level": "low"
+      },
+      "overall": {
+        "cors_working": true,
+        "pattern_valid": true,
+        "risk_level": "low",
+        "needs_attention": false
+      }
+    },
+    {
+      "origin": "https://insurance-navigator-cylkkqsmn-andrew-quintanas-projects.vercel.app",
+      "timestamp": "2025-06-04T22:37:00.074758",
+      "tests": {
+        "preflight": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-cylkkqsmn-andrew-quintanas-projects.vercel.app",
+            "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "access_control_allow_headers": "Content-Type, Authorization",
+            "access_control_allow_credentials": "true",
+            "access_control_max_age": "86400"
+          }
+        },
+        "health_check": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-cylkkqsmn-andrew-quintanas-projects.vercel.app"
+          },
+          "response_time": "0.001"
+        }
+      },
+      "validation": {
+        "valid": true,
+        "reason": "Authorized Vercel preview deployment",
+        "pattern": "vercel_preview",
+        "risk_level": "low"
+      },
+      "overall": {
+        "cors_working": true,
+        "pattern_valid": true,
+        "risk_level": "low",
+        "needs_attention": false
+      }
+    },
+    {
+      "origin": "https://insurance-navigator-k2ui23iaj-andrew-quintanas-projects.vercel.app",
+      "timestamp": "2025-06-04T22:37:00.181708",
+      "tests": {
+        "preflight": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-k2ui23iaj-andrew-quintanas-projects.vercel.app",
+            "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "access_control_allow_headers": "Content-Type, Authorization",
+            "access_control_allow_credentials": "true",
+            "access_control_max_age": "86400"
+          }
+        },
+        "health_check": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-k2ui23iaj-andrew-quintanas-projects.vercel.app"
+          },
+          "response_time": "0.000"
+        }
+      },
+      "validation": {
+        "valid": true,
+        "reason": "Authorized Vercel preview deployment",
+        "pattern": "vercel_preview",
+        "risk_level": "low"
+      },
+      "overall": {
+        "cors_working": true,
+        "pattern_valid": true,
+        "risk_level": "low",
+        "needs_attention": false
+      }
+    },
+    {
+      "origin": "https://insurance-navigator-gybzhfv6-andrew-quintanas-projects.vercel.app",
+      "timestamp": "2025-06-04T22:37:00.300950",
+      "tests": {
+        "preflight": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-gybzhfv6-andrew-quintanas-projects.vercel.app",
+            "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "access_control_allow_headers": "Content-Type, Authorization",
+            "access_control_allow_credentials": "true",
+            "access_control_max_age": "86400"
+          }
+        },
+        "health_check": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-gybzhfv6-andrew-quintanas-projects.vercel.app"
+          },
+          "response_time": "0.001"
+        }
+      },
+      "validation": {
+        "valid": true,
+        "reason": "Authorized Vercel preview deployment",
+        "pattern": "vercel_preview",
+        "risk_level": "low"
+      },
+      "overall": {
+        "cors_working": true,
+        "pattern_valid": true,
+        "risk_level": "low",
+        "needs_attention": false
+      }
+    },
+    {
+      "origin": "https://insurance-navigator-ybdie76hbx9-andrew-quintanas-projects.vercel.app",
+      "timestamp": "2025-06-04T22:37:00.444384",
+      "tests": {
+        "preflight": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-ybdie76hbx9-andrew-quintanas-projects.vercel.app",
+            "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "access_control_allow_headers": "Content-Type, Authorization",
+            "access_control_allow_credentials": "true",
+            "access_control_max_age": "86400"
+          }
+        },
+        "health_check": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-ybdie76hbx9-andrew-quintanas-projects.vercel.app"
+          },
+          "response_time": "0.004"
+        }
+      },
+      "validation": {
+        "valid": true,
+        "reason": "Authorized Vercel preview deployment",
+        "pattern": "vercel_preview",
+        "risk_level": "low"
+      },
+      "overall": {
+        "cors_working": true,
+        "pattern_valid": true,
+        "risk_level": "low",
+        "needs_attention": false
+      }
+    },
+    {
+      "origin": "https://insurance-navigator-cowg251duahd-andrew-quintanas-projects.vercel.app",
+      "timestamp": "2025-06-04T22:37:00.577586",
+      "tests": {
+        "preflight": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-cowg251duahd-andrew-quintanas-projects.vercel.app",
+            "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "access_control_allow_headers": "Content-Type, Authorization",
+            "access_control_allow_credentials": "true",
+            "access_control_max_age": "86400"
+          }
+        },
+        "health_check": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-cowg251duahd-andrew-quintanas-projects.vercel.app"
+          },
+          "response_time": "0.000"
+        }
+      },
+      "validation": {
+        "valid": true,
+        "reason": "Authorized Vercel preview deployment",
+        "pattern": "vercel_preview",
+        "risk_level": "low"
+      },
+      "overall": {
+        "cors_working": true,
+        "pattern_valid": true,
+        "risk_level": "low",
+        "needs_attention": false
+      }
+    },
+    {
+      "origin": "https://insurance-navigator-s872lsy952-andrew-quintanas-projects.vercel.app",
+      "timestamp": "2025-06-04T22:37:00.735023",
+      "tests": {
+        "preflight": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-s872lsy952-andrew-quintanas-projects.vercel.app",
+            "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "access_control_allow_headers": "Content-Type, Authorization",
+            "access_control_allow_credentials": "true",
+            "access_control_max_age": "86400"
+          }
+        },
+        "health_check": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-s872lsy952-andrew-quintanas-projects.vercel.app"
+          },
+          "response_time": "0.001"
+        }
+      },
+      "validation": {
+        "valid": true,
+        "reason": "Authorized Vercel preview deployment",
+        "pattern": "vercel_preview",
+        "risk_level": "low"
+      },
+      "overall": {
+        "cors_working": true,
+        "pattern_valid": true,
+        "risk_level": "low",
+        "needs_attention": false
+      }
+    },
+    {
+      "origin": "https://insurance-navigator-iiwduoek39q-andrew-quintanas-projects.vercel.app",
+      "timestamp": "2025-06-04T22:37:00.856273",
+      "tests": {
+        "preflight": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-iiwduoek39q-andrew-quintanas-projects.vercel.app",
+            "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "access_control_allow_headers": "Content-Type, Authorization",
+            "access_control_allow_credentials": "true",
+            "access_control_max_age": "86400"
+          }
+        },
+        "health_check": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-iiwduoek39q-andrew-quintanas-projects.vercel.app"
+          },
+          "response_time": "0.000"
+        }
+      },
+      "validation": {
+        "valid": true,
+        "reason": "Authorized Vercel preview deployment",
+        "pattern": "vercel_preview",
+        "risk_level": "low"
+      },
+      "overall": {
+        "cors_working": true,
+        "pattern_valid": true,
+        "risk_level": "low",
+        "needs_attention": false
+      }
+    },
+    {
+      "origin": "https://insurance-navigator-ue9nmxb1oas-andrew-quintanas-projects.vercel.app",
+      "timestamp": "2025-06-04T22:37:00.983281",
+      "tests": {
+        "preflight": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-ue9nmxb1oas-andrew-quintanas-projects.vercel.app",
+            "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "access_control_allow_headers": "Content-Type, Authorization",
+            "access_control_allow_credentials": "true",
+            "access_control_max_age": "86400"
+          }
+        },
+        "health_check": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-ue9nmxb1oas-andrew-quintanas-projects.vercel.app"
+          },
+          "response_time": "0.000"
+        }
+      },
+      "validation": {
+        "valid": true,
+        "reason": "Authorized Vercel preview deployment",
+        "pattern": "vercel_preview",
+        "risk_level": "low"
+      },
+      "overall": {
+        "cors_working": true,
+        "pattern_valid": true,
+        "risk_level": "low",
+        "needs_attention": false
+      }
+    },
+    {
+      "origin": "https://insurance-navigator-kizmgennswyr-andrew-quintanas-projects.vercel.app",
+      "timestamp": "2025-06-04T22:37:01.135966",
+      "tests": {
+        "preflight": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-kizmgennswyr-andrew-quintanas-projects.vercel.app",
+            "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "access_control_allow_headers": "Content-Type, Authorization",
+            "access_control_allow_credentials": "true",
+            "access_control_max_age": "86400"
+          }
+        },
+        "health_check": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-kizmgennswyr-andrew-quintanas-projects.vercel.app"
+          },
+          "response_time": "0.000"
+        }
+      },
+      "validation": {
+        "valid": true,
+        "reason": "Authorized Vercel preview deployment",
+        "pattern": "vercel_preview",
+        "risk_level": "low"
+      },
+      "overall": {
+        "cors_working": true,
+        "pattern_valid": true,
+        "risk_level": "low",
+        "needs_attention": false
+      }
+    },
+    {
+      "origin": "https://insurance-navigator-r3v31yqh-andrew-quintanas-projects.vercel.app",
+      "timestamp": "2025-06-04T22:37:01.284215",
+      "tests": {
+        "preflight": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-r3v31yqh-andrew-quintanas-projects.vercel.app",
+            "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "access_control_allow_headers": "Content-Type, Authorization",
+            "access_control_allow_credentials": "true",
+            "access_control_max_age": "86400"
+          }
+        },
+        "health_check": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-r3v31yqh-andrew-quintanas-projects.vercel.app"
+          },
+          "response_time": "0.000"
+        }
+      },
+      "validation": {
+        "valid": true,
+        "reason": "Authorized Vercel preview deployment",
+        "pattern": "vercel_preview",
+        "risk_level": "low"
+      },
+      "overall": {
+        "cors_working": true,
+        "pattern_valid": true,
+        "risk_level": "low",
+        "needs_attention": false
+      }
+    },
+    {
+      "origin": "https://insurance-navigator-70c9xrxj7eo-andrew-quintanas-projects.vercel.app",
+      "timestamp": "2025-06-04T22:37:01.435497",
+      "tests": {
+        "preflight": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-70c9xrxj7eo-andrew-quintanas-projects.vercel.app",
+            "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "access_control_allow_headers": "Content-Type, Authorization",
+            "access_control_allow_credentials": "true",
+            "access_control_max_age": "86400"
+          }
+        },
+        "health_check": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-70c9xrxj7eo-andrew-quintanas-projects.vercel.app"
+          },
+          "response_time": "0.000"
+        }
+      },
+      "validation": {
+        "valid": true,
+        "reason": "Authorized Vercel preview deployment",
+        "pattern": "vercel_preview",
+        "risk_level": "low"
+      },
+      "overall": {
+        "cors_working": true,
+        "pattern_valid": true,
+        "risk_level": "low",
+        "needs_attention": false
+      }
+    },
+    {
+      "origin": "https://insurance-navigator-lrtj817xh9-andrew-quintanas-projects.vercel.app",
+      "timestamp": "2025-06-04T22:37:01.567573",
+      "tests": {
+        "preflight": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-lrtj817xh9-andrew-quintanas-projects.vercel.app",
+            "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "access_control_allow_headers": "Content-Type, Authorization",
+            "access_control_allow_credentials": "true",
+            "access_control_max_age": "86400"
+          }
+        },
+        "health_check": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-lrtj817xh9-andrew-quintanas-projects.vercel.app"
+          },
+          "response_time": "0.000"
+        }
+      },
+      "validation": {
+        "valid": true,
+        "reason": "Authorized Vercel preview deployment",
+        "pattern": "vercel_preview",
+        "risk_level": "low"
+      },
+      "overall": {
+        "cors_working": true,
+        "pattern_valid": true,
+        "risk_level": "low",
+        "needs_attention": false
+      }
+    },
+    {
+      "origin": "https://insurance-navigator-abc123-different-user.vercel.app",
+      "timestamp": "2025-06-04T22:37:01.717323",
+      "tests": {
+        "preflight": {
+          "status": 400,
+          "success": false,
+          "cors_headers": {
+            "access_control_allow_origin": null,
+            "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "access_control_allow_headers": "Content-Type, Authorization",
+            "access_control_allow_credentials": "true",
+            "access_control_max_age": "86400"
+          }
+        },
+        "health_check": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-abc123-different-user.vercel.app"
+          },
+          "response_time": "0.000"
+        }
+      },
+      "validation": {
+        "valid": false,
+        "reason": "Vercel deployment for different user",
+        "pattern": "vercel_harmful",
+        "risk_level": "high",
+        "security_issue": true
+      },
+      "overall": {
+        "cors_working": false,
+        "pattern_valid": false,
+        "risk_level": "high",
+        "needs_attention": true
+      }
+    },
+    {
+      "origin": "https://malicious-site.vercel.app",
+      "timestamp": "2025-06-04T22:37:01.850700",
+      "tests": {
+        "preflight": {
+          "status": 400,
+          "success": false,
+          "cors_headers": {
+            "access_control_allow_origin": null,
+            "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "access_control_allow_headers": "Content-Type, Authorization",
+            "access_control_allow_credentials": "true",
+            "access_control_max_age": "86400"
+          }
+        },
+        "health_check": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://malicious-site.vercel.app"
+          },
+          "response_time": "0.000"
+        }
+      },
+      "validation": {
+        "valid": true,
+        "reason": "Generic Vercel deployment (review needed)",
+        "pattern": "vercel_all",
+        "risk_level": "medium",
+        "review_needed": true
+      },
+      "overall": {
+        "cors_working": false,
+        "pattern_valid": true,
+        "risk_level": "medium",
+        "needs_attention": true
+      }
+    },
+    {
+      "origin": "https://insurance-navigator-hack-andrew-quintanas-projects.vercel.app",
+      "timestamp": "2025-06-04T22:37:01.979726",
+      "tests": {
+        "preflight": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-hack-andrew-quintanas-projects.vercel.app",
+            "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "access_control_allow_headers": "Content-Type, Authorization",
+            "access_control_allow_credentials": "true",
+            "access_control_max_age": "86400"
+          }
+        },
+        "health_check": {
+          "status": 200,
+          "success": true,
+          "cors_headers": {
+            "access_control_allow_origin": "https://insurance-navigator-hack-andrew-quintanas-projects.vercel.app"
+          },
+          "response_time": "0.001"
+        }
+      },
+      "validation": {
+        "valid": true,
+        "reason": "Authorized Vercel preview deployment",
+        "pattern": "vercel_preview",
+        "risk_level": "low"
+      },
+      "overall": {
+        "cors_working": true,
+        "pattern_valid": true,
+        "risk_level": "low",
+        "needs_attention": false
+      }
+    }
+  ],
+  "summary": {
+    "total_tested": 20,
+    "working_count": 18,
+    "failing_count": 2,
+    "high_risk_count": 1,
+    "success_rate": "90.0%",
+    "recommendations": [
+      "\ud83d\udd27 2 URLs failed CORS tests - review configuration",
+      "\ud83d\udea8 1 high-risk URLs detected - potential security issue",
+      "\ud83d\udcdd 1 URLs don't match expected patterns - update regex"
+    ]
+  }
+}
