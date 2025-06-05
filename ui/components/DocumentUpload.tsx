@@ -233,7 +233,7 @@ export default function DocumentUpload({
       
       // Detect CORS issues
       if (errorMessage.includes('Load failed') || errorMessage.includes('CORS') || errorMessage.includes('Access-Control-Allow-Origin')) {
-        errorMessage = `🌐 Connection blocked by browser security policy. This usually means the server needs to be updated with your current website address. Please try again in a few minutes or contact support.`
+        errorMessage = `Upload failed. Please try again in a few minutes.`
       }
       
       // Detect network issues
