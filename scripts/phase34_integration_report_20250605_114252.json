@@ -1,0 +1,110 @@
+{
+  "timestamp": "2025-06-05T11:42:50.929667",
+  "tests_run": 8,
+  "tests_passed": 5,
+  "tests_failed": 3,
+  "detailed_results": {
+    "Database Schema": {
+      "passed": false,
+      "details": {},
+      "issues": [
+        "Database connection error: prepared statement \"__asyncpg_stmt_1__\" already exists\nHINT:  \nNOTE: pgbouncer with pool_mode set to \"transaction\" or\n\"statement\" does not support prepared statements properly.\nYou have two options:\n\n* if you are using pgbouncer for connection pooling to a\n  single server, switch to the connection pool functionality\n  provided by asyncpg, it is a much better option for this\n  purpose;\n\n* if you have no option of avoiding the use of pgbouncer,\n  then you can set statement_cache_size to 0 when creating\n  the asyncpg connection object.\n"
+      ]
+    },
+    "Edge Functions": {
+      "passed": false,
+      "details": {
+        "upload-handler_cors": false,
+        "upload-handler_deployed": false,
+        "processing-webhook_cors": false,
+        "processing-webhook_deployed": true,
+        "progress-tracker_cors": false,
+        "progress-tracker_deployed": false
+      },
+      "issues": [
+        "upload-handler: CORS not working",
+        "upload-handler: Not properly deployed",
+        "processing-webhook: CORS not working",
+        "progress-tracker: CORS not working",
+        "progress-tracker: Not properly deployed"
+      ]
+    },
+    "Storage Configuration": {
+      "passed": true,
+      "details": {
+        "documents_bucket_exists": true,
+        "bucket_accessible": true,
+        "rls_enforced": true
+      },
+      "issues": []
+    },
+    "LlamaParse Integration": {
+      "passed": true,
+      "details": {
+        "client_file_exists": true,
+        "has_createLlamaParseClient": true,
+        "has_LlamaParseClient": true,
+        "has_LlamaParseConfig": true,
+        "has_LlamaParseJobRequest": true,
+        "webhook_url": "https://jhrespvvhbnloxrieycf.supabase.co/functions/v1/processing-webhook",
+        "api_key_configured": false
+      },
+      "issues": [
+        "LlamaParse API key not configured"
+      ]
+    },
+    "Feature Flags": {
+      "passed": true,
+      "details": {
+        "feature_flags_accessible": true,
+        "existing_flags_count": 5,
+        "v2_flags_count": 1,
+        "evaluation_function_works": true
+      },
+      "issues": []
+    },
+    "Real-time Progress": {
+      "passed": false,
+      "details": {
+        "progress_table_accessible": true
+      },
+      "issues": [
+        "Real-time progress error: {'message': 'insert or update on table \"realtime_progress_updates\" violates foreign key constraint \"realtime_progress_updates_document_id_fkey\"', 'code': '23503', 'hint': None, 'details': 'Key (document_id)=(00000000-0000-0000-0000-000000000000) is not present in table \"documents\".'}"
+      ]
+    },
+    "Client Integration": {
+      "passed": true,
+      "details": {
+        "client_file_exists": true,
+        "has_V2UploadClient": true,
+        "has_UploadProgress": true,
+        "has_UploadConfig": true,
+        "has_createUploadClient": true,
+        "has_initializeUpload": true,
+        "has_completeUpload": true
+      },
+      "issues": []
+    },
+    "End-to-End Flow": {
+      "passed": true,
+      "details": {
+        "can_create_document": true,
+        "document_id": "8494bfd6-9afe-4186-968c-b362ca0e4dbd",
+        "can_update_document": true,
+        "can_track_progress": true
+      },
+      "issues": []
+    }
+  },
+  "errors": [],
+  "warnings": [],
+  "success_rate": 62.5,
+  "phase_3_4_ready": false,
+  "critical_issues": [
+    "CRITICAL: Database Schema failure",
+    "CRITICAL: Edge Functions failure"
+  ],
+  "recommendations": [
+    "Fix critical failures before proceeding to Phase 5"
+  ]
+}
