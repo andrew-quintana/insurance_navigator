@@ -14,7 +14,7 @@ Comprehensive async FastAPI application with:
 import os
 import sys
 import uuid
-from fastapi import FastAPI, HTTPException, Depends, Request, status, UploadFile, File, Form, Response
+from fastapi import FastAPI, HTTPException, Depends, Request, status, UploadFile, File, Form, Response, Body, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
@@ -49,7 +49,6 @@ try:
     logger.info("✅ AgentOrchestrator imported successfully")
 except ImportError as e:
     logger.error(f"❌ CRITICAL: AgentOrchestrator import failed: {e}")
-    logger.error("This is a critical error that must be fixed. Agent orchestration is required.")
     # Don't define AgentOrchestrator as None - let it fail properly
     AGENT_ORCHESTRATOR_AVAILABLE = False
     raise ImportError(f"AgentOrchestrator import failed: {e}. This is a critical error.")
@@ -1343,6 +1342,26 @@ async def root():
         "message": "Welcome to the Insurance Navigator API! Use /docs for interactive documentation."
     }
 
+
+@app.post("/chat-with-image")
+async def chat_with_image(message: str = Form(...), image: UploadFile = File(None), current_user: UserResponse = Depends(get_current_user)):
+    """Chat with image support like ChatGPT."""
+    try:
+        image_text = ""
+        if image:
+            from agents.common.multimodal.image_processor import ImageProcessor
+            processor = ImageProcessor()
+            image_data = await image.read()
+            result = processor.extract_text_from_image(image_data)
+            image_text = f" [IMAGE: {result.get("extracted_text", "processing...").strip()[:200]}]"
+        
+        enhanced_message = message + image_text
+        from agents.patient_navigator.patient_navigator import PatientNavigatorAgent
+        agent = PatientNavigatorAgent()
+        response, metadata = agent.process(enhanced_message, current_user.id, "default")
+        return {"text": response, "conversation_id": "default", "metadata": metadata}
+    except Exception as e:
+        return {"text": f"Error: {str(e)}", "conversation_id": "default"}
 @app.post("/upload-policy", response_model=Dict[str, Any])
 async def upload_policy_demo(
     file: UploadFile = File(...),
@@ -1653,6 +1672,57 @@ async def search_documents(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Search failed: {str(e)}"
+        )
+
+@app.post("/api/embeddings", response_model=Dict[str, Any])
+async def generate_embedding_for_edge_functions(
+    request: Dict[str, Any] = Body(...),
+    authorization: str = Header(None)
+):
+    """Generate embeddings for Edge Functions to use in vector processing."""
+    try:
+        # Verify authorization
+        if not authorization or not authorization.startswith('Bearer '):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing or invalid authorization header"
+            )
+        
+        # Extract text from request
+        text = request.get('text', '').strip()
+        if not text:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Text content is required"
+            )
+        
+        logger.info(f"Generating embedding for {len(text)} characters of text")
+        
+        # Get embedding model
+        model = await get_embedding_model()
+        
+        # Generate embedding
+        embedding = model.encode(text).tolist()
+        
+        # Ensure consistent dimension (384 for all-MiniLM-L6-v2)
+        if len(embedding) != 384:
+            logger.warning(f"Unexpected embedding dimension: {len(embedding)}, expected 384")
+        
+        return {
+            "success": True,
+            "embedding": embedding,
+            "dimension": len(embedding),
+            "text_length": len(text),
+            "model": "all-MiniLM-L6-v2"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Embedding generation error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate embedding: {str(e)}"
         )
 
 if __name__ == "__main__":
