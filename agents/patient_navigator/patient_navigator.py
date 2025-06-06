@@ -34,6 +34,10 @@ from langchain_core.output_parsers import PydanticOutputParser
 
 # Import base agent and exceptions
 from agents.base_agent import BaseAgent
+from agents.common.rag import RAGMixin
+from agents.common.workflows.workflow_manager import WorkflowManager
+from agents.common.memory.conversation_memory import conversation_memory
+from agents.common.caching.policy_cache import policy_cache
 from agents.common.exceptions import (
     PatientNavigatorException, 
     PatientNavigatorProcessingError,
@@ -65,7 +69,7 @@ if not logger.handlers:
     logger.setLevel(logging.INFO)
 
 
-class PatientNavigatorAgent(BaseAgent):
+class PatientNavigatorAgent(RAGMixin, BaseAgent):
     """Agent responsible for front-facing interactions with users."""
     
     def __init__(self, 
@@ -140,6 +144,12 @@ class PatientNavigatorAgent(BaseAgent):
         # Initialize agent-specific components
         self._initialize_agent()
         
+        self.configure_rag(enabled=True)
+        self.workflow_manager = WorkflowManager()
+        self.conversation_memory = conversation_memory
+        self.policy_cache = policy_cache
+        logger.info(f"Phase 7 features enabled")
+        logger.info(f"RAG enabled for {self.name}")
         logger.info(f"Patient Navigator Agent initialized with model {model_name}")
 
     # Using BaseAgent's _load_prompt method instead of a custom implementation
