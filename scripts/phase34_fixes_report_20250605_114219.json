@@ -1,0 +1,22 @@
+{
+  "timestamp": "2025-06-05T11:42:19.446628",
+  "fixes_applied": [
+    "Verified Edge Function URL structure for upload-handler",
+    "Verified Edge Function URL structure for processing-webhook",
+    "Verified Edge Function URL structure for progress-tracker",
+    "Added Edge Functions deployment guidance"
+  ],
+  "fixes_failed": [
+    "Failed to create user test-user-zero@example.com: prepared statement \"__asyncpg_stmt_1__\" already exists\nHINT:  \nNOTE: pgbouncer with pool_mode set to \"transaction\" or\n\"statement\" does not support prepared statements properly.\nYou have two options:\n\n* if you are using pgbouncer for connection pooling to a\n  single server, switch to the connection pool functionality\n  provided by asyncpg, it is a much better option for this\n  purpose;\n\n* if you have no option of avoiding the use of pgbouncer,\n  then you can set statement_cache_size to 0 when creating\n  the asyncpg connection object.\n",
+    "Failed to create user test-user-one@example.com: prepared statement \"__asyncpg_stmt_2__\" already exists\nHINT:  \nNOTE: pgbouncer with pool_mode set to \"transaction\" or\n\"statement\" does not support prepared statements properly.\nYou have two options:\n\n* if you are using pgbouncer for connection pooling to a\n  single server, switch to the connection pool functionality\n  provided by asyncpg, it is a much better option for this\n  purpose;\n\n* if you have no option of avoiding the use of pgbouncer,\n  then you can set statement_cache_size to 0 when creating\n  the asyncpg connection object.\n",
+    "Failed to check realtime constraints: prepared statement \"__asyncpg_stmt_3__\" already exists\nHINT:  \nNOTE: pgbouncer with pool_mode set to \"transaction\" or\n\"statement\" does not support prepared statements properly.\nYou have two options:\n\n* if you are using pgbouncer for connection pooling to a\n  single server, switch to the connection pool functionality\n  provided by asyncpg, it is a much better option for this\n  purpose;\n\n* if you have no option of avoiding the use of pgbouncer,\n  then you can set statement_cache_size to 0 when creating\n  the asyncpg connection object.\n",
+    "Verification failed: {'message': 'insert or update on table \"documents\" violates foreign key constraint \"documents_user_id_fkey\"', 'code': '23503', 'hint': None, 'details': 'Key (user_id)=(00000000-0000-0000-0000-000000000001) is not present in table \"users\".'}"
+  ],
+  "summary": {
+    "total_fixes_attempted": 8,
+    "fixes_successful": 4,
+    "fixes_failed": 4,
+    "success_rate": 50.0,
+    "ready_for_retry": true
+  }
+}
