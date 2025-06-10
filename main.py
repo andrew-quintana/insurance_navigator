@@ -75,15 +75,20 @@ class CustomCORSMiddleware(BaseHTTPMiddleware):
         self.allowed_origins = self._compile_patterns()
     
     def _compile_patterns(self):
-        """Compile regex patterns for efficient matching."""
+        """Compile regex patterns for efficient matching using environment variables."""
         import re
+        
+        # Get CORS origins from environment
+        cors_origins = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
+        cors_origins = [origin.strip() for origin in cors_origins if origin.strip()]
+        
+        # Get Vercel preview pattern from environment
+        vercel_pattern = os.getenv('CORS_VERCEL_PREVIEW_PATTERN', 'insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app')
+        
         return {
             'localhost': re.compile(r'^localhost(:\d+)?$'),
-            'production': [
-                'insurance-navigator.vercel.app',
-                'insurance-navigator-api.onrender.com'
-            ],
-            'vercel_preview': re.compile(r'^insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app$'),
+            'env_origins': cors_origins,  # Origins from environment
+            'vercel_preview': re.compile(f'^{vercel_pattern}$'),
             'vercel_all': re.compile(r'^[a-z0-9-]+\.vercel\.app$'),
         }
     
@@ -101,15 +106,15 @@ class CustomCORSMiddleware(BaseHTTPMiddleware):
             if self.allowed_origins['localhost'].match(domain):
                 return True
             
-            # Check production domains
-            if domain in self.allowed_origins['production']:
+            # Check environment-configured origins
+            if domain in self.allowed_origins['env_origins']:
                 return True
             
             # Check Vercel preview pattern (specific project)
             if self.allowed_origins['vercel_preview'].match(domain):
                 return True
             
-            # Check any Vercel deployment (broader)
+            # Check any Vercel deployment (broader fallback)
             if self.allowed_origins['vercel_all'].match(domain):
                 return True
             
@@ -182,27 +187,15 @@ app = FastAPI(
 # Add custom CORS middleware FIRST
 app.add_middleware(CustomCORSMiddleware)
 
-# Keep the original CORS middleware as backup
+# Backup CORS middleware using environment variables
+cors_origins = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
+cors_origins = [origin.strip() for origin in cors_origins if origin.strip()]
+vercel_pattern = os.getenv('CORS_VERCEL_PREVIEW_PATTERN', 'insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app')
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        # Explicit origins for production
-        "http://localhost:3000",
-        "http://localhost:3001", 
-        "https://insurance-navigator.vercel.app",
-        "https://insurance-navigator-api.onrender.com",
-        
-        # Known preview deployments - add the failing one explicitly
-        "https://insurance-navigator-hrf0s88oh-andrew-quintanas-projects.vercel.app",
-        "https://insurance-navigator-q2ukn6eih-andrew-quintanas-projects.vercel.app", 
-        "https://insurance-navigator-cylkkqsmn-andrew-quintanas-projects.vercel.app",
-        "https://insurance-navigator-k2ui23iaj-andrew-quintanas-projects.vercel.app",
-        "https://insurance-navigator-e3j4jn4xj-andrew-quintanas-projects.vercel.app",  # Add failing URL
-        
-        # Wildcard patterns for Vercel deployments
-        "https://*.vercel.app",  # Allow all Vercel deployments
-    ],
-    allow_origin_regex=r"https://insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app",
+    allow_origins=cors_origins + ["https://*.vercel.app"],  # Environment origins + wildcard
+    allow_origin_regex=f"https://{vercel_pattern}",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
     allow_headers=["*"],
