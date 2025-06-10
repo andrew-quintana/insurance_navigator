@@ -35,6 +35,9 @@ from db.services.conversation_service import get_conversation_service, Conversat
 from db.services.storage_service import get_storage_service, StorageService
 from db.services.db_pool import get_db_pool
 
+# Centralized CORS configuration
+from utils.cors_config import cors_config, create_preflight_response, add_cors_headers
+
 # Set up logging first
 logging.basicConfig(
     level=logging.INFO,
@@ -66,89 +69,22 @@ from sentence_transformers import SentenceTransformer
 import PyPDF2
 import io
 
-# Custom CORS middleware for better control
+# Custom CORS middleware using centralized configuration
 class CustomCORSMiddleware(BaseHTTPMiddleware):
-    """Custom CORS middleware with better error handling and validation."""
+    """Custom CORS middleware using centralized configuration from utils.cors_config."""
     
     def __init__(self, app):
         super().__init__(app)
-        self.allowed_origins = self._compile_patterns()
-    
-    def _compile_patterns(self):
-        """Compile regex patterns for efficient matching using environment variables."""
-        import re
-        
-        # Get CORS origins from environment
-        cors_origins = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
-        cors_origins = [origin.strip() for origin in cors_origins if origin.strip()]
-        
-        # Get Vercel preview pattern from environment
-        vercel_pattern = os.getenv('CORS_VERCEL_PREVIEW_PATTERN', 'insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app')
-        
-        return {
-            'localhost': re.compile(r'^localhost(:\d+)?$'),
-            'env_origins': cors_origins,  # Origins from environment
-            'vercel_preview': re.compile(f'^{vercel_pattern}$'),
-            'vercel_all': re.compile(r'^[a-z0-9-]+\.vercel\.app$'),
-        }
-    
-    def _validate_origin(self, origin: str) -> bool:
-        """Validate origin with comprehensive pattern matching."""
-        if not origin:
-            return False
-        
-        try:
-            from urllib.parse import urlparse
-            parsed = urlparse(origin)
-            domain = parsed.netloc.lower()
-            
-            # Check localhost
-            if self.allowed_origins['localhost'].match(domain):
-                return True
-            
-            # Check environment-configured origins
-            if domain in self.allowed_origins['env_origins']:
-                return True
-            
-            # Check Vercel preview pattern (specific project)
-            if self.allowed_origins['vercel_preview'].match(domain):
-                return True
-            
-            # Check any Vercel deployment (broader fallback)
-            if self.allowed_origins['vercel_all'].match(domain):
-                return True
-            
-        except Exception as e:
-            logger.warning(f"Origin validation error for {origin}: {e}")
-            return False
-        
-        return False
-    
-    def _add_cors_headers(self, response: Response, origin: str = None):
-        """Add comprehensive CORS headers."""
-        # Always add basic CORS headers for better compatibility
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, HEAD"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-        response.headers["Access-Control-Expose-Headers"] = "*"
-        response.headers["Access-Control-Max-Age"] = "86400"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        
-        # Set origin-specific header
-        if origin and self._validate_origin(origin):
-            response.headers["Access-Control-Allow-Origin"] = origin
-        else:
-            # Fallback for development
-            response.headers["Access-Control-Allow-Origin"] = "*"
+        # Use the centralized CORS configuration
+        self.cors_config = cors_config
     
     async def dispatch(self, request: Request, call_next):
-        """Process request with enhanced CORS handling."""
+        """Process request with centralized CORS handling."""
         origin = request.headers.get("origin")
         
         # Handle preflight requests
         if request.method == "OPTIONS":
-            response = Response()
-            self._add_cors_headers(response, origin)
-            return response
+            return create_preflight_response(origin)
         
         try:
             # Process the request
@@ -156,8 +92,8 @@ class CustomCORSMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
             processing_time = time.time() - start_time
             
-            # Add CORS headers to all responses
-            self._add_cors_headers(response, origin)
+            # Add CORS headers using centralized config
+            add_cors_headers(response, origin)
             
             # Add timing header for monitoring
             response.headers["X-Processing-Time"] = f"{processing_time:.3f}"
@@ -172,7 +108,7 @@ class CustomCORSMiddleware(BaseHTTPMiddleware):
                 status_code=500,
                 media_type="application/json"
             )
-            self._add_cors_headers(error_response, origin)
+            add_cors_headers(error_response, origin)
             return error_response
 
 # Initialize FastAPI app
@@ -187,20 +123,11 @@ app = FastAPI(
 # Add custom CORS middleware FIRST
 app.add_middleware(CustomCORSMiddleware)
 
-# Backup CORS middleware using environment variables
-cors_origins = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
-cors_origins = [origin.strip() for origin in cors_origins if origin.strip()]
-vercel_pattern = os.getenv('CORS_VERCEL_PREVIEW_PATTERN', 'insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app')
-
+# Keep the original CORS middleware as backup using centralized config
+cors_middleware_config = cors_config.get_fastapi_cors_middleware_config()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins + ["https://*.vercel.app"],  # Environment origins + wildcard
-    allow_origin_regex=f"https://{vercel_pattern}",
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-    max_age=86400,  # Cache preflight for 24 hours
+    **cors_middleware_config
 )
 
 # Add error handling middleware if available
