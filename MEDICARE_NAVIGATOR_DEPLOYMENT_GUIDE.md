@@ -164,6 +164,31 @@
 - **Errors**: Frontend errors appear in browser console; backend errors in Render logs
 - **Performance**: Monitor response times and database query performance
 
+## CORS Configuration Management
+
+### Environment-Based CORS Setup
+CORS origins are now managed through environment variables for better flexibility:
+
+**Backend Environment Variables:**
+```bash
+# .env and .env.template
+CORS_ALLOWED_ORIGINS="https://insurance-navigator.vercel.app,***REMOVED***,http://localhost:3000,http://localhost:3001"
+CORS_VERCEL_PREVIEW_PATTERN="insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app"
+```
+
+**Benefits:**
+- ✅ **Easier Management:** Add new deployment URLs without code changes
+- ✅ **Environment Flexibility:** Different CORS settings per environment
+- ✅ **Automatic Vercel Support:** Regex pattern handles dynamic preview URLs
+- ✅ **No Code Deployment:** Update CORS via Render environment variables
+
+**Adding New Vercel Deployments:**
+1. Add new URL to `CORS_ALLOWED_ORIGINS` in Render dashboard
+2. Or ensure it matches the `CORS_VERCEL_PREVIEW_PATTERN` regex
+3. No code changes or redeployment needed
+
+**Note:** CORS URLs are **not sensitive** - they're public configuration, not secrets.
+
 ---
 
 **Last Updated**: January 2025
