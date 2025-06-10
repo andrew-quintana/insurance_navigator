@@ -1353,7 +1353,7 @@ async def chat_with_image(message: str = Form(...), image: UploadFile = File(Non
             processor = ImageProcessor()
             image_data = await image.read()
             result = processor.extract_text_from_image(image_data)
-            image_text = f" [IMAGE: {result.get("extracted_text", "processing...").strip()[:200]}]"
+            image_text = f" [IMAGE: {result.get('extracted_text', 'processing...').strip()[:200]}]"
         
         enhanced_message = message + image_text
         from agents.patient_navigator.patient_navigator import PatientNavigatorAgent
