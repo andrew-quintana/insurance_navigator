@@ -197,6 +197,7 @@ app.add_middleware(
         "https://insurance-navigator-q2ukn6eih-andrew-quintanas-projects.vercel.app", 
         "https://insurance-navigator-cylkkqsmn-andrew-quintanas-projects.vercel.app",
         "https://insurance-navigator-k2ui23iaj-andrew-quintanas-projects.vercel.app",
+        "https://insurance-navigator-e3j4jn4xj-andrew-quintanas-projects.vercel.app",  # Add failing URL
         
         # Wildcard patterns for Vercel deployments
         "https://*.vercel.app",  # Allow all Vercel deployments
@@ -1414,8 +1415,8 @@ async def upload_policy_demo(
         if not text_content.strip():
             raise HTTPException(status_code=400, detail="Could not extract text from file")
         
-        # Limit text content for very large documents
-        MAX_TEXT_LENGTH = 1_000_000  # 1MB of text
+        # Limit text content for very large documents - more conservative for stability
+        MAX_TEXT_LENGTH = 500_000  # 500KB of text (reduced for better stability)
         if len(text_content) > MAX_TEXT_LENGTH:
             logger.warning(f"⚠️ Truncating large document: {len(text_content)} -> {MAX_TEXT_LENGTH} chars")
             text_content = text_content[:MAX_TEXT_LENGTH] + "\n\n[Document truncated due to size limit]"
@@ -1445,8 +1446,8 @@ async def upload_policy_demo(
         
         logger.info(f"✅ Step 3 complete: Created {len(chunks)} chunks from document")
         
-        # Limit number of chunks to prevent resource exhaustion
-        MAX_CHUNKS = 500
+        # Limit number of chunks to prevent resource exhaustion - more conservative
+        MAX_CHUNKS = 300  # Reduced for better stability
         if len(chunks) > MAX_CHUNKS:
             logger.warning(f"⚠️ Limiting chunks: {len(chunks)} -> {MAX_CHUNKS}")
             chunks = chunks[:MAX_CHUNKS]
