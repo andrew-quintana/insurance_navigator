@@ -12,9 +12,10 @@ const corsHeaders = {
 }
 
 Deno.serve(async (req) => {
-  console.log('🚀 link-assigner invoked:', { 
-    method: req.method, 
-    url: req.url 
+  console.log('🚀 link-assigner invoked:', {
+    method: req.method,
+    url: req.url,
+    headers: Object.fromEntries(req.headers.entries())
   })
 
   if (req.method === 'OPTIONS') {
@@ -35,9 +36,61 @@ Deno.serve(async (req) => {
       }
     )
 
-    console.log('📥 Parsing request body...')
-    const { documentId, storagePath }: LinkRequest = await req.json()
-    console.log('✅ Request parsed:', { documentId, storagePath })
+    console.log('📥 Reading request body...')
+    
+    // Get raw request body text first
+    let requestBodyText
+    try {
+      requestBodyText = await req.text()
+      console.log('📋 Raw request body:', requestBodyText)
+      console.log('📏 Body length:', requestBodyText.length)
+    } catch (err) {
+      console.error('❌ Error reading request body:', err)
+      return new Response(
+        JSON.stringify({ error: 'Failed to read request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    if (!requestBodyText || requestBodyText.trim() === '') {
+      console.error('❌ Empty request body received')
+      return new Response(
+        JSON.stringify({ error: 'Request body is empty' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Parse JSON
+    let parsedBody
+    try {
+      parsedBody = JSON.parse(requestBodyText)
+      console.log('✅ JSON parsed successfully:', parsedBody)
+    } catch (parseError) {
+      console.error('❌ JSON parsing failed:', parseError)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid JSON format',
+          details: parseError.message,
+          receivedBody: requestBodyText
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    const { documentId, storagePath }: LinkRequest = parsedBody
+    
+    if (!documentId || !storagePath) {
+      console.error('❌ Missing required fields:', { documentId, storagePath })
+      return new Response(
+        JSON.stringify({ 
+          error: 'Missing documentId or storagePath',
+          received: { documentId, storagePath }
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    console.log('✅ Request validated:', { documentId, storagePath })
 
     // Update document with storage path and set status to processing
     console.log('📝 Updating document status to processing...')
@@ -69,7 +122,6 @@ Deno.serve(async (req) => {
 
     if (invokeError) {
       console.error('❌ Error invoking doc-parser:', invokeError)
-      // Update document status to failed
       await supabase
         .from('documents')
         .update({ 
@@ -89,10 +141,14 @@ Deno.serve(async (req) => {
       success: true,
       message: 'Document processing started'
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    
   } catch (error) {
-    console.error('❌ link-assigner error:', error)
+    console.error('❌ link-assigner unexpected error:', error)
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ 
+        error: 'Internal server error',
+        details: error.message 
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
