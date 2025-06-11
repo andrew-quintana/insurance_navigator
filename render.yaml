@@ -5,7 +5,7 @@ services:
     plan: free
     dockerfilePath: ./Dockerfile
     region: oregon
-    branch: buildout/mvp-integration
+    branch: staging
     port: 8000
     healthCheckPath: /health
     envVars:
