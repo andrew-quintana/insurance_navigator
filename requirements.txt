@@ -38,7 +38,7 @@ anthropic>=0.8.0
 
 # Document processing (used in main.py)
 # sentence-transformers>=2.2.0  # REMOVED - replaced with LlamaCloud
-# PyPDF2>=3.0.0  # REMOVED - replaced with LlamaCloud
+PyPDF2>=3.0.0  # Re-enabled for incremental PDF processing
 
 # Web scraping and HTTP
 aiohttp>=3.8.0
@@ -53,3 +53,11 @@ ruff>=0.1.0
 openai>=1.0.0  # For embeddings via LlamaCloud
 llama-index>=0.10.0  # Core LlamaIndex for cloud integration
 sentence-transformers>=2.2.0  # TEMPORARY - will be removed after LlamaCloud migration complete
+
+# Notebook and data analysis dependencies
+pandas>=2.0.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+jupyter>=1.0.0
+ipykernel>=6.25.0
+notebook>=7.0.0
