@@ -221,7 +221,7 @@ export default function DocumentUploadServerless({
       // Future: Implement Supabase-native authentication flow
       
       // Get user info from Render backend token
-      const token = localStorage.getItem('authToken')
+      const token = localStorage.getItem('token')
       if (!token) {
         throw new Error('Authentication required')
       }
