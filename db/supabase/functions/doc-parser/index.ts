@@ -93,28 +93,38 @@ Deno.serve(async (req) => {
             .update({ progress_percentage: 40 })
             .eq('id', documentId)
 
-          console.log('🌐 Making request to LlamaParse API...')
-          const llamaResponse = await fetch('https://api.llamaparse.com/v1/parse', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${llamaApiKey}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              file: base64,
-              parsing_instruction: 'Extract all text content while preserving structure. Focus on Medicare policy documents, insurance terms, coverage details, and any important policy information.'
+          try {
+            console.log('🌐 Making request to LlamaParse API...')
+            const llamaResponse = await fetch('https://api.llamaparse.com/v1/parse', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${llamaApiKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                file: base64,
+                parsing_instruction: 'Extract all text content while preserving structure. Focus on Medicare policy documents, insurance terms, coverage details, and any important policy information.'
+              })
             })
-          })
 
-          if (!llamaResponse.ok) {
-            const errorText = await llamaResponse.text()
-            console.error(`❌ LlamaParse error: ${llamaResponse.status} - ${errorText}`)
-            throw new Error(`LlamaParse API error: ${llamaResponse.status}`)
+            if (!llamaResponse.ok) {
+              const errorText = await llamaResponse.text()
+              console.error(`❌ LlamaParse error: ${llamaResponse.status} - ${errorText}`)
+              throw new Error(`LlamaParse API error: ${llamaResponse.status}`)
+            }
+
+            const result = await llamaResponse.json()
+            extractedText = result.text || ''
+            console.log('✅ LlamaParse extraction completed, length:', extractedText.length)
+          } catch (llamaError) {
+            console.log(`⚠️ LlamaParse failed: ${llamaError.message}`)
+            console.log('🔄 Falling back to basic text extraction...')
+            
+            // Graceful fallback to basic text extraction
+            const text = new TextDecoder().decode(arrayBuffer)
+            extractedText = text.replace(/[^\x20-\x7E\n\r\t]/g, ' ').trim()
+            console.log('✅ Fallback extraction completed, length:', extractedText.length)
           }
-
-          const result = await llamaResponse.json()
-          extractedText = result.text || ''
-          console.log('✅ LlamaParse extraction completed, length:', extractedText.length)
         }
       } else if (document.content_type === 'text/plain') {
         // Handle text files directly
