@@ -221,10 +221,10 @@ async def get_embedding_model():
                     def encode(self, text):
                         import random
                         import numpy as np
-                        # Return numpy array that has .tolist() method
-                        return np.array([random.uniform(-1, 1) for _ in range(384)])
+                        # Return 1536-dimensional vector to match database schema (OpenAI dimensions)
+                        return np.array([random.uniform(-1, 1) for _ in range(1536)])
                 embedding_model = MockModel()
-                logger.info("✅ Mock embedding model loaded (memory optimization)")
+                logger.info("✅ Mock embedding model loaded (1536D for OpenAI compatibility)")
             else:
                 logger.info("Loading SBERT model: all-MiniLM-L6-v2...")
                 # SentenceTransformer temporarily disabled - using mock for LlamaCloud migration
@@ -232,10 +232,10 @@ async def get_embedding_model():
                     def encode(self, text):
                         import random
                         import numpy as np
-                        # Return numpy array that has .tolist() method
-                        return np.array([random.uniform(-1, 1) for _ in range(384)])
+                        # Return 1536-dimensional vector to match database schema (OpenAI dimensions)
+                        return np.array([random.uniform(-1, 1) for _ in range(1536)])
                 embedding_model = MockModel()
-                logger.warning("⚠️ Using mock embedding model for LlamaCloud migration")
+                logger.warning("⚠️ Using mock embedding model for LlamaCloud migration (1536D)")
                 # raise ImportError("SentenceTransformer disabled for memory optimization")
                 # embedding_model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
                 # logger.info("✅ SBERT model loaded successfully")
@@ -253,10 +253,10 @@ async def get_embedding_model():
                     def encode(self, text):
                         import random
                         import numpy as np
-                        # Return numpy array that has .tolist() method
-                        return np.array([random.uniform(-1, 1) for _ in range(384)])
+                        # Return 1536-dimensional vector to match database schema (OpenAI dimensions)
+                        return np.array([random.uniform(-1, 1) for _ in range(1536)])
                 embedding_model = MockModel()
-                logger.warning("⚠️ Using mock embedding model due to loading failure")
+                logger.warning("⚠️ Using mock embedding model due to loading failure (1536D)")
         except Exception as e:
             logger.error(f"❌ Failed to load SBERT model: {e}")
             # Return a mock model for demo purposes
@@ -264,10 +264,10 @@ async def get_embedding_model():
                 def encode(self, text):
                     import random
                     import numpy as np
-                    # Return numpy array that has .tolist() method
-                    return np.array([random.uniform(-1, 1) for _ in range(384)])
+                    # Return 1536-dimensional vector to match database schema (OpenAI dimensions)
+                    return np.array([random.uniform(-1, 1) for _ in range(1536)])
             embedding_model = MockModel()
-            logger.warning("⚠️ Using mock embedding model for demo")
+            logger.warning("⚠️ Using mock embedding model for demo (1536D)")
     return embedding_model
 
 def extract_text_from_pdf(file_data: bytes) -> str:
@@ -1510,6 +1510,20 @@ async def upload_policy_demo(
                                     None, lambda: model.encode(chunk).tolist()
                                 )
                                 embedding = await asyncio.wait_for(embedding_task, timeout=10.0)
+                                
+                                # Enhanced logging: Validate embedding dimensions
+                                embedding_dim = len(embedding)
+                                logger.info(f"    📊 Generated {embedding_dim}D embedding for chunk {absolute_index+1}")
+                                
+                                # Dimension validation  
+                                if embedding_dim != 1536:
+                                    logger.error(f"    ❌ DIMENSION MISMATCH: Generated {embedding_dim}D, database expects 1536D")
+                                    logger.error(f"    🔧 Fix: Update MockModel to generate 1536-dimensional vectors")
+                                    failed_chunks += 1
+                                    continue
+                                    
+                                logger.info(f"    ✅ Dimension validation passed: {embedding_dim}D matches schema")
+                                
                             except asyncio.TimeoutError:
                                 logger.warning(f"  ⚠️ Embedding timeout for chunk {absolute_index+1}, skipping...")
                                 failed_chunks += 1
@@ -1694,16 +1708,16 @@ async def generate_embedding_for_edge_functions(
         # Generate embedding
         embedding = model.encode(text).tolist()
         
-        # Ensure consistent dimension (384 for all-MiniLM-L6-v2)
-        if len(embedding) != 384:
-            logger.warning(f"Unexpected embedding dimension: {len(embedding)}, expected 384")
+        # Ensure consistent dimension (1536 for OpenAI compatibility)
+        if len(embedding) != 1536:
+            logger.warning(f"Unexpected embedding dimension: {len(embedding)}, expected 1536")
         
         return {
             "success": True,
             "embedding": embedding,
             "dimension": len(embedding),
             "text_length": len(text),
-            "model": "all-MiniLM-L6-v2"
+            "model": "mock-1536d-openai-compatible"
         }
         
     except HTTPException:
