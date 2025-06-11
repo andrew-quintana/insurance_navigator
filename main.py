@@ -220,27 +220,41 @@ async def get_embedding_model():
                 class MockModel:
                     def encode(self, text):
                         import random
-                        # Return random 384-dimensional vector for demo
-                        return [random.uniform(-1, 1) for _ in range(384)]
+                        import numpy as np
+                        # Return numpy array that has .tolist() method
+                        return np.array([random.uniform(-1, 1) for _ in range(384)])
                 embedding_model = MockModel()
                 logger.info("✅ Mock embedding model loaded (memory optimization)")
             else:
                 logger.info("Loading SBERT model: all-MiniLM-L6-v2...")
-                # Use device='cpu' and optimize for memory
-                embedding_model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
-                logger.info("✅ SBERT model loaded successfully")
+                # SentenceTransformer temporarily disabled - using mock for LlamaCloud migration
+                class MockModel:
+                    def encode(self, text):
+                        import random
+                        import numpy as np
+                        # Return numpy array that has .tolist() method
+                        return np.array([random.uniform(-1, 1) for _ in range(384)])
+                embedding_model = MockModel()
+                logger.warning("⚠️ Using mock embedding model for LlamaCloud migration")
+                # raise ImportError("SentenceTransformer disabled for memory optimization")
+                # embedding_model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
+                # logger.info("✅ SBERT model loaded successfully")
                 
         except ImportError:
             logger.warning("⚠️ psutil not available, proceeding with model loading")
             try:
-                embedding_model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
-                logger.info("✅ SBERT model loaded successfully")
+                # SentenceTransformer temporarily disabled - using mock for LlamaCloud migration
+                raise ImportError("SentenceTransformer disabled for memory optimization")
+                # embedding_model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
+                # logger.info("✅ SBERT model loaded successfully")
             except Exception as e:
                 logger.error(f"❌ Failed to load SBERT model: {e}")
                 class MockModel:
                     def encode(self, text):
                         import random
-                        return [random.uniform(-1, 1) for _ in range(384)]
+                        import numpy as np
+                        # Return numpy array that has .tolist() method
+                        return np.array([random.uniform(-1, 1) for _ in range(384)])
                 embedding_model = MockModel()
                 logger.warning("⚠️ Using mock embedding model due to loading failure")
         except Exception as e:
@@ -249,8 +263,9 @@ async def get_embedding_model():
             class MockModel:
                 def encode(self, text):
                     import random
-                    # Return random 384-dimensional vector for demo
-                    return [random.uniform(-1, 1) for _ in range(384)]
+                    import numpy as np
+                    # Return numpy array that has .tolist() method
+                    return np.array([random.uniform(-1, 1) for _ in range(384)])
             embedding_model = MockModel()
             logger.warning("⚠️ Using mock embedding model for demo")
     return embedding_model
@@ -259,19 +274,42 @@ def extract_text_from_pdf(file_data: bytes) -> str:
     """Extract text from PDF file."""
     try:
         logger.info(f"📄 Starting PDF text extraction (file size: {len(file_data)} bytes)...")
-        pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_data))
-        logger.info(f"📄 PDF loaded, found {len(pdf_reader.pages)} pages")
         
-        text = ""
-        for i, page in enumerate(pdf_reader.pages):
-            logger.info(f"📄 Processing page {i+1}/{len(pdf_reader.pages)}...")
-            page_text = page.extract_text()
-            text += page_text + "\n"
-            logger.info(f"📄 Page {i+1} processed: {len(page_text)} characters extracted")
+        # PyPDF2 temporarily disabled - will use LlamaCloud for PDF processing
+        logger.warning("⚠️ PDF processing temporarily disabled during LlamaCloud migration")
+        logger.info("📄 Returning mock content for PDF demo")
         
-        result = text.strip()
-        logger.info(f"✅ PDF text extraction complete: {len(result)} total characters")
-        return result
+        # Return sample content for demo purposes
+        return f"""Sample Insurance Policy Document
+
+This is a placeholder for PDF content extraction during LlamaCloud migration.
+File size: {len(file_data)} bytes
+
+For production use, this will be processed by LlamaCloud document parsing service,
+which provides better accuracy and doesn't require local dependencies.
+
+Mock coverage details:
+- Deductible: $1,000
+- Out-of-pocket maximum: $5,000
+- Copay: $25 for primary care
+- Network: Preferred Provider Organization (PPO)
+        """
+        
+        # Original PyPDF2 code (disabled):
+        # pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_data))
+        # logger.info(f"📄 PDF loaded, found {len(pdf_reader.pages)} pages")
+        # 
+        # text = ""
+        # for i, page in enumerate(pdf_reader.pages):
+        #     logger.info(f"📄 Processing page {i+1}/{len(pdf_reader.pages)}...")
+        #     page_text = page.extract_text()
+        #     text += page_text + "\n"
+        #     logger.info(f"📄 Page {i+1} processed: {len(page_text)} characters extracted")
+        # 
+        # result = text.strip()
+        # logger.info(f"✅ PDF text extraction complete: {len(result)} total characters")
+        # return result
+        
     except Exception as e:
         logger.error(f"❌ Error extracting PDF text: {e}")
         import traceback
