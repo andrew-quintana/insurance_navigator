@@ -129,28 +129,10 @@ Deno.serve(async (req) => {
           } catch (openaiError) {
             console.log(`⚠️ OpenAI embedding failed for chunk ${i + batchIndex}: ${openaiError.message}`)
             
-            // If it's a quota issue, fall back to Supabase embeddings
+            // If it's a quota issue, we need to handle it gracefully
             if (openaiError.message.includes('QUOTA_EXCEEDED')) {
-              console.log(`🔄 Falling back to Supabase embeddings for chunk ${i + batchIndex}...`)
-              
-              try {
-                // Use Supabase's built-in embedding function
-                const { data: supabaseEmbedding, error: embeddingError } = await supabase.rpc('get_embedding', {
-                  input_text: chunk
-                })
-
-                if (embeddingError || !supabaseEmbedding) {
-                  console.error(`❌ Supabase embedding failed for chunk ${i + batchIndex}:`, embeddingError)
-                  throw new Error(`Supabase embedding failed: ${embeddingError?.message || 'Unknown error'}`)
-                }
-
-                embeddingData = { data: [{ embedding: supabaseEmbedding }] }
-                embeddingMethod = 'supabase'
-                console.log(`✅ Supabase embedding generated for chunk ${i + batchIndex}`)
-              } catch (supabaseError) {
-                console.error(`❌ Both OpenAI and Supabase embeddings failed for chunk ${i + batchIndex}`)
-                throw new Error(`All embedding methods failed: ${supabaseError.message}`)
-              }
+              console.log(`⚠️ OpenAI quota exceeded for chunk ${i + batchIndex}. Supabase embeddings fallback not available.`)
+              throw new Error(`OpenAI quota exceeded and no alternative embedding service available. Please check your OpenAI API quota or try again later.`)
             } else {
               // For non-quota errors, re-throw
               throw openaiError
