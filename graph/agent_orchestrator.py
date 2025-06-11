@@ -113,7 +113,7 @@ class AgentOrchestrator:
             self.patient_navigator_agent = PatientNavigatorAgent(config_manager=self.config_manager)
             self.task_requirements_agent = TaskRequirementsAgent(config_manager=self.config_manager)
             self.service_access_strategy_agent = ServiceAccessStrategyAgent(config_manager=self.config_manager)
-            self.chat_communicator_agent = ChatCommunicatorAgent(config_manager=self.config_manager, use_mock=True)
+            self.chat_communicator_agent = ChatCommunicatorAgent(config_manager=self.config_manager)
             
             if self.bypass_security:
                 logger.warning("🚫 ORCHESTRATOR: Security bypass is ENABLED for all workflows")
@@ -288,6 +288,7 @@ class AgentOrchestrator:
                 except Exception as e:
                     logger.warning(f"Could not load existing workflow state: {e}")
             
+            # TODO: Remove this to have the agents do this
             # Determine workflow type based on message content
             workflow_type = self._determine_workflow_type(message)
             state["workflow_type"] = workflow_type
@@ -337,6 +338,7 @@ class AgentOrchestrator:
             logger.error(f"Error processing message: {str(e)}")
             return self._create_error_response(str(e), conversation_id)
     
+    # TODO: Remove this to have the agents do this
     def _determine_workflow_type(self, message: str) -> str:
         """Determine which workflow to use based on message content"""
         message_lower = message.lower()

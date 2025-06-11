@@ -136,6 +136,14 @@ elif [[ "$1" == "--vercel-only" ]]; then
     echo "🌐 Creating Vercel logs only..."
     check_api_setup
     python scripts/create_build_logs.py --vercel-only
+elif [[ "$1" == "--safari-only" ]]; then
+    echo "🌐 Creating Safari logs only..."
+    check_api_setup
+    python scripts/create_build_logs.py --safari-only
+elif [[ "$1" == "--visual-only" ]]; then
+    echo "🌐 Creating Visual Observation logs only..."
+    check_api_setup
+    python scripts/create_build_logs.py --visual-only
 elif [[ "$1" =~ ^[0-9]{12}$ ]]; then
     echo "📅 Creating build logs with timestamp: $1"
     python scripts/create_build_logs.py "$1"
