@@ -42,8 +42,7 @@ Deno.serve(async (req) => {
     let requestBodyText
     try {
       requestBodyText = await req.text()
-      console.log('📋 Raw request body:', requestBodyText)
-      console.log('📏 Body length:', requestBodyText.length)
+      console.log('📋 Raw request body length:', requestBodyText.length)
     } catch (err) {
       console.error('❌ Error reading request body:', err)
       return new Response(
