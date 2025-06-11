@@ -5,6 +5,8 @@ interface UploadRequest {
   filename: string;
   contentType: string;
   fileSize: number;
+  // TODO: Remove when proper dual-auth is implemented
+  userId: string;
 }
 
 Deno.serve(async (req) => {
@@ -18,7 +20,15 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     )
 
-    // Get authenticated user from JWT token
+    // TODO: SECURITY UPGRADE NEEDED
+    // Current: Simple service authentication for MVP testing
+    // Future: Implement proper dual-auth system:
+    //   1. Validate Render backend JWT token against backend API
+    //   2. Use Supabase RLS with proper user context
+    //   3. Add request signing/validation between frontend and Edge Functions
+    //   4. Implement rate limiting per user
+    //   5. Add audit logging for all document operations
+    
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
       return new Response(
@@ -27,17 +37,25 @@ Deno.serve(async (req) => {
       )
     }
 
+    // TODO: Replace with proper token validation
+    // For now, accept any Bearer token as service auth
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user) {
+    if (!token || token.length < 10) {
       return new Response(
-        JSON.stringify({ error: 'Invalid or expired token' }),
+        JSON.stringify({ error: 'Invalid authorization token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const { filename, contentType, fileSize }: UploadRequest = await req.json()
+    const { filename, contentType, fileSize, userId }: UploadRequest = await req.json()
+
+    // TODO: Validate userId against authenticated user from proper token
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: 'User ID required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     // Validate file size (50MB limit)
     if (fileSize > 52428800) {
@@ -68,14 +86,14 @@ Deno.serve(async (req) => {
     }
 
     // Generate file hash for deduplication
-    const fileHash = await generateFileHash(filename, fileSize, user.id)
+    const fileHash = await generateFileHash(filename, fileSize, userId)
     
     // Check for existing file with same hash
     const { data: existingDoc } = await supabase
       .from('documents')
       .select('id, status, original_filename')
       .eq('file_hash', fileHash)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single()
 
     if (existingDoc && existingDoc.status === 'completed') {
@@ -90,11 +108,11 @@ Deno.serve(async (req) => {
     }
 
     // Create document record
-    const storagePath = `${user.id}/${fileHash}/${filename}`
+    const storagePath = `${userId}/${fileHash}/${filename}`
     const { data: document, error: docError } = await supabase
       .from('documents')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         original_filename: filename,
         content_type: contentType,
         file_size: fileSize,

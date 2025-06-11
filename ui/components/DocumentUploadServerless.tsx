@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef, useState, useCallback, useEffect } from 'react'
+import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 import { Upload, File, CheckCircle, AlertCircle, X } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { createClient } from '@supabase/supabase-js'
@@ -47,15 +47,22 @@ export default function DocumentUploadServerless({
   const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null)
   const [documentId, setDocumentId] = useState<string | null>(null)
 
-  // Initialize Supabase client
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  // Initialize Supabase client with error handling
+  const supabase = useMemo(() => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    if (!url || !key) {
+      console.error('Missing Supabase environment variables')
+      return null
+    }
+    
+    return createClient(url, key)
+  }, [])
 
   // Real-time progress tracking
   useEffect(() => {
-    if (!documentId) return
+    if (!documentId || !supabase) return
 
     const channel = supabase
       .channel('document-progress')
@@ -130,8 +137,12 @@ export default function DocumentUploadServerless({
       )
       .subscribe()
 
-    return () => supabase.removeChannel(channel)
-  }, [documentId, selectedFile, onUploadSuccess, onUploadError])
+    return () => {
+      if (supabase) {
+        supabase.removeChannel(channel)
+      }
+    }
+  }, [documentId, selectedFile, onUploadSuccess, onUploadError, supabase])
 
   // Validate file
   const validateFile = (file: File): string | null => {
@@ -195,38 +206,59 @@ export default function DocumentUploadServerless({
   const handleUpload = async () => {
     if (!selectedFile) return
 
+    if (!supabase) {
+      setUploadError('Serverless upload not available. Please contact support.')
+      return
+    }
+
     setIsUploading(true)
-    setUploadProgress(0)
-    setUploadMessage("")
-    setUploadSuccess(false)
     setUploadError(null)
-    setDocumentId(null)
+    setUploadProgress(0)
 
     try {
-      const token = localStorage.getItem("token")
+      // TODO: SECURITY UPGRADE - Replace with proper dual-auth
+      // Current: Using Render backend token + user ID
+      // Future: Implement Supabase-native authentication flow
+      
+      // Get user info from Render backend token
+      const token = localStorage.getItem('authToken')
       if (!token) {
-        throw new Error('Authentication required. Please log in.')
+        throw new Error('Authentication required')
       }
+      
+      // TODO: Get user ID from proper token validation
+      // For now, decode from localStorage or API call
+      let userId = localStorage.getItem('userId')
+      if (!userId) {
+        // Fallback: Get user info from backend
+        const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (userResponse.ok) {
+          const userData = await userResponse.json()
+          userId = userData.id
+          localStorage.setItem('userId', userId)
+                 } else {
+           throw new Error('Failed to get user information')
+         }
+       }
 
-      console.log("🚀 Starting serverless document upload pipeline")
-      console.log("📄 File details:", { 
-        name: selectedFile.name, 
-        size: selectedFile.size, 
-        type: selectedFile.type 
-      })
+       if (!userId) {
+         throw new Error('User ID is required')
+       }
 
-      // Step 1: Initialize upload with doc-processor Edge Function
-      setUploadMessage("🔄 Initializing document upload...")
-      setUploadProgress(5)
-
-      const { data: initData, error: initError } = await supabase.functions.invoke('doc-processor', {
-        body: {
-          filename: selectedFile.name,
-          contentType: selectedFile.type,
-          fileSize: selectedFile.size
-        },
+       // Initialize document upload with serverless Edge Function
+       const { data: initData, error: initError } = await supabase!.functions.invoke('doc-processor', {
+         body: {
+           filename: selectedFile.name,
+           contentType: selectedFile.type,
+           fileSize: selectedFile.size,
+           // TODO: Remove when proper dual-auth is implemented
+           userId: userId
+         },
         headers: {
-          Authorization: `Bearer ${token}`
+          // TODO: Replace with validated token from proper auth flow
+          'Authorization': `Bearer ${token}`
         }
       })
 
