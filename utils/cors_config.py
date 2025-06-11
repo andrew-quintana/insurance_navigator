@@ -45,12 +45,21 @@ class CORSConfig:
             "http://127.0.0.1:3001"
         ]
         
+        # Add known production/staging origins
+        production_origins = [
+            "https://insurance-navigator-staging.vercel.app",
+            "https://insurance-navigator.vercel.app",
+            # Add the specific problematic URL that was reported
+            "https://insurance-navigator-ajzpmcvgz-andrew-quintanas-projects.vercel.app"
+        ]
+        
         # Combine and deduplicate
-        all_origins = list(set(cors_origins + default_origins))
+        all_origins = list(set(cors_origins + default_origins + production_origins))
         return all_origins
     
     def _compile_patterns(self) -> Dict[str, Any]:
         """Compile regex patterns for dynamic origin matching"""
+        # More flexible Vercel pattern that handles all deployment variations
         vercel_pattern = os.getenv(
             'CORS_VERCEL_PREVIEW_PATTERN', 
             'insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app'
@@ -60,6 +69,8 @@ class CORSConfig:
             'localhost': re.compile(r'^(localhost|127\.0\.0\.1)(:\d+)?$'),
             'vercel_preview': re.compile(f'^{vercel_pattern}$'),
             'vercel_all': re.compile(r'^[a-z0-9-]+\.vercel\.app$'),
+            # Broader insurance navigator pattern for all preview deployments
+            'insurance_navigator_vercel': re.compile(r'^insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app$'),
         }
     
     def is_origin_allowed(self, origin: str) -> bool:
@@ -82,6 +93,10 @@ class CORSConfig:
             
             # Check Vercel preview pattern
             if self.patterns['vercel_preview'].match(domain):
+                return True
+            
+            # Check insurance navigator specific pattern
+            if self.patterns['insurance_navigator_vercel'].match(domain):
                 return True
             
             # Check any Vercel deployment (broader fallback)
@@ -129,10 +144,12 @@ class CORSConfig:
     
     def get_fastapi_cors_middleware_config(self) -> Dict[str, Any]:
         """Get configuration for FastAPI's CORSMiddleware"""
-        vercel_pattern = os.getenv('CORS_VERCEL_PREVIEW_PATTERN', 'insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app')
+        # More flexible regex that handles all Vercel deployment variations
+        vercel_regex = r"https://(insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app|[a-z0-9-]+\.vercel\.app)"
+        
         return {
-            "allow_origins": self.allowed_origins + ["https://*.vercel.app"],
-            "allow_origin_regex": f"https://{vercel_pattern}",
+            "allow_origins": self.allowed_origins,
+            "allow_origin_regex": vercel_regex,
             "allow_credentials": self.allow_credentials,
             "allow_methods": self.allowed_methods,
             "allow_headers": self.allowed_headers,
