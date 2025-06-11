@@ -13,6 +13,7 @@ class CORSConfig:
     """Centralized CORS configuration management"""
     
     def __init__(self):
+        self.is_development = os.getenv('NODE_ENV', 'development') != 'production'
         self.allowed_origins = self._load_allowed_origins()
         self.allowed_headers = [
             "authorization", 
@@ -49,8 +50,9 @@ class CORSConfig:
         production_origins = [
             "https://insurance-navigator-staging.vercel.app",
             "https://insurance-navigator.vercel.app",
-            # Add the specific problematic URL that was reported
-            "https://insurance-navigator-ajzpmcvgz-andrew-quintanas-projects.vercel.app"
+            # Add specific problematic URLs that were reported
+            "https://insurance-navigator-ajzpmcvgz-andrew-quintanas-projects.vercel.app",
+            "https://insurance-navigator-cwtwocttv-andrew-quintanas-projects.vercel.app"
         ]
         
         # Combine and deduplicate
@@ -69,8 +71,8 @@ class CORSConfig:
             'localhost': re.compile(r'^(localhost|127\.0\.0\.1)(:\d+)?$'),
             'vercel_preview': re.compile(f'^{vercel_pattern}$'),
             'vercel_all': re.compile(r'^[a-z0-9-]+\.vercel\.app$'),
-            # Broader insurance navigator pattern for all preview deployments
-            'insurance_navigator_vercel': re.compile(r'^insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app$'),
+            # More flexible pattern for insurance navigator preview deployments
+            'insurance_navigator_vercel': re.compile(r'^insurance-navigator-[a-z0-9]+[a-z0-9\-]*-andrew-quintanas-projects\.vercel\.app$'),
         }
     
     def is_origin_allowed(self, origin: str) -> bool:
@@ -98,6 +100,12 @@ class CORSConfig:
             # Check insurance navigator specific pattern
             if self.patterns['insurance_navigator_vercel'].match(domain):
                 return True
+            
+            # In development mode, be more permissive with Vercel deployments
+            if self.is_development and domain.endswith('.vercel.app'):
+                # Allow any insurance-navigator related Vercel deployment in development
+                if 'insurance-navigator' in domain and 'andrew-quintanas-projects' in domain:
+                    return True
             
             # Check any Vercel deployment (broader fallback)
             if self.patterns['vercel_all'].match(domain):
