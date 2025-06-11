@@ -10,15 +10,35 @@ interface UploadRequest {
 }
 
 Deno.serve(async (req) => {
+  console.log('🚀 doc-processor invoked:', {
+    method: req.method,
+    url: req.url,
+    headers: Object.fromEntries(req.headers.entries())
+  })
+
   if (req.method === 'OPTIONS') {
+    console.log('✅ CORS preflight handled')
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    )
+    console.log('🔧 Initializing Supabase client with service role...')
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    
+    console.log('🔑 Environment check:', {
+      hasUrl: !!supabaseUrl,
+      hasServiceKey: !!supabaseServiceKey,
+      urlPrefix: supabaseUrl?.substring(0, 20) + '...'
+    })
+
+    // Use service role for bypassing RLS during MVP phase
+    const supabase = createClient(supabaseUrl ?? '', supabaseServiceKey ?? '', {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
 
     // TODO: SECURITY UPGRADE NEEDED
     // Current: Simple service authentication for MVP testing
@@ -29,8 +49,10 @@ Deno.serve(async (req) => {
     //   4. Implement rate limiting per user
     //   5. Add audit logging for all document operations
     
+    console.log('🔐 Checking authorization header...')
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
+      console.log('❌ No authorization header found')
       return new Response(
         JSON.stringify({ error: 'Authorization header required' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -41,15 +63,47 @@ Deno.serve(async (req) => {
     // For now, accept any Bearer token as service auth
     const token = authHeader.replace('Bearer ', '')
     if (!token || token.trim().length === 0) {
+      console.log('❌ Empty or invalid token')
       return new Response(
         JSON.stringify({ error: 'Invalid authorization token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log('Token validation passed, token length:', token.length)
+    console.log('✅ Token validation passed, token length:', token.length)
 
-    const { filename, contentType, fileSize, userId }: UploadRequest = await req.json()
+    console.log('📥 Parsing request body...')
+    const requestBody = await req.text()
+    console.log('📋 Raw request body:', requestBody)
+    
+    let parsedBody: UploadRequest
+    try {
+      parsedBody = JSON.parse(requestBody)
+      console.log('✅ JSON parsed successfully:', parsedBody)
+    } catch (parseError) {
+      console.log('❌ JSON parse error:', parseError)
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const { filename, contentType, fileSize, userId } = parsedBody
+
+    // Validate userId is a valid UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    if (!userId || !uuidRegex.test(userId)) {
+      console.log('❌ Invalid userId format:', userId)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid user ID format. Must be a valid UUID.',
+          provided: userId
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    console.log('✅ Valid UUID format for userId:', userId)
 
     // TODO: Validate userId against authenticated user from proper token
     if (!userId) {
@@ -87,18 +141,28 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Generate file hash for deduplication
+    console.log('🔍 Generating file hash for deduplication...')
     const fileHash = await generateFileHash(filename, fileSize, userId)
+    console.log('✅ File hash generated:', fileHash)
     
-    // Check for existing file with same hash
-    const { data: existingDoc } = await supabase
+    console.log('🔍 Checking for existing file with same hash...')
+    const { data: existingDoc, error: checkError } = await supabase
       .from('documents')
       .select('id, status, original_filename')
       .eq('file_hash', fileHash)
       .eq('user_id', userId)
       .single()
 
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.log('❌ Error checking for existing document:', checkError)
+      return new Response(
+        JSON.stringify({ error: 'Database error checking for duplicates' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     if (existingDoc && existingDoc.status === 'completed') {
+      console.log('⚠️ File already exists and completed:', existingDoc)
       return new Response(
         JSON.stringify({ 
           error: 'File already uploaded',
@@ -109,34 +173,43 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Create document record
+    console.log('📝 Creating document record...')
     const storagePath = `${userId}/${fileHash}/${filename}`
+    const documentData = {
+      user_id: userId,
+      original_filename: filename,
+      content_type: contentType,
+      file_size: fileSize,
+      file_hash: fileHash,
+      storage_path: storagePath,
+      status: 'uploading',
+      progress_percentage: 0,
+      processed_chunks: 0,
+      failed_chunks: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+    console.log('📋 Document data to insert:', documentData)
+
     const { data: document, error: docError } = await supabase
       .from('documents')
-      .insert({
-        user_id: userId,
-        original_filename: filename,
-        content_type: contentType,
-        file_size: fileSize,
-        file_hash: fileHash,
-        storage_path: storagePath,
-        status: 'uploading',
-        progress_percentage: 0,
-        processed_chunks: 0,
-        failed_chunks: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
+      .insert(documentData)
       .select()
       .single()
 
     if (docError) {
-      console.error('Error creating document record:', docError)
+      console.error('❌ Error creating document record:', docError)
+      console.error('❌ Full error details:', JSON.stringify(docError, null, 2))
       return new Response(
-        JSON.stringify({ error: 'Failed to create document record' }),
+        JSON.stringify({ 
+          error: 'Failed to create document record',
+          details: docError.message || 'Unknown database error'
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    console.log('✅ Document record created:', document)
 
     // Generate signed upload URL
     const { data: uploadData, error: uploadError } = await supabase.storage
