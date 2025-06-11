@@ -1520,15 +1520,15 @@ async def upload_policy_demo(
                                 vector_id = await asyncio.wait_for(
                                     conn.fetchval("""
                                         INSERT INTO user_document_vectors 
-                                        (user_id, document_id, chunk_index, chunk_embedding, chunk_text, chunk_metadata)
-                                        VALUES ($1, $2, $3, $4::vector, $5, $6)
+                                        (user_id, document_id, chunk_index, content_embedding, encrypted_chunk_text, encrypted_chunk_metadata, encryption_key_id)
+                                        VALUES ($1, $2, $3, $4::vector, $5, $6, $7)
                                         RETURNING id
                                     """, 
                                     current_user.id, 
                                     document_id,
                                     absolute_index,
                                     str(embedding),
-                                    chunk,
+                                    chunk,  # encrypted_chunk_text - for demo we'll store as plaintext temporarily
                                     json.dumps({
                                         "filename": file.filename,
                                         "file_size": len(file_data),
@@ -1536,7 +1536,8 @@ async def upload_policy_demo(
                                         "chunk_length": len(chunk),
                                         "total_chunks": len(chunks),
                                         "uploaded_at": datetime.utcnow().isoformat()
-                                    })),
+                                    }),  # encrypted_chunk_metadata - for demo we'll store as plaintext temporarily  
+                                    "00000000-0000-0000-0000-000000000000"),  # dummy encryption key for demo
                                     timeout=5.0  # 5 second timeout for DB insert
                                 )
                                 
@@ -1630,12 +1631,12 @@ async def search_documents(
             rows = await conn.fetch("""
                 SELECT 
                     document_id,
-                    chunk_text,
-                    chunk_metadata,
-                    chunk_embedding <=> $1::vector as similarity_score
+                    encrypted_chunk_text as chunk_text,
+                    encrypted_chunk_metadata as chunk_metadata,
+                    content_embedding <=> $1::vector as similarity_score
                 FROM user_document_vectors 
                 WHERE user_id = $2 AND is_active = true
-                ORDER BY chunk_embedding <=> $1::vector
+                ORDER BY content_embedding <=> $1::vector
                 LIMIT $3
             """, str(query_embedding), current_user.id, limit)
             
