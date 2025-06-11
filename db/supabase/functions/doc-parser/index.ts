@@ -94,30 +94,115 @@ Deno.serve(async (req) => {
             .eq('id', documentId)
 
           try {
-            console.log('🌐 Making request to LlamaParse API...')
-            const llamaResponse = await fetch('https://api.llamaparse.com/v1/parse', {
+            console.log('🌐 Making request to LlamaCloud API...')
+            console.log('🔍 LlamaCloud request details:', {
+              url: 'https://api.cloud.llamaindex.ai/api/v1/parsing/upload',
+              method: 'POST',
+              hasAuth: !!llamaApiKey,
+              keyPrefix: llamaApiKey?.substring(0, 10) + '...',
+              fileSize: arrayBuffer.byteLength
+            })
+
+            // Step 1: Upload file to LlamaCloud
+            const formData = new FormData()
+            const blob = new Blob([arrayBuffer], { type: 'application/pdf' })
+            formData.append('file', blob, document.original_filename)
+            
+            console.log('📤 Uploading file to LlamaCloud...')
+            const uploadResponse = await fetch('https://api.cloud.llamaindex.ai/api/v1/parsing/upload', {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${llamaApiKey}`,
-                'Content-Type': 'application/json'
+                // Don't set Content-Type for FormData, let browser set it with boundary
               },
-              body: JSON.stringify({
-                file: base64,
-                parsing_instruction: 'Extract all text content while preserving structure. Focus on Medicare policy documents, insurance terms, coverage details, and any important policy information.'
-              })
+              body: formData
             })
 
-            if (!llamaResponse.ok) {
-              const errorText = await llamaResponse.text()
-              console.error(`❌ LlamaParse error: ${llamaResponse.status} - ${errorText}`)
-              throw new Error(`LlamaParse API error: ${llamaResponse.status}`)
+            console.log('📡 LlamaCloud upload response:', {
+              status: uploadResponse.status,
+              statusText: uploadResponse.statusText,
+              ok: uploadResponse.ok
+            })
+
+            if (!uploadResponse.ok) {
+              const errorText = await uploadResponse.text()
+              console.error(`❌ LlamaCloud upload error:`, {
+                status: uploadResponse.status,
+                statusText: uploadResponse.statusText,
+                errorBody: errorText
+              })
+              throw new Error(`LlamaCloud upload error: ${uploadResponse.status} - ${errorText}`)
             }
 
-            const result = await llamaResponse.json()
-            extractedText = result.text || ''
-            console.log('✅ LlamaParse extraction completed, length:', extractedText.length)
+            const uploadResult = await uploadResponse.json()
+            const jobId = uploadResult.id
+            console.log('✅ File uploaded to LlamaCloud, job ID:', jobId)
+
+            // Step 2: Poll for job completion
+            console.log('⏳ Polling for job completion...')
+            let jobComplete = false
+            let attempts = 0
+            const maxAttempts = 30 // 5 minutes max wait
+            
+            while (!jobComplete && attempts < maxAttempts) {
+              await new Promise(resolve => setTimeout(resolve, 10000)) // Wait 10 seconds
+              attempts++
+              
+              const statusResponse = await fetch(`https://api.cloud.llamaindex.ai/api/v1/parsing/job/${jobId}`, {
+                headers: {
+                  'Authorization': `Bearer ${llamaApiKey}`,
+                  'Accept': 'application/json'
+                }
+              })
+
+              if (statusResponse.ok) {
+                const status = await statusResponse.json()
+                console.log(`🔄 Job status check ${attempts}:`, status.status)
+                
+                if (status.status === 'SUCCESS') {
+                  jobComplete = true
+                } else if (status.status === 'ERROR') {
+                  throw new Error(`LlamaCloud job failed: ${status.error || 'Unknown error'}`)
+                }
+              } else {
+                console.log(`⚠️ Status check failed, attempt ${attempts}/${maxAttempts}`)
+              }
+            }
+
+            if (!jobComplete) {
+              throw new Error('LlamaCloud job timeout - job did not complete within 5 minutes')
+            }
+
+            // Step 3: Get results
+            console.log('📥 Fetching parsed results...')
+            const resultResponse = await fetch(`https://api.cloud.llamaindex.ai/api/v1/parsing/job/${jobId}/result/markdown`, {
+              headers: {
+                'Authorization': `Bearer ${llamaApiKey}`,
+                'Accept': 'application/json'
+              }
+            })
+
+            if (!resultResponse.ok) {
+              const errorText = await resultResponse.text()
+              console.error(`❌ LlamaCloud result error:`, {
+                status: resultResponse.status,
+                errorBody: errorText
+              })
+              throw new Error(`LlamaCloud result error: ${resultResponse.status} - ${errorText}`)
+            }
+
+            const result = await resultResponse.json()
+            extractedText = result.markdown || result.text || ''
+            console.log('✅ LlamaCloud extraction completed:', {
+              textLength: extractedText.length,
+              hasText: !!extractedText
+            })
           } catch (llamaError) {
-            console.log(`⚠️ LlamaParse failed: ${llamaError.message}`)
+            console.log(`⚠️ LlamaCloud failed with detailed error:`, {
+              errorName: llamaError.name,
+              errorMessage: llamaError.message,
+              errorStack: llamaError.stack?.substring(0, 200) + '...'
+            })
             console.log('🔄 Falling back to basic text extraction...')
             
             // Graceful fallback to basic text extraction

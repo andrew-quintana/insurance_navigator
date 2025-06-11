@@ -97,23 +97,65 @@ Deno.serve(async (req) => {
       // Generate embeddings for batch
       const embeddingPromises = batch.map(async (chunk, batchIndex) => {
         try {
-          // Generate embedding using OpenAI directly
-          const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`
-            },
-            body: JSON.stringify({ input: chunk, model: "text-embedding-3-small", dimensions: 1536 })
-          })
+          let embeddingData
+          let embeddingMethod = 'openai'
 
-          if (!embeddingResponse.ok) {
-            const errorText = await embeddingResponse.text()
-            console.error(`Embedding generation failed for chunk ${i + batchIndex}: ${embeddingResponse.status} - ${errorText}`)
-            throw new Error(`Embedding generation failed: ${embeddingResponse.status}`)
+          // Try OpenAI first
+          try {
+            console.log(`🧠 Generating embedding for chunk ${i + batchIndex} using OpenAI...`)
+            const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`
+              },
+              body: JSON.stringify({ input: chunk, model: "text-embedding-3-small", dimensions: 1536 })
+            })
+
+            if (!embeddingResponse.ok) {
+              const errorText = await embeddingResponse.text()
+              console.error(`Embedding generation failed for chunk ${i + batchIndex}: ${embeddingResponse.status} - ${errorText}`)
+              
+              // If quota exceeded (429), throw specific error to trigger fallback
+              if (embeddingResponse.status === 429) {
+                throw new Error(`QUOTA_EXCEEDED:${errorText}`)
+              } else {
+                throw new Error(`Embedding generation failed: ${embeddingResponse.status}`)
+              }
+            }
+
+            embeddingData = await embeddingResponse.json()
+            console.log(`✅ OpenAI embedding generated for chunk ${i + batchIndex}`)
+          } catch (openaiError) {
+            console.log(`⚠️ OpenAI embedding failed for chunk ${i + batchIndex}: ${openaiError.message}`)
+            
+            // If it's a quota issue, fall back to Supabase embeddings
+            if (openaiError.message.includes('QUOTA_EXCEEDED')) {
+              console.log(`🔄 Falling back to Supabase embeddings for chunk ${i + batchIndex}...`)
+              
+              try {
+                // Use Supabase's built-in embedding function
+                const { data: supabaseEmbedding, error: embeddingError } = await supabase.rpc('get_embedding', {
+                  input_text: chunk
+                })
+
+                if (embeddingError || !supabaseEmbedding) {
+                  console.error(`❌ Supabase embedding failed for chunk ${i + batchIndex}:`, embeddingError)
+                  throw new Error(`Supabase embedding failed: ${embeddingError?.message || 'Unknown error'}`)
+                }
+
+                embeddingData = { data: [{ embedding: supabaseEmbedding }] }
+                embeddingMethod = 'supabase'
+                console.log(`✅ Supabase embedding generated for chunk ${i + batchIndex}`)
+              } catch (supabaseError) {
+                console.error(`❌ Both OpenAI and Supabase embeddings failed for chunk ${i + batchIndex}`)
+                throw new Error(`All embedding methods failed: ${supabaseError.message}`)
+              }
+            } else {
+              // For non-quota errors, re-throw
+              throw openaiError
+            }
           }
-
-          const embeddingData = await embeddingResponse.json()
           
           return {
             user_id: document.user_id,
@@ -129,7 +171,8 @@ Deno.serve(async (req) => {
               chunk_length: chunk.length,
               total_chunks: chunks.length,
               processed_at: new Date().toISOString(),
-              extraction_method: document.content_type === 'application/pdf' ? 'llamaparse' : 'direct'
+              extraction_method: document.content_type === 'application/pdf' ? 'llamaparse' : 'direct',
+              embedding_method: embeddingMethod
             }),
             encryption_key_id: encryptionKey.id
           }
