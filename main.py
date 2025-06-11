@@ -1529,6 +1529,30 @@ async def upload_policy_demo(
                                 failed_chunks += 1
                                 continue
                             
+                            # Get active encryption key ID
+                            try:
+                                encryption_key_id = await asyncio.wait_for(
+                                    conn.fetchval("""
+                                        SELECT id FROM encryption_keys 
+                                        WHERE key_status = 'active' 
+                                        ORDER BY created_at DESC 
+                                        LIMIT 1
+                                    """),
+                                    timeout=2.0
+                                )
+                                
+                                if not encryption_key_id:
+                                    logger.error(f"    ❌ No active encryption key found in database")
+                                    failed_chunks += 1
+                                    continue
+                                    
+                                logger.info(f"    🔐 Using encryption key: {str(encryption_key_id)[:8]}...")
+                                
+                            except Exception as e:
+                                logger.error(f"    ❌ Failed to query encryption key: {e}")
+                                failed_chunks += 1
+                                continue
+                            
                             # Store in database with error handling
                             try:
                                 vector_id = await asyncio.wait_for(
@@ -1551,7 +1575,7 @@ async def upload_policy_demo(
                                         "total_chunks": len(chunks),
                                         "uploaded_at": datetime.utcnow().isoformat()
                                     }),  # encrypted_chunk_metadata - for demo we'll store as plaintext temporarily  
-                                    "00000000-0000-0000-0000-000000000000"),  # dummy encryption key for demo
+                                    encryption_key_id),  # Real encryption key from database
                                     timeout=5.0  # 5 second timeout for DB insert
                                 )
                                 
