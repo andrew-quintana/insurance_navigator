@@ -1,7 +1,3 @@
-[project]
-# Reference ID for your Supabase project (will be replaced with actual project ID)
-ref = "your-project-ref"
-
 [api]
 enabled = true
 port = 54321
@@ -11,21 +7,15 @@ max_rows = 1000
 
 [auth]
 enabled = true
-port = 54322
-external_url = "http://localhost:54321"
-jwt_expiry = 3600
-password_min_length = 6
 
 [storage]
 enabled = true
-port = 54323
 file_size_limit = "50MiB"
-features = ["image_transformation", "webhooks"]
 
-[edge_functions]
-enabled = true
-port = 54324
-ip_version = "ipv4"
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
 
 [studio]
 enabled = true
@@ -34,11 +24,6 @@ port = 54325
 [inbucket]
 enabled = true
 port = 54326
-
-[db]
-port = 54322
-shadow_port = 54320
-major_version = 15
 
 [functions.upload-handler]
 verify_jwt = true
@@ -49,5 +34,21 @@ verify_jwt = false
 import_map = "./functions/_shared/import_map.json"
 
 [functions.processing-webhook]
+verify_jwt = false
+import_map = "./functions/_shared/import_map.json"
+
+[functions.doc-processor]
+verify_jwt = true
+import_map = "./functions/_shared/import_map.json"
+
+[functions.link-assigner]
+verify_jwt = false
+import_map = "./functions/_shared/import_map.json"
+
+[functions.doc-parser]
+verify_jwt = false
+import_map = "./functions/_shared/import_map.json"
+
+[functions.vector-processor]
 verify_jwt = false
 import_map = "./functions/_shared/import_map.json" 

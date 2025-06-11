@@ -325,7 +325,7 @@ def create_visual_observation_template(timestamp):
 """
 
 
-def create_build_logs(timestamp=None, render_only=False, vercel_only=False):
+def create_build_logs(timestamp=None, render_only=False, vercel_only=False, safari_only=False, visual_only=False):
     """Create build log files with auto-fetched logs for render and vercel."""
     
     # Get the project root directory
@@ -445,6 +445,8 @@ def main():
     parser.add_argument('timestamp', nargs='?', help='Custom timestamp (YYYYMMDDHHMM format)')
     parser.add_argument('--render-only', action='store_true', help='Only fetch Render logs')
     parser.add_argument('--vercel-only', action='store_true', help='Only fetch Vercel logs')
+    parser.add_argument('--safari-only', action='store_true', help='Only fetch Safari logs')
+    parser.add_argument('--visual-only', action='store_true', help='Only fetch Visual Observation logs')
     parser.add_argument('--latest', action='store_true', help='Explicitly fetch most recent deployments from each service')
     
     args = parser.parse_args()
@@ -468,13 +470,19 @@ def main():
         print("🔧 Mode: Render logs only")
     elif args.vercel_only:
         print("🌐 Mode: Vercel logs only")
+    elif args.safari_only:
+        print("🧭 Mode: Safari logs only")
+    elif args.visual_only:
+        print("👀 Mode: Visual Observation logs only")
     else:
         print("📋 Mode: Full deployment logs (Render + Vercel + Safari + Visual Observation)")
     
     success = create_build_logs(
         timestamp=timestamp,
         render_only=args.render_only,
-        vercel_only=args.vercel_only
+        vercel_only=args.vercel_only,
+        safari_only=args.safari_only,
+        visual_only=args.visual_only
     )
     
     if not success:
