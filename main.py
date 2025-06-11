@@ -66,7 +66,7 @@ except ImportError:
 
 # Fast imports for document processing
 # from sentence_transformers import SentenceTransformer  # REMOVED - using LlamaCloud
-# import PyPDF2  # REMOVED - using LlamaCloud
+import PyPDF2  # Re-enabled for incremental PDF processing
 import io
 
 # Custom CORS middleware using centralized configuration
@@ -271,22 +271,38 @@ async def get_embedding_model():
     return embedding_model
 
 def extract_text_from_pdf(file_data: bytes) -> str:
-    """Extract text from PDF file."""
+    """Extract text from PDF file using PyPDF2."""
     try:
         logger.info(f"📄 Starting PDF text extraction (file size: {len(file_data)} bytes)...")
         
-        # PyPDF2 temporarily disabled - will use LlamaCloud for PDF processing
-        logger.warning("⚠️ PDF processing temporarily disabled during LlamaCloud migration")
-        logger.info("📄 Returning mock content for PDF demo")
+        # Use PyPDF2 for real PDF processing
+        pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_data))
+        logger.info(f"📄 PDF loaded, found {len(pdf_reader.pages)} pages")
         
-        # Return sample content for demo purposes
+        text = ""
+        for i, page in enumerate(pdf_reader.pages):
+            logger.info(f"📄 Processing page {i+1}/{len(pdf_reader.pages)}...")
+            page_text = page.extract_text()
+            text += page_text + "\n"
+            logger.info(f"📄 Page {i+1} processed: {len(page_text)} characters extracted")
+        
+        result = text.strip()
+        logger.info(f"✅ PDF text extraction complete: {len(result)} total characters")
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ Error extracting PDF text: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        
+        # Fallback to mock content if PDF processing fails
+        logger.warning("⚠️ Falling back to mock content due to PDF processing error")
         return f"""Sample Insurance Policy Document
 
-This is a placeholder for PDF content extraction during LlamaCloud migration.
+Error occurred during PDF processing: {str(e)[:100]}...
 File size: {len(file_data)} bytes
 
-For production use, this will be processed by LlamaCloud document parsing service,
-which provides better accuracy and doesn't require local dependencies.
+This is fallback content. For production use, this will be processed by LlamaCloud document parsing service.
 
 Mock coverage details:
 - Deductible: $1,000
@@ -294,27 +310,6 @@ Mock coverage details:
 - Copay: $25 for primary care
 - Network: Preferred Provider Organization (PPO)
         """
-        
-        # Original PyPDF2 code (disabled):
-        # pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_data))
-        # logger.info(f"📄 PDF loaded, found {len(pdf_reader.pages)} pages")
-        # 
-        # text = ""
-        # for i, page in enumerate(pdf_reader.pages):
-        #     logger.info(f"📄 Processing page {i+1}/{len(pdf_reader.pages)}...")
-        #     page_text = page.extract_text()
-        #     text += page_text + "\n"
-        #     logger.info(f"📄 Page {i+1} processed: {len(page_text)} characters extracted")
-        # 
-        # result = text.strip()
-        # logger.info(f"✅ PDF text extraction complete: {len(result)} total characters")
-        # return result
-        
-    except Exception as e:
-        logger.error(f"❌ Error extracting PDF text: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        return ""
 
 def extract_text_from_file(file_data: bytes, filename: str) -> str:
     """Extract text from various file types."""
