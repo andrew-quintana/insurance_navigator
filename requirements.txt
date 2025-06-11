@@ -52,3 +52,4 @@ mypy>=1.0.0
 ruff>=0.1.0
 openai>=1.0.0  # For embeddings via LlamaCloud
 llama-index>=0.10.0  # Core LlamaIndex for cloud integration
+sentence-transformers>=2.2.0  # TEMPORARY - will be removed after LlamaCloud migration complete

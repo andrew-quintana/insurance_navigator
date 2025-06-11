@@ -8,7 +8,7 @@ import json
 import unittest
 from unittest.mock import MagicMock, patch
 from typing import Dict, Any, List
-from sentence_transformers import SentenceTransformer
+# from sentence_transformers import SentenceTransformer  # TEMPORARY - will be removed
 import numpy as np
 
 # Add project root directory to path to allow imports
