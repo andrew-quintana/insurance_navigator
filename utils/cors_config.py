@@ -52,7 +52,8 @@ class CORSConfig:
             "https://insurance-navigator.vercel.app",
             # Add specific problematic URLs that were reported
             "https://insurance-navigator-ajzpmcvgz-andrew-quintanas-projects.vercel.app",
-            "https://insurance-navigator-cwtwocttv-andrew-quintanas-projects.vercel.app"
+            "https://insurance-navigator-cwtwocttv-andrew-quintanas-projects.vercel.app",
+            "https://insurance-navigator-kkedlaqxo-andrew-quintanas-projects.vercel.app"
         ]
         
         # Combine and deduplicate

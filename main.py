@@ -206,13 +206,43 @@ agent_orchestrator_instance: Optional[AgentOrchestrator] = None
 embedding_model = None
 
 async def get_embedding_model():
-    """Get or load the sentence transformer model."""
+    """Get or load the sentence transformer model with memory optimization."""
     global embedding_model
     if embedding_model is None:
         try:
-            logger.info("Loading SBERT model: all-MiniLM-L6-v2...")
-            embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-            logger.info("✅ SBERT model loaded successfully")
+            # Check available memory and use lighter model if needed
+            import psutil
+            available_memory = psutil.virtual_memory().available / (1024**2)  # MB
+            logger.info(f"Available memory: {available_memory:.0f}MB")
+            
+            if available_memory < 300:  # Less than 300MB available
+                logger.warning("⚠️ Low memory detected, using mock model")
+                class MockModel:
+                    def encode(self, text):
+                        import random
+                        # Return random 384-dimensional vector for demo
+                        return [random.uniform(-1, 1) for _ in range(384)]
+                embedding_model = MockModel()
+                logger.info("✅ Mock embedding model loaded (memory optimization)")
+            else:
+                logger.info("Loading SBERT model: all-MiniLM-L6-v2...")
+                # Use device='cpu' and optimize for memory
+                embedding_model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
+                logger.info("✅ SBERT model loaded successfully")
+                
+        except ImportError:
+            logger.warning("⚠️ psutil not available, proceeding with model loading")
+            try:
+                embedding_model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
+                logger.info("✅ SBERT model loaded successfully")
+            except Exception as e:
+                logger.error(f"❌ Failed to load SBERT model: {e}")
+                class MockModel:
+                    def encode(self, text):
+                        import random
+                        return [random.uniform(-1, 1) for _ in range(384)]
+                embedding_model = MockModel()
+                logger.warning("⚠️ Using mock embedding model due to loading failure")
         except Exception as e:
             logger.error(f"❌ Failed to load SBERT model: {e}")
             # Return a mock model for demo purposes

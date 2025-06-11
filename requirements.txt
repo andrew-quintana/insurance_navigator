@@ -20,6 +20,7 @@ python-multipart==0.0.9  # For form data handling
 pydantic==2.6.3
 python-dotenv==1.0.1
 pytz==2024.1  # For timezone handling
+psutil>=5.9.0  # For memory monitoring
 
 # AI/ML and Search (for agents that need them)
 langchain>=0.1.0
