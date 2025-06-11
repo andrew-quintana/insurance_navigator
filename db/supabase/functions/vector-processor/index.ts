@@ -97,14 +97,14 @@ Deno.serve(async (req) => {
       // Generate embeddings for batch
       const embeddingPromises = batch.map(async (chunk, batchIndex) => {
         try {
-          // Call Render backend for embedding generation
-          const embeddingResponse = await fetch(`${Deno.env.get('RENDER_BACKEND_URL')}/api/embeddings`, {
+          // Generate embedding using OpenAI directly
+          const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${Deno.env.get('SERVICE_AUTH_TOKEN')}`
+              'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`
             },
-            body: JSON.stringify({ text: chunk })
+            body: JSON.stringify({ input: chunk, model: "text-embedding-3-small", dimensions: 1536 })
           })
 
           if (!embeddingResponse.ok) {
@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
             document_id: documentId,
             document_record_id: documentId,
             chunk_index: i + batchIndex,
-            content_embedding: JSON.stringify(embeddingData.embedding),
+            content_embedding: JSON.stringify(embeddingData.data[0].embedding),
             encrypted_chunk_text: chunk,
             encrypted_chunk_metadata: JSON.stringify({
               filename: document.original_filename,
