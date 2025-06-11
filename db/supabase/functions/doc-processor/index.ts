@@ -40,12 +40,14 @@ Deno.serve(async (req) => {
     // TODO: Replace with proper token validation
     // For now, accept any Bearer token as service auth
     const token = authHeader.replace('Bearer ', '')
-    if (!token || token.length < 10) {
+    if (!token || token.trim().length === 0) {
       return new Response(
         JSON.stringify({ error: 'Invalid authorization token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    console.log('Token validation passed, token length:', token.length)
 
     const { filename, contentType, fileSize, userId }: UploadRequest = await req.json()
 
