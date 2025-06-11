@@ -13,7 +13,7 @@ import os
 
 # Vector and ML imports
 import numpy as np
-from sentence_transformers import SentenceTransformer  # TEMPORARY - will be removed
+from sentence_transformers import SentenceTransformer
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
