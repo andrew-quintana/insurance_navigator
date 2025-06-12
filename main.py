@@ -2038,6 +2038,53 @@ async def upload_document_backend(
             detail=f"Failed to upload document: {str(e)}"
         )
 
+@app.delete("/admin/cleanup-duplicate/{file_hash}")
+async def cleanup_duplicate_file(
+    file_hash: str,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """
+    Temporary endpoint to clean up duplicate file entries for testing.
+    This will be removed once the duplicate handling is properly deployed.
+    """
+    try:
+        db_pool = await get_db_pool()
+        
+        async with db_pool.get_connection() as connection:
+            # Delete the document with the specified hash for this user
+            delete_query = """
+                DELETE FROM documents 
+                WHERE file_hash = $1 AND user_id = $2
+                RETURNING id, original_filename
+            """
+            
+            deleted_docs = await connection.fetch(delete_query, file_hash, current_user.id)
+            
+            if deleted_docs:
+                deleted_count = len(deleted_docs)
+                filenames = [doc['original_filename'] for doc in deleted_docs]
+                logger.info(f"🗑️ Cleaned up {deleted_count} duplicate documents for user {current_user.id}: {filenames}")
+                
+                return {
+                    'success': True,
+                    'deleted_count': deleted_count,
+                    'deleted_files': filenames,
+                    'message': f'Successfully cleaned up {deleted_count} duplicate document(s)'
+                }
+            else:
+                return {
+                    'success': False,
+                    'deleted_count': 0,
+                    'message': 'No documents found with that hash for your account'
+                }
+                
+    except Exception as e:
+        logger.error(f"Error cleaning up duplicate file: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to cleanup duplicate: {str(e)}"
+        )
+
 @app.get("/admin/job-queue-status")
 async def get_job_queue_status(
     current_user: UserResponse = Depends(get_current_user)
