@@ -1,0 +1,12 @@
+# DEPRECATED: Local Job Processing Script
+# 
+# This script is no longer needed - we now use Supabase Cron for automatic job processing
+# 
+# The job processing is handled automatically by Supabase cron jobs that run every minute
+# See PHASE1_DEPLOYMENT_COMPLETE.md for details
+#
+# Active Supabase Cron Jobs:
+# - process-document-jobs: Runs every minute (* * * * *)
+# - cleanup-old-jobs: Runs daily at 2 AM (0 2 * * *)
+#
+# To monitor: Check cron.job and cron.job_run_details tables in your database 
