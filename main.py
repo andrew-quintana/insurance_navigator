@@ -1914,7 +1914,7 @@ async def upload_document_backend(
             job_query = """
                 INSERT INTO processing_jobs (
                     id, document_id, job_type, status, priority, 
-                    created_at, scheduled_for, metadata
+                    created_at, scheduled_at, payload
                 ) VALUES ($1, $2, $3, $4, $5, NOW(), NOW(), $6)
             """
             
