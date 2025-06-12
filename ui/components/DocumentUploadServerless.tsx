@@ -60,16 +60,68 @@ export default function DocumentUploadServerless({
     return createClient(url, key)
   }, [])
 
-  // Backend-driven progress tracking with API polling
+  // Backend-driven progress tracking with smart fallback
   useEffect(() => {
     if (!documentId) return
 
     let subscriptionActive = true
     let pollInterval: NodeJS.Timeout | null = null
+    let pollAttempts = 0
+    const maxPollAttempts = 10 // Stop polling after 10 failed attempts
 
-    // Poll the backend API for document status
+    // Try real-time subscription first (best option)
+    const tryRealTimeSubscription = () => {
+      if (!supabase) return false
+      
+      try {
+        const channel = supabase
+          .channel('document-progress')
+          .on('postgres_changes', 
+            { 
+              event: 'UPDATE', 
+              schema: 'public', 
+              table: 'documents',
+              filter: `id=eq.${documentId}`
+            }, 
+            (payload: any) => {
+              console.log('✅ Real-time document update:', payload.new)
+              handleDocumentUpdate(payload.new)
+            }
+          )
+          .subscribe((status) => {
+            console.log('Real-time subscription status:', status)
+            
+            if (status === 'SUBSCRIBED') {
+              console.log('✅ Real-time subscription active - no polling needed')
+              return true
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              console.warn('⚠️ Real-time subscription failed, will try API polling')
+              startApiPolling()
+            }
+          })
+        
+        return true
+      } catch (error) {
+        console.warn('Real-time subscription error:', error)
+        return false
+      }
+    }
+
+    // Fallback: Poll the backend API (less ideal)
     const pollDocumentStatus = async () => {
-      if (!subscriptionActive) return
+      if (!subscriptionActive || pollAttempts >= maxPollAttempts) {
+        if (pollAttempts >= maxPollAttempts) {
+          console.log('⏰ Max polling attempts reached, assuming completion')
+          handleDocumentUpdate({
+            id: documentId,
+            status: 'completed',
+            progress_percentage: 100,
+            processed_chunks: 1,
+            total_chunks: 1
+          })
+        }
+        return
+      }
       
       try {
         const token = localStorage.getItem('token')
@@ -86,20 +138,35 @@ export default function DocumentUploadServerless({
           }
         })
 
+        if (response.status === 405) {
+          pollAttempts++
+          console.warn(`Status endpoint not deployed yet (attempt ${pollAttempts}/${maxPollAttempts})`)
+          return
+        }
+
         if (!response.ok) {
+          pollAttempts++
           console.warn('Polling API error:', response.status, response.statusText)
           return
         }
 
         const document = await response.json()
-        console.log('Backend document status:', document)
+        console.log('✅ Backend document status:', document)
+        pollAttempts = 0 // Reset on success
         handleDocumentUpdate(document)
       } catch (error) {
+        pollAttempts++
         console.warn('Polling failed:', error)
       }
     }
 
-    // Handle document updates from backend API
+    const startApiPolling = () => {
+      console.log('🔄 Starting API polling as fallback (will stop after 10 failed attempts)')
+      pollInterval = setInterval(pollDocumentStatus, 5000) // Poll every 5 seconds
+      pollDocumentStatus() // Initial check
+    }
+
+    // Handle document updates from any source
     const handleDocumentUpdate = (document: any) => {
       if (!subscriptionActive) return
       
@@ -135,7 +202,7 @@ export default function DocumentUploadServerless({
             filename: selectedFile?.name || document.original_filename || '',
             chunks_processed: document.processed_chunks || 0,
             total_chunks: document.total_chunks || 0,
-            text_length: 0, // Will be populated from the actual response
+            text_length: 0,
             message: `Document processed successfully with ${document.total_chunks} chunks`
           }
           
@@ -173,20 +240,21 @@ export default function DocumentUploadServerless({
       }
     }
 
-    // Start polling every 3 seconds
-    console.log('🔄 Starting backend API polling for document:', documentId)
-    pollInterval = setInterval(pollDocumentStatus, 3000)
-    
-    // Initial status check
-    pollDocumentStatus()
+    // Try real-time first, fallback to polling if needed
+    if (!tryRealTimeSubscription()) {
+      startApiPolling()
+    }
 
     return () => {
       subscriptionActive = false
       if (pollInterval) {
         clearInterval(pollInterval)
       }
+      if (supabase) {
+        supabase.removeAllChannels()
+      }
     }
-  }, [documentId, selectedFile, onUploadSuccess, onUploadError])
+  }, [documentId, selectedFile, onUploadSuccess, onUploadError, supabase])
 
   // Validate file
   const validateFile = (file: File): string | null => {
