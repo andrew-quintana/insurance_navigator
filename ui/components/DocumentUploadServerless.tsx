@@ -60,60 +60,67 @@ export default function DocumentUploadServerless({
     return createClient(url, key)
   }, [])
 
-  // Real-time progress tracking with improved error handling
+  // Backend-driven progress tracking with API polling
   useEffect(() => {
-    if (!documentId || !supabase) return
+    if (!documentId) return
 
     let subscriptionActive = true
-    let timeoutId: NodeJS.Timeout | null = null
+    let pollInterval: NodeJS.Timeout | null = null
 
-    // Set a timeout to mark as completed if no updates after 30 seconds
-    const setCompletionTimeout = () => {
-      if (timeoutId) clearTimeout(timeoutId)
-      timeoutId = setTimeout(() => {
-        if (subscriptionActive) {
-          console.log('⏰ No updates received for 30 seconds, assuming completion')
-          handleDocumentUpdate({
-            id: documentId,
-            status: 'completed',
-            progress_percentage: 100,
-            processed_chunks: 1,
-            total_chunks: 1
-          })
+    // Poll the backend API for document status
+    const pollDocumentStatus = async () => {
+      if (!subscriptionActive) return
+      
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) {
+          console.warn('No auth token for polling')
+          return
         }
-      }, 30000) // 30 seconds timeout
+
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+        const response = await fetch(`${apiBaseUrl}/documents/${documentId}/status`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+
+        if (!response.ok) {
+          console.warn('Polling API error:', response.status, response.statusText)
+          return
+        }
+
+        const document = await response.json()
+        console.log('Backend document status:', document)
+        handleDocumentUpdate(document)
+      } catch (error) {
+        console.warn('Polling failed:', error)
+      }
     }
 
-    // Handle document updates (shared between real-time and polling)
+    // Handle document updates from backend API
     const handleDocumentUpdate = (document: any) => {
       if (!subscriptionActive) return
       
       setUploadProgress(document.progress_percentage || 0)
       
-      // Reset timeout on any update
-      if (timeoutId) clearTimeout(timeoutId)
-      
       // Update status messages based on document status
       switch(document.status) {
         case 'uploading':
-          setUploadMessage("📤 Uploading file to secure storage...")
-          setCompletionTimeout()
+          setUploadMessage("📤 Uploading file to backend...")
           break
         case 'processing':
-          setUploadMessage("🔄 Initializing document processing...")
-          setCompletionTimeout()
+          setUploadMessage("🔄 Processing document in background...")
           break
         case 'parsing':
           setUploadMessage("📄 Extracting text from document...")
-          setCompletionTimeout()
           break
         case 'chunking':
           setUploadMessage("✂️ Breaking down content into sections...")
-          setCompletionTimeout()
           break
         case 'vectorizing':
           setUploadMessage(`🧠 Generating embeddings (${document.processed_chunks}/${document.total_chunks} sections)...`)
-          setCompletionTimeout()
           break
         case 'completed':
           setUploadMessage(`✅ Success! Processed ${document.total_chunks} sections from your document.`)
@@ -125,8 +132,8 @@ export default function DocumentUploadServerless({
           const result: UploadResponse = {
             success: true,
             document_id: document.id,
-            filename: selectedFile?.name || '',
-            chunks_processed: document.total_chunks || 0,
+            filename: selectedFile?.name || document.original_filename || '',
+            chunks_processed: document.processed_chunks || 0,
             total_chunks: document.total_chunks || 0,
             text_length: 0, // Will be populated from the actual response
             message: `Document processed successfully with ${document.total_chunks} chunks`
@@ -134,6 +141,12 @@ export default function DocumentUploadServerless({
           
           if (onUploadSuccess) {
             onUploadSuccess(result)
+          }
+          
+          // Stop polling
+          if (pollInterval) {
+            clearInterval(pollInterval)
+            pollInterval = null
           }
           
           // Auto-reset after success
@@ -147,6 +160,12 @@ export default function DocumentUploadServerless({
           setUploadMessage("")
           setIsUploading(false)
           
+          // Stop polling
+          if (pollInterval) {
+            clearInterval(pollInterval)
+            pollInterval = null
+          }
+          
           if (onUploadError) {
             onUploadError(document.error_message || 'Document processing failed')
           }
@@ -154,45 +173,20 @@ export default function DocumentUploadServerless({
       }
     }
 
-    // Try real-time subscription with improved error handling
-    const channel = supabase
-      .channel('document-progress')
-      .on('postgres_changes', 
-        { 
-          event: 'UPDATE', 
-          schema: 'public', 
-          table: 'documents',
-          filter: `id=eq.${documentId}`
-        }, 
-        (payload: any) => {
-          console.log('Real-time document update:', payload.new)
-          handleDocumentUpdate(payload.new)
-        }
-      )
-      .subscribe((status) => {
-        console.log('Subscription status:', status)
-        
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Real-time subscription active')
-          // Start the completion timeout
-          setCompletionTimeout()
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('⚠️ Real-time subscription failed, will rely on timeout mechanism')
-          // Start timeout immediately if subscription fails
-          setCompletionTimeout()
-        }
-      })
+    // Start polling every 3 seconds
+    console.log('🔄 Starting backend API polling for document:', documentId)
+    pollInterval = setInterval(pollDocumentStatus, 3000)
+    
+    // Initial status check
+    pollDocumentStatus()
 
     return () => {
       subscriptionActive = false
-      if (supabase) {
-        supabase.removeChannel(channel)
-      }
-      if (timeoutId) {
-        clearTimeout(timeoutId)
+      if (pollInterval) {
+        clearInterval(pollInterval)
       }
     }
-  }, [documentId, selectedFile, onUploadSuccess, onUploadError, supabase])
+  }, [documentId, selectedFile, onUploadSuccess, onUploadError])
 
   // Validate file
   const validateFile = (file: File): string | null => {
@@ -256,109 +250,47 @@ export default function DocumentUploadServerless({
   const handleUpload = async () => {
     if (!selectedFile) return
 
-    if (!supabase) {
-      setUploadError('Serverless upload not available. Please contact support.')
-      return
-    }
-
     setIsUploading(true)
     setUploadError(null)
     setUploadProgress(0)
 
     try {
-      // TODO: SECURITY UPGRADE - Replace with proper dual-auth
-      // Current: Using Render backend token + user ID
-      // Future: Implement Supabase-native authentication flow
-      
-      // Get user info from Render backend token
+      // Get authentication token
       const token = localStorage.getItem('token')
       if (!token) {
         throw new Error('Authentication required')
       }
       
-      // TODO: Get user ID from proper token validation
-      // For now, decode from localStorage or API call
-      let userId = localStorage.getItem('userId')
-      if (!userId) {
-        // Fallback: Get user info from backend
-        const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/me`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        if (userResponse.ok) {
-          const userData = await userResponse.json()
-          userId = userData.id
-          localStorage.setItem('userId', userId || '')
-                 } else {
-           throw new Error('Failed to get user information')
-         }
-       }
+      setUploadMessage("📤 Uploading file to backend...")
+      setUploadProgress(5)
 
-       if (!userId) {
-         throw new Error('User ID is required')
-       }
+      // Upload directly to backend API (no more Edge Functions!)
+      const formData = new FormData()
+      formData.append('file', selectedFile)
 
-       // Initialize document upload with serverless Edge Function
-       const { data: initData, error: initError } = await supabase!.functions.invoke('doc-processor', {
-         body: {
-           filename: selectedFile.name,
-           contentType: selectedFile.type,
-           fileSize: selectedFile.size,
-           // TODO: Remove when proper dual-auth is implemented
-           userId: userId!
-         },
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+      const uploadResponse = await fetch(`${apiBaseUrl}/upload-document-backend`, {
+        method: 'POST',
         headers: {
-          // TODO: Replace with validated token from proper auth flow
           'Authorization': `Bearer ${token}`
-        }
-      })
-
-      if (initError) {
-        console.error('Error initializing upload:', initError)
-        throw new Error(initError.message || 'Failed to initialize upload')
-      }
-
-      console.log("✅ Upload initialized:", initData)
-      setDocumentId(initData.documentId)
-      setUploadProgress(10)
-
-      // Step 2: Upload file to Supabase Storage using signed URL
-      setUploadMessage("📤 Uploading file to secure storage...")
-      
-      const uploadResponse = await fetch(initData.uploadUrl, {
-        method: 'PUT',
-        body: selectedFile,
-        headers: {
-          'Content-Type': selectedFile.type
-        }
+        },
+        body: formData
       })
 
       if (!uploadResponse.ok) {
-        throw new Error(`File upload failed: ${uploadResponse.status}`)
+        const errorData = await uploadResponse.json().catch(() => ({}))
+        throw new Error(errorData.detail || `Upload failed: ${uploadResponse.status}`)
       }
 
-      console.log("✅ File uploaded to storage")
-      setUploadProgress(15)
-
-      // Step 3: Trigger processing pipeline with link-assigner
-      setUploadMessage("🔗 Starting document processing pipeline...")
+      const uploadResult = await uploadResponse.json()
+      console.log("✅ Backend upload successful:", uploadResult)
       
-      const { error: linkError } = await supabase.functions.invoke('link-assigner', {
-        body: {
-          documentId: initData.documentId,
-          storagePath: initData.storagePath
-        }
-      })
+      setDocumentId(uploadResult.document_id)
+      setUploadProgress(15)
+      setUploadMessage("⚙️ Document uploaded! Processing will continue in the background...")
 
-      if (linkError) {
-        console.error('Error starting processing:', linkError)
-        throw new Error(linkError.message || 'Failed to start processing pipeline')
-      }
-
-      console.log("✅ Processing pipeline started")
-      setUploadProgress(20)
-      setUploadMessage("⚙️ Processing document - this may take a few minutes for large files...")
-
-      // Real-time progress tracking will handle the rest via useEffect
+      // The backend job queue will handle all processing automatically
+      // Real-time progress tracking will monitor the job queue status
       
     } catch (error) {
       console.error('Upload error:', error)
