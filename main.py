@@ -1748,6 +1748,68 @@ async def generate_embedding_for_edge_functions(
             detail=f"Failed to generate embedding: {str(e)}"
         )
 
+@app.get("/documents/{document_id}/status")
+async def get_document_status(
+    document_id: str,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """
+    Get document processing status for polling.
+    This endpoint bypasses RLS issues by using server-side authentication.
+    """
+    try:
+        # Get database pool
+        db_pool = await get_db_pool()
+        
+        async with db_pool.acquire() as connection:
+            # Query document status with user verification
+            query = """
+                SELECT 
+                    id, 
+                    status, 
+                    progress_percentage, 
+                    processed_chunks, 
+                    total_chunks, 
+                    error_message,
+                    original_filename,
+                    processing_completed_at
+                FROM documents 
+                WHERE id = $1 AND user_id = $2
+            """
+            
+            result = await connection.fetchrow(query, document_id, current_user.id)
+            
+            if not result:
+                raise HTTPException(
+                    status_code=404, 
+                    detail="Document not found or access denied"
+                )
+            
+            # Convert to dict and handle None values
+            document_status = {
+                'id': str(result['id']),
+                'status': result['status'],
+                'progress_percentage': result['progress_percentage'] or 0,
+                'processed_chunks': result['processed_chunks'] or 0,
+                'total_chunks': result['total_chunks'] or 0,
+                'error_message': result['error_message'],
+                'original_filename': result['original_filename'],
+                'processing_completed_at': result['processing_completed_at'].isoformat() if result['processing_completed_at'] else None
+            }
+            
+            logger.info(f"Document status for {document_id}: {document_status['status']} ({document_status['progress_percentage']}%)")
+            
+            return document_status
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting document status for {document_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get document status: {str(e)}"
+        )
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
