@@ -1854,6 +1854,8 @@ async def upload_document_backend(
     Backend-driven document upload that creates jobs in the job queue.
     This eliminates frontend dependency and ensures processing continues
     even if the user closes their browser.
+    
+    Includes duplicate file handling with SHA256 hash deduplication.
     """
     try:
         # Validate file
