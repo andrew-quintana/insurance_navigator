@@ -1349,10 +1349,10 @@ async def root():
         "version": "2.0.0",
         "status": "active",
         "documentation": "/docs",
-        "deployment_info": {
-            "prepared_statements_fix": "ACTIVE",
-            "commit_hash": "5eaaf6c",
-            "fix_description": "Supabase transaction pooler prepared statement fix deployed",
+            "deployment_info": {
+        "prepared_statements_fix": "ACTIVE",
+        "commit_hash": "95adab1",
+        "fix_description": "Duplicate file upload handling and prepared statement fix deployed",
             "environment_vars": {
                 "ASYNCPG_DISABLE_PREPARED_STATEMENTS": os.getenv('ASYNCPG_DISABLE_PREPARED_STATEMENTS'),
                 "DATABASE_URL_contains_pooler": 'pooler.supabase.com' in os.getenv('DATABASE_URL', ''),
