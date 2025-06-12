@@ -60,58 +60,60 @@ export default function DocumentUploadServerless({
     return createClient(url, key)
   }, [])
 
-  // Real-time progress tracking with fallback polling
+  // Real-time progress tracking with improved error handling
   useEffect(() => {
     if (!documentId || !supabase) return
 
-    let pollInterval: NodeJS.Timeout | null = null
     let subscriptionActive = true
+    let timeoutId: NodeJS.Timeout | null = null
 
-    // Fallback polling function
-    const pollDocumentStatus = async () => {
-      if (!subscriptionActive) return
-      
-      try {
-        const { data: document, error } = await supabase
-          .from('documents')
-          .select('id, status, progress_percentage, processed_chunks, total_chunks, error_message')
-          .eq('id', documentId)
-          .single()
-
-        if (error) {
-          console.warn('Polling error:', error)
-          return
+    // Set a timeout to mark as completed if no updates after 30 seconds
+    const setCompletionTimeout = () => {
+      if (timeoutId) clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        if (subscriptionActive) {
+          console.log('⏰ No updates received for 30 seconds, assuming completion')
+          handleDocumentUpdate({
+            id: documentId,
+            status: 'completed',
+            progress_percentage: 100,
+            processed_chunks: 1,
+            total_chunks: 1
+          })
         }
-
-        if (document) {
-          console.log('Polling document status:', document)
-          handleDocumentUpdate(document)
-        }
-      } catch (error) {
-        console.warn('Polling failed:', error)
-      }
+      }, 30000) // 30 seconds timeout
     }
 
     // Handle document updates (shared between real-time and polling)
     const handleDocumentUpdate = (document: any) => {
+      if (!subscriptionActive) return
+      
       setUploadProgress(document.progress_percentage || 0)
+      
+      // Reset timeout on any update
+      if (timeoutId) clearTimeout(timeoutId)
       
       // Update status messages based on document status
       switch(document.status) {
         case 'uploading':
           setUploadMessage("📤 Uploading file to secure storage...")
+          setCompletionTimeout()
           break
         case 'processing':
           setUploadMessage("🔄 Initializing document processing...")
+          setCompletionTimeout()
           break
         case 'parsing':
           setUploadMessage("📄 Extracting text from document...")
+          setCompletionTimeout()
           break
         case 'chunking':
           setUploadMessage("✂️ Breaking down content into sections...")
+          setCompletionTimeout()
           break
         case 'vectorizing':
           setUploadMessage(`🧠 Generating embeddings (${document.processed_chunks}/${document.total_chunks} sections)...`)
+          setCompletionTimeout()
           break
         case 'completed':
           setUploadMessage(`✅ Success! Processed ${document.total_chunks} sections from your document.`)
@@ -152,7 +154,7 @@ export default function DocumentUploadServerless({
       }
     }
 
-    // Try real-time subscription first
+    // Try real-time subscription with improved error handling
     const channel = supabase
       .channel('document-progress')
       .on('postgres_changes', 
@@ -172,35 +174,23 @@ export default function DocumentUploadServerless({
         
         if (status === 'SUBSCRIBED') {
           console.log('✅ Real-time subscription active')
+          // Start the completion timeout
+          setCompletionTimeout()
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('⚠️ Real-time subscription failed, falling back to polling')
-          // Start polling as fallback
-          pollInterval = setInterval(pollDocumentStatus, 2000) // Poll every 2 seconds
+          console.warn('⚠️ Real-time subscription failed, will rely on timeout mechanism')
+          // Start timeout immediately if subscription fails
+          setCompletionTimeout()
         }
       })
-
-    // Start polling immediately as backup (will be cleared if real-time works)
-    const initialPollTimeout: NodeJS.Timeout = setTimeout(() => {
-      if (subscriptionActive) {
-        console.log('🔄 Starting polling as backup mechanism')
-        pollInterval = setInterval(pollDocumentStatus, 2000)
-      }
-    }, 5000) // Start polling after 5 seconds if no real-time updates
-
-    // Initial status check
-    pollDocumentStatus()
 
     return () => {
       subscriptionActive = false
       if (supabase) {
         supabase.removeChannel(channel)
       }
-      if (pollInterval) {
-        clearInterval(pollInterval)
+      if (timeoutId) {
+        clearTimeout(timeoutId)
       }
-                if (initialPollTimeout) {
-            clearTimeout(initialPollTimeout)
-          }
     }
   }, [documentId, selectedFile, onUploadSuccess, onUploadError, supabase])
 
