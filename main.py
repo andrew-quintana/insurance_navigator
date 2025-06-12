@@ -664,7 +664,13 @@ async def chat(
         # Process message with agent orchestrator
         try:
             if AGENT_ORCHESTRATOR_AVAILABLE and not agent_orchestrator_instance:
-                agent_orchestrator_instance = AgentOrchestrator()
+                try:
+                    logger.info("🤖 Initializing AgentOrchestrator for first use...")
+                    agent_orchestrator_instance = AgentOrchestrator()
+                    logger.info("✅ AgentOrchestrator initialized successfully")
+                except Exception as init_error:
+                    logger.error(f"❌ AgentOrchestrator initialization failed: {init_error}")
+                    agent_orchestrator_instance = None
             
             if agent_orchestrator_instance:
                 # Use production agent orchestrator
@@ -679,6 +685,7 @@ async def chat(
                 agent_state = result.get("agent_state")
             else:
                 # Use fallback orchestrator
+                logger.info("💡 Using fallback orchestrator")
                 fallback = FallbackOrchestrator()
                 result = await fallback.process_message(
                     request.message, current_user.id, conversation_id, request.context
@@ -990,8 +997,7 @@ async def delete_document(
         )
 
 # Application lifecycle events
-@app.on_event("startup")
-async def startup_event():
+async def startup_logic():
     """Initialize services and database connections on startup."""
     global user_service_instance, conversation_service_instance, storage_service_instance
     
@@ -1012,13 +1018,9 @@ async def startup_event():
         storage_service_instance = await get_storage_service()
         logger.info("✅ Storage service initialized")
         
-        # Initialize agent orchestrator if available
+        # Initialize agent orchestrator if available (lazy initialization to avoid blocking startup)
         if AGENT_ORCHESTRATOR_AVAILABLE:
-            try:
-                agent_orchestrator_instance = AgentOrchestrator()
-                logger.info("✅ Agent orchestrator initialized")
-            except Exception as e:
-                logger.warning(f"⚠️ Agent orchestrator initialization failed: {e}")
+            logger.info("🤖 Agent orchestrator will be initialized on first use")
         else:
             logger.info("💡 Using fallback orchestrator (agent system not available)")
         
@@ -1026,10 +1028,10 @@ async def startup_event():
         
     except Exception as e:
         logger.error(f"❌ Startup failed: {str(e)}")
-        raise
+        # Don't raise to prevent startup failure - let the app start with degraded functionality
+        logger.warning("⚠️ Continuing startup despite errors...")
 
-@app.on_event("shutdown")
-async def shutdown_event():
+async def shutdown_logic():
     """Cleanup on application shutdown."""
     logger.info("👋 Insurance Navigator API shutting down...")
     
@@ -1043,6 +1045,15 @@ async def shutdown_event():
         logger.error(f"Error during shutdown: {str(e)}")
     
     logger.info("✅ Shutdown complete")
+
+# Use startup/shutdown events for backward compatibility
+@app.on_event("startup")
+async def startup_event():
+    await startup_logic()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    await shutdown_logic()
 
 # Debug endpoint for development
 @app.get("/debug/workflow/{conversation_id}")
@@ -2089,10 +2100,12 @@ async def get_job_queue_status(
 
 if __name__ == "__main__":
     import uvicorn
+    port = int(os.getenv("PORT", 8000))
+    logger.info(f"🚀 Starting server on port {port}")
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
-        reload=True,
+        port=port,
+        reload=False,  # Disable reload in production
         log_level="info"
     ) 
