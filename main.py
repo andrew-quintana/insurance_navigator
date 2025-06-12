@@ -2001,15 +2001,22 @@ async def upload_document_backend(
             # Create storage path
             storage_path = f"user_documents/{current_user.id}/{document_id}/{file.filename}"
             
-            # Upload file to Supabase Storage
+            # Upload file to Supabase Storage using the correct method
             try:
-                upload_result = await storage_service.upload_file(
-                    bucket_name="documents",
-                    file_path=storage_path,
+                upload_result = await storage_service.upload_user_document_with_vectors(
+                    user_id=current_user.id,
                     file_data=file_content,
-                    content_type=file.content_type
+                    filename=file.filename,
+                    document_type="user_document",
+                    metadata={
+                        'document_id': document_id,
+                        'file_hash': file_hash,
+                        'original_storage_path': storage_path
+                    }
                 )
-                logger.info(f"✅ File uploaded to storage: {storage_path}")
+                # Get the actual storage path from upload result
+                actual_storage_path = upload_result.get('file_path', storage_path)
+                logger.info(f"✅ File uploaded to storage: {actual_storage_path}")
             except Exception as storage_error:
                 logger.error(f"❌ Failed to upload file to storage: {storage_error}")
                 # Clean up document record
@@ -2028,7 +2035,7 @@ async def upload_document_backend(
             
             await connection.execute(
                 file_storage_query,
-                storage_path,
+                actual_storage_path,
                 'processing',
                 10,
                 document_id
@@ -2048,7 +2055,7 @@ async def upload_document_backend(
                 'content_type': file.content_type,
                 'file_size': len(file_content),
                 'file_hash': file_hash,
-                'storage_path': storage_path,
+                'storage_path': actual_storage_path,
                 'user_id': current_user.id
             }
             
