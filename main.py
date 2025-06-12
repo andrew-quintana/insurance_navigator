@@ -1003,10 +1003,33 @@ async def startup_logic():
     
     logger.info("🚀 Insurance Navigator API v2.0 starting up...")
     
+    # Log environment info for debugging (without sensitive data)
+    db_url = os.getenv("DATABASE_URL", "NOT_SET")
+    db_configured = "✅ Configured" if db_url != "NOT_SET" else "❌ NOT SET"
+    logger.info(f"🔧 DATABASE_URL: {db_configured}")
+    logger.info(f"🔧 PORT: {os.getenv('PORT', 'NOT_SET')}")
+    logger.info(f"🔧 ASYNCPG_DISABLE_PREPARED_STATEMENTS: {os.getenv('ASYNCPG_DISABLE_PREPARED_STATEMENTS', 'NOT_SET')}")
+    
     try:
-        # Initialize database pool
-        pool = await get_db_pool()
-        logger.info("✅ Database connection pool initialized")
+        # Initialize database pool with timeout and retry logic
+        logger.info("📡 Initializing database connection...")
+        max_db_retries = 3
+        for attempt in range(max_db_retries):
+            try:
+                pool = await asyncio.wait_for(get_db_pool(), timeout=30.0)
+                logger.info("✅ Database connection pool initialized")
+                break
+            except asyncio.TimeoutError:
+                logger.warning(f"⏰ Database connection timeout (attempt {attempt + 1}/{max_db_retries})")
+                if attempt == max_db_retries - 1:
+                    logger.error("❌ Database connection failed after all retries")
+                    raise
+                await asyncio.sleep(5)  # Wait before retry
+            except Exception as e:
+                logger.error(f"❌ Database connection error (attempt {attempt + 1}/{max_db_retries}): {e}")
+                if attempt == max_db_retries - 1:
+                    raise
+                await asyncio.sleep(5)  # Wait before retry
         
         # Initialize services
         user_service_instance = await get_user_service()
