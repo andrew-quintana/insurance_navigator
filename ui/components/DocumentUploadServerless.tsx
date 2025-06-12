@@ -60,125 +60,28 @@ export default function DocumentUploadServerless({
     return createClient(url, key)
   }, [])
 
-  // Backend-driven progress tracking with smart fallback
+  // Pure real-time progress tracking (NO POLLING NEEDED)
   useEffect(() => {
-    if (!documentId) return
+    if (!documentId || !supabase) return
 
     let subscriptionActive = true
-    let pollInterval: NodeJS.Timeout | null = null
-    let pollAttempts = 0
-    const maxPollAttempts = 10 // Stop polling after 10 failed attempts
 
-    // Try real-time subscription first (best option)
-    const tryRealTimeSubscription = () => {
-      if (!supabase) return false
-      
-      try {
-        const channel = supabase
-          .channel('document-progress')
-          .on('postgres_changes', 
-            { 
-              event: 'UPDATE', 
-              schema: 'public', 
-              table: 'documents',
-              filter: `id=eq.${documentId}`
-            }, 
-            (payload: any) => {
-              console.log('✅ Real-time document update:', payload.new)
-              handleDocumentUpdate(payload.new)
-            }
-          )
-          .subscribe((status) => {
-            console.log('Real-time subscription status:', status)
-            
-            if (status === 'SUBSCRIBED') {
-              console.log('✅ Real-time subscription active - no polling needed')
-              return true
-            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-              console.warn('⚠️ Real-time subscription failed, will try API polling')
-              startApiPolling()
-            }
-          })
-        
-        return true
-      } catch (error) {
-        console.warn('Real-time subscription error:', error)
-        return false
-      }
-    }
+    console.log('🔄 Setting up real-time subscription for document:', documentId)
 
-    // Fallback: Poll the backend API (less ideal)
-    const pollDocumentStatus = async () => {
-      if (!subscriptionActive || pollAttempts >= maxPollAttempts) {
-        if (pollAttempts >= maxPollAttempts) {
-          console.log('⏰ Max polling attempts reached, assuming completion')
-          handleDocumentUpdate({
-            id: documentId,
-            status: 'completed',
-            progress_percentage: 100,
-            processed_chunks: 1,
-            total_chunks: 1
-          })
-        }
-        return
-      }
-      
-      try {
-        const token = localStorage.getItem('token')
-        if (!token) {
-          console.warn('No auth token for polling')
-          return
-        }
-
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
-        const response = await fetch(`${apiBaseUrl}/documents/${documentId}/status`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
-
-        if (response.status === 405) {
-          pollAttempts++
-          console.warn(`Status endpoint not deployed yet (attempt ${pollAttempts}/${maxPollAttempts})`)
-          return
-        }
-
-        if (!response.ok) {
-          pollAttempts++
-          console.warn('Polling API error:', response.status, response.statusText)
-          return
-        }
-
-        const document = await response.json()
-        console.log('✅ Backend document status:', document)
-        pollAttempts = 0 // Reset on success
-        handleDocumentUpdate(document)
-      } catch (error) {
-        pollAttempts++
-        console.warn('Polling failed:', error)
-      }
-    }
-
-    const startApiPolling = () => {
-      console.log('🔄 Starting API polling as fallback (will stop after 10 failed attempts)')
-      pollInterval = setInterval(pollDocumentStatus, 5000) // Poll every 5 seconds
-      pollDocumentStatus() // Initial check
-    }
-
-    // Handle document updates from any source
+    // Handle document updates from Supabase real-time
     const handleDocumentUpdate = (document: any) => {
       if (!subscriptionActive) return
       
+      console.log('📡 Real-time update received:', document)
       setUploadProgress(document.progress_percentage || 0)
       
       // Update status messages based on document status
       switch(document.status) {
         case 'uploading':
-          setUploadMessage("📤 Uploading file to backend...")
+          setUploadMessage("📤 Uploading file...")
           break
         case 'processing':
-          setUploadMessage("🔄 Processing document in background...")
+          setUploadMessage("🔄 Processing document...")
           break
         case 'parsing':
           setUploadMessage("📄 Extracting text from document...")
@@ -210,12 +113,6 @@ export default function DocumentUploadServerless({
             onUploadSuccess(result)
           }
           
-          // Stop polling
-          if (pollInterval) {
-            clearInterval(pollInterval)
-            pollInterval = null
-          }
-          
           // Auto-reset after success
           setTimeout(() => {
             resetUpload()
@@ -227,12 +124,6 @@ export default function DocumentUploadServerless({
           setUploadMessage("")
           setIsUploading(false)
           
-          // Stop polling
-          if (pollInterval) {
-            clearInterval(pollInterval)
-            pollInterval = null
-          }
-          
           if (onUploadError) {
             onUploadError(document.error_message || 'Document processing failed')
           }
@@ -240,18 +131,37 @@ export default function DocumentUploadServerless({
       }
     }
 
-    // Try real-time first, fallback to polling if needed
-    if (!tryRealTimeSubscription()) {
-      startApiPolling()
-    }
+    // Set up Supabase real-time subscription (NO POLLING!)
+    const channel = supabase
+      .channel('document-progress')
+      .on('postgres_changes', 
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'documents',
+          filter: `id=eq.${documentId}`
+        }, 
+        (payload: any) => {
+          console.log('📡 Supabase real-time update:', payload.new)
+          handleDocumentUpdate(payload.new)
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Subscription status:', status)
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Real-time subscription active - NO POLLING NEEDED!')
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('⚠️ Real-time subscription failed - backend should handle processing')
+          // Don't poll - let backend handle everything
+          setUploadMessage("⚙️ Processing in background - updates will appear automatically...")
+        }
+      })
 
     return () => {
       subscriptionActive = false
-      if (pollInterval) {
-        clearInterval(pollInterval)
-      }
       if (supabase) {
-        supabase.removeAllChannels()
+        supabase.removeChannel(channel)
       }
     }
   }, [documentId, selectedFile, onUploadSuccess, onUploadError, supabase])
