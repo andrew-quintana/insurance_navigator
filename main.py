@@ -1879,7 +1879,7 @@ async def upload_document_backend(
             # Upload file to Supabase Storage
             try:
                 upload_result = await storage_service.upload_file(
-                    bucket_name="user-documents",
+                    bucket_name="documents",
                     file_path=storage_path,
                     file_data=file_content,
                     content_type=file.content_type
