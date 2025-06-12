@@ -1928,6 +1928,135 @@ async def upload_document_backend(
             detail=f"Failed to upload document: {str(e)}"
         )
 
+@app.get("/admin/job-queue-status")
+async def get_job_queue_status(
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """
+    Get comprehensive job queue status for monitoring.
+    Requires admin access or returns limited info for regular users.
+    """
+    try:
+        db_pool = await get_db_pool()
+        
+        async with db_pool.get_connection() as connection:
+            # Get job status summary
+            status_query = """
+                SELECT 
+                    status,
+                    job_type,
+                    COUNT(*) as count,
+                    MIN(created_at) as oldest,
+                    MAX(created_at) as newest
+                FROM processing_jobs 
+                GROUP BY status, job_type 
+                ORDER BY status, job_type
+            """
+            status_results = await connection.fetch(status_query)
+            
+            # Get running jobs
+            running_query = """
+                SELECT 
+                    id,
+                    document_id,
+                    job_type,
+                    started_at,
+                    EXTRACT(EPOCH FROM (NOW() - started_at)) as running_seconds
+                FROM processing_jobs 
+                WHERE status = 'running'
+                ORDER BY started_at
+            """
+            running_results = await connection.fetch(running_query)
+            
+            # Get recent failures
+            failed_query = """
+                SELECT 
+                    id,
+                    document_id,
+                    job_type,
+                    retry_count,
+                    max_retries,
+                    error_message,
+                    created_at
+                FROM processing_jobs 
+                WHERE status = 'failed' AND updated_at > NOW() - INTERVAL '1 hour'
+                ORDER BY created_at DESC
+                LIMIT 10
+            """
+            failed_results = await connection.fetch(failed_query)
+            
+            # Get document processing status
+            documents_query = """
+                SELECT 
+                    d.id,
+                    d.original_filename,
+                    d.status,
+                    d.progress_percentage,
+                    d.processed_chunks,
+                    d.total_chunks,
+                    d.created_at,
+                    d.updated_at,
+                    COUNT(pj.id) as total_jobs,
+                    COUNT(CASE WHEN pj.status = 'completed' THEN 1 END) as completed_jobs,
+                    COUNT(CASE WHEN pj.status = 'failed' THEN 1 END) as failed_jobs
+                FROM documents d
+                LEFT JOIN processing_jobs pj ON d.id = pj.document_id
+                WHERE d.created_at > NOW() - INTERVAL '2 hours'
+                GROUP BY d.id, d.original_filename, d.status, d.progress_percentage, 
+                         d.processed_chunks, d.total_chunks, d.created_at, d.updated_at
+                ORDER BY d.created_at DESC
+                LIMIT 10
+            """
+            documents_results = await connection.fetch(documents_query)
+            
+            # Convert results to dictionaries
+            status_summary = [dict(row) for row in status_results]
+            running_jobs = [dict(row) for row in running_results]
+            failed_jobs = [dict(row) for row in failed_results]
+            recent_documents = [dict(row) for row in documents_results]
+            
+            # Convert datetime objects to ISO strings
+            for job in running_jobs:
+                if job['started_at']:
+                    job['started_at'] = job['started_at'].isoformat()
+                job['running_seconds'] = int(job['running_seconds']) if job['running_seconds'] else 0
+            
+            for job in failed_jobs:
+                if job['created_at']:
+                    job['created_at'] = job['created_at'].isoformat()
+            
+            for doc in recent_documents:
+                if doc['created_at']:
+                    doc['created_at'] = doc['created_at'].isoformat()
+                if doc['updated_at']:
+                    doc['updated_at'] = doc['updated_at'].isoformat()
+            
+            for status in status_summary:
+                if status['oldest']:
+                    status['oldest'] = status['oldest'].isoformat()
+                if status['newest']:
+                    status['newest'] = status['newest'].isoformat()
+            
+            return {
+                'timestamp': datetime.utcnow().isoformat(),
+                'status_summary': status_summary,
+                'running_jobs': running_jobs,
+                'recent_failures': failed_jobs,
+                'recent_documents': recent_documents,
+                'system_health': {
+                    'total_active_jobs': len([s for s in status_summary if s['status'] in ['pending', 'running', 'retrying']]),
+                    'total_failed_jobs': len(failed_jobs),
+                    'processing_documents': len([d for d in recent_documents if d['status'] == 'processing'])
+                }
+            }
+            
+    except Exception as e:
+        logger.error(f"Error getting job queue status: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get job queue status: {str(e)}"
+        )
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
