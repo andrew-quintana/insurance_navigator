@@ -1810,6 +1810,124 @@ async def get_document_status(
             detail=f"Failed to get document status: {str(e)}"
         )
 
+@app.post("/upload-document-backend", response_model=Dict[str, Any])
+async def upload_document_backend(
+    file: UploadFile = File(...),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """
+    Backend-driven document upload that creates jobs in the job queue.
+    This eliminates frontend dependency and ensures processing continues
+    even if the user closes their browser.
+    """
+    try:
+        # Validate file
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="No filename provided")
+        
+        # File size validation (50MB limit)
+        file_content = await file.read()
+        if len(file_content) > 52428800:  # 50MB
+            raise HTTPException(status_code=413, detail="File size must be less than 50MB")
+        
+        # File type validation
+        allowed_types = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
+                        'application/msword', 'text/plain']
+        if file.content_type not in allowed_types:
+            raise HTTPException(status_code=400, detail="Only PDF, DOCX, DOC, and TXT files are supported")
+        
+        # Get database pool
+        db_pool = await get_db_pool()
+        
+        async with db_pool.acquire() as connection:
+            # Create document record
+            document_id = str(uuid.uuid4())
+            
+            insert_query = """
+                INSERT INTO documents (
+                    id, user_id, original_filename, content_type, file_size,
+                    status, progress_percentage, created_at, updated_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+                RETURNING id
+            """
+            
+            result = await connection.fetchrow(
+                insert_query,
+                document_id,
+                current_user.id,
+                file.filename,
+                file.content_type,
+                len(file_content),
+                'uploading',
+                5
+            )
+            
+            if not result:
+                raise HTTPException(status_code=500, detail="Failed to create document record")
+            
+            # Store file content temporarily (you might want to use Supabase Storage here)
+            # For now, we'll store the raw content in the database
+            file_storage_query = """
+                UPDATE documents 
+                SET file_content = $1, status = $2, progress_percentage = $3, updated_at = NOW()
+                WHERE id = $4
+            """
+            
+            await connection.execute(
+                file_storage_query,
+                file_content,
+                'processing',
+                10,
+                document_id
+            )
+            
+            # Create initial processing job in the job queue
+            job_id = str(uuid.uuid4())
+            job_query = """
+                INSERT INTO processing_jobs (
+                    id, document_id, job_type, status, priority, 
+                    created_at, scheduled_for, metadata
+                ) VALUES ($1, $2, $3, $4, $5, NOW(), NOW(), $6)
+            """
+            
+            job_metadata = {
+                'filename': file.filename,
+                'content_type': file.content_type,
+                'file_size': len(file_content),
+                'user_id': current_user.id
+            }
+            
+            await connection.execute(
+                job_query,
+                job_id,
+                document_id,
+                'parse',  # Start with parsing job
+                'pending',
+                1,  # High priority
+                json.dumps(job_metadata)
+            )
+            
+            logger.info(f"✅ Document {document_id} uploaded and job {job_id} created for user {current_user.id}")
+            
+            return {
+                'success': True,
+                'document_id': document_id,
+                'filename': file.filename,
+                'file_size': len(file_content),
+                'status': 'processing',
+                'message': 'Document uploaded successfully. Processing will continue in the background.',
+                'job_id': job_id
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error uploading document: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to upload document: {str(e)}"
+        )
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
