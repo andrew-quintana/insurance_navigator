@@ -1761,7 +1761,7 @@ async def get_document_status(
         # Get database pool
         db_pool = await get_db_pool()
         
-        async with db_pool.acquire() as connection:
+        async with db_pool.get_connection() as connection:
             # Query document status with user verification
             query = """
                 SELECT 
@@ -1839,7 +1839,7 @@ async def upload_document_backend(
         # Get database pool
         db_pool = await get_db_pool()
         
-        async with db_pool.acquire() as connection:
+        async with db_pool.get_connection() as connection:
             # Create document record
             document_id = str(uuid.uuid4())
             
