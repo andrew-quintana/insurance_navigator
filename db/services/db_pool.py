@@ -42,17 +42,24 @@ class DatabasePool:
             if not db_url:
                 raise ValueError("DATABASE_URL not configured")
             
+            # Log masked database URL for debugging (hide password)
+            if db_url:
+                masked_url = db_url.split('@')[0].split(':')[:-1]
+                masked_url = ':'.join(masked_url) + ':***@' + db_url.split('@')[1] if '@' in db_url else "Invalid URL format"
+                logger.info(f"🌐 Using database: {masked_url}")
+            
             # Check if using transaction pooler (Supavisor/pgbouncer)
             self._transaction_pooler_mode = (
                 os.getenv('ASYNCPG_DISABLE_PREPARED_STATEMENTS') == '1' or
                 'pooler.supabase.com' in db_url
             )
             
-            # Prepare asyncpg connection pool kwargs
+            # Prepare asyncpg connection pool kwargs with shorter timeouts for faster startup
             pool_kwargs = {
-                'min_size': 5,
-                'max_size': 20,
-                'command_timeout': 60,
+                'min_size': 2,  # Reduced for faster startup
+                'max_size': 10,  # Reduced for resource efficiency
+                'command_timeout': 30,  # Reduced timeout
+                'timeout': 10,  # Connection timeout
                 'server_settings': {
                     'jit': 'off',  # Disable JIT for better compatibility
                     'application_name': 'insurance_navigator'
@@ -67,8 +74,24 @@ class DatabasePool:
             else:
                 logger.info("🔧 Prepared statements ENABLED for direct connections")
             
-            # Create asyncpg connection pool
-            self.pool = await asyncpg.create_pool(db_url, **pool_kwargs)
+            # Log environment for debugging
+            logger.info(f"🔧 Transaction pooler mode: {self._transaction_pooler_mode}")
+            logger.info(f"🔧 Pool config: min_size={pool_kwargs['min_size']}, max_size={pool_kwargs['max_size']}")
+            
+            # Create asyncpg connection pool with retry logic
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    logger.info(f"📡 Creating database pool (attempt {attempt + 1}/{max_retries})...")
+                    self.pool = await asyncpg.create_pool(db_url, **pool_kwargs)
+                    logger.info("✅ Database pool created successfully")
+                    break
+                except Exception as e:
+                    logger.error(f"❌ Pool creation failed (attempt {attempt + 1}/{max_retries}): {e}")
+                    if attempt == max_retries - 1:
+                        logger.error("🚨 All database pool creation attempts failed")
+                        raise
+                    await asyncio.sleep(2)  # Wait before retry
             
             # Prepare SQLAlchemy engine kwargs
             sqlalchemy_kwargs = {
