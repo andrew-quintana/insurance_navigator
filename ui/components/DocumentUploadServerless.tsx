@@ -60,10 +60,99 @@ export default function DocumentUploadServerless({
     return createClient(url, key)
   }, [])
 
-  // Real-time progress tracking
+  // Real-time progress tracking with fallback polling
   useEffect(() => {
     if (!documentId || !supabase) return
 
+    let pollInterval: NodeJS.Timeout | null = null
+    let subscriptionActive = true
+
+    // Fallback polling function
+    const pollDocumentStatus = async () => {
+      if (!subscriptionActive) return
+      
+      try {
+        const { data: document, error } = await supabase
+          .from('documents')
+          .select('id, status, progress_percentage, processed_chunks, total_chunks, error_message')
+          .eq('id', documentId)
+          .single()
+
+        if (error) {
+          console.warn('Polling error:', error)
+          return
+        }
+
+        if (document) {
+          console.log('Polling document status:', document)
+          handleDocumentUpdate(document)
+        }
+      } catch (error) {
+        console.warn('Polling failed:', error)
+      }
+    }
+
+    // Handle document updates (shared between real-time and polling)
+    const handleDocumentUpdate = (document: any) => {
+      setUploadProgress(document.progress_percentage || 0)
+      
+      // Update status messages based on document status
+      switch(document.status) {
+        case 'uploading':
+          setUploadMessage("📤 Uploading file to secure storage...")
+          break
+        case 'processing':
+          setUploadMessage("🔄 Initializing document processing...")
+          break
+        case 'parsing':
+          setUploadMessage("📄 Extracting text from document...")
+          break
+        case 'chunking':
+          setUploadMessage("✂️ Breaking down content into sections...")
+          break
+        case 'vectorizing':
+          setUploadMessage(`🧠 Generating embeddings (${document.processed_chunks}/${document.total_chunks} sections)...`)
+          break
+        case 'completed':
+          setUploadMessage(`✅ Success! Processed ${document.total_chunks} sections from your document.`)
+          setUploadProgress(100)
+          setUploadSuccess(true)
+          setIsUploading(false)
+          
+          // Create success result
+          const result: UploadResponse = {
+            success: true,
+            document_id: document.id,
+            filename: selectedFile?.name || '',
+            chunks_processed: document.total_chunks || 0,
+            total_chunks: document.total_chunks || 0,
+            text_length: 0, // Will be populated from the actual response
+            message: `Document processed successfully with ${document.total_chunks} chunks`
+          }
+          
+          if (onUploadSuccess) {
+            onUploadSuccess(result)
+          }
+          
+          // Auto-reset after success
+          setTimeout(() => {
+            resetUpload()
+          }, 3000)
+          break
+        case 'failed':
+          setUploadError(document.error_message || 'Document processing failed')
+          setUploadProgress(0)
+          setUploadMessage("")
+          setIsUploading(false)
+          
+          if (onUploadError) {
+            onUploadError(document.error_message || 'Document processing failed')
+          }
+          break
+      }
+    }
+
+    // Try real-time subscription first
     const channel = supabase
       .channel('document-progress')
       .on('postgres_changes', 
@@ -74,73 +163,44 @@ export default function DocumentUploadServerless({
           filter: `id=eq.${documentId}`
         }, 
         (payload: any) => {
-          const document = payload.new as DocumentProgress
-          console.log('Document progress update:', document)
-          
-          setUploadProgress(document.progress_percentage || 0)
-          
-          // Update status messages based on document status
-          switch(document.status) {
-            case 'uploading':
-              setUploadMessage("📤 Uploading file to secure storage...")
-              break
-            case 'processing':
-              setUploadMessage("🔄 Initializing document processing...")
-              break
-            case 'parsing':
-              setUploadMessage("📄 Extracting text from document...")
-              break
-            case 'chunking':
-              setUploadMessage("✂️ Breaking down content into sections...")
-              break
-            case 'vectorizing':
-              setUploadMessage(`🧠 Generating embeddings (${document.processed_chunks}/${document.total_chunks} sections)...`)
-              break
-            case 'completed':
-              setUploadMessage(`✅ Success! Processed ${document.total_chunks} sections from your document.`)
-              setUploadProgress(100)
-              setUploadSuccess(true)
-              setIsUploading(false)
-              
-              // Create success result
-              const result: UploadResponse = {
-                success: true,
-                document_id: document.id,
-                filename: selectedFile?.name || '',
-                chunks_processed: document.total_chunks || 0,
-                total_chunks: document.total_chunks || 0,
-                text_length: 0, // Will be populated from the actual response
-                message: `Document processed successfully with ${document.total_chunks} chunks`
-              }
-              
-              if (onUploadSuccess) {
-                onUploadSuccess(result)
-              }
-              
-              // Auto-reset after success
-              setTimeout(() => {
-                resetUpload()
-              }, 3000)
-              break
-            case 'failed':
-              setUploadError(document.error_message || 'Document processing failed')
-              setUploadProgress(0)
-              setUploadMessage("")
-              setIsUploading(false)
-              
-              if (onUploadError) {
-                onUploadError(document.error_message || 'Document processing failed')
-              }
-              break
-          }
+          console.log('Real-time document update:', payload.new)
+          handleDocumentUpdate(payload.new)
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('Subscription status:', status)
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Real-time subscription active')
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('⚠️ Real-time subscription failed, falling back to polling')
+          // Start polling as fallback
+          pollInterval = setInterval(pollDocumentStatus, 2000) // Poll every 2 seconds
+        }
+      })
+
+    // Start polling immediately as backup (will be cleared if real-time works)
+    const initialPollTimeout: NodeJS.Timeout = setTimeout(() => {
+      if (subscriptionActive) {
+        console.log('🔄 Starting polling as backup mechanism')
+        pollInterval = setInterval(pollDocumentStatus, 2000)
+      }
+    }, 5000) // Start polling after 5 seconds if no real-time updates
+
+    // Initial status check
+    pollDocumentStatus()
 
     return () => {
+      subscriptionActive = false
       if (supabase) {
         supabase.removeChannel(channel)
       }
+      if (pollInterval) {
+        clearInterval(pollInterval)
+      }
+                if (initialPollTimeout) {
+            clearTimeout(initialPollTimeout)
+          }
     }
   }, [documentId, selectedFile, onUploadSuccess, onUploadError, supabase])
 
@@ -237,7 +297,7 @@ export default function DocumentUploadServerless({
         if (userResponse.ok) {
           const userData = await userResponse.json()
           userId = userData.id
-          localStorage.setItem('userId', userId)
+          localStorage.setItem('userId', userId || '')
                  } else {
            throw new Error('Failed to get user information')
          }
@@ -254,7 +314,7 @@ export default function DocumentUploadServerless({
            contentType: selectedFile.type,
            fileSize: selectedFile.size,
            // TODO: Remove when proper dual-auth is implemented
-           userId: userId
+           userId: userId!
          },
         headers: {
           // TODO: Replace with validated token from proper auth flow
