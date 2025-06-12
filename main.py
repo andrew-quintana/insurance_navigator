@@ -14,6 +14,7 @@ Comprehensive async FastAPI application with:
 import os
 import sys
 import uuid
+import hashlib
 from fastapi import FastAPI, HTTPException, Depends, Request, status, UploadFile, File, Form, Response, Body, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -1836,6 +1837,9 @@ async def upload_document_backend(
         if file.content_type not in allowed_types:
             raise HTTPException(status_code=400, detail="Only PDF, DOCX, DOC, and TXT files are supported")
         
+        # Generate file hash for deduplication and integrity
+        file_hash = hashlib.sha256(file_content).hexdigest()
+        
         # Get database pool
         db_pool = await get_db_pool()
         
@@ -1845,9 +1849,9 @@ async def upload_document_backend(
             
             insert_query = """
                 INSERT INTO documents (
-                    id, user_id, original_filename, content_type, file_size,
+                    id, user_id, original_filename, content_type, file_size, file_hash,
                     status, progress_percentage, created_at, updated_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
                 RETURNING id
             """
             
@@ -1858,6 +1862,7 @@ async def upload_document_backend(
                 file.filename,
                 file.content_type,
                 len(file_content),
+                file_hash,
                 'uploading',
                 5
             )
