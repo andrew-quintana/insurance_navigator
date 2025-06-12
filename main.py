@@ -1870,17 +1870,40 @@ async def upload_document_backend(
             if not result:
                 raise HTTPException(status_code=500, detail="Failed to create document record")
             
-            # Store file content temporarily (you might want to use Supabase Storage here)
-            # For now, we'll store the raw content in the database
+            # Store file in Supabase Storage
+            storage_service = await get_storage_service()
+            
+            # Create storage path
+            storage_path = f"user_documents/{current_user.id}/{document_id}/{file.filename}"
+            
+            # Upload file to Supabase Storage
+            try:
+                upload_result = await storage_service.upload_file(
+                    bucket_name="user-documents",
+                    file_path=storage_path,
+                    file_data=file_content,
+                    content_type=file.content_type
+                )
+                logger.info(f"✅ File uploaded to storage: {storage_path}")
+            except Exception as storage_error:
+                logger.error(f"❌ Failed to upload file to storage: {storage_error}")
+                # Clean up document record
+                await connection.execute("DELETE FROM documents WHERE id = $1", document_id)
+                raise HTTPException(
+                    status_code=500, 
+                    detail=f"Failed to store file: {str(storage_error)}"
+                )
+            
+            # Update document with storage path and processing status
             file_storage_query = """
                 UPDATE documents 
-                SET file_content = $1, status = $2, progress_percentage = $3, updated_at = NOW()
+                SET storage_path = $1, status = $2, progress_percentage = $3, updated_at = NOW()
                 WHERE id = $4
             """
             
             await connection.execute(
                 file_storage_query,
-                file_content,
+                storage_path,
                 'processing',
                 10,
                 document_id
@@ -1899,6 +1922,8 @@ async def upload_document_backend(
                 'filename': file.filename,
                 'content_type': file.content_type,
                 'file_size': len(file_content),
+                'file_hash': file_hash,
+                'storage_path': storage_path,
                 'user_id': current_user.id
             }
             
