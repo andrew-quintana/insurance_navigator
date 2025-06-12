@@ -1878,7 +1878,31 @@ async def upload_document_backend(
         db_pool = await get_db_pool()
         
         async with db_pool.get_connection() as connection:
-            # Create document record
+            # Check if file with same hash already exists for this user
+            existing_query = """
+                SELECT id, original_filename, status, created_at 
+                FROM documents 
+                WHERE file_hash = $1 AND user_id = $2
+                ORDER BY created_at DESC
+                LIMIT 1
+            """
+            
+            existing_doc = await connection.fetchrow(existing_query, file_hash, current_user.id)
+            
+            if existing_doc:
+                logger.info(f"📄 Duplicate file detected for user {current_user.id}: {file.filename} (hash: {file_hash[:16]}...)")
+                return {
+                    'success': True,
+                    'document_id': existing_doc['id'],
+                    'filename': file.filename,
+                    'file_size': len(file_content),
+                    'status': existing_doc['status'],
+                    'message': f'File already exists (uploaded on {existing_doc["created_at"].strftime("%Y-%m-%d %H:%M")}). Using existing document.',
+                    'duplicate': True,
+                    'existing_filename': existing_doc['original_filename']
+                }
+            
+            # Create document record for new file
             document_id = str(uuid.uuid4())
             
             insert_query = """
@@ -1889,20 +1913,41 @@ async def upload_document_backend(
                 RETURNING id
             """
             
-            result = await connection.fetchrow(
-                insert_query,
-                document_id,
-                current_user.id,
-                file.filename,
-                file.content_type,
-                len(file_content),
-                file_hash,
-                'uploading',
-                5
-            )
-            
-            if not result:
-                raise HTTPException(status_code=500, detail="Failed to create document record")
+            try:
+                result = await connection.fetchrow(
+                    insert_query,
+                    document_id,
+                    current_user.id,
+                    file.filename,
+                    file.content_type,
+                    len(file_content),
+                    file_hash,
+                    'uploading',
+                    5
+                )
+                
+                if not result:
+                    raise HTTPException(status_code=500, detail="Failed to create document record")
+                    
+            except Exception as db_error:
+                # Handle race condition where file was uploaded between our check and insert
+                if "duplicate key value violates unique constraint" in str(db_error) and "file_hash" in str(db_error):
+                    logger.warning(f"⚠️ Race condition detected: file uploaded concurrently for user {current_user.id}")
+                    # Re-check for existing document
+                    existing_doc = await connection.fetchrow(existing_query, file_hash, current_user.id)
+                    if existing_doc:
+                        return {
+                            'success': True,
+                            'document_id': existing_doc['id'],
+                            'filename': file.filename,
+                            'file_size': len(file_content),
+                            'status': existing_doc['status'],
+                            'message': f'File already exists (uploaded concurrently). Using existing document.',
+                            'duplicate': True,
+                            'existing_filename': existing_doc['original_filename']
+                        }
+                # Re-raise other database errors
+                raise db_error
             
             # Store file in Supabase Storage
             storage_service = await get_storage_service()
@@ -1980,7 +2025,8 @@ async def upload_document_backend(
                 'file_size': len(file_content),
                 'status': 'processing',
                 'message': 'Document uploaded successfully. Processing will continue in the background.',
-                'job_id': job_id
+                'job_id': job_id,
+                'duplicate': False
             }
             
     except HTTPException:
