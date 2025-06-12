@@ -1783,6 +1783,50 @@ async def generate_embedding_for_edge_functions(
             detail=f"Failed to generate embedding: {str(e)}"
         )
 
+@app.get("/debug/document/{document_id}/status")
+async def debug_document_status(document_id: str):
+    """Debug endpoint to check document status without authentication."""
+    try:
+        db_pool = await get_db_pool()
+        
+        async with db_pool.get_connection() as connection:
+            # Get document info
+            doc_query = """
+                SELECT id, original_filename, status, progress_percentage, 
+                       processed_chunks, total_chunks, created_at, updated_at
+                FROM documents 
+                WHERE id = $1
+            """
+            doc_result = await connection.fetchrow(doc_query, document_id)
+            
+            if not doc_result:
+                return {"error": "Document not found"}
+            
+            # Get associated jobs
+            jobs_query = """
+                SELECT id, job_type, status, retry_count, created_at, 
+                       started_at, completed_at, error_message
+                FROM processing_jobs 
+                WHERE document_id = $1
+                ORDER BY created_at
+            """
+            jobs_results = await connection.fetch(jobs_query, document_id)
+            
+            return {
+                "document": dict(doc_result),
+                "jobs": [dict(job) for job in jobs_results],
+                "debug_info": {
+                    "total_jobs": len(jobs_results),
+                    "pending_jobs": len([j for j in jobs_results if j['status'] == 'pending']),
+                    "running_jobs": len([j for j in jobs_results if j['status'] == 'running']),
+                    "completed_jobs": len([j for j in jobs_results if j['status'] == 'completed']),
+                    "failed_jobs": len([j for j in jobs_results if j['status'] == 'failed'])
+                }
+            }
+            
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/documents/{document_id}/status")
 async def get_document_status(
     document_id: str,
@@ -2085,6 +2129,59 @@ async def cleanup_duplicate_file(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to cleanup duplicate: {str(e)}"
+        )
+
+@app.post("/admin/trigger-job-processing")
+async def trigger_job_processing(
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """
+    Manually trigger job processing for stuck documents.
+    This calls the Supabase job processor function.
+    """
+    try:
+        import httpx
+        
+        # Call the Supabase job processor
+        supabase_url = os.getenv('SUPABASE_URL')
+        service_role_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+        
+        if not supabase_url or not service_role_key:
+            raise HTTPException(status_code=500, detail="Supabase configuration missing")
+        
+        job_processor_url = f"{supabase_url}/functions/v1/job-processor"
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                job_processor_url,
+                headers={
+                    "Authorization": f"Bearer {service_role_key}",
+                    "Content-Type": "application/json"
+                },
+                timeout=30.0
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(f"✅ Job processing triggered: {result}")
+                return {
+                    "success": True,
+                    "message": "Job processing triggered successfully",
+                    "result": result
+                }
+            else:
+                logger.error(f"❌ Job processor failed: {response.status_code} - {response.text}")
+                return {
+                    "success": False,
+                    "message": f"Job processor failed: {response.status_code}",
+                    "error": response.text
+                }
+                
+    except Exception as e:
+        logger.error(f"Error triggering job processing: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to trigger job processing: {str(e)}"
         )
 
 @app.get("/admin/job-queue-status")
