@@ -264,12 +264,14 @@ export default function DocumentUploadServerless({
       setUploadMessage("📤 Uploading file to backend...")
       setUploadProgress(5)
 
-      // Upload directly to backend API (no more Edge Functions!)
+      // Try new backend endpoint first, fallback to existing endpoint
       const formData = new FormData()
       formData.append('file', selectedFile)
 
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
-      const uploadResponse = await fetch(`${apiBaseUrl}/upload-document-backend`, {
+      
+      // Try new backend-driven endpoint first
+      let uploadResponse = await fetch(`${apiBaseUrl}/upload-document-backend`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -277,15 +279,35 @@ export default function DocumentUploadServerless({
         body: formData
       })
 
+      // If new endpoint not available (405), fallback to existing endpoint
+      if (uploadResponse.status === 405) {
+        console.log('🔄 New endpoint not deployed yet, using fallback...')
+        setUploadMessage("📤 Using fallback upload method...")
+        
+        uploadResponse = await fetch(`${apiBaseUrl}/upload-policy`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        })
+      }
+
       if (!uploadResponse.ok) {
         const errorData = await uploadResponse.json().catch(() => ({}))
         throw new Error(errorData.detail || `Upload failed: ${uploadResponse.status}`)
       }
 
       const uploadResult = await uploadResponse.json()
-      console.log("✅ Backend upload successful:", uploadResult)
+      console.log("✅ Upload successful:", uploadResult)
       
-      setDocumentId(uploadResult.document_id)
+      // Handle different response formats
+      const documentId = uploadResult.document_id || uploadResult.id || uploadResult.documentId
+      if (!documentId) {
+        throw new Error('No document ID returned from upload')
+      }
+      
+      setDocumentId(documentId)
       setUploadProgress(15)
       setUploadMessage("⚙️ Document uploaded! Processing will continue in the background...")
 
