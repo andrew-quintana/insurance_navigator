@@ -60,9 +60,8 @@ class StorageService:
             logger.error(f"Error ensuring bucket exists: {e}")
             # Don't raise - allow service to work with existing bucket
 
-    async def upload_policy_document(
+    async def upload_document(
         self,
-        policy_id: str,
         file_data: bytes,
         filename: str,
         user_id: str,
@@ -70,10 +69,9 @@ class StorageService:
         metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Upload a policy document to Supabase Storage.
+        Upload a document with policy basics extraction (simplified from complex processing jobs).
         
         Args:
-            policy_id: UUID of the policy
             file_data: Raw file data
             filename: Original filename
             user_id: ID of user uploading the file
@@ -81,7 +79,7 @@ class StorageService:
             metadata: Optional metadata about the document
             
         Returns:
-            Dict containing upload information including file path and metadata
+            Dict containing upload information including file path and policy basics
             
         Raises:
             ValueError: If file is too large or invalid
@@ -95,7 +93,7 @@ class StorageService:
             # Generate secure file path
             file_extension = Path(filename).suffix.lower()
             secure_filename = f"{uuid.uuid4().hex}{file_extension}"
-            file_path = f"{document_type}/{policy_id}/{secure_filename}"
+            file_path = f"{document_type}/{user_id}/{secure_filename}"
             
             # Detect content type
             content_type = self._get_content_type(filename)
@@ -120,70 +118,62 @@ class StorageService:
             
             logger.info(f"File uploaded successfully to: {file_path}")
             
-            # Store metadata in database
+            # Store in simplified documents table and extract policy basics
             pool = await get_db_pool()
-            
-            doc_metadata = {
-                'original_filename': filename,
-                'file_path': file_path,
-                'content_type': content_type,
-                'file_size': len(file_data),
-                'document_type': document_type,
-                'uploaded_by': user_id,
-                'uploaded_at': datetime.utcnow().isoformat(),
-                'policy_id': policy_id,
-                **(metadata or {})
-            }
+            document_id = None
             
             async with pool.get_connection() as conn:
-                # Create documents table if it doesn't exist
-                await conn.execute("""
-                    CREATE TABLE IF NOT EXISTS policy_documents (
-                        id SERIAL PRIMARY KEY,
-                        policy_id TEXT NOT NULL,
-                        file_path TEXT NOT NULL UNIQUE,
-                        original_filename TEXT NOT NULL,
-                        content_type TEXT NOT NULL,
-                        file_size INTEGER NOT NULL,
-                        document_type TEXT NOT NULL,
-                        uploaded_by TEXT NOT NULL,
-                        uploaded_at TIMESTAMPTZ DEFAULT NOW(),
-                        metadata JSONB DEFAULT '{}'::jsonb,
-                        is_active BOOLEAN DEFAULT true
-                    )
-                """)
-                
-                # Create index if not exists
-                await conn.execute("""
-                    CREATE INDEX IF NOT EXISTS idx_policy_documents_policy_id 
-                    ON policy_documents(policy_id)
-                """)
-                
-                # Insert document record
+                # Insert document record using simplified schema
                 document_id = await conn.fetchval("""
-                    INSERT INTO policy_documents 
-                    (policy_id, file_path, original_filename, content_type, file_size, 
-                     document_type, uploaded_by, metadata)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    INSERT INTO documents 
+                    (user_id, original_filename, file_size, content_type, file_hash,
+                     storage_path, status, document_type, metadata)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                     RETURNING id
-                """, policy_id, file_path, filename, content_type, len(file_data),
-                document_type, user_id, json.dumps(doc_metadata))
+                """, 
+                uuid.UUID(user_id), filename, len(file_data), content_type,
+                self._calculate_file_hash(file_data), file_path, 'completed',
+                document_type, json.dumps(metadata or {}))
             
-            logger.info(f"Uploaded document {filename} for policy {policy_id}: {file_path}")
+            # Extract text content for policy analysis
+            try:
+                extracted_text = await self._extract_text_content(file_data, filename)
+                
+                # Use document service for policy basics extraction
+                from .document_service import get_document_service
+                doc_service = await get_document_service()
+                
+                if extracted_text and document_type == 'policy':
+                    # Extract policy basics asynchronously (non-blocking)
+                    asyncio.create_task(
+                        doc_service.extract_policy_basics(str(document_id), extracted_text)
+                    )
+                    
+            except Exception as e:
+                logger.warning(f"Failed to extract policy basics for {document_id}: {e}")
+                # Don't fail the upload for extraction errors
+            
+            logger.info(f"Uploaded document {filename} for user {user_id}: {file_path}")
             
             return {
-                'document_id': document_id,
+                'document_id': str(document_id),
                 'file_path': file_path,
                 'original_filename': filename,
                 'content_type': content_type,
                 'file_size': len(file_data),
-                'uploaded_at': doc_metadata['uploaded_at'],
-                'metadata': doc_metadata
+                'uploaded_at': datetime.utcnow().isoformat(),
+                'status': 'completed',
+                'policy_extraction_status': 'processing' if document_type == 'policy' else 'n/a'
             }
             
         except Exception as e:
-            logger.error(f"Failed to upload document {filename} for policy {policy_id}: {str(e)}")
+            logger.error(f"Failed to upload document {filename} for user {user_id}: {str(e)}")
             raise RuntimeError(f"Upload failed: {str(e)}")
+    
+    def _calculate_file_hash(self, file_data: bytes) -> str:
+        """Calculate SHA256 hash of file data."""
+        import hashlib
+        return hashlib.sha256(file_data).hexdigest()
 
     async def get_signed_url(
         self, 

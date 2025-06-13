@@ -1,6 +1,7 @@
 """
-Conversation service for managing persistent conversation history and agent state.
-Supports LangGraph workflow state persistence and conversation context management.
+Simplified Conversation Service for MVP Refactoring
+Basic conversation storage and retrieval without complex agent state tracking.
+Removes workflow states and agent orchestration complexity.
 """
 
 import logging
@@ -137,142 +138,11 @@ class ConversationService:
             logger.error(f"Error getting conversation history {conversation_id}: {str(e)}")
             return []
     
-    async def save_agent_state(
-        self,
-        conversation_id: str,
-        agent_name: str,
-        state_data: Dict[str, Any],
-        workflow_step: Optional[str] = None
-    ) -> None:
-        """Save agent workflow state."""
-        try:
-            pool = await get_db_pool()
-            
-            async with pool.get_connection() as conn:
-                # Create agent_states table if it doesn't exist
-                await self._ensure_agent_states_table(conn)
-                
-                await conn.execute(
-                    """
-                    INSERT INTO agent_states 
-                    (conversation_id, agent_name, state_data, workflow_step, updated_at)
-                    VALUES ($1, $2, $3, $4, NOW())
-                    ON CONFLICT (conversation_id, agent_name) 
-                    DO UPDATE SET 
-                        state_data = EXCLUDED.state_data,
-                        workflow_step = EXCLUDED.workflow_step,
-                        updated_at = EXCLUDED.updated_at
-                    """,
-                    conversation_id, agent_name, json.dumps(state_data), workflow_step
-                )
-                
-                logger.debug(f"Saved state for agent {agent_name} in conversation {conversation_id}")
-                
-        except Exception as e:
-            logger.error(f"Error saving agent state: {str(e)}")
-            raise
+    # REMOVED: save_agent_state - complex agent state tracking removed in MVP refactor
     
-    async def get_agent_state(
-        self,
-        conversation_id: str,
-        agent_name: str
-    ) -> Optional[Dict[str, Any]]:
-        """Get agent workflow state."""
-        try:
-            pool = await get_db_pool()
-            
-            async with pool.get_connection() as conn:
-                row = await conn.fetchrow(
-                    """
-                    SELECT state_data, workflow_step, updated_at
-                    FROM agent_states 
-                    WHERE conversation_id = $1 AND agent_name = $2
-                    """,
-                    conversation_id, agent_name
-                )
-                
-                if not row:
-                    return None
-                
-                return {
-                    "state_data": json.loads(row["state_data"]),
-                    "workflow_step": row["workflow_step"],
-                    "updated_at": row["updated_at"]
-                }
-                
-        except Exception as e:
-            logger.error(f"Error getting agent state: {str(e)}")
-            return None
+    # REMOVED: get_agent_state - complex agent state tracking removed in MVP refactor
     
-    async def save_workflow_state(
-        self,
-        conversation_id: str,
-        workflow_type: str,
-        current_step: str,
-        state_data: Dict[str, Any],
-        user_id: str
-    ) -> None:
-        """Save complete workflow state."""
-        try:
-            pool = await get_db_pool()
-            
-            async with pool.get_connection() as conn:
-                # Create workflow_states table if it doesn't exist
-                await self._ensure_workflow_states_table(conn)
-                
-                await conn.execute(
-                    """
-                    INSERT INTO workflow_states 
-                    (conversation_id, user_id, workflow_type, current_step, state_data, updated_at)
-                    VALUES ($1, $2, $3, $4, $5, NOW())
-                    ON CONFLICT (conversation_id) 
-                    DO UPDATE SET 
-                        workflow_type = EXCLUDED.workflow_type,
-                        current_step = EXCLUDED.current_step,
-                        state_data = EXCLUDED.state_data,
-                        updated_at = EXCLUDED.updated_at
-                    """,
-                    conversation_id, uuid.UUID(user_id), workflow_type, 
-                    current_step, json.dumps(state_data)
-                )
-                
-                logger.debug(f"Saved workflow state for conversation {conversation_id}")
-                
-        except Exception as e:
-            logger.error(f"Error saving workflow state: {str(e)}")
-            raise
-    
-    async def get_workflow_state(
-        self,
-        conversation_id: str
-    ) -> Optional[Dict[str, Any]]:
-        """Get workflow state."""
-        try:
-            pool = await get_db_pool()
-            
-            async with pool.get_connection() as conn:
-                row = await conn.fetchrow(
-                    """
-                    SELECT workflow_type, current_step, state_data, updated_at
-                    FROM workflow_states 
-                    WHERE conversation_id = $1
-                    """,
-                    conversation_id
-                )
-                
-                if not row:
-                    return None
-                
-                return {
-                    "workflow_type": row["workflow_type"],
-                    "current_step": row["current_step"],
-                    "state_data": json.loads(row["state_data"]),
-                    "updated_at": row["updated_at"]
-                }
-                
-        except Exception as e:
-            logger.error(f"Error getting workflow state: {str(e)}")
-            return None
+    # REMOVED: Workflow state functions - complex orchestration removed in MVP refactor
     
     async def get_user_conversations(
         self,
@@ -335,19 +205,9 @@ class ConversationService:
                     if not owner or str(owner) != user_id:
                         return False
                     
-                    # Delete related data
+                    # Delete related data (simplified - no agent/workflow states)
                     await conn.execute(
                         "DELETE FROM conversation_messages WHERE conversation_id = $1",
-                        conversation_id
-                    )
-                    
-                    await conn.execute(
-                        "DELETE FROM agent_states WHERE conversation_id = $1",
-                        conversation_id
-                    )
-                    
-                    await conn.execute(
-                        "DELETE FROM workflow_states WHERE conversation_id = $1",
                         conversation_id
                     )
                     
@@ -406,36 +266,7 @@ class ConversationService:
             ON conversation_messages(created_at)
         """)
     
-    async def _ensure_agent_states_table(self, conn: asyncpg.Connection) -> None:
-        """Ensure agent_states table exists."""
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS agent_states (
-                conversation_id TEXT NOT NULL,
-                agent_name TEXT NOT NULL,
-                state_data JSONB NOT NULL,
-                workflow_step TEXT,
-                updated_at TIMESTAMPTZ DEFAULT NOW(),
-                PRIMARY KEY (conversation_id, agent_name)
-            )
-        """)
-    
-    async def _ensure_workflow_states_table(self, conn: asyncpg.Connection) -> None:
-        """Ensure workflow_states table exists."""
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS workflow_states (
-                conversation_id TEXT PRIMARY KEY,
-                user_id UUID NOT NULL,
-                workflow_type TEXT NOT NULL,
-                current_step TEXT NOT NULL,
-                state_data JSONB NOT NULL,
-                updated_at TIMESTAMPTZ DEFAULT NOW()
-            )
-        """)
-        
-        # Create index if not exists
-        await conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_workflow_states_user_id ON workflow_states(user_id)
-        """)
+    # REMOVED: Complex table creation functions for agent and workflow states
 
 # Global conversation service instance
 conversation_service = ConversationService()
