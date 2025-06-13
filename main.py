@@ -66,7 +66,7 @@ except ImportError:
 
 # Fast imports for document processing
 # from sentence_transformers import SentenceTransformer  # REMOVED - using LlamaCloud
-# import PyPDF2  # REMOVED - using LlamaCloud
+import PyPDF2  # Required for PDF text extraction
 import io
 
 # Custom CORS middleware using centralized configuration
