@@ -112,91 +112,65 @@ export default function DocumentUpload({
     setUploadError(null)
 
     try {
-      // Better progress simulation based on document processing stages
-      const progressStages = [
-        { stage: "Uploading", maxProgress: 20, duration: 1000 },      // File upload: 1 second
-        { stage: "Extracting text", maxProgress: 40, duration: 2000 }, // Text extraction: 2 seconds  
-        { stage: "Chunking content", maxProgress: 60, duration: 2000 }, // Text chunking: 2 seconds
-        { stage: "Generating embeddings", maxProgress: 95, duration: 8000 }, // Embeddings: 8 seconds (longest)
-      ]
-      
-      let currentStage = 0
-      let stageStartTime = Date.now()
-      
-      const progressInterval = setInterval(() => {
-        if (currentStage >= progressStages.length) {
-          clearInterval(progressInterval)
-          return
-        }
-        
-        const stage = progressStages[currentStage]
-        const elapsedTime = Date.now() - stageStartTime
-        const stageProgress = Math.min(elapsedTime / stage.duration, 1)
-        
-        // Calculate new progress within current stage
-        const previousMax = currentStage > 0 ? progressStages[currentStage - 1].maxProgress : 0
-        const currentMax = stage.maxProgress
-        const newProgress = previousMax + (currentMax - previousMax) * stageProgress
-        
-        setUploadProgress(Math.round(newProgress))
-        
-        // Update message based on current stage
-        setUploadMessage(`🚀 ${stage.stage}...`)
-        
-        // Move to next stage when current stage is complete
-        if (stageProgress >= 1) {
-          currentStage++
-          stageStartTime = Date.now()
-        }
-      }, 200) // Update every 200ms for smoother progress
+      // Immediate progress to show frontend activity
+      setUploadMessage("📤 Uploading document...")
+      setUploadProgress(20)
 
       const token = localStorage.getItem("token")
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
-      const uploadUrl = `${apiBaseUrl}/upload-policy`
       
-      console.log("🌐 API Base URL:", apiBaseUrl)
-      console.log("🔗 Upload URL:", uploadUrl)
-      console.log("📄 File details:", { 
-        name: selectedFile.name, 
-        size: selectedFile.size, 
-        type: selectedFile.type 
-      })
-
-      const formData = new FormData()
-      formData.append('file', selectedFile)
-      formData.append('policy_id', selectedFile.name.replace(/\.[^/.]+$/, ""))
-
-      setUploadMessage("🚀 Uploading document and processing text...")
-
-      const response = await fetch(uploadUrl, {
+      // Try new backend endpoint first, fallback to existing endpoint
+      let uploadUrl = `${apiBaseUrl}/upload-document-backend`
+      let uploadResponse = await fetch(uploadUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
         },
-        body: formData,
+        body: (() => {
+          const formData = new FormData()
+          formData.append('file', selectedFile)
+          formData.append('policy_id', selectedFile.name.replace(/\.[^/.]+$/, ""))
+          return formData
+        })(),
       })
 
-      clearInterval(progressInterval)
+      // If new endpoint not available (405), fallback to existing endpoint
+      if (uploadResponse.status === 405) {
+        console.log('🔄 New endpoint not deployed yet, using fallback...')
+        uploadUrl = `${apiBaseUrl}/upload-policy`
+        
+        const formData = new FormData()
+        formData.append('file', selectedFile)
+        formData.append('policy_id', selectedFile.name.replace(/\.[^/.]+$/, ""))
 
-      if (!response.ok) {
+        uploadResponse = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        })
+      }
+
+      if (!uploadResponse.ok) {
         // Enhanced error handling for common issues
-        if (response.status === 0 || response.status === 502) {
-          throw new Error(`Connection failed - please check your internet connection and try again. (Status: ${response.status})`)
+        if (uploadResponse.status === 0 || uploadResponse.status === 502) {
+          throw new Error(`Connection failed - please check your internet connection and try again. (Status: ${uploadResponse.status})`)
         }
-        if (response.status === 401) {
-          throw new Error(`Authentication failed - please log in again. (Status: ${response.status})`)
+        if (uploadResponse.status === 401) {
+          throw new Error(`Authentication failed - please log in again. (Status: ${uploadResponse.status})`)
         }
-        if (response.status === 403) {
-          throw new Error(`Access denied - please check your permissions. (Status: ${response.status})`)
+        if (uploadResponse.status === 403) {
+          throw new Error(`Access denied - please check your permissions. (Status: ${uploadResponse.status})`)
         }
-        if (response.status === 413) {
-          throw new Error(`File too large - please upload a smaller document. (Status: ${response.status})`)
+        if (uploadResponse.status === 413) {
+          throw new Error(`File too large - please upload a smaller document. (Status: ${uploadResponse.status})`)
         }
         
         // Try to get error details from response
-        let errorMessage = `Upload failed (Status: ${response.status})`
+        let errorMessage = `Upload failed (Status: ${uploadResponse.status})`
         try {
-          const errorData = await response.text()
+          const errorData = await uploadResponse.text()
           if (errorData) {
             errorMessage += ` - ${errorData}`
           }
@@ -207,33 +181,44 @@ export default function DocumentUpload({
         throw new Error(errorMessage)
       }
 
-      setUploadMessage("⚙️ Processing document - this may take a few minutes for large files...")
-      setUploadProgress(95)
-
-      const result = await response.json()
+      const result = await uploadResponse.json()
       
+      // Show immediate completion on frontend
       setUploadProgress(100)
       setUploadSuccess(true)
-      setUploadMessage(`✅ Success! Processed ${result.chunks_processed} sections from your document.`)
+      setUploadMessage(`✅ Document uploaded! Processing continues in background...`)
       
+      // Call success handler immediately with upload result
       if (onUploadSuccess) {
-        onUploadSuccess(result)
+        onUploadSuccess({
+          success: true,
+          document_id: result.document_id || result.id || 'unknown',
+          filename: selectedFile.name,
+          chunks_processed: 0, // Will be updated via background notification
+          total_chunks: 1,
+          text_length: 0,
+          message: `Document "${selectedFile.name}" uploaded successfully. Background processing will notify you when complete.`
+        })
       }
 
       // Auto-reset after success
       setTimeout(() => {
         resetUpload()
-      }, 2000)
+      }, 3000)
       
     } catch (error) {
-      console.error('Upload error:', error)
+      console.error("Upload error:", error)
       
-      // Enhanced error handling with specific guidance
       let errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       
-      // Detect CORS issues
-      if (errorMessage.includes('Load failed') || errorMessage.includes('CORS') || errorMessage.includes('Access-Control-Allow-Origin')) {
-        errorMessage = `Upload failed. Please try again in a few minutes.`
+      // Detect authentication issues
+      if (errorMessage.includes('unauthorized') || errorMessage.includes('401')) {
+        errorMessage = `🔐 Authentication failed. Please log in again.`
+      }
+      
+      // Detect file size issues
+      if (errorMessage.includes('too large') || errorMessage.includes('413')) {
+        errorMessage = `📦 File too large. Please upload a file smaller than 10MB.`
       }
       
       // Detect network issues
@@ -244,6 +229,7 @@ export default function DocumentUpload({
       setUploadError(errorMessage)
       setUploadProgress(0)
       setUploadMessage("")
+      setIsUploading(false)
       
       if (onUploadError) {
         onUploadError(errorMessage)

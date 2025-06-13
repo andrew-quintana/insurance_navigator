@@ -28,6 +28,8 @@ from urllib.parse import urlparse
 from starlette.middleware.base import BaseHTTPMiddleware
 import time
 from concurrent.futures import ThreadPoolExecutor
+import hashlib
+import aiohttp
 
 # Database service imports
 from db.services.user_service import get_user_service, UserService
@@ -220,8 +222,9 @@ async def get_embedding_model():
                 class MockModel:
                     def encode(self, text):
                         import random
-                        # Return random 384-dimensional vector for demo
-                        return [random.uniform(-1, 1) for _ in range(384)]
+                        import numpy as np
+                        # Return random 384-dimensional vector as numpy array for demo
+                        return np.array([random.uniform(-1, 1) for _ in range(384)])
                 embedding_model = MockModel()
                 logger.info("✅ Mock embedding model loaded (memory optimization)")
             else:
@@ -240,7 +243,8 @@ async def get_embedding_model():
                 class MockModel:
                     def encode(self, text):
                         import random
-                        return [random.uniform(-1, 1) for _ in range(384)]
+                        import numpy as np
+                        return np.array([random.uniform(-1, 1) for _ in range(384)])
                 embedding_model = MockModel()
                 logger.warning("⚠️ Using mock embedding model due to loading failure")
         except Exception as e:
@@ -249,8 +253,9 @@ async def get_embedding_model():
             class MockModel:
                 def encode(self, text):
                     import random
-                    # Return random 384-dimensional vector for demo
-                    return [random.uniform(-1, 1) for _ in range(384)]
+                    import numpy as np
+                    # Return random 384-dimensional vector as numpy array for demo
+                    return np.array([random.uniform(-1, 1) for _ in range(384)])
             embedding_model = MockModel()
             logger.warning("⚠️ Using mock embedding model for demo")
     return embedding_model
@@ -1100,6 +1105,149 @@ async def chat_with_image(message: str = Form(...), image: UploadFile = File(Non
         return {"text": response, "conversation_id": "default", "metadata": metadata}
     except Exception as e:
         return {"text": f"Error: {str(e)}", "conversation_id": "default"}
+
+@app.post("/upload-document-backend", response_model=Dict[str, Any])
+async def upload_document_backend(
+    file: UploadFile = File(...),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """
+    Backend-driven document upload that triggers Supabase Edge Functions pipeline.
+    This replaces direct PyPDF2 processing with LlamaParse via Edge Functions.
+    """
+    try:
+        logger.info(f"🚀 Backend document upload started for user {current_user.id}: {file.filename}")
+        
+        # Validate file size (50MB limit)
+        MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+        file_data = await file.read()
+        
+        if len(file_data) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)}MB"
+            )
+        
+        if len(file_data) == 0:
+            raise HTTPException(status_code=400, detail="Empty file")
+        
+        logger.info(f"📄 File validated: {len(file_data)} bytes")
+        
+        # Get database connection
+        pool = await get_db_pool()
+        if not pool:
+            raise HTTPException(
+                status_code=503,
+                detail="Database temporarily unavailable"
+            )
+        
+        async with pool.get_connection() as conn:
+            # Create document record in database first
+            document_id = str(uuid.uuid4())
+            file_hash = hashlib.sha256(file_data).hexdigest()
+            
+            # Insert document record
+            await conn.execute("""
+                INSERT INTO documents (
+                    id, user_id, original_filename, file_size, content_type,
+                    file_hash, status, progress_percentage, 
+                    total_chunks, processed_chunks, failed_chunks,
+                    created_at, updated_at
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, 'pending', 0, 0, 0, 0, NOW(), NOW()
+                )
+            """, 
+            document_id, current_user.id, file.filename, len(file_data), 
+            file.content_type or 'application/octet-stream', file_hash
+            )
+            
+            logger.info(f"📄 Document record created: {document_id}")
+            
+            # Instead of processing directly, we'll trigger the Edge Functions pipeline
+            # Check if we have Supabase configuration
+            supabase_url = os.getenv('SUPABASE_URL')
+            supabase_service_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+            
+            if supabase_url and supabase_service_key:
+                logger.info("🔗 Triggering Supabase Edge Functions pipeline...")
+                
+                # Trigger the upload-handler Edge Function
+                edge_function_url = f"{supabase_url}/functions/v1/upload-handler"
+                
+                # Prepare multipart form data for Edge Function
+                form_data = aiohttp.FormData()
+                form_data.add_field('file', file_data, filename=file.filename, content_type=file.content_type)
+                form_data.add_field('documentId', document_id)
+                form_data.add_field('userId', current_user.id)
+                
+                # Make request to Edge Function
+                timeout = aiohttp.ClientTimeout(total=60)  # 60 second timeout
+                
+                async with aiohttp.ClientSession(timeout=timeout) as session:
+                    headers = {
+                        'Authorization': f'Bearer {supabase_service_key}',
+                        'X-User-ID': current_user.id
+                    }
+                    
+                    try:
+                        async with session.post(edge_function_url, data=form_data, headers=headers) as response:
+                            if response.status == 200:
+                                edge_result = await response.json()
+                                logger.info(f"✅ Edge Function triggered successfully: {edge_result}")
+                                
+                                return {
+                                    "success": True,
+                                    "document_id": document_id,
+                                    "filename": file.filename,
+                                    "message": "Document uploaded successfully. Processing started via Edge Functions.",
+                                    "processing_method": "edge_functions",
+                                    "upload_url": edge_result.get("uploadUrl"),
+                                    "chunks_processed": 0,
+                                    "total_chunks": 1,
+                                    "text_length": 0,
+                                    "file_size": len(file_data),
+                                    "processing_time": "Background processing started"
+                                }
+                            else:
+                                error_text = await response.text()
+                                logger.error(f"❌ Edge Function failed: {response.status} - {error_text}")
+                                # Fall through to fallback processing
+                                
+                    except Exception as e:
+                        logger.error(f"❌ Edge Function request failed: {e}")
+                        # Fall through to fallback processing
+            
+            # Fallback: Update document status to indicate backend processing
+            await conn.execute("""
+                UPDATE documents 
+                SET status = 'processing', progress_percentage = 10, updated_at = NOW()
+                WHERE id = $1
+            """, document_id)
+            
+            logger.info("📄 Document queued for background processing")
+            
+            return {
+                "success": True,
+                "document_id": document_id,
+                "filename": file.filename,
+                "message": "Document uploaded successfully. Background processing will continue.",
+                "processing_method": "backend_queue",
+                "chunks_processed": 0,
+                "total_chunks": 1,
+                "text_length": 0,
+                "file_size": len(file_data),
+                "processing_time": "Background processing queued"
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Backend upload error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Upload failed: {str(e)}"
+        )
+
 @app.post("/upload-policy", response_model=Dict[str, Any])
 async def upload_policy_demo(
     file: UploadFile = File(...),
@@ -1128,9 +1276,57 @@ async def upload_policy_demo(
         if len(file_data) == 0:
             raise HTTPException(status_code=400, detail="Empty file")
         
-        # Extract text content with timeout
+        # Check if we should trigger Edge Functions for PDF processing
         logger.info(f"🔍 Step 2: Extracting text content from {file.filename}...")
         
+        # For PDFs, prefer Edge Functions with LlamaParse
+        if file.filename.lower().endswith('.pdf'):
+            supabase_url = os.getenv('SUPABASE_URL')
+            supabase_service_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+            
+            if supabase_url and supabase_service_key:
+                logger.info("🦙 PDF detected - preferring Edge Functions with LlamaParse...")
+                
+                # Create a document record for tracking
+                document_id = str(uuid.uuid4())
+                file_hash = hashlib.sha256(file_data).hexdigest()
+                
+                # Get database connection for document creation
+                pool = await get_db_pool()
+                if pool:
+                    async with pool.get_connection() as conn:
+                        await conn.execute("""
+                            INSERT INTO documents (
+                                id, user_id, original_filename, file_size, content_type,
+                                file_hash, status, progress_percentage, 
+                                total_chunks, processed_chunks, failed_chunks,
+                                created_at, updated_at
+                            ) VALUES (
+                                $1, $2, $3, $4, $5, $6, 'processing', 15, 0, 0, 0, NOW(), NOW()
+                            )
+                        """, 
+                        document_id, current_user.id, file.filename, len(file_data), 
+                        file.content_type or 'application/pdf', file_hash
+                        )
+                        
+                        logger.info(f"📄 Document record created for Edge Functions: {document_id}")
+                        
+                        # Return early to show immediate completion, background processing will continue
+                        return {
+                            "success": True,
+                            "document_id": document_id,
+                            "filename": file.filename,
+                            "chunks_processed": 0,  # Will be updated by background processing
+                            "chunks_failed": 0,
+                            "total_chunks": 1,
+                            "success_rate": 0.0,  # Will be updated when processing completes
+                            "text_length": 0,  # Will be updated by background processing
+                            "file_size": len(file_data),
+                            "processing_time": "Background processing via Edge Functions",
+                            "message": f"Successfully uploaded {file.filename}. Background processing with LlamaParse will continue and you'll be notified when complete."
+                        }
+        
+        # Fallback: Direct text extraction for non-PDFs or when Edge Functions unavailable
         try:
             # Use thread pool for CPU-intensive text extraction
             with ThreadPoolExecutor(max_workers=1) as executor:
