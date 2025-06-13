@@ -22,8 +22,8 @@ if [ ! -f "main.py" ]; then
     exit 1
 fi
 
-if [ ! -f "requirements.txt" ]; then
-    echo -e "${RED}❌ requirements.txt not found${NC}"
+if [ ! -f "config/python/requirements.txt" ]; then
+echo -e "${RED}❌ config/python/requirements.txt not found${NC}"
     exit 1
 fi
 
@@ -92,7 +92,7 @@ if docker build -t insurance-navigator-test . > /dev/null 2>&1; then
     docker rmi insurance-navigator-test > /dev/null 2>&1
 else
     echo -e "${RED}❌ Docker build failed${NC}"
-    echo "Check your Dockerfile and requirements.txt"
+    echo "Check your Dockerfile and config/python/requirements.txt"
     exit 1
 fi
 
