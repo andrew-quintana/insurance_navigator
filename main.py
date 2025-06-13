@@ -14,31 +14,25 @@ Comprehensive async FastAPI application with:
 import os
 import sys
 import uuid
-import hashlib
+from fastapi import FastAPI, HTTPException, Depends, Request, status, UploadFile, File, Form, Response, Body, Header
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, RedirectResponse
+from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any, List
+from datetime import datetime
+import logging
 import json
 import asyncio
-import asyncpg
-from datetime import datetime, timedelta
-from typing import List, Optional, Dict, Any
-from contextlib import asynccontextmanager
-
-from fastapi import FastAPI, HTTPException, Depends, File, UploadFile, Form, status, Request, Header, Body
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.responses import StreamingResponse, JSONResponse
-from fastapi.middleware.base import BaseHTTPMiddleware
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import jwt
-from jwt.exceptions import InvalidTokenError
-
-# Import our new services
-sys.path.append('/Users/aq_home/1Projects/accessa/insurance_navigator')
-from db.services.conversation_service import ConversationService
-from db.services.storage_service import StorageService
-from db.services.document_service import DocumentService
+import re
+from urllib.parse import urlparse
+from starlette.middleware.base import BaseHTTPMiddleware
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 # Database service imports
 from db.services.user_service import get_user_service, UserService
+from db.services.conversation_service import get_conversation_service, ConversationService
+from db.services.storage_service import get_storage_service, StorageService
 from db.services.db_pool import get_db_pool
 
 # Centralized CORS configuration
@@ -72,7 +66,7 @@ except ImportError:
 
 # Fast imports for document processing
 # from sentence_transformers import SentenceTransformer  # REMOVED - using LlamaCloud
-import PyPDF2  # Re-enabled for incremental PDF processing
+# import PyPDF2  # REMOVED - using LlamaCloud
 import io
 
 # Custom CORS middleware using centralized configuration
@@ -90,32 +84,32 @@ class CustomCORSMiddleware(BaseHTTPMiddleware):
         
         # Handle preflight requests
         if request.method == "OPTIONS":
-        return create_preflight_response(origin)
+            return create_preflight_response(origin)
         
         try:
-        # Process the request
-        start_time = time.time()
-        response = await call_next(request)
-        processing_time = time.time() - start_time
-        
-        # Add CORS headers using centralized config
-        add_cors_headers(response, origin)
-        
-        # Add timing header for monitoring
-        response.headers["X-Processing-Time"] = f"{processing_time:.3f}"
-        
-        return response
-        
+            # Process the request
+            start_time = time.time()
+            response = await call_next(request)
+            processing_time = time.time() - start_time
+            
+            # Add CORS headers using centralized config
+            add_cors_headers(response, origin)
+            
+            # Add timing header for monitoring
+            response.headers["X-Processing-Time"] = f"{processing_time:.3f}"
+            
+            return response
+            
         except Exception as e:
-        # Even on error, return CORS headers
-        logger.error(f"Request processing error: {e}")
-        error_response = Response(
-            content=json.dumps({"error": "Internal server error", "message": str(e)}),
-            status_code=500,
-            media_type="application/json"
-        )
-        add_cors_headers(error_response, origin)
-        return error_response
+            # Even on error, return CORS headers
+            logger.error(f"Request processing error: {e}")
+            error_response = Response(
+                content=json.dumps({"error": "Internal server error", "message": str(e)}),
+                status_code=500,
+                media_type="application/json"
+            )
+            add_cors_headers(error_response, origin)
+            return error_response
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -206,30 +200,7 @@ class UploadResponse(BaseModel):
 user_service_instance: Optional[UserService] = None
 conversation_service_instance: Optional[ConversationService] = None
 storage_service_instance: Optional[StorageService] = None
-document_service_instance: Optional[DocumentService] = None
 agent_orchestrator_instance: Optional[AgentOrchestrator] = None
-
-# Service initialization functions
-async def get_conversation_service():
-    global conversation_service_instance
-    if not conversation_service_instance:
-        db_pool = await get_db_pool()
-        conversation_service_instance = ConversationService(db_pool)
-    return conversation_service_instance
-
-async def get_storage_service():
-    global storage_service_instance
-    if not storage_service_instance:
-        db_pool = await get_db_pool()
-        storage_service_instance = StorageService(db_pool)
-    return storage_service_instance
-
-async def get_document_service():
-    global document_service_instance
-    if not document_service_instance:
-        db_pool = await get_db_pool()
-        document_service_instance = DocumentService(db_pool)
-    return document_service_instance
 
 # Global embedding model (loaded once)
 embedding_model = None
@@ -239,106 +210,73 @@ async def get_embedding_model():
     global embedding_model
     if embedding_model is None:
         try:
-        # Check available memory and use lighter model if needed
-        import psutil
-        available_memory = psutil.virtual_memory().available / (1024**2)  # MB
-        logger.info(f"Available memory: {available_memory:.0f}MB")
-        
-        if available_memory < 300:  # Less than 300MB available
-            logger.warning("⚠️ Low memory detected, using mock model")
-            class MockModel:
-                def encode(self, text):
-                import random
-                import numpy as np
-                # Return 1536-dimensional vector to match database schema (OpenAI dimensions)
-                return np.array([random.uniform(-1, 1) for _ in range(1536)])
-            embedding_model = MockModel()
-            logger.info("✅ Mock embedding model loaded (1536D for OpenAI compatibility)")
-        else:
-            logger.info("Loading SBERT model: all-MiniLM-L6-v2...")
-            # SentenceTransformer temporarily disabled - using mock for LlamaCloud migration
-            class MockModel:
-                def encode(self, text):
-                import random
-                import numpy as np
-                # Return 1536-dimensional vector to match database schema (OpenAI dimensions)
-                return np.array([random.uniform(-1, 1) for _ in range(1536)])
-            embedding_model = MockModel()
-            logger.warning("⚠️ Using mock embedding model for LlamaCloud migration (1536D)")
-            # raise ImportError("SentenceTransformer disabled for memory optimization")
-            # embedding_model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
-            # logger.info("✅ SBERT model loaded successfully")
+            # Check available memory and use lighter model if needed
+            import psutil
+            available_memory = psutil.virtual_memory().available / (1024**2)  # MB
+            logger.info(f"Available memory: {available_memory:.0f}MB")
             
+            if available_memory < 300:  # Less than 300MB available
+                logger.warning("⚠️ Low memory detected, using mock model")
+                class MockModel:
+                    def encode(self, text):
+                        import random
+                        # Return random 384-dimensional vector for demo
+                        return [random.uniform(-1, 1) for _ in range(384)]
+                embedding_model = MockModel()
+                logger.info("✅ Mock embedding model loaded (memory optimization)")
+            else:
+                logger.info("Loading SBERT model: all-MiniLM-L6-v2...")
+                # Use device='cpu' and optimize for memory
+                embedding_model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
+                logger.info("✅ SBERT model loaded successfully")
+                
         except ImportError:
-        logger.warning("⚠️ psutil not available, proceeding with model loading")
-        try:
-            # SentenceTransformer temporarily disabled - using mock for LlamaCloud migration
-            raise ImportError("SentenceTransformer disabled for memory optimization")
-            # embedding_model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
-            # logger.info("✅ SBERT model loaded successfully")
+            logger.warning("⚠️ psutil not available, proceeding with model loading")
+            try:
+                embedding_model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
+                logger.info("✅ SBERT model loaded successfully")
+            except Exception as e:
+                logger.error(f"❌ Failed to load SBERT model: {e}")
+                class MockModel:
+                    def encode(self, text):
+                        import random
+                        return [random.uniform(-1, 1) for _ in range(384)]
+                embedding_model = MockModel()
+                logger.warning("⚠️ Using mock embedding model due to loading failure")
         except Exception as e:
             logger.error(f"❌ Failed to load SBERT model: {e}")
+            # Return a mock model for demo purposes
             class MockModel:
                 def encode(self, text):
-                import random
-                import numpy as np
-                # Return 1536-dimensional vector to match database schema (OpenAI dimensions)
-                return np.array([random.uniform(-1, 1) for _ in range(1536)])
+                    import random
+                    # Return random 384-dimensional vector for demo
+                    return [random.uniform(-1, 1) for _ in range(384)]
             embedding_model = MockModel()
-            logger.warning("⚠️ Using mock embedding model due to loading failure (1536D)")
-        except Exception as e:
-        logger.error(f"❌ Failed to load SBERT model: {e}")
-        # Return a mock model for demo purposes
-        class MockModel:
-            def encode(self, text):
-                import random
-                import numpy as np
-                # Return 1536-dimensional vector to match database schema (OpenAI dimensions)
-                return np.array([random.uniform(-1, 1) for _ in range(1536)])
-        embedding_model = MockModel()
-        logger.warning("⚠️ Using mock embedding model for demo (1536D)")
+            logger.warning("⚠️ Using mock embedding model for demo")
     return embedding_model
 
 def extract_text_from_pdf(file_data: bytes) -> str:
-    """Extract text from PDF file using PyPDF2."""
+    """Extract text from PDF file."""
     try:
         logger.info(f"📄 Starting PDF text extraction (file size: {len(file_data)} bytes)...")
-        
-        # Use PyPDF2 for real PDF processing
         pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_data))
         logger.info(f"📄 PDF loaded, found {len(pdf_reader.pages)} pages")
         
         text = ""
         for i, page in enumerate(pdf_reader.pages):
-        logger.info(f"📄 Processing page {i+1}/{len(pdf_reader.pages)}...")
-        page_text = page.extract_text()
-        text += page_text + "\n"
-        logger.info(f"📄 Page {i+1} processed: {len(page_text)} characters extracted")
+            logger.info(f"📄 Processing page {i+1}/{len(pdf_reader.pages)}...")
+            page_text = page.extract_text()
+            text += page_text + "\n"
+            logger.info(f"📄 Page {i+1} processed: {len(page_text)} characters extracted")
         
         result = text.strip()
         logger.info(f"✅ PDF text extraction complete: {len(result)} total characters")
         return result
-        
     except Exception as e:
         logger.error(f"❌ Error extracting PDF text: {e}")
         import traceback
         logger.error(traceback.format_exc())
-        
-        # Fallback to mock content if PDF processing fails
-        logger.warning("⚠️ Falling back to mock content due to PDF processing error")
-        return f"""Sample Insurance Policy Document
-
-Error occurred during PDF processing: {str(e)[:100]}...
-File size: {len(file_data)} bytes
-
-This is fallback content. For production use, this will be processed by LlamaCloud document parsing service.
-
-Mock coverage details:
-- Deductible: $1,000
-- Out-of-pocket maximum: $5,000
-- Copay: $25 for primary care
-- Network: Preferred Provider Organization (PPO)
-        """
+        return ""
 
 def extract_text_from_file(file_data: bytes, filename: str) -> str:
     """Extract text from various file types."""
@@ -350,28 +288,28 @@ def extract_text_from_file(file_data: bytes, filename: str) -> str:
     elif filename.lower().endswith(('.txt', '.md')):
         logger.info(f"📝 Detected text file, using UTF-8 decoding...")
         try:
-        result = file_data.decode('utf-8')
-        logger.info(f"✅ UTF-8 decoding successful: {len(result)} characters")
-        return result
-        except UnicodeDecodeError:
-        logger.warning(f"⚠️  UTF-8 failed, trying latin-1...")
-        try:
-            result = file_data.decode('latin-1')
-            logger.info(f"✅ Latin-1 decoding successful: {len(result)} characters")
+            result = file_data.decode('utf-8')
+            logger.info(f"✅ UTF-8 decoding successful: {len(result)} characters")
             return result
-        except Exception as e:
-            logger.error(f"❌ Text decoding failed: {e}")
-            return ""
+        except UnicodeDecodeError:
+            logger.warning(f"⚠️  UTF-8 failed, trying latin-1...")
+            try:
+                result = file_data.decode('latin-1')
+                logger.info(f"✅ Latin-1 decoding successful: {len(result)} characters")
+                return result
+            except Exception as e:
+                logger.error(f"❌ Text decoding failed: {e}")
+                return ""
     else:
         logger.info(f"❓ Unknown file type, attempting UTF-8 decoding...")
         # Try to decode as text for other file types
         try:
-        result = file_data.decode('utf-8')
-        logger.info(f"✅ UTF-8 decoding successful: {len(result)} characters")
-        return result
+            result = file_data.decode('utf-8')
+            logger.info(f"✅ UTF-8 decoding successful: {len(result)} characters")
+            return result
         except Exception as e:
-        logger.warning(f"⚠️  UTF-8 decoding failed for unknown file type: {e}")
-        return ""
+            logger.warning(f"⚠️  UTF-8 decoding failed for unknown file type: {e}")
+            return ""
 
 def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
     """Split text into overlapping chunks."""
@@ -383,22 +321,22 @@ def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> List[st
     while start < len(text):
         end = start + chunk_size
         if end >= len(text):
-        chunks.append(text[start:])
-        break
+            chunks.append(text[start:])
+            break
         else:
-        # Try to break at a sentence or word boundary
-        break_point = text.rfind('.', start, end)
-        if break_point == -1:
-            break_point = text.rfind(' ', start, end)
-        if break_point == -1:
-            break_point = end
-        else:
-            break_point += 1  # Include the period/space
-        
-        chunks.append(text[start:break_point].strip())
-        start = break_point - overlap
-        if start < 0:
-            start = 0
+            # Try to break at a sentence or word boundary
+            break_point = text.rfind('.', start, end)
+            if break_point == -1:
+                break_point = text.rfind(' ', start, end)
+            if break_point == -1:
+                break_point = end
+            else:
+                break_point += 1  # Include the period/space
+            
+            chunks.append(text[start:break_point].strip())
+            start = break_point - overlap
+            if start < 0:
+                start = 0
     
     return [chunk for chunk in chunks if chunk.strip()]
 
@@ -409,7 +347,7 @@ class FallbackOrchestrator:
     async def process_message(self, message: str, user_id: str, conversation_id: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Process message with fallback logic."""
         return {
-        "response": f"""**Insurance Navigator Response**
+            "response": f"""**Insurance Navigator Response**
 
 I understand you're asking: "{message}"
 
@@ -422,13 +360,13 @@ For immediate assistance, please try:
 - Coverage verification
 
 Your conversation ID: {conversation_id}""",
-            "sources": [],
-        "metadata": {
-            "mode": "fallback",
-            "message_received": True,
-            "conversation_id": conversation_id,
-            "timestamp": datetime.utcnow().isoformat()
-        }
+                "sources": [],
+            "metadata": {
+                "mode": "fallback",
+                "message_received": True,
+                "conversation_id": conversation_id,
+                "timestamp": datetime.utcnow().isoformat()
+            }
         }
 
 # Authentication dependency
@@ -440,25 +378,25 @@ async def get_current_user(request: Request) -> UserResponse:
     
     if not auth_header or not auth_header.startswith("Bearer "):
         raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Missing or invalid authentication token",
-        headers={"WWW-Authenticate": "Bearer"},
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid authentication token",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     
     token = auth_header.split(" ")[1]
     
     try:
         if not user_service_instance:
-        user_service_instance = await get_user_service()
+            user_service_instance = await get_user_service()
         
         # Use validate_session which returns full user data from database
         user_data = await user_service_instance.validate_session(token)
         if not user_data:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         
         return UserResponse(**user_data)
         
@@ -467,9 +405,9 @@ async def get_current_user(request: Request) -> UserResponse:
     except Exception as e:
         logger.error(f"Token verification error: {str(e)}")
         raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Token verification failed",
-        headers={"WWW-Authenticate": "Bearer"},
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token verification failed",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
 @app.options("/{full_path:path}")
@@ -478,10 +416,10 @@ async def options_handler(request: Request):
     return Response(
         status_code=200,
         headers={
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
-        "Access-Control-Allow-Headers": "*",
-        "Access-Control-Max-Age": "86400",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Max-Age": "86400",
         }
     )
 
@@ -509,32 +447,32 @@ async def health_check():
         # Test database connection with timeout
         db_pool = await get_db_pool()
         if db_pool:
-        # Use a more resilient connection test
-        try:
-            # Fix: Use timeout for the entire operation
-            async def test_db_connection():
-                async with db_pool.get_connection() as conn:
-                await conn.execute("SELECT 1")
-            
-            await asyncio.wait_for(test_db_connection(), timeout=5.0)
-            db_status = "connected"
-            logger.debug("✅ Health check: Database connection successful")
-        except asyncio.TimeoutError:
-            db_status = "timeout"
-            logger.warning("⚠️ Health check: Database connection timeout")
-        except Exception as e:
-            db_status = f"error: {str(e)[:50]}"
-            logger.warning(f"⚠️ Health check: Database connection error: {e}")
+            # Use a more resilient connection test
+            try:
+                # Fix: Use timeout for the entire operation
+                async def test_db_connection():
+                    async with db_pool.get_connection() as conn:
+                        await conn.execute("SELECT 1")
+                
+                await asyncio.wait_for(test_db_connection(), timeout=5.0)
+                db_status = "connected"
+                logger.debug("✅ Health check: Database connection successful")
+            except asyncio.TimeoutError:
+                db_status = "timeout"
+                logger.warning("⚠️ Health check: Database connection timeout")
+            except Exception as e:
+                db_status = f"error: {str(e)[:50]}"
+                logger.warning(f"⚠️ Health check: Database connection error: {e}")
         else:
-        db_status = "unavailable"
-        logger.warning("⚠️ Health check: Database pool unavailable")
+            db_status = "unavailable"
+            logger.warning("⚠️ Health check: Database pool unavailable")
 
         result = {
-        "status": "healthy" if db_status == "connected" else "degraded",
-        "timestamp": datetime.utcnow().isoformat(),
-        "database": db_status,
-        "version": "2.0.0",
-        "cached": False
+            "status": "healthy" if db_status == "connected" else "degraded",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database": db_status,
+            "version": "2.0.0",
+            "cached": False
         }
         
         # Cache the result
@@ -546,18 +484,18 @@ async def health_check():
     except Exception as e:
         logger.error(f"Health check error: {str(e)}")
         error_result = {
-        "status": "unhealthy",
-        "timestamp": datetime.utcnow().isoformat(),
-        "database": f"error: {str(e)[:50]}",
-        "version": "2.0.0",
-        "cached": False
+            "status": "unhealthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database": f"error: {str(e)[:50]}",
+            "version": "2.0.0",
+            "cached": False
         }
         
         # Cache error result for shorter duration (10 seconds)
         if (current_time - cache["timestamp"]) > 10:
-        cache["result"] = error_result
-        cache["timestamp"] = current_time
-        
+            cache["result"] = error_result
+            cache["timestamp"] = current_time
+            
         return error_result
 
 # Authentication endpoints
@@ -568,13 +506,13 @@ async def register(request: RegisterRequest):
     
     try:
         if not user_service_instance:
-        user_service_instance = await get_user_service()
+            user_service_instance = await get_user_service()
         
         # Create user in database
         user_data = await user_service_instance.create_user(
-        email=request.email,
-        password=request.password,
-        full_name=request.full_name
+            email=request.email,
+            password=request.password,
+            full_name=request.full_name
         )
         
         # Create JWT token
@@ -586,14 +524,14 @@ async def register(request: RegisterRequest):
     except ValueError as e:
         logger.warning(f"Registration failed for {request.email}: {str(e)}")
         raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail=str(e)
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
         )
     except Exception as e:
         logger.error(f"Registration error for {request.email}: {str(e)}")
         raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Registration failed"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Registration failed"
         )
 
 @app.post("/login", response_model=Token)
@@ -603,17 +541,17 @@ async def login(request: LoginRequest):
     
     try:
         if not user_service_instance:
-        user_service_instance = await get_user_service()
+            user_service_instance = await get_user_service()
         
         # Authenticate user
         user_data = await user_service_instance.authenticate_user(request.email, request.password)
         
         if not user_data:
-        logger.warning(f"Login failed for {request.email}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password"
-        )
+            logger.warning(f"Login failed for {request.email}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
         
         # Create JWT token
         token = user_service_instance.create_access_token(user_data)
@@ -626,8 +564,8 @@ async def login(request: LoginRequest):
     except Exception as e:
         logger.error(f"Login error for {request.email}: {str(e)}")
         raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Login failed"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Login failed"
         )
 
 @app.post("/forgot-password")
@@ -643,15 +581,15 @@ async def forgot_password(request: ForgotPasswordRequest):
         # 4. Store token with expiration time
         
         return {
-        "message": "If an account with that email exists, you'll receive password reset instructions.",
-        "success": True
+            "message": "If an account with that email exists, you'll receive password reset instructions.",
+            "success": True
         }
         
     except Exception as e:
         logger.error(f"Forgot password error for {request.email}: {str(e)}")
         raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Password reset request failed"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Password reset request failed"
         )
 
 @app.get("/me", response_model=UserResponse)
@@ -671,98 +609,91 @@ async def chat(
     try:
         # Initialize services
         if not conversation_service_instance:
-        conversation_service_instance = await get_conversation_service()
+            conversation_service_instance = await get_conversation_service()
         
         # Get or create conversation
         conversation_id = request.conversation_id
         if not conversation_id:
-        conversation_id = await conversation_service_instance.create_conversation(
-            user_id=current_user.id,
-            metadata={"workflow_type": "medicare_navigator"}
-        )
+            conversation_id = await conversation_service_instance.create_conversation(
+                user_id=current_user.id,
+                metadata={"workflow_type": "medicare_navigator"}
+            )
         
         # Save user message to conversation history
         await conversation_service_instance.add_message(
-        conversation_id=conversation_id,
-        role="user",
-        content=request.message,
-        metadata=request.context or {}
+            conversation_id=conversation_id,
+            role="user",
+            content=request.message,
+            metadata=request.context or {}
         )
         
-        # Process message with agent orchestrator (RAG search integration will be handled separately)
+        # Process message with agent orchestrator
         try:
-        if AGENT_ORCHESTRATOR_AVAILABLE and not agent_orchestrator_instance:
-            try:
-                logger.info("🤖 Initializing AgentOrchestrator for first use...")
+            if AGENT_ORCHESTRATOR_AVAILABLE and not agent_orchestrator_instance:
                 agent_orchestrator_instance = AgentOrchestrator()
-                logger.info("✅ AgentOrchestrator initialized successfully")
-            except Exception as init_error:
-                logger.error(f"❌ AgentOrchestrator initialization failed: {init_error}")
-                agent_orchestrator_instance = None
-        
-        if agent_orchestrator_instance:
-            # Use production agent orchestrator
-            result = await agent_orchestrator_instance.process_message(
-                message=request.message,
-                user_id=current_user.id,
-                conversation_id=conversation_id
-            )
-            response_text = result.get("text", "I'm processing your request...")
-            sources = result.get("sources", [])
-            metadata = result.get("metadata", {})
-            agent_state = result.get("agent_state")
-        else:
-            # Use fallback orchestrator
-            logger.info("💡 Using fallback orchestrator")
-            fallback = FallbackOrchestrator()
-            result = await fallback.process_message(
-                request.message, current_user.id, conversation_id, request.context
-            )
-            response_text = result["response"]
-            sources = result.get("sources", [])
-            metadata = result.get("metadata", {})
-            agent_state = None
-        
+            
+            if agent_orchestrator_instance:
+                # Use production agent orchestrator
+                result = await agent_orchestrator_instance.process_message(
+                    message=request.message,
+                    user_id=current_user.id,
+                    conversation_id=conversation_id
+                )
+                response_text = result.get("text", "I'm processing your request...")
+                sources = result.get("sources", [])
+                metadata = result.get("metadata", {})
+                agent_state = result.get("agent_state")
+            else:
+                # Use fallback orchestrator
+                fallback = FallbackOrchestrator()
+                result = await fallback.process_message(
+                    request.message, current_user.id, conversation_id, request.context
+                )
+                response_text = result["response"]
+                sources = result.get("sources", [])
+                metadata = result.get("metadata", {})
+                agent_state = None
+            
         except Exception as e:
-        logger.error(f"Agent processing error: {str(e)}")
-        response_text = f"I apologize, but I'm experiencing technical difficulties. Your message has been saved and I'll respond as soon as possible."
-        sources = []
-        metadata = {"error": str(e), "fallback_used": True}
-        agent_state = None
+            logger.error(f"Agent processing error: {str(e)}")
+            response_text = f"I apologize, but I'm experiencing technical difficulties. Your message has been saved and I'll respond as soon as possible."
+            sources = []
+            metadata = {"error": str(e), "fallback_used": True}
+            agent_state = None
         
         # Save agent response to conversation history
         await conversation_service_instance.add_message(
-        conversation_id=conversation_id,
-        role="assistant",
-        content=response_text,
-        metadata={
-            "sources": sources,
-            "agent_metadata": metadata,
-            "agent_state": agent_state
-        }
+            conversation_id=conversation_id,
+            role="assistant",
+            content=response_text,
+            metadata={
+                "sources": sources,
+                "agent_metadata": metadata,
+                "agent_state": agent_state
+            }
         )
         
         # Update conversation metadata if agent state available
         if agent_state:
-        await conversation_service_instance.update_conversation_state(
-            conversation_id=conversation_id,
-            state=agent_state
-        )
+            await conversation_service_instance.update_conversation_state(
+                conversation_id=conversation_id,
+                state=agent_state
+            )
         
         return ChatResponse(
-        text=response_text,
-        conversation_id=conversation_id,
-        sources=sources,
-        metadata=metadata,
-        workflow_type=result.get('workflow_type', 'medicare_navigator'),
-        agent_state=agent_state
+            text=response_text,
+            conversation_id=conversation_id,
+            sources=sources,
+            metadata=metadata,
+            workflow_type=result.get('workflow_type', 'medicare_navigator'),
+            agent_state=agent_state
         )
         
     except Exception as e:
         logger.error(f"Chat endpoint error: {str(e)}")
         raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="An error occurred processing your message"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred processing your message"
         )
 
 @app.get("/conversations", response_model=List[ConversationResponse])
@@ -775,29 +706,29 @@ async def get_conversations(
     
     try:
         if not conversation_service_instance:
-        conversation_service_instance = await get_conversation_service()
+            conversation_service_instance = await get_conversation_service()
         
         conversations = await conversation_service_instance.get_user_conversations(
-        user_id=current_user.id,
-        limit=limit
+            user_id=current_user.id,
+            limit=limit
         )
         
         return [
-        ConversationResponse(
-            id=conv["id"],
-            created_at=conv["created_at"],
-            updated_at=conv["updated_at"],
-            message_count=conv["message_count"],
-            metadata=conv.get("metadata")
-        )
-        for conv in conversations
+            ConversationResponse(
+                id=conv["id"],
+                created_at=conv["created_at"],
+                updated_at=conv["updated_at"],
+                message_count=conv["message_count"],
+                metadata=conv.get("metadata")
+            )
+            for conv in conversations
         ]
         
     except Exception as e:
         logger.error(f"Error fetching conversations for user {current_user.id}: {str(e)}")
         raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Failed to fetch conversations"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch conversations"
         )
 
 @app.get("/conversations/{conversation_id}/messages")
@@ -811,11 +742,11 @@ async def get_conversation_messages(
     
     try:
         if not conversation_service_instance:
-        conversation_service_instance = await get_conversation_service()
+            conversation_service_instance = await get_conversation_service()
         
         messages = await conversation_service_instance.get_conversation_history(
-        conversation_id=conversation_id,
-        limit=limit
+            conversation_id=conversation_id,
+            limit=limit
         )
         
         return {"messages": messages}
@@ -823,8 +754,8 @@ async def get_conversation_messages(
     except Exception as e:
         logger.error(f"Error fetching messages for conversation {conversation_id}: {str(e)}")
         raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Failed to fetch conversation messages"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch conversation messages"
         )
 
 # Document storage endpoints
@@ -840,46 +771,46 @@ async def upload_document(
     
     try:
         if not storage_service_instance:
-        storage_service_instance = await get_storage_service()
+            storage_service_instance = await get_storage_service()
         
         # Read file data
         file_data = await file.read()
         
         # Upload to storage
         upload_result = await storage_service_instance.upload_policy_document(
-        policy_id=policy_id,
-        file_data=file_data,
-        filename=file.filename,
-        user_id=current_user.id,
-        document_type=document_type,
-        metadata={
-            "uploaded_by_name": current_user.full_name,
-            "content_length": len(file_data)
-        }
+            policy_id=policy_id,
+            file_data=file_data,
+            filename=file.filename,
+            user_id=current_user.id,
+            document_type=document_type,
+            metadata={
+                "uploaded_by_name": current_user.full_name,
+                "content_length": len(file_data)
+            }
         )
         
         # Generate signed URL for immediate access
         signed_url = await storage_service_instance.get_signed_url(
-        file_path=upload_result["file_path"],
-        expires_in=3600,
-        download=False
+            file_path=upload_result["file_path"],
+            expires_in=3600,
+            download=False
         )
         
         logger.info(f"Document uploaded: {file.filename} by user {current_user.id}")
         
         return UploadResponse(
-        document_id=upload_result["document_id"],
-        file_path=upload_result["file_path"],
-        original_filename=upload_result["original_filename"],
-        file_size=upload_result["file_size"],
-        signed_url=signed_url
+            document_id=upload_result["document_id"],
+            file_path=upload_result["file_path"],
+            original_filename=upload_result["original_filename"],
+            file_size=upload_result["file_size"],
+            signed_url=signed_url
         )
         
     except Exception as e:
         logger.error(f"Document upload error: {str(e)}")
         raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=f"Upload failed: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Upload failed: {str(e)}"
         )
 
 @app.get("/documents", response_model=List[DocumentResponse])
@@ -893,34 +824,34 @@ async def list_documents(
     
     try:
         if not storage_service_instance:
-        storage_service_instance = await get_storage_service()
+            storage_service_instance = await get_storage_service()
         
         if policy_id:
-        # List policy documents using vector storage
-        documents = await storage_service_instance.list_policy_documents(
-            policy_id=policy_id, 
-            user_id=current_user.id
-        )
+            # List policy documents using vector storage
+            documents = await storage_service_instance.list_policy_documents(
+                policy_id=policy_id, 
+                user_id=current_user.id
+            )
         else:
-        # For now, require policy_id to list documents
-        # In the future, we could add a user_documents method
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="policy_id is required"
-        )
+            # For now, require policy_id to list documents
+            # In the future, we could add a user_documents method
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="policy_id is required"
+            )
         
         return [
-        DocumentResponse(
-            id=doc["id"],
-            file_path=doc["file_path"],
-            original_filename=doc["original_filename"],
-            content_type=doc["content_type"],
-            file_size=doc["file_size"],
-            document_type=doc["document_type"],
-            uploaded_at=doc["uploaded_at"],
-            metadata=doc.get("metadata")
-        )
-        for doc in documents
+            DocumentResponse(
+                id=doc["id"],
+                file_path=doc["file_path"],
+                original_filename=doc["original_filename"],
+                content_type=doc["content_type"],
+                file_size=doc["file_size"],
+                document_type=doc["document_type"],
+                uploaded_at=doc["uploaded_at"],
+                metadata=doc.get("metadata")
+            )
+            for doc in documents
         ]
         
     except HTTPException:
@@ -928,8 +859,8 @@ async def list_documents(
     except Exception as e:
         logger.error(f"Error listing documents: {str(e)}")
         raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Failed to list documents"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list documents"
         )
 
 @app.get("/documents/{file_path:path}/download")
@@ -942,25 +873,25 @@ async def download_document(
     
     try:
         if not storage_service_instance:
-        storage_service_instance = await get_storage_service()
+            storage_service_instance = await get_storage_service()
         
         # Check permissions
         permissions = await storage_service_instance.get_file_access_permissions(
-        file_path=file_path,
-        user_id=current_user.id
+            file_path=file_path,
+            user_id=current_user.id
         )
         
         if not permissions["read"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied"
-        )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied"
+            )
         
         # Generate signed URL
         signed_url = await storage_service_instance.get_signed_url(
-        file_path=file_path,
-        expires_in=3600,
-        download=True
+            file_path=file_path,
+            expires_in=3600,
+            download=True
         )
         
         # Redirect to signed URL
@@ -971,8 +902,8 @@ async def download_document(
     except Exception as e:
         logger.error(f"Download error for {file_path}: {str(e)}")
         raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Download failed"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Download failed"
         )
 
 @app.delete("/documents/{file_path:path}")
@@ -986,32 +917,32 @@ async def delete_document(
     
     try:
         if not storage_service_instance:
-        storage_service_instance = await get_storage_service()
+            storage_service_instance = await get_storage_service()
         
         # Check permissions
         permissions = await storage_service_instance.get_file_access_permissions(
-        file_path=file_path,
-        user_id=current_user.id
+            file_path=file_path,
+            user_id=current_user.id
         )
         
         if not permissions["delete"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Delete access denied"
-        )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Delete access denied"
+            )
         
         # Delete document
         success = await storage_service_instance.delete_document(
-        file_path=file_path,
-        user_id=current_user.id,
-        hard_delete=hard_delete
+            file_path=file_path,
+            user_id=current_user.id,
+            hard_delete=hard_delete
         )
         
         if not success:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document not found"
-        )
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found"
+            )
         
         return {"message": f"Document {'permanently deleted' if hard_delete else 'deleted'}", "success": True}
         
@@ -1020,44 +951,22 @@ async def delete_document(
     except Exception as e:
         logger.error(f"Delete error for {file_path}: {str(e)}")
         raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Delete failed"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Delete failed"
         )
 
 # Application lifecycle events
-async def startup_logic():
+@app.on_event("startup")
+async def startup_event():
     """Initialize services and database connections on startup."""
     global user_service_instance, conversation_service_instance, storage_service_instance
     
     logger.info("🚀 Insurance Navigator API v2.0 starting up...")
     
-    # Log environment info for debugging (without sensitive data)
-    db_url = os.getenv("DATABASE_URL", "NOT_SET")
-    db_configured = "✅ Configured" if db_url != "NOT_SET" else "❌ NOT SET"
-    logger.info(f"🔧 DATABASE_URL: {db_configured}")
-    logger.info(f"🔧 PORT: {os.getenv('PORT', 'NOT_SET')}")
-    logger.info(f"🔧 ASYNCPG_DISABLE_PREPARED_STATEMENTS: {os.getenv('ASYNCPG_DISABLE_PREPARED_STATEMENTS', 'NOT_SET')}")
-    
     try:
-        # Initialize database pool with timeout and retry logic
-        logger.info("📡 Initializing database connection...")
-        max_db_retries = 3
-        for attempt in range(max_db_retries):
-        try:
-            pool = await asyncio.wait_for(get_db_pool(), timeout=30.0)
-            logger.info("✅ Database connection pool initialized")
-            break
-        except asyncio.TimeoutError:
-            logger.warning(f"⏰ Database connection timeout (attempt {attempt + 1}/{max_db_retries})")
-            if attempt == max_db_retries - 1:
-                logger.error("❌ Database connection failed after all retries")
-                raise
-            await asyncio.sleep(5)  # Wait before retry
-        except Exception as e:
-            logger.error(f"❌ Database connection error (attempt {attempt + 1}/{max_db_retries}): {e}")
-            if attempt == max_db_retries - 1:
-                raise
-            await asyncio.sleep(5)  # Wait before retry
+        # Initialize database pool
+        pool = await get_db_pool()
+        logger.info("✅ Database connection pool initialized")
         
         # Initialize services
         user_service_instance = await get_user_service()
@@ -1069,20 +978,24 @@ async def startup_logic():
         storage_service_instance = await get_storage_service()
         logger.info("✅ Storage service initialized")
         
-        # Initialize agent orchestrator if available (lazy initialization to avoid blocking startup)
+        # Initialize agent orchestrator if available
         if AGENT_ORCHESTRATOR_AVAILABLE:
-        logger.info("🤖 Agent orchestrator will be initialized on first use")
+            try:
+                agent_orchestrator_instance = AgentOrchestrator()
+                logger.info("✅ Agent orchestrator initialized")
+            except Exception as e:
+                logger.warning(f"⚠️ Agent orchestrator initialization failed: {e}")
         else:
-        logger.info("💡 Using fallback orchestrator (agent system not available)")
+            logger.info("💡 Using fallback orchestrator (agent system not available)")
         
         logger.info("🎉 Startup complete - Insurance Navigator API ready!")
         
     except Exception as e:
         logger.error(f"❌ Startup failed: {str(e)}")
-        # Don't raise to prevent startup failure - let the app start with degraded functionality
-        logger.warning("⚠️ Continuing startup despite errors...")
+        raise
 
-async def shutdown_logic():
+@app.on_event("shutdown")
+async def shutdown_event():
     """Cleanup on application shutdown."""
     logger.info("👋 Insurance Navigator API shutting down...")
     
@@ -1097,17 +1010,267 @@ async def shutdown_logic():
     
     logger.info("✅ Shutdown complete")
 
-# Use startup/shutdown events for backward compatibility
-@app.on_event("startup")
-async def startup_event():
-    await startup_logic()
+# Debug endpoint for development
+@app.get("/debug/workflow/{conversation_id}")
+async def debug_workflow(
+    conversation_id: str,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Debug endpoint to view complete workflow execution details."""
+    global conversation_service_instance
+    
+    try:
+        if not conversation_service_instance:
+            conversation_service_instance = await get_conversation_service()
+        
+        # Get conversation messages
+        messages = await conversation_service_instance.get_conversation_history(
+            conversation_id=conversation_id,
+            limit=50
+        )
+        
+        # Get workflow states
+        workflow_states = await conversation_service_instance.get_workflow_state(conversation_id)
+        
+        # Get agent states
+        agent_states = []
+        agent_names = ["prompt_security", "patient_navigator", "task_requirements", 
+                      "service_access_strategy", "regulatory", "chat_communicator"]
+        
+        for agent_name in agent_names:
+            try:
+                state = await conversation_service_instance.get_agent_state(
+                    conversation_id=conversation_id,
+                    agent_name=agent_name
+                )
+                if state:
+                    agent_states.append({
+                        "agent_name": agent_name,
+                        "state": state
+                    })
+            except Exception as e:
+                # Agent state might not exist, continue
+                continue
+        
+        return {
+            "conversation_id": conversation_id,
+            "user_id": current_user.id,
+            "messages": messages,
+            "workflow_states": workflow_states,
+            "agent_states": agent_states,
+            "debug_info": {
+                "total_messages": len(messages),
+                "agents_executed": len(agent_states),
+                "workflow_available": workflow_states is not None
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Debug workflow error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Debug error: {str(e)}"
+        )
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    await shutdown_logic()
+@app.get("/debug/latest-workflow")
+async def debug_latest_workflow(
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Get debug info for the user's latest conversation."""
+    global conversation_service_instance
+    
+    try:
+        if not conversation_service_instance:
+            conversation_service_instance = await get_conversation_service()
+        
+        # Get user's latest conversation
+        conversations = await conversation_service_instance.get_user_conversations(
+            user_id=current_user.id,
+            limit=1
+        )
+        
+        if not conversations:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No conversations found"
+            )
+        
+        latest_conversation = conversations[0]
+        conversation_id = latest_conversation["id"]
+        
+        # Redirect to the full debug endpoint
+        return await debug_workflow(conversation_id, current_user)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Debug latest workflow error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Debug error: {str(e)}"
+        )
 
-# Removed: /debug/workflow/* endpoints (workflow_states and agent_states tables removed in simplified schema)
-# These complex debugging endpoints are no longer needed with the simplified architecture
+@app.get("/debug/latest-workflow/readable")
+async def debug_latest_workflow_readable(
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Get debug info for the user's latest conversation in human-readable format."""
+    global conversation_service_instance
+    
+    try:
+        # Get the raw debug data
+        debug_data = await debug_latest_workflow(current_user)
+        
+        # Format it in a readable way
+        readable_output = []
+        
+        # Header
+        readable_output.append("🔍 AGENT WORKFLOW DEBUG REPORT")
+        readable_output.append("=" * 50)
+        readable_output.append(f"📋 Conversation ID: {debug_data['conversation_id']}")
+        readable_output.append(f"👤 User ID: {debug_data['user_id']}")
+        readable_output.append("")
+        
+        # Summary
+        debug_info = debug_data.get('debug_info', {})
+        readable_output.append("📊 WORKFLOW SUMMARY")
+        readable_output.append("-" * 25)
+        readable_output.append(f"• Total Messages: {debug_info.get('total_messages', 0)}")
+        readable_output.append(f"• Agents Executed: {debug_info.get('agents_executed', 0)}")
+        readable_output.append(f"• Workflow Available: {debug_info.get('workflow_available', False)}")
+        readable_output.append("")
+        
+        # Messages
+        messages = debug_data.get('messages', [])
+        if messages:
+            readable_output.append("💬 CONVERSATION MESSAGES")
+            readable_output.append("-" * 30)
+            for i, msg in enumerate(messages, 1):
+                role_icon = "👤" if msg['role'] == 'user' else "🤖"
+                readable_output.append(f"{i}. {role_icon} {msg['role'].upper()}:")
+                readable_output.append(f"   📝 {msg['content'][:100]}{'...' if len(msg['content']) > 100 else ''}")
+                readable_output.append(f"   🕒 {msg['created_at']}")
+                readable_output.append("")
+        
+        # Workflow Results
+        workflow_states = debug_data.get('workflow_states', {})
+        if workflow_states:
+            state_data = workflow_states.get('state_data', {})
+            readable_output.append("🔄 WORKFLOW EXECUTION")
+            readable_output.append("-" * 25)
+            readable_output.append(f"• Workflow Type: {workflow_states.get('workflow_type', 'N/A')}")
+            readable_output.append(f"• Current Step: {workflow_states.get('current_step', 'N/A')}")
+            readable_output.append(f"• Intent Detected: {state_data.get('intent', 'N/A')}")
+            readable_output.append(f"• Security Check: {'✅ Passed' if state_data.get('security_check_passed') else '❌ Failed'}")
+            
+            error = state_data.get('error')
+            if error:
+                readable_output.append(f"• ⚠️ Error: {error}")
+            readable_output.append("")
+            
+            # Strategy Results (if available)
+            strategy_result = state_data.get('strategy_result')
+            if strategy_result:
+                readable_output.append("🎯 STRATEGY RESULTS")
+                readable_output.append("-" * 20)
+                readable_output.append(f"• Recommended Service: {strategy_result.get('recommended_service', 'N/A')}")
+                readable_output.append(f"• Estimated Timeline: {strategy_result.get('estimated_timeline', 'N/A')}")
+                readable_output.append(f"• Confidence Score: {strategy_result.get('confidence', 'N/A')}")
+                
+                action_plan = strategy_result.get('action_plan', [])
+                if action_plan:
+                    readable_output.append(f"• Action Steps: {len(action_plan)} steps")
+                    for step in action_plan:
+                        readable_output.append(f"  {step.get('step_number', '?')}. {step.get('step_description', 'N/A')}")
+                        readable_output.append(f"     ⏱ Timeline: {step.get('expected_timeline', 'N/A')}")
+                        resources = step.get('required_resources', [])
+                        if resources:
+                            readable_output.append(f"     📋 Resources: {', '.join(resources)}")
+                
+                matched_services = strategy_result.get('matched_services', [])
+                if matched_services:
+                    readable_output.append(f"• Matched Services: {len(matched_services)} found")
+                    for service in matched_services:
+                        covered = "✅ Covered" if service.get('is_covered') else "❌ Not Covered"
+                        readable_output.append(f"  • {service.get('service_name', 'N/A')} - {covered}")
+                readable_output.append("")
+        
+        # Agent-by-Agent Breakdown
+        agent_states = debug_data.get('agent_states', [])
+        if agent_states:
+            readable_output.append("🤖 AGENT EXECUTION DETAILS")
+            readable_output.append("-" * 35)
+            
+            for agent in agent_states:
+                agent_name = agent.get('agent_name', 'Unknown')
+                state = agent.get('state', {})
+                state_data = state.get('state_data', {})
+                
+                # Agent header with icon
+                agent_icons = {
+                    'prompt_security': '🛡️',
+                    'patient_navigator': '🧭', 
+                    'task_requirements': '📋',
+                    'service_access_strategy': '🎯',
+                    'regulatory': '⚖️',
+                    'chat_communicator': '💬'
+                }
+                icon = agent_icons.get(agent_name, '🤖')
+                readable_output.append(f"{icon} {agent_name.upper().replace('_', ' ')}")
+                readable_output.append("  " + "-" * (len(agent_name) + 2))
+                
+                # Execution step
+                step = state_data.get('step', 'N/A')
+                readable_output.append(f"  • Step: {step}")
+                
+                # Timestamp
+                updated_at = state.get('updated_at', 'N/A')
+                readable_output.append(f"  • Updated: {updated_at}")
+                
+                # Results (if available)
+                result = state_data.get('result')
+                if result:
+                    if agent_name == 'prompt_security':
+                        passed = result.get('passed', False)
+                        readable_output.append(f"  • Security Check: {'✅ Passed' if passed else '❌ Failed'}")
+                    
+                    elif agent_name == 'patient_navigator':
+                        intent = result.get('intent_type', 'N/A')
+                        confidence = result.get('confidence_score', 'N/A')
+                        readable_output.append(f"  • Intent Detected: {intent}")
+                        readable_output.append(f"  • Confidence: {confidence}")
+                    
+                    elif agent_name == 'service_access_strategy':
+                        service = result.get('recommended_service', 'N/A')
+                        timeline = result.get('estimated_timeline', 'N/A')
+                        readable_output.append(f"  • Recommended: {service}")
+                        readable_output.append(f"  • Timeline: {timeline}")
+                        
+                        action_plan = result.get('action_plan', [])
+                        if action_plan:
+                            readable_output.append(f"  • Action Steps: {len(action_plan)} steps")
+                
+                readable_output.append("")
+        
+        # Footer
+        readable_output.append("✅ Debug report generated successfully!")
+        readable_output.append(f"🕒 Generated at: {datetime.utcnow().isoformat()}Z")
+        
+        # Return as plain text
+        return Response(
+            content="\n".join(readable_output),
+            media_type="text/plain",
+            headers={"Content-Disposition": "inline"}
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Debug readable workflow error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Debug error: {str(e)}"
+        )
 
 # Root endpoint
 @app.get("/")
@@ -1119,13 +1282,13 @@ async def root():
         "status": "active",
         "documentation": "/docs",
         "deployment_info": {
-        "prepared_statements_fix": "ACTIVE",
-        "commit_hash": "95adab1",
-        "fix_description": "Duplicate file upload handling and prepared statement fix deployed",
-        "environment_vars": {
-            "ASYNCPG_DISABLE_PREPARED_STATEMENTS": os.getenv('ASYNCPG_DISABLE_PREPARED_STATEMENTS'),
-            "DATABASE_URL_contains_pooler": 'pooler.supabase.com' in os.getenv('DATABASE_URL', ''),
-        }
+            "prepared_statements_fix": "ACTIVE",
+            "commit_hash": "5eaaf6c",
+            "fix_description": "Supabase transaction pooler prepared statement fix deployed",
+            "environment_vars": {
+                "ASYNCPG_DISABLE_PREPARED_STATEMENTS": os.getenv('ASYNCPG_DISABLE_PREPARED_STATEMENTS'),
+                "DATABASE_URL_contains_pooler": 'pooler.supabase.com' in os.getenv('DATABASE_URL', ''),
+            }
         },
         "message": "Welcome to the Insurance Navigator API! Use /docs for interactive documentation."
     }
@@ -1137,11 +1300,11 @@ async def chat_with_image(message: str = Form(...), image: UploadFile = File(Non
     try:
         image_text = ""
         if image:
-        from agents.common.multimodal.image_processor import ImageProcessor
-        processor = ImageProcessor()
-        image_data = await image.read()
-        result = processor.extract_text_from_image(image_data)
-        image_text = f" [IMAGE: {result.get('extracted_text', 'processing...').strip()[:200]}]"
+            from agents.common.multimodal.image_processor import ImageProcessor
+            processor = ImageProcessor()
+            image_data = await image.read()
+            result = processor.extract_text_from_image(image_data)
+            image_text = f" [IMAGE: {result.get('extracted_text', 'processing...').strip()[:200]}]"
         
         enhanced_message = message + image_text
         from agents.patient_navigator.patient_navigator import PatientNavigatorAgent
@@ -1168,45 +1331,45 @@ async def upload_policy_demo(
         file_data = await file.read()
         
         if len(file_data) > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=f"File too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)}MB"
-        )
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)}MB"
+            )
         
         logger.info(f"✅ Step 1 complete: Read {len(file_data)} bytes")
         
         if len(file_data) == 0:
-        raise HTTPException(status_code=400, detail="Empty file")
+            raise HTTPException(status_code=400, detail="Empty file")
         
         # Extract text content with timeout
         logger.info(f"🔍 Step 2: Extracting text content from {file.filename}...")
         
         try:
-        # Use thread pool for CPU-intensive text extraction
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            text_content = await asyncio.wait_for(
-                asyncio.get_event_loop().run_in_executor(
-                executor, extract_text_from_file, file_data, file.filename
-                ),
-                timeout=60.0  # 60 second timeout for text extraction
-            )
+            # Use thread pool for CPU-intensive text extraction
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                text_content = await asyncio.wait_for(
+                    asyncio.get_event_loop().run_in_executor(
+                        executor, extract_text_from_file, file_data, file.filename
+                    ),
+                    timeout=60.0  # 60 second timeout for text extraction
+                )
         except asyncio.TimeoutError:
-        logger.error(f"❌ Text extraction timeout for {file.filename}")
-        raise HTTPException(
-            status_code=408,
-            detail="File processing timeout. Please try a smaller file or contact support."
-        )
+            logger.error(f"❌ Text extraction timeout for {file.filename}")
+            raise HTTPException(
+                status_code=408,
+                detail="File processing timeout. Please try a smaller file or contact support."
+            )
         
         logger.info(f"✅ Step 2 complete: Extracted {len(text_content)} characters")
         
         if not text_content.strip():
-        raise HTTPException(status_code=400, detail="Could not extract text from file")
+            raise HTTPException(status_code=400, detail="Could not extract text from file")
         
         # Limit text content for very large documents - more conservative for stability
         MAX_TEXT_LENGTH = 500_000  # 500KB of text (reduced for better stability)
         if len(text_content) > MAX_TEXT_LENGTH:
-        logger.warning(f"⚠️ Truncating large document: {len(text_content)} -> {MAX_TEXT_LENGTH} chars")
-        text_content = text_content[:MAX_TEXT_LENGTH] + "\n\n[Document truncated due to size limit]"
+            logger.warning(f"⚠️ Truncating large document: {len(text_content)} -> {MAX_TEXT_LENGTH} chars")
+            text_content = text_content[:MAX_TEXT_LENGTH] + "\n\n[Document truncated due to size limit]"
         
         # Generate document ID
         document_id = str(uuid.uuid4())
@@ -1216,28 +1379,28 @@ async def upload_policy_demo(
         logger.info(f"✂️  Step 3: Chunking text (length: {len(text_content)})...")
         
         try:
-        # Use thread pool for chunking to avoid blocking
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            chunks = await asyncio.wait_for(
-                asyncio.get_event_loop().run_in_executor(
-                executor, chunk_text, text_content
-                ),
-                timeout=30.0  # 30 second timeout for chunking
-            )
+            # Use thread pool for chunking to avoid blocking
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                chunks = await asyncio.wait_for(
+                    asyncio.get_event_loop().run_in_executor(
+                        executor, chunk_text, text_content
+                    ),
+                    timeout=30.0  # 30 second timeout for chunking
+                )
         except asyncio.TimeoutError:
-        logger.error(f"❌ Text chunking timeout")
-        raise HTTPException(
-            status_code=408,
-            detail="Text processing timeout. Please try a smaller file."
-        )
+            logger.error(f"❌ Text chunking timeout")
+            raise HTTPException(
+                status_code=408,
+                detail="Text processing timeout. Please try a smaller file."
+            )
         
         logger.info(f"✅ Step 3 complete: Created {len(chunks)} chunks from document")
         
         # Limit number of chunks to prevent resource exhaustion - more conservative
         MAX_CHUNKS = 300  # Reduced for better stability
         if len(chunks) > MAX_CHUNKS:
-        logger.warning(f"⚠️ Limiting chunks: {len(chunks)} -> {MAX_CHUNKS}")
-        chunks = chunks[:MAX_CHUNKS]
+            logger.warning(f"⚠️ Limiting chunks: {len(chunks)} -> {MAX_CHUNKS}")
+            chunks = chunks[:MAX_CHUNKS]
         
         # Get embedding model
         logger.info(f"🧠 Step 4: Loading embedding model...")
@@ -1249,18 +1412,18 @@ async def upload_policy_demo(
         
         max_retries = 3
         for attempt in range(max_retries):
-        try:
-            pool = await get_db_pool()
-            if pool:
-                break
-        except Exception as e:
-            logger.warning(f"Database connection attempt {attempt + 1} failed: {e}")
-            if attempt == max_retries - 1:
-                raise HTTPException(
-                status_code=503,
-                detail="Database temporarily unavailable. Please try again later."
-                )
-            await asyncio.sleep(1)  # Wait before retry
+            try:
+                pool = await get_db_pool()
+                if pool:
+                    break
+            except Exception as e:
+                logger.warning(f"Database connection attempt {attempt + 1} failed: {e}")
+                if attempt == max_retries - 1:
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Database temporarily unavailable. Please try again later."
+                    )
+                await asyncio.sleep(1)  # Wait before retry
         
         logger.info(f"✅ Step 5 complete: Database connection established")
         
@@ -1279,151 +1442,112 @@ async def upload_policy_demo(
         last_milestone = 0
         
         try:
-        async with pool.get_connection() as conn:
-            # Process chunks in batches
-            for batch_start in range(0, len(chunks), BATCH_SIZE):
-                batch_end = min(batch_start + BATCH_SIZE, len(chunks))
-                batch_chunks = chunks[batch_start:batch_end]
-                
-                # Process batch
-                for i, chunk in enumerate(batch_chunks):
-                absolute_index = batch_start + i
-                
-                try:
-                    # Calculate progress percentage
-                    progress_pct = int(((absolute_index + 1) / len(chunks)) * 100)
+            async with pool.get_connection() as conn:
+                # Process chunks in batches
+                for batch_start in range(0, len(chunks), BATCH_SIZE):
+                    batch_end = min(batch_start + BATCH_SIZE, len(chunks))
+                    batch_chunks = chunks[batch_start:batch_end]
                     
-                    # Log at major milestones
-                    if progress_pct >= progress_milestones[0] and progress_pct > last_milestone:
-                        milestone = progress_milestones.pop(0)
-                        last_milestone = milestone
-                        chunks_remaining = len(chunks) - absolute_index - 1
-                        time_remaining = chunks_remaining * 0.5
-                        logger.info(f"  🎯 Milestone: {milestone}% complete ({absolute_index+1}/{len(chunks)} chunks)")
-                        logger.info(f"     ⏱️ Estimated time remaining: {time_remaining:.1f} seconds")
-                        logger.info(f"     📝 Current chunk: {len(chunk)} characters")
+                    # Process batch
+                    for i, chunk in enumerate(batch_chunks):
+                        absolute_index = batch_start + i
+                        
+                        try:
+                            # Calculate progress percentage
+                            progress_pct = int(((absolute_index + 1) / len(chunks)) * 100)
+                            
+                            # Log at major milestones
+                            if progress_pct >= progress_milestones[0] and progress_pct > last_milestone:
+                                milestone = progress_milestones.pop(0)
+                                last_milestone = milestone
+                                chunks_remaining = len(chunks) - absolute_index - 1
+                                time_remaining = chunks_remaining * 0.5
+                                logger.info(f"  🎯 Milestone: {milestone}% complete ({absolute_index+1}/{len(chunks)} chunks)")
+                                logger.info(f"     ⏱️ Estimated time remaining: {time_remaining:.1f} seconds")
+                                logger.info(f"     📝 Current chunk: {len(chunk)} characters")
+                            
+                            # Generate embedding with timeout
+                            try:
+                                embedding_task = asyncio.get_event_loop().run_in_executor(
+                                    None, lambda: model.encode(chunk).tolist()
+                                )
+                                embedding = await asyncio.wait_for(embedding_task, timeout=10.0)
+                            except asyncio.TimeoutError:
+                                logger.warning(f"  ⚠️ Embedding timeout for chunk {absolute_index+1}, skipping...")
+                                failed_chunks += 1
+                                continue
+                            
+                            # Store in database with error handling
+                            try:
+                                vector_id = await asyncio.wait_for(
+                                    conn.fetchval("""
+                                        INSERT INTO user_document_vectors 
+                                        (user_id, document_id, chunk_index, chunk_embedding, chunk_text, chunk_metadata)
+                                        VALUES ($1, $2, $3, $4::vector, $5, $6)
+                                        RETURNING id
+                                    """, 
+                                    current_user.id, 
+                                    document_id,
+                                    absolute_index,
+                                    str(embedding),
+                                    chunk,
+                                    json.dumps({
+                                        "filename": file.filename,
+                                        "file_size": len(file_data),
+                                        "content_type": file.content_type,
+                                        "chunk_length": len(chunk),
+                                        "total_chunks": len(chunks),
+                                        "uploaded_at": datetime.utcnow().isoformat()
+                                    })),
+                                    timeout=5.0  # 5 second timeout for DB insert
+                                )
+                                
+                                vector_ids.append(vector_id)
+                                
+                            except asyncio.TimeoutError:
+                                logger.warning(f"  ⚠️ Database insert timeout for chunk {absolute_index+1}")
+                                failed_chunks += 1
+                                continue
+                            except Exception as e:
+                                logger.warning(f"  ⚠️ Database error for chunk {absolute_index+1}: {e}")
+                                failed_chunks += 1
+                                continue
+                            
+                        except Exception as e:
+                            logger.warning(f"  ⚠️ Error processing chunk {absolute_index+1}: {e}")
+                            failed_chunks += 1
+                            continue
                     
-                    # Generate embedding with timeout
-                    try:
-                        embedding_task = asyncio.get_event_loop().run_in_executor(
-                        None, lambda: model.encode(chunk).tolist()
-                        )
-                        embedding = await asyncio.wait_for(embedding_task, timeout=10.0)
-                        
-                        # Enhanced logging: Validate embedding dimensions
-                        embedding_dim = len(embedding)
-                        logger.info(f"    📊 Generated {embedding_dim}D embedding for chunk {absolute_index+1}")
-                        
-                        # Dimension validation  
-                        if embedding_dim != 1536:
-                        logger.error(f"    ❌ DIMENSION MISMATCH: Generated {embedding_dim}D, database expects 1536D")
-                        logger.error(f"    🔧 Fix: Update MockModel to generate 1536-dimensional vectors")
-                        failed_chunks += 1
-                        continue
-                        
-                        logger.info(f"    ✅ Dimension validation passed: {embedding_dim}D matches schema")
-                        
-                    except asyncio.TimeoutError:
-                        logger.warning(f"  ⚠️ Embedding timeout for chunk {absolute_index+1}, skipping...")
-                        failed_chunks += 1
-                        continue
-                    
-                    # Get active encryption key ID
-                    try:
-                        encryption_key_id = await asyncio.wait_for(
-                        conn.fetchval("""
-                            SELECT id FROM encryption_keys 
-                            WHERE key_status = 'active' 
-                            ORDER BY created_at DESC 
-                            LIMIT 1
-                        """),
-                        timeout=2.0
-                        )
-                        
-                        if not encryption_key_id:
-                        logger.error(f"    ❌ No active encryption key found in database")
-                        failed_chunks += 1
-                        continue
-                        
-                        logger.info(f"    🔐 Using encryption key: {str(encryption_key_id)[:8]}...")
-                        
-                    except Exception as e:
-                        logger.error(f"    ❌ Failed to query encryption key: {e}")
-                        failed_chunks += 1
-                        continue
-                    
-                    # Store in database with error handling
-                    try:
-                        vector_id = await asyncio.wait_for(
-                        conn.fetchval("""
-                            INSERT INTO user_document_vectors 
-                            (user_id, document_id, chunk_index, content_embedding, encrypted_chunk_text, encrypted_chunk_metadata, encryption_key_id)
-                            VALUES ($1, $2, $3, $4::vector, $5, $6, $7)
-                            RETURNING id
-                        """, 
-                        current_user.id, 
-                        document_id,
-                        absolute_index,
-                        str(embedding),
-                        chunk,  # encrypted_chunk_text - for demo we'll store as plaintext temporarily
-                        json.dumps({
-                            "filename": file.filename,
-                            "file_size": len(file_data),
-                            "content_type": file.content_type,
-                            "chunk_length": len(chunk),
-                            "total_chunks": len(chunks),
-                            "uploaded_at": datetime.utcnow().isoformat()
-                        }),  # encrypted_chunk_metadata - for demo we'll store as plaintext temporarily  
-                        encryption_key_id),  # Real encryption key from database
-                        timeout=5.0  # 5 second timeout for DB insert
-                        )
-                        
-                        vector_ids.append(vector_id)
-                        
-                    except asyncio.TimeoutError:
-                        logger.warning(f"  ⚠️ Database insert timeout for chunk {absolute_index+1}")
-                        failed_chunks += 1
-                        continue
-                    except Exception as e:
-                        logger.warning(f"  ⚠️ Database error for chunk {absolute_index+1}: {e}")
-                        failed_chunks += 1
-                        continue
-                    
-                except Exception as e:
-                    logger.warning(f"  ⚠️ Error processing chunk {absolute_index+1}: {e}")
-                    failed_chunks += 1
-                    continue
-                
-                # Small delay between batches to prevent overwhelming the system
-                if batch_end < len(chunks):
-                await asyncio.sleep(0.1)
+                    # Small delay between batches to prevent overwhelming the system
+                    if batch_end < len(chunks):
+                        await asyncio.sleep(0.1)
         
         except Exception as e:
-        logger.error(f"❌ Critical error during chunk processing: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Processing failed: {str(e)[:100]}... Please try again or contact support."
-        )
+            logger.error(f"❌ Critical error during chunk processing: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Processing failed: {str(e)[:100]}... Please try again or contact support."
+            )
         
         success_rate = (len(vector_ids) / len(chunks)) * 100 if chunks else 0
         
         logger.info(f"🎉 Step 6 complete: Successfully stored {len(vector_ids)} vectors for document {document_id}")
         if failed_chunks > 0:
-        logger.warning(f"⚠️ {failed_chunks} chunks failed processing (success rate: {success_rate:.1f}%)")
+            logger.warning(f"⚠️ {failed_chunks} chunks failed processing (success rate: {success_rate:.1f}%)")
         
         # Return comprehensive result
         result = {
-        "success": True,
-        "document_id": document_id,
-        "filename": file.filename,
-        "chunks_processed": len(vector_ids),
-        "chunks_failed": failed_chunks,
-        "total_chunks": len(chunks),
-        "success_rate": round(success_rate, 1),
-        "text_length": len(text_content),
-        "file_size": len(file_data),
-        "processing_time": f"~{len(chunks) * 0.5:.1f}s estimated",
-        "message": f"Successfully uploaded and vectorized {file.filename} ({success_rate:.1f}% success rate)"
+            "success": True,
+            "document_id": document_id,
+            "filename": file.filename,
+            "chunks_processed": len(vector_ids),
+            "chunks_failed": failed_chunks,
+            "total_chunks": len(chunks),
+            "success_rate": round(success_rate, 1),
+            "text_length": len(text_content),
+            "file_size": len(file_data),
+            "processing_time": f"~{len(chunks) * 0.5:.1f}s estimated",
+            "message": f"Successfully uploaded and vectorized {file.filename} ({success_rate:.1f}% success rate)"
         }
         
         logger.info(f"✅ Upload complete: {result}")
@@ -1439,8 +1563,8 @@ async def upload_policy_demo(
         
         # Return a user-friendly error with CORS headers
         raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=f"Upload processing failed. Please try a smaller file or contact support. Error: {str(e)[:100]}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Upload processing failed. Please try a smaller file or contact support. Error: {str(e)[:100]}"
         )
 
 @app.post("/search-documents", response_model=Dict[str, Any])
@@ -1464,41 +1588,41 @@ async def search_documents(
         
         results = []
         async with pool.get_connection() as conn:
-        # Search using vector similarity
-        rows = await conn.fetch("""
-            SELECT 
-                document_id,
-                encrypted_chunk_text as chunk_text,
-                encrypted_chunk_metadata as chunk_metadata,
-                content_embedding <=> $1::vector as similarity_score
-            FROM user_document_vectors 
-            WHERE user_id = $2 AND is_active = true
-            ORDER BY content_embedding <=> $1::vector
-            LIMIT $3
-        """, str(query_embedding), current_user.id, limit)
-        
-        for row in rows:
-            metadata = json.loads(row['chunk_metadata'])
-            results.append({
-                "document_id": row['document_id'],
-                "text": row['chunk_text'],
-                "filename": metadata.get('filename', 'Unknown'),
-                "similarity_score": float(row['similarity_score']),
-                "metadata": metadata
-            })
+            # Search using vector similarity
+            rows = await conn.fetch("""
+                SELECT 
+                    document_id,
+                    chunk_text,
+                    chunk_metadata,
+                    chunk_embedding <=> $1::vector as similarity_score
+                FROM user_document_vectors 
+                WHERE user_id = $2 AND is_active = true
+                ORDER BY chunk_embedding <=> $1::vector
+                LIMIT $3
+            """, str(query_embedding), current_user.id, limit)
+            
+            for row in rows:
+                metadata = json.loads(row['chunk_metadata'])
+                results.append({
+                    "document_id": row['document_id'],
+                    "text": row['chunk_text'],
+                    "filename": metadata.get('filename', 'Unknown'),
+                    "similarity_score": float(row['similarity_score']),
+                    "metadata": metadata
+                })
         
         return {
-        "success": True,
-        "query": query,
-        "results": results,
-        "total_results": len(results)
+            "success": True,
+            "query": query,
+            "results": results,
+            "total_results": len(results)
         }
         
     except Exception as e:
         logger.error(f"Document search error: {str(e)}")
         raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=f"Search failed: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Search failed: {str(e)}"
         )
 
 @app.post("/api/embeddings", response_model=Dict[str, Any])
@@ -1510,18 +1634,18 @@ async def generate_embedding_for_edge_functions(
     try:
         # Verify authorization
         if not authorization or not authorization.startswith('Bearer '):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid authorization header"
-        )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing or invalid authorization header"
+            )
         
         # Extract text from request
         text = request.get('text', '').strip()
         if not text:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Text content is required"
-        )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Text content is required"
+            )
         
         logger.info(f"Generating embedding for {len(text)} characters of text")
         
@@ -1531,16 +1655,16 @@ async def generate_embedding_for_edge_functions(
         # Generate embedding
         embedding = model.encode(text).tolist()
         
-        # Ensure consistent dimension (1536 for OpenAI compatibility)
-        if len(embedding) != 1536:
-        logger.warning(f"Unexpected embedding dimension: {len(embedding)}, expected 1536")
+        # Ensure consistent dimension (384 for all-MiniLM-L6-v2)
+        if len(embedding) != 384:
+            logger.warning(f"Unexpected embedding dimension: {len(embedding)}, expected 384")
         
         return {
-        "success": True,
-        "embedding": embedding,
-        "dimension": len(embedding),
-        "text_length": len(text),
-        "model": "mock-1536d-openai-compatible"
+            "success": True,
+            "embedding": embedding,
+            "dimension": len(embedding),
+            "text_length": len(text),
+            "model": "all-MiniLM-L6-v2"
         }
         
     except HTTPException:
@@ -1548,220 +1672,16 @@ async def generate_embedding_for_edge_functions(
     except Exception as e:
         logger.error(f"Embedding generation error: {str(e)}")
         raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=f"Failed to generate embedding: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate embedding: {str(e)}"
         )
-
-@app.get("/debug/document/{document_id}/status")
-async def debug_document_status(document_id: str):
-    """Debug endpoint to check document status without authentication."""
-    try:
-        db_pool = await get_db_pool()
-        
-        async with db_pool.get_connection() as connection:
-        # Get document info
-        doc_query = """
-            SELECT id, original_filename, status, progress_percentage, 
-                   processed_chunks, total_chunks, created_at, updated_at
-            FROM user_documents 
-            WHERE id = $1
-        """
-        doc_result = await connection.fetchrow(doc_query, document_id)
-        
-        if not doc_result:
-            return {"error": "Document not found"}
-        
-        # Get associated jobs
-        jobs_query = """
-            SELECT id, job_type, status, retry_count, created_at, 
-                   started_at, completed_at, error_message
-            FROM processing_jobs 
-            WHERE document_id = $1
-            ORDER BY created_at
-        """
-        jobs_results = await connection.fetch(jobs_query, document_id)
-        
-        return {
-            "document": dict(doc_result),
-            "jobs": [dict(job) for job in jobs_results],
-            "debug_info": {
-                "total_jobs": len(jobs_results),
-                "pending_jobs": len([j for j in jobs_results if j['status'] == 'pending']),
-                "running_jobs": len([j for j in jobs_results if j['status'] == 'running']),
-                "completed_jobs": len([j for j in jobs_results if j['status'] == 'completed']),
-                "failed_jobs": len([j for j in jobs_results if j['status'] == 'failed'])
-            }
-        }
-        
-    except Exception as e:
-        return {"error": str(e)}
-
-@app.get("/documents/{document_id}/status")
-async def get_document_status(
-    document_id: str,
-    current_user: UserResponse = Depends(get_current_user)
-):
-    """
-    Get document processing status using the new simplified document service.
-    """
-    try:
-        # Get document service instance
-        if not document_service_instance:
-        document_service_instance = await get_document_service()
-        
-        # Get document status using the service
-        document_status = await document_service_instance.get_document_status(
-        document_id=document_id,
-        user_id=current_user.id
-        )
-        
-        if not document_status:
-        raise HTTPException(
-            status_code=404, 
-            detail="Document not found or access denied"
-        )
-        
-        logger.info(f"Document status for {document_id}: {document_status['status']}")
-        
-        return document_status
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error getting document status for {document_id}: {e}")
-        raise HTTPException(
-        status_code=500,
-        detail=f"Failed to get document status: {str(e)}"
-        )
-
-@app.post("/upload-document-backend", response_model=Dict[str, Any])
-async def upload_document_backend(
-    file: UploadFile = File(...),
-    current_user: UserResponse = Depends(get_current_user)
-):
-    """
-    Simplified document upload using the new document service architecture.
-    This provides direct upload without complex job queue processing.
-    
-    Includes duplicate file handling and automatic policy basics extraction.
-    """
-    try:
-        # Validate file
-        if not file.filename:
-        raise HTTPException(status_code=400, detail="No filename provided")
-        
-        # File size validation (50MB limit)
-        file_content = await file.read()
-        if len(file_content) > 52428800:  # 50MB
-        raise HTTPException(status_code=413, detail="File size must be less than 50MB")
-        
-        # File type validation
-        allowed_types = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
-                'application/msword', 'text/plain']
-        if file.content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="Only PDF, DOCX, DOC, and TXT files are supported")
-        
-        # Get document service instance
-        if not document_service_instance:
-        document_service_instance = await get_document_service()
-        
-        # Use the simplified document service to handle upload and processing
-        upload_result = await document_service_instance.upload_and_process_document(
-                user_id=current_user.id,
-                file_data=file_content,
-                filename=file.filename,
-        content_type=file.content_type,
-                metadata={
-            'uploaded_by': current_user.full_name,
-            'upload_method': 'backend_api'
-        }
-        )
-        
-        return {
-            'success': True,
-        'document_id': upload_result['document_id'],
-            'filename': file.filename,
-            'file_size': len(file_content),
-        'status': upload_result['status'],
-        'message': upload_result.get('message', 'Document uploaded and processed successfully'),
-        'duplicate': upload_result.get('is_duplicate', False),
-        'policy_basics': upload_result.get('policy_basics'),
-        'processing_details': {
-            'text_extracted': upload_result.get('text_length', 0) > 0,
-            'chunks_created': upload_result.get('chunks_created', 0),
-            'vectors_created': upload_result.get('vectors_created', 0),
-            'policy_extracted': bool(upload_result.get('policy_basics'))
-        }
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error uploading document: {e}")
-        raise HTTPException(
-        status_code=500,
-        detail=f"Failed to upload document: {str(e)}"
-        )
-
-@app.delete("/admin/cleanup-duplicate/{file_hash}")
-async def cleanup_duplicate_file(
-    file_hash: str,
-    current_user: UserResponse = Depends(get_current_user)
-):
-    """
-    Temporary endpoint to clean up duplicate file entries for testing.
-    This will be removed once the duplicate handling is properly deployed.
-    """
-    try:
-        db_pool = await get_db_pool()
-        
-        async with db_pool.get_connection() as connection:
-        # Delete the document with the specified hash for this user
-        delete_query = """
-            DELETE FROM user_documents 
-            WHERE file_hash = $1 AND user_id = $2
-            RETURNING id, original_filename
-        """
-        
-        deleted_docs = await connection.fetch(delete_query, file_hash, current_user.id)
-        
-        if deleted_docs:
-            deleted_count = len(deleted_docs)
-            filenames = [doc['original_filename'] for doc in deleted_docs]
-            logger.info(f"🗑️ Cleaned up {deleted_count} duplicate documents for user {current_user.id}: {filenames}")
-            
-            return {
-                'success': True,
-                'deleted_count': deleted_count,
-                'deleted_files': filenames,
-                'message': f'Successfully cleaned up {deleted_count} duplicate document(s)'
-            }
-        else:
-            return {
-                'success': False,
-                'deleted_count': 0,
-                'message': 'No documents found with that hash for your account'
-            }
-            
-    except Exception as e:
-        logger.error(f"Error cleaning up duplicate file: {e}")
-        raise HTTPException(
-        status_code=500,
-        detail=f"Failed to cleanup duplicate: {str(e)}"
-        )
-
-# Removed: /admin/trigger-job-processing endpoint (no longer needed with simplified architecture)
-
-# Removed: /admin/job-queue-status endpoint (no processing jobs table in simplified schema)
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv("PORT", 8000))
-    logger.info(f"🚀 Starting server on port {port}")
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=port,
-        reload=False,  # Disable reload in production
+        port=8000,
+        reload=True,
         log_level="info"
     ) 
