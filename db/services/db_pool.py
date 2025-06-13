@@ -83,7 +83,7 @@ class DatabasePool:
             for attempt in range(max_retries):
                 try:
                     logger.info(f"📡 Creating database pool (attempt {attempt + 1}/{max_retries})...")
-            self.pool = await asyncpg.create_pool(db_url, **pool_kwargs)
+                    self.pool = await asyncpg.create_pool(db_url, **pool_kwargs)
                     logger.info("✅ Database pool created successfully")
                     break
                 except Exception as e:
