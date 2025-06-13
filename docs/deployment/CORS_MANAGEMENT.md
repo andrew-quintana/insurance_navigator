@@ -194,7 +194,7 @@ curl -X POST ***REMOVED***/chat \
 
 ### **Automated Testing**
 ```python
-# test_cors.py
+# scripts/testing/test_cors.py
 from utils.cors_config import cors_config
 
 def test_origin_validation():

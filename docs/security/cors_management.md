@@ -233,10 +233,10 @@ The system automatically detects:
 
 ```bash
 # 1. Test specific deployment
-python test_specific_url.py
+python scripts/testing/test_specific_url.py
 
 # 2. Run comprehensive scan
-python test_cors.py --comprehensive-scan
+python scripts/testing/test_cors.py --comprehensive-scan
 
 # 3. Check server health
 curl -i ***REMOVED***/health
@@ -404,7 +404,7 @@ SECURITY_KEYWORDS = [
 ## Getting Help
 
 ### Self-Service
-1. Run diagnostics: `python test_cors.py --comprehensive-scan`
+1. Run diagnostics: `python scripts/testing/test_cors.py --comprehensive-scan`
 2. Check monitoring reports: `scripts/monitoring/reports/`
 3. Review server health: `curl ***REMOVED***/health`
 
