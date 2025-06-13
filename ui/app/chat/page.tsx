@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { SendHorizontal, ArrowLeft, Upload, User, Bot, LogOut, X, FileText, CheckCircle, AlertCircle } from "lucide-react"
 import DocumentUploadModal from "@/components/DocumentUploadModal"
+import { createClient } from '@supabase/supabase-js'
 
 type Message = {
   id: number
@@ -59,6 +60,19 @@ export default function ChatPage() {
   const lastActivityTime = useRef<number>(Date.now())
   const isCheckingAuthRef = useRef(false)
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
+
+  // Initialize Supabase client for background processing notifications
+  const supabase = React.useMemo(() => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    if (!url || !key) {
+      console.warn('Missing Supabase environment variables for background notifications')
+      return null
+    }
+    
+    return createClient(url, key)
+  }, [])
 
   // Check authentication on component mount
   useEffect(() => {
@@ -144,6 +158,92 @@ export default function ChatPage() {
     }
   }, [router])
 
+  // Track user activity for session management
+  const updateActivity = () => {
+    lastActivityTime.current = Date.now()
+    setSessionWarning("") // Clear any session warnings
+  }
+
+  // Set up background processing notifications
+  useEffect(() => {
+    if (!supabase || !isAuthenticated || !userInfo?.id) return
+
+    console.log('🔄 Setting up background processing notifications for user:', userInfo.id)
+
+    // Listen for document processing completion notifications
+    const channel = supabase
+      .channel('background-notifications')
+      .on('postgres_changes', 
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'realtime_progress_updates',
+          filter: `user_id=eq.${userInfo.id}`
+        }, 
+        (payload: any) => {
+          console.log('📡 Background notification received:', payload.new)
+          
+          const notification = payload.new
+          const notificationPayload = notification.payload || {}
+          
+          // Only handle completion notifications
+          if (notificationPayload.type === 'complete' && notificationPayload.status === 'completed') {
+            const details = notificationPayload.details || {}
+            
+            const completionMessage: Message = {
+              id: Date.now(), // Use timestamp for unique ID
+              sender: "bot",
+              text: `🎉 **Background Processing Complete!**\n\nYour document "${details.filename || 'unknown'}" has been successfully processed!\n\n**Processing Results:**\n• ${details.processedChunks || 0} text sections analyzed\n• Document is now searchable and ready for questions\n• You can now ask me specific questions about this document\n\n**Ready to help!** What would you like to know about your uploaded document?`
+            }
+            
+            setMessages(prev => [...prev, completionMessage])
+            updateActivity() // Reset session timer
+          }
+        }
+      )
+      .on('postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public', 
+          table: 'documents',
+          filter: `user_id=eq.${userInfo.id}`
+        },
+        (payload: any) => {
+          console.log('📡 Document update received:', payload.new)
+          
+          const document = payload.new
+          
+          // Only handle completion status updates
+          if (document.status === 'completed' && document.processed_chunks > 0) {
+            const completionMessage: Message = {
+              id: Date.now() + 1, // Ensure unique ID
+              sender: "bot", 
+              text: `✅ **Document Processing Complete!**\n\nYour document "${document.original_filename}" has been successfully processed!\n\n**Processing Results:**\n• ${document.processed_chunks} text sections processed\n• ${document.total_chunks} total sections identified\n• File size: ${(document.file_size / 1024).toFixed(1)} KB\n\nThe document is now fully searchable and I can answer questions about its contents. What would you like to know?`
+            }
+            
+            setMessages(prev => [...prev, completionMessage])
+            updateActivity() // Reset session timer
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Background notification subscription status:', status)
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Background processing notifications active!')
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('⚠️ Background notification subscription failed:', status)
+        }
+      })
+
+    return () => {
+      console.log('🔄 Cleaning up background notification subscription')
+      if (supabase) {
+        supabase.removeChannel(channel)
+      }
+    }
+  }, [supabase, isAuthenticated, userInfo?.id, updateActivity])
+
   // Auto-scroll to the bottom of messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -155,12 +255,6 @@ export default function ChatPage() {
       inputRef.current.focus()
     }
   }, [isAuthenticated])
-
-  // Track user activity for session management
-  const updateActivity = () => {
-    lastActivityTime.current = Date.now()
-    setSessionWarning("") // Clear any session warnings
-  }
 
   const logout = () => {
     localStorage.removeItem("token")
@@ -257,10 +351,10 @@ export default function ChatPage() {
   const handleUploadSuccess = (result: any) => {
     console.log('Upload successful:', result)
     
-    // Add a message to the chat indicating successful upload
+    // Add a message to the chat indicating successful upload with background processing
     const successMessage: Message = {
       id: messages.length + 1,
-      text: `✅ **Document uploaded successfully!**\n\nI've processed your document "${result.filename}" and it's now available for me to reference when answering your Medicare questions.\n\n**Document Details:**\n• ${result.chunks_processed} text sections processed\n• ${result.text_length.toLocaleString()} characters analyzed\n• Document ID: ${result.document_id}\n\nYou can now ask me specific questions about your uploaded document!`,
+      text: `✅ **Document Upload Complete!**\n\nYour document "${result.filename}" has been uploaded successfully and is now being processed in the background.\n\n**Upload Details:**\n• File uploaded and verified\n• Background processing started\n• Document ID: ${result.document_id}\n\n**Next Steps:**\nI'll automatically notify you here in the chat when processing is complete and the document is ready for questions!`,
       sender: "bot"
     }
     
