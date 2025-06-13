@@ -666,7 +666,7 @@ async def chat(
             if AGENT_ORCHESTRATOR_AVAILABLE and not agent_orchestrator_instance:
                 try:
                     logger.info("🤖 Initializing AgentOrchestrator for first use...")
-                    agent_orchestrator_instance = AgentOrchestrator()
+                agent_orchestrator_instance = AgentOrchestrator()
                     logger.info("✅ AgentOrchestrator initialized successfully")
                 except Exception as init_error:
                     logger.error(f"❌ AgentOrchestrator initialization failed: {init_error}")
@@ -1017,7 +1017,7 @@ async def startup_logic():
         for attempt in range(max_db_retries):
             try:
                 pool = await asyncio.wait_for(get_db_pool(), timeout=30.0)
-                logger.info("✅ Database connection pool initialized")
+        logger.info("✅ Database connection pool initialized")
                 break
             except asyncio.TimeoutError:
                 logger.warning(f"⏰ Database connection timeout (attempt {attempt + 1}/{max_db_retries})")
@@ -1349,8 +1349,8 @@ async def root():
         "version": "2.0.0",
         "status": "active",
         "documentation": "/docs",
-            "deployment_info": {
-        "prepared_statements_fix": "ACTIVE",
+        "deployment_info": {
+            "prepared_statements_fix": "ACTIVE",
         "commit_hash": "95adab1",
         "fix_description": "Duplicate file upload handling and prepared statement fix deployed",
             "environment_vars": {

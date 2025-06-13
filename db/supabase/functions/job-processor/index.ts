@@ -63,6 +63,24 @@ serve(async (req) => {
   }
 })
 
+// Helper function to determine required data keys for job validation
+function getRequiredDataKeys(jobType: string): string[] {
+  switch (jobType) {
+    case 'parse':
+      return ['extractedText', 'metadata']
+    case 'chunk':
+      return ['chunks']
+    case 'embed':
+      return ['vectors', 'embeddings']
+    case 'complete':
+      return ['processingResult']
+    case 'notify':
+      return []
+    default:
+      return []
+  }
+}
+
 async function processJobs(supabase: any): Promise<Response> {
   console.log('🔄 Starting job processing cycle...')
   
@@ -167,23 +185,42 @@ async function executeJob(supabase: any, job: ProcessingJob): Promise<JobResult>
     // Handle job completion or failure
     if (result.success) {
       // Mark job as completed
-      await supabase
+      const { error: completeError } = await supabase
         .rpc('complete_processing_job', { 
           job_id_param: job.id,
           job_result: result.data || null
         })
 
-      // Schedule next job if specified
+      if (completeError) {
+        console.error(`❌ Failed to mark job ${job.id} as completed:`, completeError)
+        return { success: false, error: `Failed to complete job: ${completeError.message}` }
+      }
+
+      // Schedule next job if specified - with validation
       if (result.nextJob) {
-        await supabase
-          .rpc('create_processing_job', {
-            doc_id: job.document_id,
-            job_type_param: result.nextJob.type,
-            job_payload: result.nextJob.payload || {},
-            schedule_delay_seconds: result.nextJob.delay || 0
-          })
-        
-        console.log(`📅 Scheduled next job: ${result.nextJob.type} for document ${job.document_id}`)
+        try {
+          // Use enhanced scheduling with validation
+          const requiredKeys = getRequiredDataKeys(job.job_type)
+          
+          const { data: nextJobId, error: scheduleError } = await supabase
+            .rpc('schedule_next_job_safely', {
+              prev_job_id: job.id,
+              doc_id: job.document_id,
+              next_job_type: result.nextJob.type,
+              next_payload: result.nextJob.payload || {},
+              required_data_keys: requiredKeys
+            })
+
+          if (scheduleError) {
+            console.error(`❌ Failed to schedule next job for ${job.id}:`, scheduleError)
+            // Don't fail the current job, but log the issue
+            console.warn(`⚠️ Job ${job.id} completed but next job scheduling failed`)
+          } else {
+            console.log(`📅 Scheduled next job: ${result.nextJob.type} (${nextJobId}) for document ${job.document_id}`)
+          }
+        } catch (scheduleError) {
+          console.error(`❌ Exception scheduling next job for ${job.id}:`, scheduleError)
+        }
       }
 
       console.log(`✅ Job ${job.id} completed successfully`)

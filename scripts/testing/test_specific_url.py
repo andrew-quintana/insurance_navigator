@@ -2,7 +2,7 @@
 import asyncio
 import aiohttp
 import sys
-from test_cors import CORSValidator
+from .test_cors import CORSValidator
 
 async def test_specific_url():
     validator = CORSValidator()
