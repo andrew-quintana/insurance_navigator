@@ -1,0 +1,143 @@
+{
+  "timestamp": "2025-06-13T10:57:52.100514",
+  "database_url": "aws-0-us-west-1.pooler.supabase.com:6543/postgres",
+  "validation_results": {
+    "current_tables": {
+      "total_count": 37,
+      "table_list": [
+        "agent_policy_context",
+        "agent_states",
+        "conversation_messages",
+        "conversations",
+        "cron_job_health",
+        "cron_job_logs",
+        "current_job_status",
+        "document_processing_stats",
+        "documents",
+        "encryption_keys",
+        "failed_documents",
+        "failed_jobs",
+        "feature_flag_evaluations",
+        "feature_flags",
+        "job_health_log",
+        "job_queue_stats",
+        "job_transitions",
+        "policy_access_logs",
+        "policy_access_policies",
+        "policy_content_vectors",
+        "policy_documents",
+        "processing_jobs",
+        "processing_progress",
+        "queue_health",
+        "realtime_progress_updates",
+        "regulatory_documents",
+        "roles",
+        "schema_migrations",
+        "stuck_documents",
+        "stuck_jobs",
+        "system_metadata",
+        "user_document_vectors",
+        "user_policy_links",
+        "user_roles",
+        "user_upload_stats",
+        "users",
+        "workflow_states"
+      ]
+    },
+    "target_tables": {
+      "existing": [
+        "regulatory_documents",
+        "user_document_vectors",
+        "conversations"
+      ],
+      "missing": [
+        "user_documents",
+        "messages",
+        "audit_logs"
+      ],
+      "migration_status": "PARTIAL"
+    },
+    "existing_data": {
+      "conversations": {
+        "count": 21,
+        "sample_ids": [
+          "<Record id='conv_118b637eafd6'>",
+          "<Record id='conv_23a35e450a34'>",
+          "<Record id='conv_2d3f8e934cd1'>",
+          "<Record id='conv_487b38a9ad22'>",
+          "<Record id='conv_49eb4e55cdd2'>"
+        ]
+      },
+      "conversation_messages": {
+        "count": 41,
+        "sample": [
+          "<Record conversation_id='conv_070e9ebd21ab' role='user' content_length=27>",
+          "<Record conversation_id='conv_070e9ebd21ab' role='assistant' content_length=123>",
+          "<Record conversation_id='conv_574668f40089' role='user' content_length=24>",
+          "<Record conversation_id='conv_574668f40089' role='assistant' content_length=123>",
+          "<Record conversation_id='conv_21dd76f7d584' role='user' content_length=24>"
+        ]
+      },
+      "user_document_vectors": {
+        "count": 16,
+        "unique_users": 1,
+        "unique_documents": 16
+      },
+      "regulatory_documents": {
+        "count": 13,
+        "sample_types": [
+          "<Record document_type='policy' count=2>",
+          "<Record document_type='manual' count=3>",
+          "<Record document_type='regulation' count=1>",
+          "<Record document_type='statute' count=1>",
+          "<Record document_type='exclusion_list' count=1>",
+          "<Record document_type='fee_schedule' count=2>",
+          "<Record document_type='guidance' count=2>",
+          "<Record document_type='portal' count=1>"
+        ]
+      },
+      "users": {
+        "count": 5,
+        "active_users": 5
+      }
+    },
+    "performance_baseline": {
+      "conversation_query_ms": 25.823999999999998,
+      "vector_search_ms": "N/A (test failed)",
+      "complex_join_ms": 26.387
+    },
+    "hipaa_compliance": {
+      "rls_enabled": {
+        "conversations": true,
+        "user_document_vectors": true
+      },
+      "audit_capability": false,
+      "encryption_columns": [
+        "encrypted_chunk_text",
+        "encrypted_chunk_metadata"
+      ]
+    },
+    "migration_readiness": {
+      "target_tables_created": false,
+      "no_active_transactions": true,
+      "sufficient_disk_space": true,
+      "backup_recommended": true,
+      "estimated_downtime_minutes": 1
+    }
+  },
+  "recommendations": [
+    "Run schema migration first to create target tables"
+  ],
+  "errors": [],
+  "warnings": [
+    "Audit logging capability not verified"
+  ],
+  "summary": {
+    "validation_status": "PASSED",
+    "total_validations": 6,
+    "errors": 0,
+    "warnings": 1,
+    "recommendations": 1,
+    "migration_ready": false
+  }
+}
