@@ -1143,21 +1143,21 @@ async def upload_document_backend(
         
         async with pool.get_connection() as conn:
             # Create document record in database first
-            document_id = str(uuid.uuid4())
+            document_uuid = uuid.uuid4()
+            document_id = str(document_uuid)
             file_hash = hashlib.sha256(file_data).hexdigest()
             
-            # Insert document record
+            # Insert document record with proper UUID types
             await conn.execute("""
                 INSERT INTO documents (
                     id, user_id, original_filename, file_size, content_type,
                     file_hash, status, progress_percentage, 
-                    total_chunks, processed_chunks, failed_chunks,
-                    created_at, updated_at
+                    total_chunks, processed_chunks, failed_chunks
                 ) VALUES (
-                    $1, $2, $3, $4, $5, $6, 'pending', 0, 0, 0, 0, NOW(), NOW()
+                    $1, $2, $3, $4, $5, $6, 'pending', 0, 0, 0, 0
                 )
             """, 
-            document_id, current_user.id, file.filename, len(file_data), 
+            document_uuid, uuid.UUID(current_user.id), file.filename, len(file_data), 
             file.content_type or 'application/octet-stream', file_hash
             )
             
@@ -1288,7 +1288,8 @@ async def upload_policy_demo(
                 logger.info("🦙 PDF detected - preferring Edge Functions with LlamaParse...")
                 
                 # Create a document record for tracking
-                document_id = str(uuid.uuid4())
+                document_uuid = uuid.uuid4()
+                document_id = str(document_uuid)
                 file_hash = hashlib.sha256(file_data).hexdigest()
                 
                 # Get database connection for document creation
@@ -1299,13 +1300,12 @@ async def upload_policy_demo(
                             INSERT INTO documents (
                                 id, user_id, original_filename, file_size, content_type,
                                 file_hash, status, progress_percentage, 
-                                total_chunks, processed_chunks, failed_chunks,
-                                created_at, updated_at
+                                total_chunks, processed_chunks, failed_chunks
                             ) VALUES (
-                                $1, $2, $3, $4, $5, $6, 'processing', 15, 0, 0, 0, NOW(), NOW()
+                                $1, $2, $3, $4, $5, $6, 'processing', 15, 0, 0, 0
                             )
                         """, 
-                        document_id, current_user.id, file.filename, len(file_data), 
+                        document_uuid, uuid.UUID(current_user.id), file.filename, len(file_data), 
                         file.content_type or 'application/pdf', file_hash
                         )
                         
