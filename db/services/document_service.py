@@ -325,7 +325,7 @@ class DocumentService:
                 # Get documents that might contain the query terms
                 results = await conn.fetch("""
                     SELECT DISTINCT 
-                        dv.document_id,
+                        d.id as document_id,
                         d.original_filename,
                         d.created_at,
                         d.policy_basics
@@ -391,7 +391,7 @@ class DocumentService:
                         id, original_filename, status, document_type,
                         file_size, content_type, policy_basics,
                         created_at, updated_at
-                    FROM user_documents
+                    FROM documents
                     WHERE id = $1 AND user_id = $2
                 """, uuid.UUID(document_id), uuid.UUID(user_id))
                 
@@ -431,7 +431,7 @@ class DocumentService:
                     SELECT 
                         id, original_filename, status, document_type,
                         file_size, policy_basics, created_at
-                    FROM user_documents
+                    FROM documents
                     {where_clause}
                     ORDER BY created_at DESC
                     LIMIT ${'2' if not document_type else '3'}
