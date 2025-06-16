@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 
 # Configuration
-BASE_URL = os.getenv('API_BASE_URL', 'https://your-app.onrender.com')
+BASE_URL = os.getenv('API_BASE_URL', 'https://insurance-navigator-api.onrender.com')
 TEST_PDF = 'data/examples/test_policy.pdf'  # Adjust path as needed
 
 def test_basic_health():
