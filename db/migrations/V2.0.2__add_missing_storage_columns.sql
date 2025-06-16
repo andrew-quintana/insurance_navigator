@@ -36,6 +36,26 @@ ON documents (file_hash);
 CREATE INDEX IF NOT EXISTS idx_documents_progress 
 ON documents (progress_percentage, status);
 
--- Log successful migration
-INSERT INTO audit_logs (action, created_at)
-VALUES ('SCHEMA_MIGRATION_V2.0.2_STORAGE_COLUMNS', NOW()); 
+-- Log successful migration (only if audit_logs has the required columns)
+DO $$ 
+BEGIN
+    -- Check if audit_logs has the minimal required columns
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'audit_logs' AND column_name = 'action'
+    ) THEN
+        -- Try to insert with minimal required fields
+        IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'audit_logs' AND column_name = 'resource_type'
+        ) THEN
+            -- Has resource_type column
+            INSERT INTO audit_logs (action, resource_type, created_at)
+            VALUES ('SCHEMA_MIGRATION_V2.0.2_STORAGE_COLUMNS', 'migration', NOW());
+        ELSE
+            -- No resource_type column, use basic insert
+            INSERT INTO audit_logs (action, created_at)
+            VALUES ('SCHEMA_MIGRATION_V2.0.2_STORAGE_COLUMNS', NOW());
+        END IF;
+    END IF;
+END $$; 
