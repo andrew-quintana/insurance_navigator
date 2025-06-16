@@ -1147,17 +1147,21 @@ async def upload_document_backend(
             document_id = str(document_uuid)
             file_hash = hashlib.sha256(file_data).hexdigest()
             
-            # Insert document record with proper UUID types
+            # Generate file path for storage
+            file_path = f"uploads/{current_user.id}/{document_id}/{file.filename}"
+            
+            # Insert document record with proper UUID types and file_path
             await conn.execute("""
                 INSERT INTO documents (
-                    id, user_id, original_filename, file_size, content_type,
+                    id, user_id, original_filename, file_path, file_size, content_type,
                     file_hash, status, progress_percentage, 
-                    total_chunks, processed_chunks, failed_chunks
+                    total_chunks, processed_chunks, failed_chunks,
+                    document_type, storage_backend, bucket_name
                 ) VALUES (
-                    $1, $2, $3, $4, $5, $6, 'pending', 0, 0, 0, 0
+                    $1, $2, $3, $4, $5, $6, $7, 'pending', 0, 0, 0, 0, 'policy', 'supabase', 'raw_documents'
                 )
             """, 
-            document_uuid, uuid.UUID(current_user.id), file.filename, len(file_data), 
+            document_uuid, uuid.UUID(current_user.id), file.filename, file_path, len(file_data), 
             file.content_type or 'application/octet-stream', file_hash
             )
             
@@ -1296,16 +1300,20 @@ async def upload_policy_demo(
                 pool = await get_db_pool()
                 if pool:
                     async with pool.get_connection() as conn:
+                        # Generate file path for storage
+                        file_path = f"uploads/{current_user.id}/{document_id}/{file.filename}"
+                        
                         await conn.execute("""
                             INSERT INTO documents (
-                                id, user_id, original_filename, file_size, content_type,
+                                id, user_id, original_filename, file_path, file_size, content_type,
                                 file_hash, status, progress_percentage, 
-                                total_chunks, processed_chunks, failed_chunks
+                                total_chunks, processed_chunks, failed_chunks,
+                                document_type, storage_backend, bucket_name
                             ) VALUES (
-                                $1, $2, $3, $4, $5, $6, 'processing', 15, 0, 0, 0
+                                $1, $2, $3, $4, $5, $6, $7, 'processing', 15, 0, 0, 0, 'policy', 'supabase', 'raw_documents'
                             )
                         """, 
-                        document_uuid, uuid.UUID(current_user.id), file.filename, len(file_data), 
+                        document_uuid, uuid.UUID(current_user.id), file.filename, file_path, len(file_data), 
                         file.content_type or 'application/pdf', file_hash
                         )
                         
