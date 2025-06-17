@@ -83,7 +83,7 @@ class DatabasePool:
             for attempt in range(max_retries):
                 try:
                     logger.info(f"📡 Creating database pool (attempt {attempt + 1}/{max_retries})...")
-            self.pool = await asyncpg.create_pool(db_url, **pool_kwargs)
+                    self.pool = await asyncpg.create_pool(db_url, **pool_kwargs)
                     logger.info("✅ Database pool created successfully")
                     break
                 except Exception as e:
@@ -187,7 +187,7 @@ class DatabasePool:
             except Exception as e:
                 error_msg = str(e).lower()
                 if 'prepared statement' in error_msg and 'does not exist' in error_msg:
-                    logger.error(f"🚨 CRITICAL: Prepared statement error detected: {e}")
+                    logger.error(f"�� CRITICAL: Prepared statement error detected: {e}")
                     logger.error(f"   This indicates transaction pooler compatibility issue")
                     logger.error(f"   Environment: ASYNCPG_DISABLE_PREPARED_STATEMENTS={os.getenv('ASYNCPG_DISABLE_PREPARED_STATEMENTS')}")
                     logger.error(f"   Transaction pooler mode: {self._transaction_pooler_mode}")
