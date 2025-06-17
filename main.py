@@ -1146,7 +1146,7 @@ async def upload_document_backend(
         # Get database connection
         pool = await get_db_pool()
         if not pool:
-            raise HTTPException(
+        raise HTTPException(
                 status_code=503,
                 detail="Database temporarily unavailable"
             )
@@ -1184,11 +1184,13 @@ async def upload_document_backend(
                 # Trigger the upload-handler Edge Function
                 edge_function_url = f"{supabase_url}/functions/v1/upload-handler"
                 
-                # Prepare multipart form data for Edge Function
-                form_data = aiohttp.FormData()
-                form_data.add_field('file', file_data, filename=file.filename, content_type=file.content_type)
-                form_data.add_field('documentId', document_id)
-                form_data.add_field('userId', current_user.id)
+                # Prepare JSON payload for Edge Function (not form data)
+                edge_payload = {
+                    "filename": file.filename,
+                    "contentType": file.content_type or 'application/octet-stream',
+                    "fileSize": len(file_data),
+                    "documentId": document_id
+                }
                 
                 # Make request to Edge Function
                 timeout = aiohttp.ClientTimeout(total=60)  # 60 second timeout
@@ -1197,11 +1199,12 @@ async def upload_document_backend(
                     headers = {
                         'Authorization': f'Bearer {user_token}',  # Use user's JWT token, not service key
                         'apikey': supabase_service_key,  # Add service key as apikey header
+                        'Content-Type': 'application/json',
                         'X-User-ID': current_user.id
                     }
                     
                     try:
-                        async with session.post(edge_function_url, data=form_data, headers=headers) as response:
+                        async with session.post(edge_function_url, json=edge_payload, headers=headers) as response:
                             if response.status == 200:
                                 edge_result = await response.json()
                                 logger.info(f"✅ Edge Function triggered successfully: {edge_result}")
