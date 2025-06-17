@@ -37,14 +37,20 @@ serve(async (req) => {
   }
 
   try {
+    console.log('🚀 Upload handler started - method:', req.method)
+    console.log('📋 Headers received:', JSON.stringify(Object.fromEntries(req.headers.entries())))
+    
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Get authenticated user - support both Supabase and backend JWT tokens
+    // Get authenticated user - now expects service role key + X-User-ID
     const authHeader = req.headers.get('Authorization')
+    console.log('🔍 Auth header present:', !!authHeader)
+    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('❌ Missing or invalid authorization header format')
       return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -52,58 +58,40 @@ serve(async (req) => {
     }
     
     const token = authHeader.replace('Bearer ', '')
-    let userId: string | null = null
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     
-    // Try Supabase auth first
-    try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-      if (user && !authError) {
-        userId = user.id
-      }
-    } catch (e) {
-      // Supabase auth failed, try custom JWT validation
-    }
+    console.log('🔍 Auth Debug - Token length:', token.length)
+    console.log('🔍 Auth Debug - Service key length:', serviceKey.length)
+    console.log('🔍 Auth Debug - Tokens match:', token === serviceKey)
     
-    // If Supabase auth failed, try custom JWT validation
-    if (!userId) {
-      try {
-        // Decode JWT token (simplified validation for MVP)
-        // In production, should verify signature with JWT secret
-        const parts = token.split('.')
-        if (parts.length === 3) {
-          const payload = JSON.parse(atob(parts[1]))
-          if (payload.sub && payload.exp && payload.exp > Date.now() / 1000) {
-            userId = payload.sub
-          }
-        }
-      } catch (e) {
-        // JWT parsing failed
-      }
-    }
-    
-    // Additional fallback: check X-User-ID header if provided
-    if (!userId) {
-      const userIdHeader = req.headers.get('X-User-ID')
-      if (userIdHeader) {
-        // Verify user exists in database
-        const { data: user, error } = await supabase
-          .from('auth.users')
-          .select('id')
-          .eq('id', userIdHeader)
-          .single()
-        
-        if (user && !error) {
-          userId = userIdHeader
-        }
-      }
-    }
-    
-    if (!userId) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+    // Verify service role key
+    if (token !== serviceKey) {
+      console.log('❌ Auth Debug - Invalid service role key')
+      return new Response(JSON.stringify({ 
+        error: 'Unauthorized',
+        debug: 'Invalid service role key'
+      }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
+    
+    // Get user ID from header
+    const userId = req.headers.get('X-User-ID')
+    console.log('🔍 Auth Debug - X-User-ID header:', userId)
+    
+    if (!userId) {
+      console.log('❌ Auth Debug - Missing X-User-ID header')
+      return new Response(JSON.stringify({ 
+        error: 'Unauthorized',
+        debug: 'Missing X-User-ID header'
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    console.log('✅ Authentication successful for userId:', userId)
 
     if (req.method === 'POST') {
       return await handleUpload(req, supabase, userId)

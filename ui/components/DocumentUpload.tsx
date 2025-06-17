@@ -138,18 +138,18 @@ export default function DocumentUpload({
       if (uploadResponse.status === 405) {
         console.log('🔄 New endpoint not deployed yet, using fallback...')
         uploadUrl = `${apiBaseUrl}/upload-policy`
-        
-        const formData = new FormData()
-        formData.append('file', selectedFile)
-        formData.append('policy_id', selectedFile.name.replace(/\.[^/.]+$/, ""))
+
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+      formData.append('policy_id', selectedFile.name.replace(/\.[^/.]+$/, ""))
 
         uploadResponse = await fetch(uploadUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          body: formData,
-        })
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      })
       }
 
       if (!uploadResponse.ok) {
