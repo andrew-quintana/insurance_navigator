@@ -102,9 +102,10 @@ class AgentDiscovery:
 class AgentPrototype:
     """Lightweight agent for rapid prototyping without BaseAgent inheritance."""
     
-    def __init__(self, name: str, prompt_template: str, model_params: Optional[Dict] = None):
+    def __init__(self, name: str, prompt_template: str, model_params: Optional[Dict] = None, system_prompt: Optional[str] = None):
         self.name = name
         self.prompt_template = prompt_template
+        self.system_prompt = system_prompt  # Separate system prompt
         self.model_params = model_params or {
             "model_name": "claude-3-haiku-20240307",
             "temperature": 0.7,
@@ -158,6 +159,10 @@ class AgentPrototype:
             self.prompt_template = kwargs['prompt_template']
             updated.append('prompt')
         
+        if 'system_prompt' in kwargs:
+            self.system_prompt = kwargs['system_prompt']
+            updated.append('system_prompt')
+        
         if 'model_params' in kwargs:
             self.model_params.update(kwargs['model_params'])
             # Reinitialize LLM with new params
@@ -191,14 +196,34 @@ class AgentPrototype:
             })
             
             if use_model and self.llm:
-                # Use LLM for processing
-                formatted_prompt = self.prompt_template.format(
-                    input=input_data,
-                    memory=json.dumps(self.memory, indent=2),
-                    conversation_history=self.conversation_history[-5:]  # Last 5 interactions
-                )
+                # Use LLM for processing with system/user prompt structure
+                if self.system_prompt:
+                    # Use system + user prompt structure
+                    from langchain_core.messages import SystemMessage, HumanMessage
+                    
+                    # Format the user prompt with input data
+                    formatted_user_prompt = self.prompt_template.format(
+                        input=input_data,
+                        memory=json.dumps(self.memory, indent=2),
+                        conversation_history=self.conversation_history[-5:]  # Last 5 interactions
+                    )
+                    
+                    messages = [
+                        SystemMessage(content=self.system_prompt),
+                        HumanMessage(content=formatted_user_prompt)
+                    ]
+                    
+                    response = self.llm.invoke(messages)
+                else:
+                    # Use single prompt template (legacy behavior)
+                    formatted_prompt = self.prompt_template.format(
+                        input=input_data,
+                        memory=json.dumps(self.memory, indent=2),
+                        conversation_history=self.conversation_history[-5:]  # Last 5 interactions
+                    )
+                    
+                    response = self.llm.invoke(formatted_prompt)
                 
-                response = self.llm.invoke(formatted_prompt)
                 result = response.content if hasattr(response, 'content') else str(response)
             else:
                 # Mock processing
@@ -239,7 +264,8 @@ class AgentPrototype:
         print(f"🧹 Cleared memory for {self.name}")
     
     def __repr__(self):
-        return f"AgentPrototype(name='{self.name}', tools={len(self.tools)}, memory_items={len(self.memory)})"
+        system_info = " + system_prompt" if self.system_prompt else ""
+        return f"AgentPrototype(name='{self.name}', tools={len(self.tools)}, memory_items={len(self.memory)}{system_info})"
 
 
 class ExistingAgentTester:
@@ -514,8 +540,57 @@ class PrototypingLab:
         self.workflows = {}
         self.test_results = []
     
-    def quick_agent(self, name: str, prompt: str, **model_params) -> AgentPrototype:
-        """Quickly create and register a prototype agent."""
+    def quick_agent(self, name: str, prompt: str = None, system_prompt: str = None, user_prompt: str = None, **model_params) -> AgentPrototype:
+        """Quickly create and register a prototype agent.
+        
+        Args:
+            name: Agent name
+            prompt: Legacy single prompt (for backward compatibility)  
+            system_prompt: System prompt (instructions for the AI)
+            user_prompt: User prompt template (should contain {input})
+            **model_params: Model configuration parameters
+            
+        Usage examples:
+            # Legacy style (backward compatible):
+            agent = lab.quick_agent("test", "You are helpful. Respond to: {input}")
+            
+            # New system + user prompt style:
+            agent = lab.quick_agent("test", 
+                system_prompt="You are a helpful healthcare assistant.",
+                user_prompt="Please help with: {input}")
+                
+            # Mixed style (system + legacy prompt):
+            agent = lab.quick_agent("test", 
+                prompt="Please help with: {input}",
+                system_prompt="You are a helpful healthcare assistant.")
+        """
+        # Handle different prompt configurations
+        if system_prompt and user_prompt:
+            # New style: separate system and user prompts
+            final_system_prompt = system_prompt
+            final_prompt_template = user_prompt
+        elif system_prompt and prompt:
+            # Mixed style: system prompt + legacy prompt template
+            final_system_prompt = system_prompt
+            final_prompt_template = prompt
+        elif prompt:
+            # Legacy style: single prompt template
+            final_system_prompt = None
+            final_prompt_template = prompt
+        elif user_prompt:
+            # User prompt only (no system prompt)
+            final_system_prompt = None
+            final_prompt_template = user_prompt
+        else:
+            # Default template if nothing provided
+            final_system_prompt = "You are a helpful AI assistant."
+            final_prompt_template = "Please help with: {input}"
+            print(f"⚠️ No prompts provided for '{name}', using defaults")
+        
+        # Ensure the prompt template has {input} placeholder
+        if "{input}" not in final_prompt_template:
+            print(f"⚠️ Warning: prompt template for '{name}' doesn't contain {{input}} placeholder")
+        
         # Set default model parameters if none provided
         if not model_params:
             model_params = {
@@ -523,8 +598,17 @@ class PrototypingLab:
                 "temperature": 0.7,
                 "max_tokens": 1000
             }
-        agent = AgentPrototype(name, prompt, model_params)
+            
+        agent = AgentPrototype(name, final_prompt_template, model_params, final_system_prompt)
         self.agents[name] = agent
+        
+        # Show configuration info
+        if final_system_prompt:
+            print(f"   📋 System prompt: {final_system_prompt[:50]}...")
+            print(f"   💬 User template: {final_prompt_template[:50]}...")
+        else:
+            print(f"   💬 Prompt template: {final_prompt_template[:50]}...")
+            
         return agent
     
     def quick_workflow(self, name: str) -> WorkflowPrototype:
@@ -636,17 +720,37 @@ class ConfigPanel:
         self.lab = lab
         self.active_configs = {}
     
-    def edit_agent_prompt(self, agent_name: str, new_prompt: str):
-        """Hot-swap an agent's prompt template."""
+    def edit_agent_prompt(self, agent_name: str, new_prompt: str = None, new_system_prompt: str = None):
+        """Hot-swap an agent's prompt template and/or system prompt."""
         if agent_name in self.lab.agents:
             agent = self.lab.agents[agent_name]
-            old_prompt = agent.prompt_template
-            agent.update_config(prompt_template=new_prompt)
-            print(f"🔄 Updated prompt for {agent_name}")
-            print(f"   Old: {old_prompt[:50]}...")
-            print(f"   New: {new_prompt[:50]}...")
+            
+            if new_prompt:
+                old_prompt = agent.prompt_template
+                agent.update_config(prompt_template=new_prompt)
+                print(f"🔄 Updated user prompt for {agent_name}")
+                print(f"   Old: {old_prompt[:50]}...")
+                print(f"   New: {new_prompt[:50]}...")
+            
+            if new_system_prompt:
+                old_system = agent.system_prompt or "None"
+                agent.update_config(system_prompt=new_system_prompt)
+                print(f"🔄 Updated system prompt for {agent_name}")
+                print(f"   Old: {str(old_system)[:50]}...")
+                print(f"   New: {new_system_prompt[:50]}...")
+                
+            if not new_prompt and not new_system_prompt:
+                print(f"⚠️ No prompt updates provided for {agent_name}")
         else:
             print(f"❌ Agent '{agent_name}' not found in lab")
+
+    def edit_system_prompt(self, agent_name: str, new_system_prompt: str):
+        """Hot-swap an agent's system prompt specifically."""
+        self.edit_agent_prompt(agent_name, new_system_prompt=new_system_prompt)
+
+    def edit_user_prompt(self, agent_name: str, new_user_prompt: str):
+        """Hot-swap an agent's user prompt template specifically."""
+        self.edit_agent_prompt(agent_name, new_prompt=new_user_prompt)
     
     def edit_model_params(self, agent_name: str, **params):
         """Hot-swap model parameters."""
@@ -670,6 +774,13 @@ class ConfigPanel:
             agent = self.lab.agents[agent_name]
             print(f"\n⚙️ Current Config for {agent_name}:")
             print(f"   Model: {agent.model_params}")
+            
+            if agent.system_prompt:
+                print(f"   System prompt: {agent.system_prompt[:100]}...")
+                print(f"   User template: {agent.prompt_template[:100]}...")
+            else:
+                print(f"   Prompt template: {agent.prompt_template[:100]}...")
+            
             print(f"   Memory items: {len(agent.memory)}")
             print(f"   Tools: {len(agent.tools)}")
             print(f"   Conversation history: {len(agent.conversation_history)}")
@@ -678,8 +789,26 @@ class ConfigPanel:
 
 
 # Factory functions for convenience
-def create_agent(name: str, prompt_template: str, **model_params) -> AgentPrototype:
-    """Quick agent creation helper."""
+def create_agent(name: str, prompt_template: str = None, system_prompt: str = None, user_prompt: str = None, **model_params) -> AgentPrototype:
+    """Quick agent creation helper with system prompt support."""
+    
+    # Handle different prompt configurations
+    if system_prompt and user_prompt:
+        final_system_prompt = system_prompt
+        final_prompt_template = user_prompt
+    elif system_prompt and prompt_template:
+        final_system_prompt = system_prompt
+        final_prompt_template = prompt_template
+    elif prompt_template:
+        final_system_prompt = None
+        final_prompt_template = prompt_template
+    elif user_prompt:
+        final_system_prompt = None
+        final_prompt_template = user_prompt
+    else:
+        final_system_prompt = "You are a helpful AI assistant."
+        final_prompt_template = "Please help with: {input}"
+    
     # Set default model parameters if none provided
     if not model_params:
         model_params = {
@@ -687,7 +816,7 @@ def create_agent(name: str, prompt_template: str, **model_params) -> AgentProtot
             "temperature": 0.7,
             "max_tokens": 1000
         }
-    return AgentPrototype(name, prompt_template, model_params)
+    return AgentPrototype(name, final_prompt_template, model_params, final_system_prompt)
 
 
 def create_workflow(name: str) -> WorkflowPrototype:
