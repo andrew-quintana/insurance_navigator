@@ -279,23 +279,23 @@ def extract_text_from_pdf(file_data: bytes) -> str:
             # Fallback to PyPDF2 for basic extraction
             try:
                 import PyPDF2
-                pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_data))
-                logger.info(f"📄 PDF loaded, found {len(pdf_reader.pages)} pages")
-                
-                text = ""
-                for i, page in enumerate(pdf_reader.pages):
-                    logger.info(f"📄 Processing page {i+1}/{len(pdf_reader.pages)}...")
-                    page_text = page.extract_text()
-                    text += page_text + "\n"
-                    logger.info(f"📄 Page {i+1} processed: {len(page_text)} characters extracted")
-                
-                result = text.strip()
+        pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_data))
+        logger.info(f"📄 PDF loaded, found {len(pdf_reader.pages)} pages")
+        
+        text = ""
+        for i, page in enumerate(pdf_reader.pages):
+            logger.info(f"📄 Processing page {i+1}/{len(pdf_reader.pages)}...")
+            page_text = page.extract_text()
+            text += page_text + "\n"
+            logger.info(f"📄 Page {i+1} processed: {len(page_text)} characters extracted")
+        
+        result = text.strip()
                 logger.info(f"✅ Fallback PDF text extraction complete: {len(result)} total characters")
-                return result
+        return result
             except ImportError:
                 logger.error("❌ PyPDF2 not available and LlamaParse not configured")
                 return "PDF processing temporarily unavailable. Please configure LlamaParse for advanced document processing."
-                
+        
     except Exception as e:
         logger.error(f"❌ Error extracting PDF text: {e}")
         import traceback
@@ -657,7 +657,7 @@ async def chat(
             # Search user's documents using hybrid approach (policy facts + vector search)
             search_results = await document_service.hybrid_search(
                 query=request.message,
-                user_id=current_user.id,
+                    user_id=current_user.id,
                 limit=5
             )
             
@@ -696,7 +696,7 @@ async def chat(
                     response_text += "For claims assistance:\n"
                 elif any(word in message_lower for word in ['doctor', 'provider', 'network']):
                     response_text += "About providers and networks:\n"
-                else:
+            else:
                     response_text += "Here's relevant information from your policies:\n"
                 
                 # Add policy summaries
@@ -716,7 +716,7 @@ async def chat(
                 response_text = ("I don't have specific policy information to answer your question. "
                                "You may want to upload your insurance documents first, or I can help "
                                "you with general insurance navigation questions.")
-                sources = []
+            sources = []
                 metadata = {"search_performed": True, "results_count": 0}
             
         except Exception as search_error:
@@ -733,7 +733,7 @@ async def chat(
             role="assistant",
             content=response_text,
             metadata={"sources": sources, **metadata}
-        )
+            )
         
         return ChatResponse(
             text=response_text,
@@ -1103,11 +1103,12 @@ async def chat_with_image(message: str = Form(...), image: UploadFile = File(Non
         agent = PatientNavigatorAgent()
         response, metadata = agent.process(enhanced_message, current_user.id, "default")
         return {"text": response, "conversation_id": "default", "metadata": metadata}
-    except Exception as e:
+            except Exception as e:
         return {"text": f"Error: {str(e)}", "conversation_id": "default"}
 
 @app.post("/upload-document-backend", response_model=Dict[str, Any])
 async def upload_document_backend(
+    request: Request,
     file: UploadFile = File(...),
     current_user: UserResponse = Depends(get_current_user)
 ):
@@ -1117,6 +1118,15 @@ async def upload_document_backend(
     """
     try:
         logger.info(f"🚀 Backend document upload started for user {current_user.id}: {file.filename}")
+        
+        # Get the user's JWT token from the request
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            raise HTTPException(
+                status_code=401,
+                detail="Missing authentication token"
+            )
+        user_token = auth_header.split(" ")[1]
         
         # Validate file size (50MB limit)
         MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
@@ -1185,7 +1195,8 @@ async def upload_document_backend(
                 
                 async with aiohttp.ClientSession(timeout=timeout) as session:
                     headers = {
-                        'Authorization': f'Bearer {supabase_service_key}',
+                        'Authorization': f'Bearer {user_token}',  # Use user's JWT token, not service key
+                        'apikey': supabase_service_key,  # Add service key as apikey header
                         'X-User-ID': current_user.id
                     }
                     
@@ -1238,7 +1249,7 @@ async def upload_document_backend(
                 "file_size": len(file_data),
                 "processing_time": "Background processing queued"
             }
-            
+        
     except HTTPException:
         raise
     except Exception as e:
