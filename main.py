@@ -279,19 +279,19 @@ def extract_text_from_pdf(file_data: bytes) -> str:
             # Fallback to PyPDF2 for basic extraction
             try:
                 import PyPDF2
-        pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_data))
-        logger.info(f"📄 PDF loaded, found {len(pdf_reader.pages)} pages")
-        
-        text = ""
-        for i, page in enumerate(pdf_reader.pages):
-            logger.info(f"📄 Processing page {i+1}/{len(pdf_reader.pages)}...")
-            page_text = page.extract_text()
-            text += page_text + "\n"
-            logger.info(f"📄 Page {i+1} processed: {len(page_text)} characters extracted")
-        
-        result = text.strip()
+                pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_data))
+                logger.info(f"📄 PDF loaded, found {len(pdf_reader.pages)} pages")
+                
+                text = ""
+                for i, page in enumerate(pdf_reader.pages):
+                    logger.info(f"📄 Processing page {i+1}/{len(pdf_reader.pages)}...")
+                    page_text = page.extract_text()
+                    text += page_text + "\n"
+                    logger.info(f"📄 Page {i+1} processed: {len(page_text)} characters extracted")
+                
+                result = text.strip()
                 logger.info(f"✅ Fallback PDF text extraction complete: {len(result)} total characters")
-        return result
+                return result
             except ImportError:
                 logger.error("❌ PyPDF2 not available and LlamaParse not configured")
                 return "PDF processing temporarily unavailable. Please configure LlamaParse for advanced document processing."
@@ -1098,12 +1098,16 @@ async def chat_with_image(message: str = Form(...), image: UploadFile = File(Non
             image_text = f" [IMAGE: {result.get('extracted_text', 'processing...').strip()[:200]}]"
         
         enhanced_message = message + image_text
-        from agents.patient_navigator.patient_navigator import PatientNavigatorAgent
-        agent = PatientNavigatorAgent()
-        response, metadata = agent.process(enhanced_message, current_user.id, "default")
-        return {"text": response, "conversation_id": "default", "metadata": metadata}
-            except Exception as e:
-        return {"text": f"Error: {str(e)}", "conversation_id": "default"}
+        try:
+            from agents.patient_navigator.patient_navigator import PatientNavigatorAgent
+            agent = PatientNavigatorAgent()
+            response, metadata = agent.process(enhanced_message, current_user.id, "default")
+            return {"text": response, "conversation_id": "default", "metadata": metadata}
+        except Exception as e:
+            return {"text": f"Error: {str(e)}", "conversation_id": "default"}
+    except Exception as e:
+        logger.error(f"❌ Image chat error: {e}")
+        return {"text": f"Error processing request: {str(e)}", "conversation_id": "default"}
 
 @app.post("/upload-document-backend", response_model=Dict[str, Any])
 async def upload_document_backend(
@@ -1145,7 +1149,7 @@ async def upload_document_backend(
         # Get database connection
         pool = await get_db_pool()
         if not pool:
-        raise HTTPException(
+            raise HTTPException(
                 status_code=503,
                 detail="Database temporarily unavailable"
             )
