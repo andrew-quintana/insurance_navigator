@@ -279,19 +279,19 @@ def extract_text_from_pdf(file_data: bytes) -> str:
             # Fallback to PyPDF2 for basic extraction
             try:
                 import PyPDF2
-        pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_data))
-        logger.info(f"📄 PDF loaded, found {len(pdf_reader.pages)} pages")
-        
-        text = ""
-        for i, page in enumerate(pdf_reader.pages):
-            logger.info(f"📄 Processing page {i+1}/{len(pdf_reader.pages)}...")
-            page_text = page.extract_text()
-            text += page_text + "\n"
-            logger.info(f"📄 Page {i+1} processed: {len(page_text)} characters extracted")
-        
-        result = text.strip()
+                pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_data))
+                logger.info(f"📄 PDF loaded, found {len(pdf_reader.pages)} pages")
+                
+                text = ""
+                for i, page in enumerate(pdf_reader.pages):
+                    logger.info(f"📄 Processing page {i+1}/{len(pdf_reader.pages)}...")
+                    page_text = page.extract_text()
+                    text += page_text + "\n"
+                    logger.info(f"📄 Page {i+1} processed: {len(page_text)} characters extracted")
+                
+                result = text.strip()
                 logger.info(f"✅ Fallback PDF text extraction complete: {len(result)} total characters")
-        return result
+                return result
             except ImportError:
                 logger.error("❌ PyPDF2 not available and LlamaParse not configured")
                 return "PDF processing temporarily unavailable. Please configure LlamaParse for advanced document processing."
@@ -697,7 +697,7 @@ async def chat(
                 elif any(word in message_lower for word in ['doctor', 'provider', 'network']):
                     response_text += "About providers and networks:\n"
             else:
-                    response_text += "Here's relevant information from your policies:\n"
+                response_text += "Here's relevant information from your policies:\n"
                 
                 # Add policy summaries
                 for source in sources[:3]:  # Top 3 results
@@ -711,13 +711,12 @@ async def chat(
                     "results_count": len(search_results),
                     "hybrid_search": True
                 }
-            else:
-                # No relevant documents found
-                response_text = ("I don't have specific policy information to answer your question. "
-                               "You may want to upload your insurance documents first, or I can help "
-                               "you with general insurance navigation questions.")
+            # No relevant documents found
+            response_text = ("I don't have specific policy information to answer your question. "
+                           "You may want to upload your insurance documents first, or I can help "
+                           "you with general insurance navigation questions.")
             sources = []
-                metadata = {"search_performed": True, "results_count": 0}
+            metadata = {"search_performed": True, "results_count": 0}
             
         except Exception as search_error:
             logger.error(f"Search error: {search_error}")
@@ -1103,7 +1102,7 @@ async def chat_with_image(message: str = Form(...), image: UploadFile = File(Non
         agent = PatientNavigatorAgent()
         response, metadata = agent.process(enhanced_message, current_user.id, "default")
         return {"text": response, "conversation_id": "default", "metadata": metadata}
-            except Exception as e:
+    except Exception as e:
         return {"text": f"Error: {str(e)}", "conversation_id": "default"}
 
 @app.post("/upload-document-backend", response_model=Dict[str, Any])
@@ -1146,7 +1145,7 @@ async def upload_document_backend(
         # Get database connection
         pool = await get_db_pool()
         if not pool:
-        raise HTTPException(
+                raise HTTPException(
                 status_code=503,
                 detail="Database temporarily unavailable"
             )
