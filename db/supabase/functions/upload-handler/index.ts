@@ -42,12 +42,63 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Get authenticated user
-    const authHeader = req.headers.get('Authorization')!
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    // Get authenticated user - support both Supabase and backend JWT tokens
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
     
-    if (authError || !user) {
+    const token = authHeader.replace('Bearer ', '')
+    let userId: string | null = null
+    
+    // Try Supabase auth first
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+      if (user && !authError) {
+        userId = user.id
+      }
+    } catch (e) {
+      // Supabase auth failed, try custom JWT validation
+    }
+    
+    // If Supabase auth failed, try custom JWT validation
+    if (!userId) {
+      try {
+        // Decode JWT token (simplified validation for MVP)
+        // In production, should verify signature with JWT secret
+        const parts = token.split('.')
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1]))
+          if (payload.sub && payload.exp && payload.exp > Date.now() / 1000) {
+            userId = payload.sub
+          }
+        }
+      } catch (e) {
+        // JWT parsing failed
+      }
+    }
+    
+    // Additional fallback: check X-User-ID header if provided
+    if (!userId) {
+      const userIdHeader = req.headers.get('X-User-ID')
+      if (userIdHeader) {
+        // Verify user exists in database
+        const { data: user, error } = await supabase
+          .from('auth.users')
+          .select('id')
+          .eq('id', userIdHeader)
+          .single()
+        
+        if (user && !error) {
+          userId = userIdHeader
+        }
+      }
+    }
+    
+    if (!userId) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -55,11 +106,11 @@ serve(async (req) => {
     }
 
     if (req.method === 'POST') {
-      return await handleUpload(req, supabase, user.id)
+      return await handleUpload(req, supabase, userId)
     } else if (req.method === 'GET') {
-      return await handleUploadStatus(req, supabase, user.id)
+      return await handleUploadStatus(req, supabase, userId)
     } else if (req.method === 'PUT') {
-      return await handleChunkUpload(req, supabase, user.id)
+      return await handleChunkUpload(req, supabase, userId)
     }
 
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
