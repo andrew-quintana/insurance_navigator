@@ -1904,68 +1904,6 @@ async def upload_unified_document(
             detail=f"Unified document upload failed: {str(e)}"
         )
 
-@app.post("/chat", response_model=ChatResponse)
-async def chat(
-    request: ChatRequest,
-    current_user: UserResponse = Depends(get_current_user)
-):
-    """Simplified chat endpoint with hybrid search and policy facts lookup."""
-    try:
-        logger.info(f"💬 Chat request from user {current_user.id}: {request.message}")
-        
-        # Ultra-simplified response for testing
-        conversation_id = request.conversation_id or str(uuid.uuid4())
-        
-        # Generate a helpful response
-        message_lower = request.message.lower()
-        
-        if any(word in message_lower for word in ['hello', 'hi', 'hey']):
-            response_text = ("Hello! I'm your insurance navigator assistant. I can help you understand "
-                           "your insurance benefits, find providers, explain coverage, and assist with claims. "
-                           "What can I help you with today?")
-        elif any(word in message_lower for word in ['coverage', 'covered', 'benefit']):
-            response_text = ("I'd be happy to help explain your insurance coverage! To provide specific information, "
-                           "I would need to review your policy documents. In general, most health insurance plans cover:\n\n"
-                           "• Preventive care (usually 100%)\n"
-                           "• Doctor visits (with copay or coinsurance)\n"
-                           "• Prescription drugs (with copay tiers)\n"
-                           "• Hospital stays (subject to deductible)\n\n"
-                           "Would you like me to help you understand any specific aspect of your coverage?")
-        elif any(word in message_lower for word in ['claim', 'claims']):
-            response_text = ("For filing claims, here's what you typically need to do:\n\n"
-                           "1. Keep all receipts and medical records\n"
-                           "2. Check if your provider files claims directly\n"
-                           "3. Submit claims within your plan's time limit\n"
-                           "4. Follow up on claim status\n\n"
-                           "Would you like help with a specific claim issue?")
-        else:
-            response_text = ("I'm here to help with your insurance questions! I can assist with:\n\n"
-                           "• Understanding your benefits and coverage\n"
-                           "• Finding in-network providers\n"
-                           "• Explaining costs like deductibles and copays\n"
-                           "• Filing and tracking claims\n"
-                           "• Appeals and customer service issues\n\n"
-                           "What specific insurance topic would you like help with?")
-        
-        return ChatResponse(
-            text=response_text,
-            conversation_id=conversation_id,
-            sources=[],
-            metadata={
-                "mode": "ultra_simplified",
-                "user_id": current_user.id,
-                "message_length": len(request.message)
-            },
-            workflow_type="simplified_navigator"
-        )
-        
-    except Exception as e:
-        logger.error(f"Chat endpoint error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred processing your message"
-        )
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
