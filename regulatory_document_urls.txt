@@ -1,0 +1,111 @@
+# Medicare and Medicaid Regulatory Documents for RAG Processing
+# Sources: CMS.gov Official Manuals and Guidance
+
+## Medicare Internet-Only Manuals (IOMs)
+# Publication 100-01: Medicare General Information, Eligibility and Entitlement Manual
+https://www.cms.gov/regulations-and-guidance/guidance/manuals/internet-only-manuals-ioms-items/cms050111
+
+# Publication 100-02: Medicare Benefit Policy Manual
+https://www.cms.gov/regulations-and-guidance/guidance/manuals/internet-only-manuals-ioms-items/cms012673
+
+# Publication 100-03: Medicare National Coverage Determinations (NCD) Manual
+https://www.cms.gov/regulations-and-guidance/guidance/manuals/internet-only-manuals-ioms-items/cms014961
+
+# Publication 100-04: Medicare Claims Processing Manual
+https://www.cms.gov/regulations-and-guidance/guidance/manuals/internet-only-manuals-ioms-items/cms018912
+
+# Publication 100-05: Medicare Secondary Payer Manual
+https://www.cms.gov/regulations-and-guidance/guidance/manuals/internet-only-manuals-ioms-items/cms019017
+
+# Publication 100-06: Medicare Financial Management Manual
+https://www.cms.gov/regulations-and-guidance/guidance/manuals/internet-only-manuals-ioms-items/cms019018
+
+# Publication 100-07: State Operations Manual
+https://www.cms.gov/regulations-and-guidance/guidance/manuals/internet-only-manuals-ioms-items/cms1201984
+
+# Publication 100-08: Medicare Program Integrity Manual
+https://www.cms.gov/regulations-and-guidance/guidance/manuals/internet-only-manuals-ioms-items/cms019033
+
+# Publication 100-09: Medicare Contractor Beneficiary and Provider Communications Manual
+https://www.cms.gov/regulations-and-guidance/guidance/manuals/internet-only-manuals-ioms-items/cms019034
+
+# Publication 100-10: Quality Improvement Organization Manual
+https://www.cms.gov/regulations-and-guidance/guidance/manuals/internet-only-manuals-ioms-items/cms019035
+
+# Publication 100-11: Programs of All-Inclusive Care for the Elderly (PACE) Manual
+https://www.cms.gov/regulations-and-guidance/guidance/manuals/internet-only-manuals-ioms-items/cms019036
+
+# Publication 100-15: Medicaid Program Integrity Manual
+https://www.cms.gov/regulations-and-guidance/guidance/manuals/internet-only-manuals-ioms-items/cms1238527
+
+# Publication 100-16: Medicare Managed Care Manual
+https://www.cms.gov/regulations-and-guidance/guidance/manuals/internet-only-manuals-ioms-items/cms019326
+
+# Publication 100-18: Medicare Prescription Drug Benefit Manual
+https://www.cms.gov/regulations-and-guidance/guidance/manuals/internet-only-manuals-ioms-items/cms050485
+
+# Publication 100-19: Demonstrations
+https://www.cms.gov/regulations-and-guidance/guidance/manuals/internet-only-manuals-ioms-items/cms020107
+
+# Publication 100-22: Medicare Quality Reporting Incentive Programs Manual
+https://www.cms.gov/regulations-and-guidance/guidance/manuals/internet-only-manuals-ioms-items/cms1236946
+
+## State Medicaid Manual (Paper-Based)
+# Main State Medicaid Manual
+https://www.cms.gov/regulations-and-guidance/guidance/manuals/paper-based-manuals-items/cms021927
+
+## Provider Reimbursement Manuals
+# Provider Reimbursement Manual - Part 1
+https://www.cms.gov/regulations-and-guidance/guidance/manuals/paper-based-manuals-items/cms021929
+
+# Provider Reimbursement Manual - Part 2
+https://www.cms.gov/regulations-and-guidance/guidance/manuals/paper-based-manuals-items/cms021935
+
+## Key Medicare Policy Documents
+# Medicare Coverage Database
+https://www.cms.gov/medicare-coverage-database/
+
+# Medicare Learning Network (MLN) Matters
+https://www.cms.gov/medicare/regulations-guidance/medicare-learning-network-mln/matters
+
+# National Coverage Determinations
+https://www.cms.gov/medicare-coverage-database/indexes/ncd-alphabetical-index.aspx
+
+## Medicaid Policy Guidance
+# State Medicaid Director Letters
+https://www.medicaid.gov/federal-policy-guidance/downloads/
+
+# Medicaid and CHIP Program Information
+https://www.medicaid.gov/medicaid/index.html
+
+## Marketplace and Private Insurance Regulations
+# Affordable Care Act Regulations
+https://www.cms.gov/marketplace/resources/regulations-guidance
+
+# Rate Review Program Guidance
+https://www.cms.gov/marketplace/resources/regulations-guidance
+
+## Additional Key Regulatory Resources
+# CMS Rulemaking
+https://www.cms.gov/medicare/regulations-guidance/medicare-fee-service-payment-regulations
+
+# Quarterly Provider Updates
+https://www.cms.gov/medicare/regulations-guidance/quarterly-provider-updates
+
+# CMS Innovation Center Models
+https://innovation.cms.gov/innovation-models
+
+# Medicare Advantage and Part D Resources
+https://www.cms.gov/medicare/health-drug-plans
+
+# Quality Reporting Programs
+https://www.cms.gov/medicare/quality
+
+# HIPAA Administrative Simplification
+https://www.cms.gov/regulations-guidance/administrative-simplification/hipaa-aca
+
+# Emergency Preparedness Requirements
+https://www.cms.gov/medicare/provider-enrollment-and-certification/certificationandcomplianc/emergency-prep
+
+# Conditions of Participation
+https://www.cms.gov/medicare/provider-enrollment-and-certification/certificationandcomplianc/hospitals 

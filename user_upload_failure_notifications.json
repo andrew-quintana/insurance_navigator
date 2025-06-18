@@ -1,0 +1,104 @@
+{
+  "generated_at": "2025-06-17T20:29:08.035879",
+  "total_users": 1,
+  "total_failed_uploads": 11,
+  "notifications": [
+    {
+      "user_id": "27b30e9d-0d06-4325-910f-20fe9d686f14",
+      "failed_documents": [
+        {
+          "user_id": "27b30e9d-0d06-4325-910f-20fe9d686f14",
+          "document_id": "0ed8a1f0-c63b-4eae-8958-b101a602a2a7",
+          "filename": "mvp_test_document.txt",
+          "failure_reason": "processing_timeout",
+          "notification_type": "reupload_required",
+          "created_at": "2025-06-17T20:29:06.934544"
+        },
+        {
+          "user_id": "27b30e9d-0d06-4325-910f-20fe9d686f14",
+          "document_id": "ad8d4533-d0a1-4801-a21e-576ad9d05031",
+          "filename": "test_serverless_processing.txt",
+          "failure_reason": "processing_timeout",
+          "notification_type": "reupload_required",
+          "created_at": "2025-06-17T20:29:07.037747"
+        },
+        {
+          "user_id": "27b30e9d-0d06-4325-910f-20fe9d686f14",
+          "document_id": "68fcbd15-453f-4bf4-80ae-feab526701bf",
+          "filename": "complete_test.txt",
+          "failure_reason": "processing_timeout",
+          "notification_type": "reupload_required",
+          "created_at": "2025-06-17T20:29:07.156588"
+        },
+        {
+          "user_id": "27b30e9d-0d06-4325-910f-20fe9d686f14",
+          "document_id": "936c9baf-006c-47d1-a4b5-a04ca619aa76",
+          "filename": "debug_test.txt",
+          "failure_reason": "processing_timeout",
+          "notification_type": "reupload_required",
+          "created_at": "2025-06-17T20:29:07.323753"
+        },
+        {
+          "user_id": "27b30e9d-0d06-4325-910f-20fe9d686f14",
+          "document_id": "e12cfe76-fa59-461a-b336-cbab2e88a893",
+          "filename": "mvp_test_document.txt",
+          "failure_reason": "processing_timeout",
+          "notification_type": "reupload_required",
+          "created_at": "2025-06-17T20:29:07.410291"
+        },
+        {
+          "user_id": "27b30e9d-0d06-4325-910f-20fe9d686f14",
+          "document_id": "b8331516-8cba-4a6d-9acc-f71b84261883",
+          "filename": "mvp_test_document.txt",
+          "failure_reason": "processing_timeout",
+          "notification_type": "reupload_required",
+          "created_at": "2025-06-17T20:29:07.511850"
+        },
+        {
+          "user_id": "27b30e9d-0d06-4325-910f-20fe9d686f14",
+          "document_id": "cd05bfc9-60bf-4e3c-acd0-48a47c36fafb",
+          "filename": "simple_direct_test.txt",
+          "failure_reason": "processing_timeout",
+          "notification_type": "reupload_required",
+          "created_at": "2025-06-17T20:29:07.627919"
+        },
+        {
+          "user_id": "27b30e9d-0d06-4325-910f-20fe9d686f14",
+          "document_id": "cff379b8-6cd2-4d2a-ac04-2b7e7b170305",
+          "filename": "test_serverless_processing.txt",
+          "failure_reason": "processing_timeout",
+          "notification_type": "reupload_required",
+          "created_at": "2025-06-17T20:29:07.728449"
+        },
+        {
+          "user_id": "27b30e9d-0d06-4325-910f-20fe9d686f14",
+          "document_id": "5104d78b-e440-4afe-812a-67cf66877847",
+          "filename": "mvp_test_document.txt",
+          "failure_reason": "processing_timeout",
+          "notification_type": "reupload_required",
+          "created_at": "2025-06-17T20:29:07.830969"
+        },
+        {
+          "user_id": "27b30e9d-0d06-4325-910f-20fe9d686f14",
+          "document_id": "739bf3d7-d0ce-476e-b7b0-b27e72cf1403",
+          "filename": "mvp_final_test.txt",
+          "failure_reason": "processing_timeout",
+          "notification_type": "reupload_required",
+          "created_at": "2025-06-17T20:29:07.933279"
+        },
+        {
+          "user_id": "27b30e9d-0d06-4325-910f-20fe9d686f14",
+          "document_id": "42a0bebc-7a80-48ff-8670-38b45ad9b178",
+          "filename": "mvp_final_test.txt",
+          "failure_reason": "processing_timeout",
+          "notification_type": "reupload_required",
+          "created_at": "2025-06-17T20:29:08.035837"
+        }
+      ],
+      "email_subject": "Action Required: Re-upload Your Documents",
+      "email_body": "Hi there,\n\nWe encountered an issue processing your 11 documents: mvp_test_document.txt, test_serverless_processing.txt, complete_test.txt, debug_test.txt, mvp_test_document.txt, mvp_test_document.txt, simple_direct_test.txt, test_serverless_processing.txt, mvp_test_document.txt, mvp_final_test.txt, mvp_final_test.txt that you recently uploaded to Insurance Navigator.\n\nWhat happened:\nThe document processing timed out, which usually indicates:\n\u2022 File corruption or unusual formatting\n\u2022 Very large file size\n\u2022 Temporary system issues\n\nWhat you need to do:\n1. Please try uploading your 11 documents: mvp_test_document.txt, test_serverless_processing.txt, complete_test.txt, debug_test.txt, mvp_test_document.txt, mvp_test_document.txt, simple_direct_test.txt, test_serverless_processing.txt, mvp_test_document.txt, mvp_final_test.txt, mvp_final_test.txt again\n2. Ensure your files are not corrupted and are in a supported format\n3. If you continue having issues, please contact our support team\n\nWe apologize for the inconvenience and appreciate your patience.\n\nBest regards,\nThe Insurance Navigator Team\n\n---\nNeed help? Contact support or visit our help center.",
+      "priority": "high",
+      "status": "pending"
+    }
+  ]
+}

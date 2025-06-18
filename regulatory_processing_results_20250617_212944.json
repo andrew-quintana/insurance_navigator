@@ -1,0 +1,234 @@
+{
+  "processed": [
+    {
+      "status": "processed",
+      "url": "https://www.cms.gov/medicare-coverage-database/view/article.aspx?articleid=55426",
+      "document_id": "cc737d2c-4cdc-4703-b62a-1a5a2f0f291c",
+      "vector_count": 1,
+      "vector_ids": [
+        "63"
+      ],
+      "title": "article.aspx",
+      "content_length": 113,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": "article.aspx",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "status": "processed",
+      "url": "https://www.cms.gov/marketplace/resources/regulations-guidance",
+      "document_id": "5148f561-9e63-4a4b-99e6-91693b1bb83e",
+      "vector_count": 11,
+      "vector_ids": [
+        "64",
+        "65",
+        "66",
+        "67",
+        "68",
+        "69",
+        "70",
+        "71",
+        "72",
+        "73",
+        "74"
+      ],
+      "title": "Regulations and Guidance | CMS",
+      "content_length": 10000,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": "regulatory_doc_www_cms_gov_20250617_212917.pdf",
+      "content_type": "text/html; charset=UTF-8"
+    },
+    {
+      "status": "processed",
+      "url": "https://www.cms.gov/Regulations-and-Guidance/Guidance/Transmittals",
+      "document_id": "f7bf842d-e51e-4b99-9b4f-b7b76b374331",
+      "vector_count": 3,
+      "vector_ids": [
+        "77",
+        "78",
+        "79"
+      ],
+      "title": "Transmittals | CMS",
+      "content_length": 2352,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": "regulatory_doc_www_cms_gov_20250617_212932.pdf",
+      "content_type": "text/html; charset=UTF-8"
+    },
+    {
+      "status": "processed",
+      "url": "https://www.ecfr.gov/current/title-42",
+      "document_id": "68951771-6009-4009-aedd-f1fce8269cc4",
+      "vector_count": 1,
+      "vector_ids": [
+        "76"
+      ],
+      "title": "Federal Register :: Request Access",
+      "content_length": 857,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": "regulatory_doc_www_ecfr_gov_20250617_212932.pdf",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "status": "processed",
+      "url": "https://www.cms.gov/medicaremedicare-fee-service-paymentdmeposfeescheddmepos-fee-schedule",
+      "document_id": "f29c6c17-c0a6-42e5-8d5f-f69acedec73a",
+      "vector_count": 1,
+      "vector_ids": [
+        "75"
+      ],
+      "title": "medicaremedicare-fee-service-paymentdmeposfeescheddmepos-fee-schedule",
+      "content_length": 119,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": null,
+      "content_type": null
+    },
+    {
+      "status": "processed",
+      "url": "https://www.cms.gov/Regulations-and-Guidance/Guidance/Manuals/Downloads/bp102c01.pdf",
+      "document_id": "74489af0-2c58-4daf-b1ae-676ee4bfbb15",
+      "vector_count": 1,
+      "vector_ids": [
+        "80"
+      ],
+      "title": "bp102c01.pdf",
+      "content_length": 107,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": "regulatory/2025/06/70c7ad89-be89-45c4-827c-204c060f0c0e_bp102c01.pdf",
+      "file_size": 695686,
+      "filename": "bp102c01.pdf",
+      "content_type": "application/pdf"
+    },
+    {
+      "status": "processed",
+      "url": "https://www.cms.gov/Regulations-and-Guidance/Guidance/Manuals/Downloads/clm104c01.pdf",
+      "document_id": "24467cd7-2654-4328-a110-4003d577f3b7",
+      "vector_count": 1,
+      "vector_ids": [
+        "81"
+      ],
+      "title": "clm104c01_0.pdf",
+      "content_length": 108,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": "regulatory/2025/06/84bf02a3-0a9a-4996-b8ec-9771b2202142_clm104c01_0.pdf",
+      "file_size": 1934366,
+      "filename": "clm104c01_0.pdf",
+      "content_type": "application/pdf"
+    },
+    {
+      "status": "processed",
+      "url": "https://www.cms.gov/medicare/physician-fee-schedule/search",
+      "document_id": "d64989e8-0d48-4114-89a2-97323d22d905",
+      "vector_count": 1,
+      "vector_ids": [
+        "82"
+      ],
+      "title": "Search the Physician Fee Schedule | CMS",
+      "content_length": 280,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": "regulatory_doc_www_cms_gov_20250617_212941.pdf",
+      "content_type": "text/html; charset=UTF-8"
+    },
+    {
+      "status": "processed",
+      "url": "https://www.cms.gov/Regulations-and-Guidance/Guidance/Manuals/Downloads/pim83c01.pdf",
+      "document_id": "c57d205d-7fd2-4b71-8df7-e3d2459d7b7f",
+      "vector_count": 1,
+      "vector_ids": [
+        "83"
+      ],
+      "title": "pim83c01.pdf",
+      "content_length": 107,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": "regulatory/2025/06/afcd3494-2f1d-4df4-b164-5453d9194bbe_pim83c01.pdf",
+      "file_size": 312473,
+      "filename": "pim83c01.pdf",
+      "content_type": "application/pdf"
+    },
+    {
+      "status": "processed",
+      "url": "https://www.cms.gov/medicare-coverage-database/reports/sad-exclusion-list-report.aspx",
+      "document_id": "7a112be2-1e55-40f3-ba47-2decf4dd7cd3",
+      "vector_count": 1,
+      "vector_ids": [
+        "84"
+      ],
+      "title": "sad-exclusion-list-report.aspx",
+      "content_length": 118,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": "sad-exclusion-list-report.aspx",
+      "content_type": "text/html; charset=utf-8"
+    }
+  ],
+  "failed": [
+    {
+      "url": "https://www.cms.gov/medicare-coverage-database/",
+      "error": "Failed to process https://www.cms.gov/medicare-coverage-database/: Content too short (< 100 chars): 80 chars"
+    },
+    {
+      "url": "https://www.cms.gov/medicare-coverage-database/",
+      "error": "Failed to process https://www.cms.gov/medicare-coverage-database/: Content too short (< 100 chars): 80 chars"
+    },
+    {
+      "url": "https://www.ssa.gov/OP_Home/ssact/title18/1800.htm",
+      "error": "Failed to process https://www.ssa.gov/OP_Home/ssact/title18/1800.htm: Content too short (< 100 chars): 80 chars"
+    }
+  ],
+  "duplicates": [],
+  "total_vectors_created": 22,
+  "processing_time": 27.130605,
+  "start_time": "2025-06-17 21:29:17.739502"
+}

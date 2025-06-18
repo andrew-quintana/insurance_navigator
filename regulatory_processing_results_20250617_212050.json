@@ -1,0 +1,112 @@
+{
+  "processed": [],
+  "failed": [
+    {
+      "url": "https://www.medicare.gov/Pubs/pdf/10050-Medicare-and-You.pdf",
+      "error": "Failed to process https://www.medicare.gov/Pubs/pdf/10050-Medicare-and-You.pdf: Content too short (< 100 chars): 83 chars"
+    },
+    {
+      "url": "https://www.cms.gov/medicare-coverage-database/",
+      "error": "Failed to process https://www.cms.gov/medicare-coverage-database/: Content too short (< 100 chars): 80 chars"
+    },
+    {
+      "url": "https://www.hhs.gov/hipaa/for-professionals/security/index.html",
+      "error": "Failed to process https://www.hhs.gov/hipaa/for-professionals/security/index.html: Content too short (< 100 chars): 93 chars"
+    }
+  ],
+  "duplicates": [
+    {
+      "status": "duplicate",
+      "url": "https://www.medicaid.gov/medicaid/eligibility/index.html",
+      "existing_document_id": "2e8e331c-9ad7-4853-88bf-000cfe94061f",
+      "message": "Document already exists with same content hash"
+    },
+    {
+      "status": "duplicate",
+      "url": "https://www.medicare.gov/drug-coverage-part-d",
+      "existing_document_id": "ee4373bb-2605-4d2b-81f5-0cb53506a4aa",
+      "message": "Document already exists with same content hash"
+    },
+    {
+      "status": "duplicate",
+      "url": "https://www.medicare.gov/sign-up-change-plans/types-of-medicare-health-plans/medicare-advantage-plans",
+      "existing_document_id": "4f07576b-93b2-4143-bdba-958d0f668be2",
+      "message": "Document already exists with same content hash"
+    },
+    {
+      "status": "duplicate",
+      "url": "https://www.medicaid.gov/chip/index.html",
+      "existing_document_id": "098400fa-b368-4ade-be5f-6f657106ec16",
+      "message": "Document already exists with same content hash"
+    },
+    {
+      "status": "duplicate",
+      "url": "https://www.cms.gov/Outreach-and-Education/Medicare-Learning-Network-MLN/MLNProducts",
+      "existing_document_id": "1d1d03e1-baa6-44f4-ae0b-c2a240071426",
+      "message": "Document already exists with same content hash"
+    },
+    {
+      "status": "duplicate",
+      "url": "https://www.hhs.gov/healthcare/about-the-aca/patients-bill-of-rights/index.html",
+      "existing_document_id": "b67f8141-70d5-4a11-aa3c-593ea1261d02",
+      "message": "Document already exists with same content hash"
+    },
+    {
+      "status": "duplicate",
+      "url": "https://www.medicare.gov/your-medicare-costs/help-paying-costs/medicare-rights",
+      "existing_document_id": "54d5c63d-6dc1-4810-a6a4-5cf8bb2504b2",
+      "message": "Document already exists with same content hash"
+    },
+    {
+      "status": "duplicate",
+      "url": "https://www.hhs.gov/hipaa/for-professionals/privacy/laws-regulations/index.html",
+      "existing_document_id": "e6f1fe2f-58ba-4779-aaf2-0cbd7097a47b",
+      "message": "Document already exists with same content hash"
+    },
+    {
+      "status": "duplicate",
+      "url": "https://www.hhs.gov/hipaa/for-professionals/privacy/guidance/access/index.html",
+      "existing_document_id": "a0167e51-f1aa-4beb-a59b-3d93e3c09089",
+      "message": "Document already exists with same content hash"
+    },
+    {
+      "status": "duplicate",
+      "url": "https://www.hhs.gov/healthcare/about-the-aca/benefit-categories/index.html",
+      "existing_document_id": "76e9721f-897f-4e39-9f0b-e86d2490b915",
+      "message": "Document already exists with same content hash"
+    },
+    {
+      "status": "duplicate",
+      "url": "https://www.healthcare.gov/glossary/",
+      "existing_document_id": "186b7d13-c010-4770-a210-26496abd8fdf",
+      "message": "Document already exists with same content hash"
+    },
+    {
+      "status": "duplicate",
+      "url": "https://www.cms.gov/CCIIO/Programs-and-Initiatives/Other-Insurance-Protections/mhpaea_factsheet",
+      "existing_document_id": "f5431a1a-5b51-4fff-9606-aaea370ddfe1",
+      "message": "Document already exists with same content hash"
+    },
+    {
+      "status": "duplicate",
+      "url": "https://www.cms.gov/nosurprises",
+      "existing_document_id": "bfd17f68-d5cf-4837-a784-a9df5ea4e398",
+      "message": "Document already exists with same content hash"
+    },
+    {
+      "status": "duplicate",
+      "url": "https://www.medicare.gov/your-medicare-costs/help-paying-costs/save-on-drug-costs/medicare-extra-help-paying-prescription-drug-costs",
+      "existing_document_id": "391b8970-6a14-4120-874f-81a89bff1579",
+      "message": "Document already exists with same content hash"
+    },
+    {
+      "status": "duplicate",
+      "url": "https://www.medicare.gov/claims-appeals/",
+      "existing_document_id": "bcfd187d-24a9-49b5-be2c-d848beb0a2a0",
+      "message": "Document already exists with same content hash"
+    }
+  ],
+  "total_vectors_created": 0,
+  "processing_time": 15.281585,
+  "start_time": "2025-06-17 21:20:35.438589"
+}

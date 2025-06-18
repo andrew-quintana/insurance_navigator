@@ -1,0 +1,27 @@
+{
+  "processed": [
+    {
+      "status": "processed",
+      "url": "https://www.medicare.gov/basics/",
+      "document_id": "c046440c-f930-414e-b0c3-6337dceee736",
+      "vector_count": 0,
+      "vector_ids": [],
+      "title": "Basics | Medicare",
+      "content_length": 810,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": "regulatory_doc_www_medicare_gov_20250617_211616.pdf",
+      "content_type": "text/html; charset=UTF-8"
+    }
+  ],
+  "failed": [],
+  "duplicates": [],
+  "total_vectors_created": 0,
+  "processing_time": 0.607422,
+  "start_time": "2025-06-17 21:16:15.768139"
+}

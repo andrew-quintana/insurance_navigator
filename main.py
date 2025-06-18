@@ -1105,7 +1105,7 @@ async def chat_with_image(message: str = Form(...), image: UploadFile = File(Non
             agent = PatientNavigatorAgent()
             response, metadata = agent.process(enhanced_message, current_user.id, "default")
             return {"text": response, "conversation_id": "default", "metadata": metadata}
-            except Exception as e:
+        except Exception as e:
             return {"text": f"Error: {str(e)}", "conversation_id": "default"}
     except Exception as e:
         logger.error(f"❌ Image chat error: {e}")
@@ -1151,7 +1151,7 @@ async def upload_document_backend(
         # Get database connection
         pool = await get_db_pool()
         if not pool:
-        raise HTTPException(
+            raise HTTPException(
                 status_code=503,
                 detail="Database temporarily unavailable"
             )

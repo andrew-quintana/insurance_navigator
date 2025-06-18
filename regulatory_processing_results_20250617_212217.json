@@ -1,0 +1,45 @@
+{
+  "processed": [
+    {
+      "status": "processed",
+      "url": "https://www.medicare.gov/basics/",
+      "document_id": "f80a5d43-0498-424e-b144-596126bb3aa8",
+      "vector_count": 0,
+      "vector_ids": [],
+      "title": "Basics | Medicare",
+      "content_length": 810,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": "regulatory_doc_www_medicare_gov_20250617_212214.pdf",
+      "content_type": "text/html; charset=UTF-8"
+    },
+    {
+      "status": "processed",
+      "url": "https://www.healthcare.gov/young-adults/",
+      "document_id": "fc51df4e-2555-4cd5-a16b-ad0867b57cc1",
+      "vector_count": 0,
+      "vector_ids": [],
+      "title": "Health Care Coverage Options for Young Adults | HealthCare.gov",
+      "content_length": 1998,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": "regulatory_doc_www_healthcare_gov_20250617_212214.pdf",
+      "content_type": "text/html"
+    }
+  ],
+  "failed": [],
+  "duplicates": [],
+  "total_vectors_created": 0,
+  "processing_time": 2.980498,
+  "start_time": "2025-06-17 21:22:14.308788"
+}

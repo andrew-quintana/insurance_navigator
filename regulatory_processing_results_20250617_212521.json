@@ -1,0 +1,358 @@
+{
+  "processed": [
+    {
+      "status": "processed",
+      "url": "https://www.medicaid.gov/medicaid/eligibility/index.html",
+      "document_id": "40851d33-a5af-464d-a2de-7f6920499061",
+      "vector_count": 11,
+      "vector_ids": [
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20",
+        "21",
+        "22",
+        "23"
+      ],
+      "title": "Eligibility Policy | Medicaid",
+      "content_length": 10000,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": "index.html",
+      "content_type": "text/html; charset=UTF-8"
+    },
+    {
+      "status": "processed",
+      "url": "https://www.medicare.gov/drug-coverage-part-d",
+      "document_id": "9ec014d9-0fb9-4703-ba7f-28f0ceb7d36d",
+      "vector_count": 1,
+      "vector_ids": [
+        "12"
+      ],
+      "title": "What's Medicare Drug Coverage (Part D)? | Medicare",
+      "content_length": 909,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": "regulatory_doc_www_medicare_gov_20250617_212433.pdf",
+      "content_type": "text/html; charset=UTF-8"
+    },
+    {
+      "status": "processed",
+      "url": "https://www.medicare.gov/sign-up-change-plans/types-of-medicare-health-plans/medicare-advantage-plans",
+      "document_id": "46da44a2-2988-4e71-badc-b3c3dbda5188",
+      "vector_count": 1,
+      "vector_ids": [
+        "25"
+      ],
+      "title": "medicare-advantage-plans",
+      "content_length": 131,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": null,
+      "content_type": null
+    },
+    {
+      "status": "processed",
+      "url": "https://www.medicaid.gov/chip/index.html",
+      "document_id": "91fbe2c9-cedc-4240-909f-7816165773a5",
+      "vector_count": 1,
+      "vector_ids": [
+        "24"
+      ],
+      "title": "Children's Health Insurance Program (CHIP) | Medicaid",
+      "content_length": 960,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": "index.html",
+      "content_type": "text/html; charset=UTF-8"
+    },
+    {
+      "status": "processed",
+      "url": "https://www.cms.gov/Outreach-and-Education/Medicare-Learning-Network-MLN/MLNProducts",
+      "document_id": "1aca8261-3911-4b8c-97a5-b36951aa50a6",
+      "vector_count": 10,
+      "vector_ids": [
+        "26",
+        "27",
+        "28",
+        "29",
+        "30",
+        "31",
+        "32",
+        "33",
+        "34",
+        "35"
+      ],
+      "title": "MLN Publications & Multimedia | CMS",
+      "content_length": 10000,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": "regulatory_doc_www_cms_gov_20250617_212446.pdf",
+      "content_type": "text/html; charset=UTF-8"
+    },
+    {
+      "status": "processed",
+      "url": "https://www.hhs.gov/healthcare/about-the-aca/patients-bill-of-rights/index.html",
+      "document_id": "0bab0c79-91e0-4023-becc-c7dae98cd0f1",
+      "vector_count": 1,
+      "vector_ids": [
+        "36"
+      ],
+      "title": "index.html",
+      "content_length": 109,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": null,
+      "content_type": null
+    },
+    {
+      "status": "processed",
+      "url": "https://www.medicare.gov/your-medicare-costs/help-paying-costs/medicare-rights",
+      "document_id": "c66901d7-5b4a-42cc-b75c-5eee2358b9dd",
+      "vector_count": 1,
+      "vector_ids": [
+        "37"
+      ],
+      "title": "medicare-rights",
+      "content_length": 108,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": null,
+      "content_type": null
+    },
+    {
+      "status": "processed",
+      "url": "https://www.hhs.gov/hipaa/for-professionals/privacy/laws-regulations/index.html",
+      "document_id": "752ee80e-cd4d-4280-88cc-858f6a832366",
+      "vector_count": 1,
+      "vector_ids": [
+        "39"
+      ],
+      "title": "index.html",
+      "content_length": 109,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": null,
+      "content_type": null
+    },
+    {
+      "status": "processed",
+      "url": "https://www.hhs.gov/hipaa/for-professionals/privacy/guidance/access/index.html",
+      "document_id": "3ee7d118-d780-42a6-9f18-507ed8fa569a",
+      "vector_count": 1,
+      "vector_ids": [
+        "38"
+      ],
+      "title": "index.html",
+      "content_length": 108,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": null,
+      "content_type": null
+    },
+    {
+      "status": "processed",
+      "url": "https://www.hhs.gov/healthcare/about-the-aca/benefit-categories/index.html",
+      "document_id": "d50a73d6-ff08-43db-9ef9-683aaccdba42",
+      "vector_count": 1,
+      "vector_ids": [
+        "40"
+      ],
+      "title": "index.html",
+      "content_length": 104,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": null,
+      "content_type": null
+    },
+    {
+      "status": "processed",
+      "url": "https://www.healthcare.gov/glossary/",
+      "document_id": "227d8676-a3f3-4da1-923f-68e3c4c71572",
+      "vector_count": 6,
+      "vector_ids": [
+        "41",
+        "42",
+        "43",
+        "44",
+        "45",
+        "46"
+      ],
+      "title": "Glossary | HealthCare.gov",
+      "content_length": 5953,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": "regulatory_doc_www_healthcare_gov_20250617_212505.pdf",
+      "content_type": "text/html"
+    },
+    {
+      "status": "processed",
+      "url": "https://www.cms.gov/CCIIO/Programs-and-Initiatives/Other-Insurance-Protections/mhpaea_factsheet",
+      "document_id": "6e481092-a83d-4d59-81b8-61367ae079e8",
+      "vector_count": 12,
+      "vector_ids": [
+        "47",
+        "48",
+        "49",
+        "50",
+        "51",
+        "52",
+        "53",
+        "54",
+        "55",
+        "56",
+        "57",
+        "58"
+      ],
+      "title": "The Mental Health Parity and Addiction Equity Act (MHPAEA) | CMS",
+      "content_length": 10000,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": "regulatory_doc_www_cms_gov_20250617_212505.pdf",
+      "content_type": "text/html; charset=UTF-8"
+    },
+    {
+      "status": "processed",
+      "url": "https://www.cms.gov/nosurprises",
+      "document_id": "cd1667ec-7f81-4c2a-97ca-a83708e74b37",
+      "vector_count": 2,
+      "vector_ids": [
+        "61",
+        "62"
+      ],
+      "title": "No Surprise Billing | CMS",
+      "content_length": 2104,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": "regulatory_doc_www_cms_gov_20250617_212519.pdf",
+      "content_type": "text/html; charset=UTF-8"
+    },
+    {
+      "status": "processed",
+      "url": "https://www.medicare.gov/your-medicare-costs/help-paying-costs/save-on-drug-costs/medicare-extra-help-paying-prescription-drug-costs",
+      "document_id": "b262a3a1-5818-4bf6-860d-e81d6b4c3911",
+      "vector_count": 1,
+      "vector_ids": [
+        "59"
+      ],
+      "title": "medicare-extra-help-paying-prescription-drug-costs",
+      "content_length": 162,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": null,
+      "content_type": null
+    },
+    {
+      "status": "processed",
+      "url": "https://www.medicare.gov/claims-appeals/",
+      "document_id": "cf5668f3-c0a2-4138-af06-afa0d4934448",
+      "vector_count": 1,
+      "vector_ids": [
+        "60"
+      ],
+      "title": "Claims, Appeals, and Complaints | Medicare",
+      "content_length": 900,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": "regulatory_doc_www_medicare_gov_20250617_212519.pdf",
+      "content_type": "text/html; charset=UTF-8"
+    }
+  ],
+  "failed": [
+    {
+      "url": "https://www.medicare.gov/Pubs/pdf/10050-Medicare-and-You.pdf",
+      "error": "Failed to process https://www.medicare.gov/Pubs/pdf/10050-Medicare-and-You.pdf: Content too short (< 100 chars): 83 chars"
+    },
+    {
+      "url": "https://www.cms.gov/medicare-coverage-database/",
+      "error": "Failed to process https://www.cms.gov/medicare-coverage-database/: Content too short (< 100 chars): 80 chars"
+    },
+    {
+      "url": "https://www.hhs.gov/hipaa/for-professionals/security/index.html",
+      "error": "Failed to process https://www.hhs.gov/hipaa/for-professionals/security/index.html: Content too short (< 100 chars): 93 chars"
+    }
+  ],
+  "duplicates": [],
+  "total_vectors_created": 51,
+  "processing_time": 48.712639,
+  "start_time": "2025-06-17 21:24:32.496637"
+}
