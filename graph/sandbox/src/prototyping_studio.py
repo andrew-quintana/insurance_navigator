@@ -392,7 +392,14 @@ class WorkflowPrototype:
         self.entry_point = None
         self.compiled_workflow = None
         self.execution_log = []
+        self.use_model = True  # Default to using real models
         
+    def set_model_usage(self, use_model: bool):
+        """Set whether to use real models or mock responses."""
+        self.use_model = use_model
+        mode = "real Claude models" if use_model else "mock responses"
+        print(f"🔧 Workflow '{self.name}' set to use {mode}")
+    
     def add_agent(self, agent: AgentPrototype, node_name: str) -> str:
         """Add an agent as a node using LangGraph patterns."""
         
@@ -525,14 +532,18 @@ class WorkflowPrototype:
                 "workflow": self.name
             }
     
-    def execute(self, input_data: Any) -> Dict[str, Any]:
-        """Synchronous wrapper for async execution."""
+    def execute(self, input_data: Any, use_model: bool = None) -> Dict[str, Any]:
+        """Synchronous wrapper for async execution with model control."""
         if not self.compiled_workflow:
             return {
                 "success": False,
                 "error": "Workflow not compiled",
                 "workflow": self.name
             }
+        
+        # Use workflow default if not specified
+        if use_model is None:
+            use_model = self.use_model
         
         try:
             # Clear previous execution log
@@ -556,7 +567,7 @@ class WorkflowPrototype:
                     
                     try:
                         # Execute agent
-                        result = agent.process(current_data, use_model=False)  # Mock mode for demo
+                        result = agent.process(current_data, use_model=use_model)
                         
                         # Log execution with detailed intermediate information
                         self.execution_log.append({
@@ -726,6 +737,9 @@ class PrototypingLab:
         self.existing_tester = existing_tester
         self.agents = {}
         self.workflows = {}
+        self.execution_history = []
+        self.created_agents = []  # Track agent names
+        self.created_workflows = []  # Track workflow names
         self.test_results = []
     
     def quick_agent(self, name: str, prompt: str = None, system_prompt: str = None, user_prompt: str = None, **model_params) -> AgentPrototype:
@@ -789,6 +803,10 @@ class PrototypingLab:
         agent = AgentPrototype(name, final_prompt_template, model_params, final_system_prompt)
         self.agents[name] = agent
         
+        # Track created agent
+        if name not in self.created_agents:
+            self.created_agents.append(name)
+        
         # Show configuration info
         if final_system_prompt:
             print(f"   📋 System prompt: {final_system_prompt[:50]}...")
@@ -798,9 +816,16 @@ class PrototypingLab:
             
         return agent
     
-    def quick_workflow(self, name: str) -> WorkflowPrototype:
-        """Quickly create and register a workflow."""
+    def quick_workflow(self, name: str, use_model: bool = True) -> WorkflowPrototype:
+        """Create a new workflow with LangGraph patterns."""
         workflow = WorkflowPrototype(name)
+        workflow.set_model_usage(use_model)
+        
+        # Track created workflow
+        if name not in self.created_workflows:
+            self.created_workflows.append(name)
+        
+        # Store workflow
         self.workflows[name] = workflow
         return workflow
     
@@ -955,6 +980,62 @@ class ConfigPanel:
         else:
             print(f"❌ Agent '{agent_name}' not found in lab")
     
+    def update_agent_config(self, agent_name: str, **config_updates):
+        """Update multiple configuration aspects of an agent at once."""
+        if agent_name not in self.lab.agents:
+            print(f"❌ Agent '{agent_name}' not found in lab")
+            return
+        
+        agent = self.lab.agents[agent_name]
+        
+        # Track what was updated
+        updated_items = []
+        
+        # Handle system prompt update
+        if 'system_prompt' in config_updates:
+            old_system = agent.system_prompt or "None"
+            agent.update_config(system_prompt=config_updates['system_prompt'])
+            updated_items.append("system prompt")
+            print(f"🔄 Updated system prompt for {agent_name}")
+            print(f"   Old: {str(old_system)[:50]}...")
+            print(f"   New: {config_updates['system_prompt'][:50]}...")
+        
+        # Handle user prompt template update
+        if 'prompt' in config_updates or 'user_prompt' in config_updates:
+            prompt_key = 'prompt' if 'prompt' in config_updates else 'user_prompt'
+            old_prompt = agent.prompt_template
+            agent.update_config(prompt_template=config_updates[prompt_key])
+            updated_items.append("user prompt")
+            print(f"🔄 Updated user prompt for {agent_name}")
+            print(f"   Old: {old_prompt[:50]}...")
+            print(f"   New: {config_updates[prompt_key][:50]}...")
+        
+        # Handle model parameters update
+        model_params = {}
+        for key in ['temperature', 'max_tokens', 'model_name', 'model']:
+            if key in config_updates:
+                model_params[key] = config_updates[key]
+        
+        if model_params:
+            old_params = agent.model_params.copy()
+            agent.update_config(model_params=model_params)
+            updated_items.append("model parameters")
+            print(f"🔄 Updated model parameters for {agent_name}")
+            for key, value in model_params.items():
+                old_val = old_params.get(key, 'Not set')
+                print(f"   {key}: {old_val} → {value}")
+        
+        # Handle memory update
+        if 'memory' in config_updates:
+            agent.update_config(memory=config_updates['memory'])
+            updated_items.append("memory")
+            print(f"🔄 Updated memory for {agent_name}")
+        
+        if updated_items:
+            print(f"✅ Updated {', '.join(updated_items)} for {agent_name}")
+        else:
+            print(f"⚠️ No valid configuration updates provided for {agent_name}")
+    
     def show_current_config(self, agent_name: str):
         """Show current configuration for an agent."""
         if agent_name in self.lab.agents:
@@ -1042,4 +1123,288 @@ def initialize_prototyping_studio():
         'existing_tester': existing_tester,
         'lab': lab,
         'config_panel': config_panel
+    }
+
+
+# ==========================================
+# JSON MODEL TESTING UTILITIES
+# ==========================================
+
+from pydantic import BaseModel, Field
+from typing import List, Dict, Any, Optional, Type
+import json
+
+
+class JSONModelUtilities:
+    """Utility class for JSON model testing and validation."""
+    
+    @staticmethod
+    def create_json_aware_agent(lab: PrototypingLab, name: str, input_schema: str, output_schema: str, 
+                               specialist_type: str, temperature: float = 0.3, max_tokens: int = 400) -> AgentPrototype:
+        """Create an agent that expects and produces specific JSON schemas."""
+        system_prompt = f"""You are a {specialist_type} that processes {input_schema} JSON and produces {output_schema} JSON.
+Always respond with valid JSON matching the {output_schema} schema.
+Focus on providing structured, accurate data in the expected format."""
+        
+        return lab.quick_agent(
+            name,
+            system_prompt=system_prompt,
+            prompt=f"Process this structured input: {{input}}",
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
+    
+    @staticmethod
+    def validate_json_output(output: str, expected_model: Type[BaseModel], agent_name: str = "Agent") -> Dict[str, Any]:
+        """Validate JSON output against expected Pydantic model."""
+        validation_result = {
+            "is_valid": False,
+            "model_name": expected_model.__name__,
+            "agent_name": agent_name,
+            "field_count": 0,
+            "parsed_data": None,
+            "error": None
+        }
+        
+        try:
+            if isinstance(output, str) and output.strip().startswith('{'):
+                parsed_output = json.loads(output)
+                
+                # Validate against expected model schema
+                validated_model = expected_model.model_validate(parsed_output)
+                
+                validation_result.update({
+                    "is_valid": True,
+                    "field_count": len(parsed_output.keys()),
+                    "parsed_data": parsed_output
+                })
+                
+            else:
+                validation_result["error"] = "Non-JSON output detected"
+                
+        except json.JSONDecodeError as e:
+            validation_result["error"] = f"Invalid JSON format: {e}"
+        except Exception as e:
+            validation_result["error"] = f"Schema validation failed: {e}"
+        
+        return validation_result
+    
+    @staticmethod
+    def display_validation_result(validation_result: Dict[str, Any]):
+        """Display JSON validation results in a formatted way."""
+        agent_name = validation_result["agent_name"]
+        model_name = validation_result["model_name"]
+        
+        if validation_result["is_valid"]:
+            field_count = validation_result["field_count"]
+            print(f"   ✅ Valid {model_name} JSON with {field_count} fields")
+        else:
+            error = validation_result["error"]
+            print(f"   ❌ {agent_name}: {error}")
+    
+    @staticmethod
+    def compare_json_structures(original_output: str, updated_output: str, comparison_name: str = "Comparison"):
+        """Compare two JSON outputs and display differences."""
+        try:
+            if (original_output.strip().startswith('{') and updated_output.strip().startswith('{')):
+                orig_json = json.loads(original_output)
+                upd_json = json.loads(updated_output)
+                
+                print(f"\n📊 {comparison_name}:")
+                print(f"   Original fields: {len(orig_json.keys())}")
+                print(f"   Updated fields: {len(upd_json.keys())}")
+                
+                # Look for common array fields to compare lengths
+                for key in orig_json.keys():
+                    if key in upd_json and isinstance(orig_json[key], list) and isinstance(upd_json[key], list):
+                        orig_len = len(orig_json[key])
+                        upd_len = len(upd_json[key])
+                        if orig_len != upd_len:
+                            print(f"   {key}: {orig_len} → {upd_len} items")
+                
+        except Exception as e:
+            print(f"⚠️  Could not compare JSON structures: {e}")
+
+
+# Insurance-specific JSON Models for Testing
+
+class PatientIntakeInput(BaseModel):
+    """Structured input model for patient intake processing."""
+    patient_id: Optional[str] = Field(default=None, description="Patient identifier")
+    age: Optional[int] = Field(default=None, description="Patient age")
+    medical_conditions: List[str] = Field(default_factory=list, description="Known medical conditions")
+    insurance_status: str = Field(description="Current insurance status")
+    medications: List[str] = Field(default_factory=list, description="Current medications")
+    monthly_costs: Dict[str, float] = Field(default_factory=dict, description="Monthly healthcare costs")
+    questions: List[str] = Field(default_factory=list, description="Patient questions/concerns")
+    raw_text: str = Field(description="Original patient inquiry text")
+
+
+class IntakeAnalysis(BaseModel):
+    """Output model for intake processing step."""
+    patient_summary: str = Field(description="Summary of patient situation")
+    key_conditions: List[str] = Field(default_factory=list, description="Identified medical conditions")
+    insurance_gaps: List[str] = Field(default_factory=list, description="Identified insurance gaps")
+    priority_needs: List[str] = Field(default_factory=list, description="Priority healthcare needs")
+    cost_concerns: Dict[str, float] = Field(default_factory=dict, description="Cost analysis")
+    urgency_level: str = Field(description="Urgency assessment (low/medium/high)")
+
+
+class CoverageAnalysis(BaseModel):
+    """Output model for coverage analysis step."""
+    recommended_plans: List[Dict[str, Any]] = Field(default_factory=list, description="Recommended insurance plans")
+    coverage_options: Dict[str, Any] = Field(default_factory=dict, description="Coverage details")
+    cost_comparison: Dict[str, float] = Field(default_factory=dict, description="Cost comparisons")
+    provider_networks: List[str] = Field(default_factory=list, description="Provider network information")
+    benefits_summary: List[str] = Field(default_factory=list, description="Key benefits")
+
+
+class PatientGuidance(BaseModel):
+    """Final output model for patient guidance."""
+    action_plan: List[Dict[str, str]] = Field(default_factory=list, description="Step-by-step action plan")
+    immediate_steps: List[str] = Field(default_factory=list, description="Immediate actions needed")
+    resources: List[Dict[str, str]] = Field(default_factory=list, description="Helpful resources")
+    timeline: Dict[str, str] = Field(default_factory=dict, description="Expected timelines")
+    cost_savings_tips: List[str] = Field(default_factory=list, description="Ways to reduce costs")
+    follow_up_actions: List[str] = Field(default_factory=list, description="Follow-up recommendations")
+
+
+class MedicalCaseInput(BaseModel):
+    """Input model for medical case analysis."""
+    patient_condition: str = Field(description="Primary medical condition")
+    treatment_needed: str = Field(description="Required medical treatment")
+    insurance_issue: str = Field(description="Insurance-related problem")
+    cost_concern: float = Field(description="Monthly cost if not covered")
+    timeline_pressure: str = Field(description="Time constraints")
+    prior_attempts: List[str] = Field(default_factory=list, description="Previous attempts at resolution")
+    documentation_status: str = Field(description="Current documentation status")
+
+
+class ClinicalAnalysis(BaseModel):
+    """Output model for clinical specialist analysis."""
+    medical_necessity_score: float = Field(description="Medical necessity rating (0-10)")
+    clinical_justification: List[str] = Field(default_factory=list, description="Clinical justifications")
+    diagnostic_codes: List[str] = Field(default_factory=list, description="Relevant diagnostic codes")
+    treatment_alternatives: List[Dict[str, str]] = Field(default_factory=list, description="Alternative treatments")
+    evidence_requirements: List[str] = Field(default_factory=list, description="Required evidence")
+    specialist_recommendations: List[str] = Field(default_factory=list, description="Specialist recommendations")
+
+
+class AdvocacyAnalysis(BaseModel):
+    """Output model for patient advocacy analysis."""
+    patient_rights: List[str] = Field(default_factory=list, description="Relevant patient rights")
+    advocacy_strategies: List[Dict[str, str]] = Field(default_factory=list, description="Advocacy approaches")
+    appeal_options: List[str] = Field(default_factory=list, description="Available appeal options")
+    support_resources: List[Dict[str, str]] = Field(default_factory=list, description="Support resources")
+    urgency_actions: List[str] = Field(default_factory=list, description="Immediate actions needed")
+    emotional_support_notes: str = Field(description="Supportive messaging for patient")
+
+
+class RegulatoryAnalysis(BaseModel):
+    """Output model for regulatory specialist analysis."""
+    applicable_regulations: List[Dict[str, str]] = Field(default_factory=list, description="Relevant regulations")
+    compliance_requirements: List[str] = Field(default_factory=list, description="Compliance obligations")
+    legal_remedies: List[str] = Field(default_factory=list, description="Available legal remedies")
+    regulatory_citations: List[str] = Field(default_factory=list, description="Specific regulatory citations")
+    enforcement_mechanisms: List[str] = Field(default_factory=list, description="Enforcement options")
+    regulatory_timeline: Dict[str, str] = Field(default_factory=dict, description="Regulatory timelines")
+
+
+# Test Case Factories
+
+class JSONTestCaseFactory:
+    """Factory for creating test cases with structured JSON data."""
+    
+    @staticmethod
+    def create_workflow_test_case() -> Dict[str, Any]:
+        """Create a complete workflow test case with structured input."""
+        patient_scenario = """I'm a 45-year-old with diabetes who recently lost my job and COBRA insurance. 
+I need to find new coverage for my insulin and regular endocrinologist visits. 
+I'm looking at marketplace plans but don't understand deductibles, copays, and if my current doctor is covered. 
+My monthly insulin costs about $300 without insurance. What should I do?"""
+        
+        structured_input = PatientIntakeInput(
+            age=45,
+            medical_conditions=["diabetes"],
+            insurance_status="recently_lost_cobra",
+            medications=["insulin"],
+            monthly_costs={"insulin": 300.0},
+            questions=[
+                "How do deductibles work?",
+                "What are copays?", 
+                "Is my current doctor covered?",
+                "How to find affordable coverage?"
+            ],
+            raw_text=patient_scenario
+        )
+        
+        return {
+            "input": structured_input,
+            "models": [IntakeAnalysis, CoverageAnalysis, PatientGuidance],
+            "scenario_name": "Diabetes Insurance Loss"
+        }
+    
+    @staticmethod
+    def create_agent_comparison_test_case() -> Dict[str, Any]:
+        """Create a test case for comparing different agent types."""
+        lupus_case = MedicalCaseInput(
+            patient_condition="Systemic Lupus Erythematosus (SLE)",
+            treatment_needed="Benlysta (belimumab) infusions",
+            insurance_issue="Prior authorization denied multiple times",
+            cost_concern=5000.0,
+            timeline_pressure="Appeal deadline in 5 days",
+            prior_attempts=[
+                "Initial prior auth request", 
+                "First appeal with rheumatologist letter",
+                "Second appeal with additional documentation"
+            ],
+            documentation_status="Extensive medical records and specialist recommendations available"
+        )
+        
+        simple_case = MedicalCaseInput(
+            patient_condition="Diabetes",
+            treatment_needed="Insulin coverage",
+            insurance_issue="High copay",
+            cost_concern=200.0,
+            timeline_pressure="None",
+            prior_attempts=[],
+            documentation_status="Basic documentation"
+        )
+        
+        return {
+            "complex_case": lupus_case,
+            "simple_case": simple_case,
+            "models": {
+                "clinical": ClinicalAnalysis,
+                "advocacy": AdvocacyAnalysis,
+                "regulatory": RegulatoryAnalysis
+            },
+            "agent_configs": [
+                ("clinical", 0.1, 500),
+                ("advocacy", 0.7, 450),
+                ("regulatory", 0.05, 600)
+            ]
+        }
+
+
+# Convenience function to get all utilities
+def get_json_utilities():
+    """Get all JSON testing utilities in one convenient object."""
+    return {
+        'utils': JSONModelUtilities,
+        'models': {
+            'workflow': {
+                'input': PatientIntakeInput,
+                'steps': [IntakeAnalysis, CoverageAnalysis, PatientGuidance]
+            },
+            'agents': {
+                'input': MedicalCaseInput,
+                'outputs': {
+                    'clinical': ClinicalAnalysis,
+                    'advocacy': AdvocacyAnalysis,
+                    'regulatory': RegulatoryAnalysis
+                }
+            }
+        },
+        'factory': JSONTestCaseFactory
     } 

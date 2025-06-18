@@ -549,8 +549,8 @@ class StorageService:
         """
         try:
             # First, upload to storage (existing functionality)
-            upload_result = await self.upload_policy_document(
-                policy_id, file_data, filename, user_id, document_type, metadata
+            upload_result = await self.upload_document(
+                file_data, filename, user_id, document_type, metadata
             )
             
             # Parse document content
@@ -637,9 +637,9 @@ class StorageService:
             # Generate a document ID for this upload
             document_id = str(uuid.uuid4())
             
-            # Upload using existing method (with document_id as policy_id for now)
-            upload_result = await self.upload_policy_document(
-                document_id, file_data, filename, user_id, document_type, metadata
+            # Upload using existing method
+            upload_result = await self.upload_document(
+                file_data, filename, user_id, document_type, metadata
             )
             
             # Parse document content
