@@ -333,19 +333,19 @@ def extract_text_from_pdf(file_data: bytes) -> str:
             # Fallback to PyPDF2 for basic extraction
             try:
                 import PyPDF2
-        pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_data))
-        logger.info(f"📄 PDF loaded, found {len(pdf_reader.pages)} pages")
-        
-        text = ""
-        for i, page in enumerate(pdf_reader.pages):
-            logger.info(f"📄 Processing page {i+1}/{len(pdf_reader.pages)}...")
-            page_text = page.extract_text()
-            text += page_text + "\n"
-            logger.info(f"📄 Page {i+1} processed: {len(page_text)} characters extracted")
-        
-        result = text.strip()
+                pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_data))
+                logger.info(f"📄 PDF loaded, found {len(pdf_reader.pages)} pages")
+                
+                text = ""
+                for i, page in enumerate(pdf_reader.pages):
+                    logger.info(f"📄 Processing page {i+1}/{len(pdf_reader.pages)}...")
+                    page_text = page.extract_text()
+                    text += page_text + "\n"
+                    logger.info(f"📄 Page {i+1} processed: {len(page_text)} characters extracted")
+                
+                result = text.strip()
                 logger.info(f"✅ Fallback PDF text extraction complete: {len(result)} total characters")
-        return result
+                return result
             except ImportError:
                 logger.error("❌ PyPDF2 not available and LlamaParse not configured")
                 return "PDF processing temporarily unavailable. Please configure LlamaParse for advanced document processing."
