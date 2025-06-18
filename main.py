@@ -677,11 +677,12 @@ async def chat(
         # Perform hybrid search for relevant policy information
         try:
             # Search user's documents using hybrid approach (policy facts + vector search)
-            search_results = await document_service.hybrid_search(
+            search_results_data = await document_service.search_hybrid(
+                user_id=current_user.id,
                 query=request.message,
-                    user_id=current_user.id,
                 limit=5
             )
+            search_results = search_results_data.get('results', [])
             
             # Generate response with context
             if search_results:
@@ -691,20 +692,21 @@ async def chat(
                 
                 for result in search_results:
                     # Extract policy facts for quick access
-                    policy_facts = result.get('policy_basics', {})
+                    policy_facts = result.get('policy_facts', {})
                     if policy_facts:
                         context_text += f"Policy Info: {policy_facts}\n"
                     
-                    # Add vector content
-                    content = result.get('content', '')[:200]  # First 200 chars
-                    if content:
-                        context_text += f"Content: {content}...\n"
+                    # Add document info
+                    filename = result.get('filename', 'Document')
+                    search_type = result.get('search_type', 'general')
+                    context_text += f"Document: {filename} ({search_type})\n"
                     
                     sources.append({
                         "document_id": result.get('document_id'),
-                        "policy_type": policy_facts.get('policy_type', 'Unknown'),
+                        "filename": filename,
+                        "policy_type": policy_facts.get('plan_type', 'Unknown'),
                         "relevance_score": result.get('relevance_score', 0),
-                        "content_preview": content
+                        "search_type": search_type
                     })
                 
                 # Generate contextual response
@@ -724,13 +726,15 @@ async def chat(
                 # Add policy summaries
                 for source in sources[:3]:  # Top 3 results
                     policy_type = source.get('policy_type', 'Policy')
-                    response_text += f"\n• {policy_type}: {source.get('content_preview', 'Information available')}"
+                    filename = source.get('filename', 'Document')
+                    response_text += f"\n• {policy_type} ({filename}): Information available"
                 
                 response_text += "\n\nWould you like me to provide more specific details about any of these policies?"
                 
                 metadata = {
                     "search_performed": True,
                     "results_count": len(search_results),
+                    "total_results": search_results_data.get('total_results', 0),
                     "hybrid_search": True
                 }
             else:

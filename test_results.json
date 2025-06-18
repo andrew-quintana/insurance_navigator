@@ -2,11 +2,11 @@
   {
     "test": "Health Check",
     "status": "PASS",
-    "timestamp": "2025-06-18T16:46:09.854441",
+    "timestamp": "2025-06-18T16:48:46.906783",
     "details": "Status: healthy, Services: {'database': 'connected', 'agents': 'healthy', 'authentication': 'healthy'}",
     "response_data": {
       "status": "healthy",
-      "timestamp": "2025-06-18T23:46:09.835026Z",
+      "timestamp": "2025-06-18T23:48:46.888720Z",
       "services": {
         "database": "connected",
         "agents": "healthy",
@@ -18,14 +18,21 @@
   {
     "test": "API Documentation",
     "status": "PASS",
-    "timestamp": "2025-06-18T16:46:10.019297",
+    "timestamp": "2025-06-18T16:48:47.007873",
     "details": "Docs available, content length: 955 bytes",
     "response_data": null
   },
   {
     "test": "User Registration",
+    "status": "SKIP",
+    "timestamp": "2025-06-18T16:48:49.015750",
+    "details": "User already exists, will try login",
+    "response_data": null
+  },
+  {
+    "test": "User Login",
     "status": "PASS",
-    "timestamp": "2025-06-18T16:46:12.140551",
+    "timestamp": "2025-06-18T16:48:50.925933",
     "details": "Token received: eyJhbGciOiJIUzI1NiIs...",
     "response_data": {
       "token_type": "Bearer"
@@ -34,7 +41,7 @@
   {
     "test": "Authenticated Endpoint",
     "status": "PASS",
-    "timestamp": "2025-06-18T16:46:12.366731",
+    "timestamp": "2025-06-18T16:48:51.117077",
     "details": "User: test@example.com",
     "response_data": {
       "id": "d283c995-a1fa-48fb-b62d-02d4b2c819a6",
@@ -50,21 +57,21 @@
   {
     "test": "Chat Endpoint",
     "status": "FAIL",
-    "timestamp": "2025-06-18T16:46:12.767916",
+    "timestamp": "2025-06-18T16:48:51.378437",
     "details": "Status: 500, Response: {\"detail\":\"An error occurred processing your message\"}",
     "response_data": null
   },
   {
     "test": "Conversations Endpoint",
     "status": "PASS",
-    "timestamp": "2025-06-18T16:46:13.364412",
+    "timestamp": "2025-06-18T16:48:51.749517",
     "details": "Found 0 conversations",
     "response_data": null
   },
   {
     "test": "Regulatory Document Upload",
     "status": "FAIL",
-    "timestamp": "2025-06-18T16:46:14.353779",
+    "timestamp": "2025-06-18T16:48:52.384745",
     "details": "Status: 500, Response: {\"detail\":\"Regulatory document upload failed: 'StorageService' object has no attribute 'upload_policy_document'\"}",
     "response_data": null
   }
