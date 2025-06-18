@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
 """
-FastAPI Insurance Navigator API - Production Database Integration
+Insurance Navigator - Healthcare Navigation Assistant
+==================================================
 
-Comprehensive async FastAPI application with:
-- Supabase PostgreSQL database integration
-- Persistent user authentication and session management  
-- Conversation history persistence
-- Document storage with Supabase Storage
-- LangGraph agent orchestration integration
-- Role-based access control
+A comprehensive healthcare navigation system that helps users:
+- Understand their insurance coverage and benefits
+- Find appropriate healthcare providers and services
+- Navigate complex healthcare systems and processes
+- Access care coordination and support services
+
+This system uses AI agents to provide personalized, empathetic guidance
+while maintaining HIPAA compliance and healthcare industry standards.
+
+TODO: Implement comprehensive health system integrations
+TODO: Add real-time insurance verification APIs
+TODO: Create mobile app companion for better accessibility
+TODO: Implement multi-language support for diverse populations
+TODO: Add voice interface for accessibility
 """
 
 import os
@@ -116,8 +124,8 @@ class CustomCORSMiddleware(BaseHTTPMiddleware):
 # Initialize FastAPI app
 app = FastAPI(
     title="Insurance Navigator API",
-    description="Medicare/Medicaid navigation with persistent database and agent orchestration",
-    version="2.0.0",
+    description="Healthcare Navigation Assistant API for insurance and medical guidance",
+    version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -197,6 +205,52 @@ class UploadResponse(BaseModel):
     original_filename: str
     file_size: int
     signed_url: Optional[str] = None
+
+class HealthCheck(BaseModel):
+    """Health check response model."""
+    status: str = Field(..., description="Service status")
+    timestamp: str = Field(..., description="Check timestamp")
+    services: Dict[str, str] = Field(..., description="Service statuses")
+    version: str = Field(..., description="Application version")
+
+class RegulatoryDocumentRequest(BaseModel):
+    """Request model for regulatory document upload via URL"""
+    source_url: str = Field(..., description="URL of the regulatory document")
+    title: str = Field(..., description="Document title")
+    document_type: str = Field(default="regulatory_document", description="Type of document")
+    jurisdiction: str = Field(default="federal", description="Jurisdiction (federal, state, local)")
+    program: List[str] = Field(default=["medicaid"], description="Programs this document applies to")
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
+
+class UnifiedDocumentRequest(BaseModel):
+    """Unified request model that handles both file uploads and URL-based regulatory documents"""
+    document_type: str = Field(..., description="Type of document (user_document, regulatory_document, policy)")
+    source_type: str = Field(..., description="Source type (file_upload, url_download)")
+    
+    # For file uploads
+    filename: Optional[str] = None
+    
+    # For URL downloads (regulatory documents)
+    source_url: Optional[str] = None
+    title: Optional[str] = None
+    jurisdiction: Optional[str] = None
+    program: Optional[List[str]] = None
+    
+    # Common fields
+    metadata: Optional[Dict[str, Any]] = None
+
+class UnifiedDocumentResponse(BaseModel):
+    """Response model for unified document processing"""
+    success: bool
+    document_id: str
+    document_type: str
+    source_type: str
+    processing_method: str
+    filename: Optional[str] = None
+    title: Optional[str] = None
+    message: str
+    vector_processing_status: str
+    estimated_vectors: Optional[int] = None
 
 # Global service instances
 user_service_instance: Optional[UserService] = None
@@ -279,19 +333,19 @@ def extract_text_from_pdf(file_data: bytes) -> str:
             # Fallback to PyPDF2 for basic extraction
             try:
                 import PyPDF2
-                pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_data))
-                logger.info(f"📄 PDF loaded, found {len(pdf_reader.pages)} pages")
-                
-                text = ""
-                for i, page in enumerate(pdf_reader.pages):
-                    logger.info(f"📄 Processing page {i+1}/{len(pdf_reader.pages)}...")
-                    page_text = page.extract_text()
-                    text += page_text + "\n"
-                    logger.info(f"📄 Page {i+1} processed: {len(page_text)} characters extracted")
-                
-                result = text.strip()
+        pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_data))
+        logger.info(f"📄 PDF loaded, found {len(pdf_reader.pages)} pages")
+        
+        text = ""
+        for i, page in enumerate(pdf_reader.pages):
+            logger.info(f"📄 Processing page {i+1}/{len(pdf_reader.pages)}...")
+            page_text = page.extract_text()
+            text += page_text + "\n"
+            logger.info(f"📄 Page {i+1} processed: {len(page_text)} characters extracted")
+        
+        result = text.strip()
                 logger.info(f"✅ Fallback PDF text extraction complete: {len(result)} total characters")
-                return result
+        return result
             except ImportError:
                 logger.error("❌ PyPDF2 not available and LlamaParse not configured")
                 return "PDF processing temporarily unavailable. Please configure LlamaParse for advanced document processing."
@@ -447,80 +501,28 @@ async def options_handler(request: Request):
         }
     )
 
-@app.get("/health")
+@app.get("/health", response_model=HealthCheck)
 async def health_check():
-    """Health check endpoint with caching to reduce database load."""
-    # Cache health check results for 30 seconds to reduce DB pressure
-    cache_key = "health_check_cache"
-    cache_duration = 30  # seconds
+    """Comprehensive health check endpoint."""
+    # TODO: Add database connectivity checks
+    # TODO: Implement external service dependency checks
+    # TODO: Add performance metrics collection
+    # TODO: Create alerting for unhealthy states
     
-    # Simple in-memory cache using global variable
-    global _health_cache
-    if not hasattr(health_check, '_health_cache'):
-        health_check._health_cache = {"result": None, "timestamp": 0}
+    services = {
+        "database": "healthy" if supabase else "unhealthy",
+        "agents": "healthy" if AGENT_ORCHESTRATOR_AVAILABLE else "unhealthy",
+        "authentication": "healthy" if SECRET_KEY else "unhealthy"
+    }
     
-    current_time = datetime.utcnow().timestamp()
-    cache = health_check._health_cache
+    overall_status = "healthy" if all(status == "healthy" for status in services.values()) else "unhealthy"
     
-    # Return cached result if still valid
-    if cache["result"] and (current_time - cache["timestamp"]) < cache_duration:
-        return cache["result"]
-    
-    # Perform actual health check
-    try:
-        # Test database connection with timeout
-        db_pool = await get_db_pool()
-        if db_pool:
-            # Use a more resilient connection test
-            try:
-                # Fix: Use timeout for the entire operation
-                async def test_db_connection():
-                    async with db_pool.get_connection() as conn:
-                        await conn.execute("SELECT 1")
-                
-                await asyncio.wait_for(test_db_connection(), timeout=5.0)
-                db_status = "connected"
-                logger.debug("✅ Health check: Database connection successful")
-            except asyncio.TimeoutError:
-                db_status = "timeout"
-                logger.warning("⚠️ Health check: Database connection timeout")
-            except Exception as e:
-                db_status = f"error: {str(e)[:50]}"
-                logger.warning(f"⚠️ Health check: Database connection error: {e}")
-        else:
-            db_status = "unavailable"
-            logger.warning("⚠️ Health check: Database pool unavailable")
-
-        result = {
-            "status": "healthy" if db_status == "connected" else "degraded",
-            "timestamp": datetime.utcnow().isoformat(),
-            "database": db_status,
-            "version": "2.0.0",
-            "cached": False
-        }
-        
-        # Cache the result
-        cache["result"] = result
-        cache["timestamp"] = current_time
-        
-        return result
-        
-    except Exception as e:
-        logger.error(f"Health check error: {str(e)}")
-        error_result = {
-            "status": "unhealthy",
-            "timestamp": datetime.utcnow().isoformat(),
-            "database": f"error: {str(e)[:50]}",
-            "version": "2.0.0",
-            "cached": False
-        }
-        
-        # Cache error result for shorter duration (10 seconds)
-        if (current_time - cache["timestamp"]) > 10:
-            cache["result"] = error_result
-            cache["timestamp"] = current_time
-            
-        return error_result
+    return HealthCheck(
+        status=overall_status,
+        timestamp=datetime.utcnow().isoformat() + "Z",
+        services=services,
+        version="1.0.0"
+    )
 
 # Authentication endpoints
 @app.post("/register", response_model=Token)
@@ -1103,7 +1105,7 @@ async def chat_with_image(message: str = Form(...), image: UploadFile = File(Non
             agent = PatientNavigatorAgent()
             response, metadata = agent.process(enhanced_message, current_user.id, "default")
             return {"text": response, "conversation_id": "default", "metadata": metadata}
-        except Exception as e:
+            except Exception as e:
             return {"text": f"Error: {str(e)}", "conversation_id": "default"}
     except Exception as e:
         logger.error(f"❌ Image chat error: {e}")
@@ -1149,7 +1151,7 @@ async def upload_document_backend(
         # Get database connection
         pool = await get_db_pool()
         if not pool:
-            raise HTTPException(
+        raise HTTPException(
                 status_code=503,
                 detail="Database temporarily unavailable"
             )
@@ -1677,6 +1679,362 @@ async def generate_embedding_for_edge_functions(
             detail=f"Failed to generate embedding: {str(e)}"
         )
 
+@app.post("/api/documents/upload-regulatory", response_model=UnifiedDocumentResponse)
+async def upload_regulatory_document(
+    request: RegulatoryDocumentRequest,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """
+    Upload regulatory document via URL through the unified processing pipeline.
+    This extends the existing document processing system to handle regulatory documents.
+    """
+    try:
+        logger.info(f"🏛️ Regulatory document upload started for user {current_user.id}: {request.title}")
+        
+        # Get storage service
+        global storage_service_instance
+        if not storage_service_instance:
+            storage_service_instance = await get_storage_service()
+        
+        # Download document content from URL
+        timeout = aiohttp.ClientTimeout(total=60)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(request.source_url) as response:
+                if response.status != 200:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Failed to download document from URL: HTTP {response.status}"
+                    )
+                
+                file_data = await response.read()
+                if len(file_data) == 0:
+                    raise HTTPException(status_code=400, detail="Empty document downloaded")
+                
+                # Extract filename from URL or use title
+                filename = request.source_url.split('/')[-1] or f"{request.title}.pdf"
+                content_type = response.headers.get('content-type', 'application/pdf')
+        
+        logger.info(f"📄 Downloaded {len(file_data)} bytes from {request.source_url}")
+        
+        # Create document record with regulatory metadata
+        document_metadata = {
+            "source_url": request.source_url,
+            "title": request.title,
+            "jurisdiction": request.jurisdiction,
+            "program": request.program,
+            "document_type": request.document_type,
+            "processing_method": "regulatory_url_upload",
+            **(request.metadata or {})
+        }
+        
+        # Use existing storage service with enhanced metadata
+        upload_result = await storage_service_instance.upload_user_document_with_vectors(
+            user_id=current_user.id,
+            file_data=file_data,
+            filename=filename,
+            document_type=request.document_type,
+            metadata=document_metadata
+        )
+        
+        # Store in regulatory_documents table as well
+        pool = await get_db_pool()
+        async with pool.get_connection() as conn:
+            regulatory_doc_id = await conn.fetchval("""
+                INSERT INTO regulatory_documents (
+                    raw_document_path, title, jurisdiction, program, document_type,
+                    effective_date, source_url, tags, summary, search_metadata,
+                    extraction_method, priority_score, created_at, updated_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                RETURNING document_id
+            """,
+                upload_result['file_path'],  # raw_document_path
+                request.title,
+                request.jurisdiction,
+                request.program,
+                request.document_type,
+                datetime.now().date(),  # effective_date
+                request.source_url,
+                ['regulatory', 'healthcare'] + request.program,  # tags
+                {"text": f"Regulatory document: {request.title}"},  # summary
+                {  # search_metadata
+                    "upload_method": "unified_api",
+                    "original_filename": filename,
+                    "file_size": len(file_data),
+                    "user_document_id": upload_result.get('document_id')
+                },
+                'unified_api_upload',  # extraction_method
+                1.0,  # priority_score
+                datetime.now(),
+                datetime.now()
+            )
+        
+        # Update vectors to reference regulatory document
+        if upload_result.get('vector_ids'):
+            async with pool.get_connection() as conn:
+                for vector_id in upload_result['vector_ids']:
+                    await conn.execute("""
+                        UPDATE user_document_vectors 
+                        SET document_source_type = 'regulatory_document',
+                            regulatory_document_id = $1
+                        WHERE id = $2
+                    """, regulatory_doc_id, uuid.UUID(vector_id))
+        
+        logger.info(f"✅ Regulatory document {request.title} processed successfully: {regulatory_doc_id}")
+        
+        return UnifiedDocumentResponse(
+            success=True,
+            document_id=str(regulatory_doc_id),
+            document_type=request.document_type,
+            source_type="url_download",
+            processing_method="unified_api_pipeline",
+            title=request.title,
+            message=f"Regulatory document '{request.title}' uploaded and processed successfully",
+            vector_processing_status="completed" if upload_result.get('content_processed') else "failed",
+            estimated_vectors=upload_result.get('vector_chunk_count', 0)
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Regulatory document upload error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Regulatory document upload failed: {str(e)}"
+        )
+
+@app.post("/api/documents/upload-unified", response_model=UnifiedDocumentResponse)
+async def upload_unified_document(
+    file: UploadFile = File(None),
+    request_data: str = Form(...),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """
+    Unified document upload endpoint that handles both file uploads and URL downloads
+    through the same processing pipeline. This demonstrates the Unified API pattern.
+    """
+    try:
+        # Parse the request data
+        import json
+        request = UnifiedDocumentRequest(**json.loads(request_data))
+        
+        logger.info(f"📄 Unified document upload: {request.document_type} via {request.source_type}")
+        
+        # Get storage service
+        global storage_service_instance
+        if not storage_service_instance:
+            storage_service_instance = await get_storage_service()
+        
+        file_data = None
+        filename = None
+        content_type = None
+        
+        if request.source_type == "file_upload":
+            if not file:
+                raise HTTPException(status_code=400, detail="File is required for file_upload source_type")
+            
+            file_data = await file.read()
+            filename = file.filename
+            content_type = file.content_type
+            
+        elif request.source_type == "url_download":
+            if not request.source_url:
+                raise HTTPException(status_code=400, detail="source_url is required for url_download source_type")
+            
+            # Download from URL
+            timeout = aiohttp.ClientTimeout(total=60)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(request.source_url) as response:
+                    if response.status != 200:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Failed to download from URL: HTTP {response.status}"
+                        )
+                    
+                    file_data = await response.read()
+                    filename = request.source_url.split('/')[-1] or f"{request.title or 'document'}.pdf"
+                    content_type = response.headers.get('content-type', 'application/pdf')
+        
+        else:
+            raise HTTPException(status_code=400, detail="Invalid source_type. Must be 'file_upload' or 'url_download'")
+        
+        if not file_data or len(file_data) == 0:
+            raise HTTPException(status_code=400, detail="No file data received")
+        
+        # Process through unified pipeline based on document type
+        if request.document_type == "regulatory_document":
+            # Handle regulatory documents with enhanced metadata
+            document_metadata = {
+                "title": request.title or filename,
+                "jurisdiction": request.jurisdiction or "federal",
+                "program": request.program or ["medicaid"],
+                "source_url": request.source_url,
+                "processing_method": "unified_api",
+                **(request.metadata or {})
+            }
+            
+            # Process through user document pipeline first
+            upload_result = await storage_service_instance.upload_user_document_with_vectors(
+                user_id=current_user.id,
+                file_data=file_data,
+                filename=filename,
+                document_type=request.document_type,
+                metadata=document_metadata
+            )
+            
+            # Also store in regulatory_documents table
+            pool = await get_db_pool()
+            async with pool.get_connection() as conn:
+                regulatory_doc_id = await conn.fetchval("""
+                    INSERT INTO regulatory_documents (
+                        raw_document_path, title, jurisdiction, program, document_type,
+                        effective_date, source_url, tags, summary, search_metadata,
+                        extraction_method, priority_score, created_at, updated_at
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                    RETURNING document_id
+                """,
+                    upload_result['file_path'],
+                    request.title or filename,
+                    request.jurisdiction or "federal",
+                    request.program or ["medicaid"],
+                    request.document_type,
+                    datetime.now().date(),
+                    request.source_url,
+                    ['regulatory', 'healthcare'] + (request.program or []),
+                    {"text": f"Document: {request.title or filename}"},
+                    {
+                        "upload_method": "unified_api",
+                        "source_type": request.source_type,
+                        "original_filename": filename,
+                        "file_size": len(file_data),
+                        "user_document_id": upload_result.get('document_id')
+                    },
+                    'unified_api',
+                    1.0,
+                    datetime.now(),
+                    datetime.now()
+                )
+            
+            document_id = str(regulatory_doc_id)
+            
+        else:
+            # Handle user documents, policies, etc.
+            upload_result = await storage_service_instance.upload_user_document_with_vectors(
+                user_id=current_user.id,
+                file_data=file_data,
+                filename=filename,
+                document_type=request.document_type,
+                metadata=request.metadata
+            )
+            document_id = upload_result['document_id']
+        
+        return UnifiedDocumentResponse(
+            success=True,
+            document_id=document_id,
+            document_type=request.document_type,
+            source_type=request.source_type,
+            processing_method="unified_api_pipeline",
+            filename=filename,
+            title=request.title,
+            message=f"Document processed successfully via {request.source_type}",
+            vector_processing_status="completed" if upload_result.get('content_processed') else "failed",
+            estimated_vectors=upload_result.get('vector_chunk_count', 0)
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Unified document upload error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unified document upload failed: {str(e)}"
+        )
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat_endpoint(
+    chat_request: ChatRequest,
+    user_info: Dict[str, Any] = Depends(get_current_user)
+) -> ChatResponse:
+    """
+    Main chat endpoint for healthcare navigation assistance.
+    
+    This endpoint processes user messages and provides intelligent responses
+    using the healthcare navigation AI system.
+    """
+    # TODO: Implement conversation persistence optimization
+    # TODO: Add conversation analytics and insights
+    # TODO: Create conversation export functionality
+    # TODO: Implement conversation summarization for long chats
+    
+    try:
+        user_id = user_info["user_id"]
+        message = chat_request.message
+        conversation_id = chat_request.conversation_id or f"conv_{user_id}_{int(datetime.utcnow().timestamp())}"
+        context = chat_request.context or {}
+        
+        logger.info(f"Processing chat request for user {user_id[:8]}...")
+        
+        if AGENT_ORCHESTRATOR_AVAILABLE:
+            try:
+                # TODO: Implement intelligent agent routing based on query type
+                # TODO: Add query complexity analysis for response optimization
+                # TODO: Create multi-agent collaboration for complex queries
+                
+                # Process with Patient Navigator first
+                navigator_result = await agent_orchestrator_instance.process_message(
+                    message=message,
+                    user_id=user_id,
+                    session_id=conversation_id
+                )
+                
+                # Convert to conversational response
+                final_response = await agent_orchestrator_instance.process_response(
+                    response=navigator_result,
+                    user_id=user_id,
+                    session_id=conversation_id
+                )
+                
+                # TODO: Add response quality scoring and feedback loop
+                # TODO: Implement response caching for common queries
+                # TODO: Add response personalization based on user history
+                
+                return ChatResponse(
+                    text=final_response["message"],
+                    conversation_id=conversation_id,
+                    sources=final_response.get("sources", []),
+                    metadata={
+                        **final_response.get("metadata", {}),
+                        "agents_used": ["patient_navigator"],
+                        "processing_time": final_response.get("processing_time", 0)
+                    }
+                )
+                
+            except Exception as e:
+                logger.error(f"Agent processing error: {e}")
+                logger.error(traceback.format_exc())
+                # Fall through to fallback
+        
+        # Fallback response when agents are unavailable
+        # TODO: Implement smarter fallback with pre-trained responses
+        # TODO: Add queue system for processing when agents are restored
+        # TODO: Create notification system for service disruptions
+        
+        fallback_orchestrator = FallbackOrchestrator()
+        result = await fallback_orchestrator.process_message(
+            message=message,
+            user_id=user_id,
+            conversation_id=conversation_id,
+            context=context
+        )
+        
+        return ChatResponse(
+            text=result["response"],
+            conversation_id=conversation_id,
+            sources=result["sources"],
+            metadata=result["metadata"]
+        )
+        
+    except Exception as e:
+        logger.error(f"Chat endpoint error: {e}")
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
