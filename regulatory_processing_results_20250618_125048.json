@@ -1,0 +1,29 @@
+{
+  "processed": [
+    {
+      "status": "processed",
+      "url": "https://www.cms.gov/medicare-coverage-database/view/article.aspx?articleid=54321",
+      "document_id": "0029f8f7-5931-41bb-bd0e-0cfd83736d04",
+      "vector_count": 1,
+      "vector_ids": [
+        "85"
+      ],
+      "title": "article.aspx",
+      "content_length": 113,
+      "jurisdiction": "United States",
+      "programs": [
+        "Healthcare",
+        "General"
+      ],
+      "storage_path": null,
+      "file_size": null,
+      "filename": "article.aspx",
+      "content_type": "text/html; charset=utf-8"
+    }
+  ],
+  "failed": [],
+  "duplicates": [],
+  "total_vectors_created": 1,
+  "processing_time": 6.630437,
+  "start_time": "2025-06-18 12:50:42.027519"
+}
