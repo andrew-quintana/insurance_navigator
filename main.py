@@ -509,10 +509,18 @@ async def health_check():
         pool = await get_db_pool()
         db_healthy = pool is not None
         
+        # Check authentication configuration
+        try:
+            from utils.security_config import get_security_config
+            security_config = get_security_config()
+            auth_healthy = bool(security_config.jwt_secret_key)
+        except Exception:
+            auth_healthy = False
+        
         services = {
             "database": "connected" if db_healthy else "disconnected",
             "agents": "healthy" if AGENT_ORCHESTRATOR_AVAILABLE else "unhealthy",
-            "authentication": "healthy" if SECRET_KEY else "unhealthy"
+            "authentication": "healthy" if auth_healthy else "unhealthy"
         }
         
         overall_status = "healthy" if all(status in ["healthy", "connected"] for status in services.values()) else "unhealthy"
