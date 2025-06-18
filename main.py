@@ -718,8 +718,8 @@ async def chat(
                     response_text += "For claims assistance:\n"
                 elif any(word in message_lower for word in ['doctor', 'provider', 'network']):
                     response_text += "About providers and networks:\n"
-            else:
-                response_text += "Here's relevant information from your policies:\n"
+                else:
+                    response_text += "Here's relevant information from your policies:\n"
                 
                 # Add policy summaries
                 for source in sources[:3]:  # Top 3 results
@@ -733,12 +733,13 @@ async def chat(
                     "results_count": len(search_results),
                     "hybrid_search": True
                 }
-            # No relevant documents found
-            response_text = ("I don't have specific policy information to answer your question. "
-                           "You may want to upload your insurance documents first, or I can help "
-                           "you with general insurance navigation questions.")
-            sources = []
-            metadata = {"search_performed": True, "results_count": 0}
+            else:
+                # No relevant documents found
+                response_text = ("I don't have specific policy information to answer your question. "
+                               "You may want to upload your insurance documents first, or I can help "
+                               "you with general insurance navigation questions.")
+                sources = []
+                metadata = {"search_performed": True, "results_count": 0}
             
         except Exception as search_error:
             logger.error(f"Search error: {search_error}")
