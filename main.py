@@ -504,25 +504,37 @@ async def options_handler(request: Request):
 @app.get("/health", response_model=HealthCheck)
 async def health_check():
     """Comprehensive health check endpoint."""
-    # TODO: Add database connectivity checks
-    # TODO: Implement external service dependency checks
-    # TODO: Add performance metrics collection
-    # TODO: Create alerting for unhealthy states
-    
-    services = {
-        "database": "healthy" if supabase else "unhealthy",
-        "agents": "healthy" if AGENT_ORCHESTRATOR_AVAILABLE else "unhealthy",
-        "authentication": "healthy" if SECRET_KEY else "unhealthy"
-    }
-    
-    overall_status = "healthy" if all(status == "healthy" for status in services.values()) else "unhealthy"
-    
-    return HealthCheck(
-        status=overall_status,
-        timestamp=datetime.utcnow().isoformat() + "Z",
-        services=services,
-        version="1.0.0"
-    )
+    try:
+        # Check database pool availability
+        pool = await get_db_pool()
+        db_healthy = pool is not None
+        
+        services = {
+            "database": "connected" if db_healthy else "disconnected",
+            "agents": "healthy" if AGENT_ORCHESTRATOR_AVAILABLE else "unhealthy",
+            "authentication": "healthy" if SECRET_KEY else "unhealthy"
+        }
+        
+        overall_status = "healthy" if all(status in ["healthy", "connected"] for status in services.values()) else "unhealthy"
+        
+        return HealthCheck(
+            status=overall_status,
+            timestamp=datetime.utcnow().isoformat() + "Z",
+            services=services,
+            version="2.0.0"
+        )
+    except Exception as e:
+        logger.error(f"❌ Health check error: {e}")
+        return HealthCheck(
+            status="unhealthy",
+            timestamp=datetime.utcnow().isoformat() + "Z",
+            services={
+                "database": "error",
+                "agents": "unknown",
+                "authentication": "unknown"
+            },
+            version="2.0.0"
+        )
 
 # Authentication endpoints
 @app.post("/register", response_model=Token)
