@@ -506,7 +506,7 @@ async def health_check():
     """
     Health check endpoint for monitoring service status.
     Returns comprehensive health information including database, agent, and auth status.
-    Force deployment refresh - 2025-01-18
+    Force deployment refresh - 2025-01-18 v2 - Storage service fix deployed
     """
     try:
         # Check database pool availability
@@ -533,7 +533,7 @@ async def health_check():
             status=overall_status,
             timestamp=datetime.utcnow().isoformat() + "Z",
             services=services,
-            version="2.0.0"
+            version="2.0.1"
         )
     except Exception as e:
         logger.error(f"❌ Health check error: {e}")
@@ -545,7 +545,7 @@ async def health_check():
                 "agents": "unknown",
                 "authentication": "unknown"
             },
-            version="2.0.0"
+            version="2.0.1"
         )
 
 # Authentication endpoints
@@ -783,7 +783,6 @@ async def upload_document(
     """Simplified document upload with automatic policy extraction."""
     try:
         from db.services.document_service import DocumentService
-        from db.services.storage_service import StorageService
         
         # Initialize services
         document_service = DocumentService()
@@ -1030,13 +1029,13 @@ async def root():
     """Root endpoint with basic API information."""
     return {
         "service": "Insurance Navigator API",
-        "version": "2.0.0",
+        "version": "2.0.1",
         "status": "active",
         "documentation": "/docs",
         "deployment_info": {
             "prepared_statements_fix": "ACTIVE",
-            "commit_hash": "5eaaf6c",
-            "fix_description": "Supabase transaction pooler prepared statement fix deployed",
+            "commit_hash": "d8f2192",
+            "fix_description": "Storage service upload_policy_document fix - deployment v2",
             "environment_vars": {
                 "ASYNCPG_DISABLE_PREPARED_STATEMENTS": os.getenv('ASYNCPG_DISABLE_PREPARED_STATEMENTS'),
                 "DATABASE_URL_contains_pooler": 'pooler.supabase.com' in os.getenv('DATABASE_URL', ''),

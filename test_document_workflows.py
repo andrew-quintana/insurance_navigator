@@ -58,8 +58,8 @@ class DocumentWorkflowTester:
         try:
             headers = {"Authorization": f"Bearer {self.auth_token}"}
             payload = {
-                "source_url": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-                "title": "Test Sample PDF Document",
+                "source_url": "https://www.adobe.com/support/products/enterprise/knowledgecenter/media/c4611_sample_explain.pdf",
+                "title": "Test Adobe Sample PDF Document",
                 "document_type": "regulatory_document", 
                 "jurisdiction": "federal",
                 "program": ["medicaid"],
@@ -114,8 +114,8 @@ class DocumentWorkflowTester:
             request_data = {
                 "document_type": "user_document",
                 "source_type": "url_download",
-                "source_url": "https://www.africau.edu/images/default/sample.pdf",
-                "title": "Test User Document Sample",
+                "source_url": "https://www.adobe.com/support/products/enterprise/knowledgecenter/media/c4611_sample_explain.pdf",
+                "title": "Test User Adobe Document Sample",
                 "metadata": {
                     "test": True,
                     "workflow_test": "user_document_upload",
