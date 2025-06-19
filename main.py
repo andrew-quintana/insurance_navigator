@@ -503,7 +503,11 @@ async def options_handler(request: Request):
 
 @app.get("/health", response_model=HealthCheck)
 async def health_check():
-    """Comprehensive health check endpoint."""
+    """
+    Health check endpoint for monitoring service status.
+    Returns comprehensive health information including database, agent, and auth status.
+    Force deployment refresh - 2025-01-18
+    """
     try:
         # Check database pool availability
         pool = await get_db_pool()
