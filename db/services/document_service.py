@@ -23,7 +23,7 @@ class DocumentService:
     """
     
     def __init__(self):
-        self.encryption_service = EncryptionServiceFactory.get_service()
+        self.encryption_service = EncryptionServiceFactory.create_service('mock')
         
     async def extract_policy_basics(self, document_id: str, text: str) -> Dict[str, Any]:
         """
