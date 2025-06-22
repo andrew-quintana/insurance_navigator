@@ -85,8 +85,8 @@ class UserService:
             logger.error(f"Failed to create user {email}: {str(e)}")
             raise
     
-    async def authenticate_user(self, email: str, password: str) -> Optional[Dict[str, Any]]:
-        """Authenticate user with email and password."""
+    async def authenticate_user(self, email: str, password: str) -> Optional[str]:
+        """Authenticate user with email and password and return JWT token."""
         try:
             pool = await get_db_pool()
             
@@ -121,7 +121,7 @@ class UserService:
                 
                 logger.info(f"User authenticated successfully: {email}")
                 
-                return {
+                user_data = {
                     "id": str(user_row["id"]),
                     "email": user_row["email"],
                     "full_name": user_row["full_name"],
@@ -129,6 +129,10 @@ class UserService:
                     "last_login": user_row["last_login"],
                     "roles": user_roles
                 }
+                
+                # Create and return JWT token
+                token = self.create_access_token(user_data)
+                return token
                 
         except Exception as e:
             logger.error(f"Authentication error for {email}: {str(e)}")
@@ -413,6 +417,24 @@ class UserService:
             
         except ValueError:
             return None
+
+    async def register_user(self, email: str, password: str, full_name: str) -> str:
+        """Register a new user and return JWT token (expected by main.py)."""
+        try:
+            # Create user in database
+            user_data = await self.create_user(email, password, full_name)
+            
+            # Create and return JWT token
+            token = self.create_access_token(user_data)
+            return token
+            
+        except Exception as e:
+            logger.error(f"Failed to register user {email}: {str(e)}")
+            raise
+
+    async def get_user_from_token(self, token: str) -> Optional[Dict[str, Any]]:
+        """Get user data from JWT token (expected by main.py)."""
+        return await self.validate_session(token)
 
 # Global user service instance
 user_service = UserService()
