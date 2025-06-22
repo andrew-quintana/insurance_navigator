@@ -99,6 +99,8 @@ serve(async (req) => {
       return await handleUploadStatus(req, supabase, userId)
     } else if (req.method === 'PUT') {
       return await handleChunkUpload(req, supabase, userId)
+    } else if (req.method === 'PATCH') {
+      return await handleUploadComplete(req, supabase, userId)
     }
 
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
@@ -419,30 +421,19 @@ async function handleUploadComplete(req: Request, supabase: any, userId: string)
     const needsLlamaParse = shouldUseLlamaParse(document.content_type)
     
     if (needsLlamaParse) {
-      console.log(`🦙 Submitting document to LlamaParse: ${document.original_filename}`)
+      console.log(`🦙 Starting LlamaParse processing: ${document.original_filename}`)
       
       try {
-        // For Phase 5: Trigger LlamaParse processing via webhook
-        // This replaces the direct client call with webhook-based processing
-        const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/processing-webhook`
-        
-        // Trigger LlamaParse processing (simulated for now)
-        const llamaParseJobId = `llamaparse_${Date.now()}_${documentId.slice(-8)}`
-
-        // Update document with LlamaParse job info
+        // Update document status to parsing with LlamaParse
         await supabase
           .from('documents')
           .update({
-            llama_parse_job_id: llamaParseJobId,
+            status: 'parsing',
             progress_percentage: 30,
             metadata: {
               ...document.metadata,
-              llamaparse_job: {
-                job_id: llamaParseJobId,
-                submitted_at: new Date().toISOString(),
-                webhook_url: webhookUrl,
-                processing_method: 'llamaparse_webhook'
-              }
+              processing_method: 'llamaparse',
+              parsing_started_at: new Date().toISOString()
             }
           })
           .eq('id', documentId)
@@ -450,19 +441,29 @@ async function handleUploadComplete(req: Request, supabase: any, userId: string)
         // Send progress update
         await sendProgressUpdate(supabase, userId, {
           documentId: documentId,
-          status: 'processing',
+          status: 'parsing',
           progress: 30,
           metadata: { 
-            step: 'llamaparse_submitted',
-            job_id: llamaParseJobId,
-            processing_method: 'webhook'
+            step: 'llamaparse_started',
+            processing_method: 'llamaparse'
           }
         })
 
-        console.log(`✅ LlamaParse job queued: ${llamaParseJobId}`)
+        // Actually trigger doc-parser edge function with LlamaParse
+        console.log(`🔗 Invoking doc-parser with LlamaParse for document: ${documentId}`)
+        const { data, error } = await supabase.functions.invoke('doc-parser', {
+          body: { documentId: documentId }
+        })
+
+        if (error) {
+          console.error(`❌ doc-parser (LlamaParse) invocation failed:`, error)
+          throw new Error(`doc-parser LlamaParse failed: ${error.message}`)
+        }
+
+        console.log(`✅ doc-parser (LlamaParse) invoked successfully for document: ${documentId}`)
 
       } catch (llamaParseError) {
-        console.error('❌ LlamaParse submission failed:', llamaParseError)
+        console.error('❌ LlamaParse processing failed:', llamaParseError)
         
         // Fall back to direct processing
         console.log('📝 Falling back to direct text processing')
@@ -517,12 +518,12 @@ async function triggerDirectProcessing(supabase: any, documentId: string, userId
   console.log(`📄 Starting direct processing for document: ${documentId}`)
   
   try {
-    // Update status to chunking (skip LlamaParse step)
+    // Update status to parsing
     await supabase
       .from('documents')
       .update({
-        status: 'chunking',
-        progress_percentage: 50,
+        status: 'parsing',
+        progress_percentage: 30,
         updated_at: new Date().toISOString()
       })
       .eq('id', documentId)
@@ -530,26 +531,26 @@ async function triggerDirectProcessing(supabase: any, documentId: string, userId
     // Send progress update
     await sendProgressUpdate(supabase, userId, {
       documentId: documentId,
-      status: 'chunking',
-      progress: 50,
+      status: 'parsing',
+      progress: 30,
       metadata: { 
-        step: 'direct_processing',
+        step: 'direct_processing_started',
         processing_method: 'native'
       }
     })
 
-    // Here you could trigger the chunking process
-    // For Phase 4, we'll simulate this step
-    setTimeout(async () => {
-      await supabase
-        .from('documents')
-        .update({
-          status: 'embedding',
-          progress_percentage: 80,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', documentId)
-    }, 3000)
+    // Actually trigger doc-parser edge function
+    console.log(`🔗 Invoking doc-parser for document: ${documentId}`)
+    const { data, error } = await supabase.functions.invoke('doc-parser', {
+      body: { documentId: documentId }
+    })
+
+    if (error) {
+      console.error(`❌ doc-parser invocation failed:`, error)
+      throw new Error(`doc-parser failed: ${error.message}`)
+    }
+
+    console.log(`✅ doc-parser invoked successfully for document: ${documentId}`)
 
   } catch (error) {
     console.error(`❌ Direct processing failed for ${documentId}:`, error)
@@ -565,4 +566,26 @@ async function triggerDirectProcessing(supabase: any, documentId: string, userId
   }
 }
 
-// ... existing helper functions ... 
+// Helper functions
+
+async function sendProgressUpdate(supabase: any, userId: string, update: any) {
+  try {
+    await supabase
+      .from('realtime_progress_updates')
+      .insert({
+        user_id: userId,
+        document_id: update.documentId,
+        payload: {
+          type: 'progress_update',
+          documentId: update.documentId,
+          progress: update.progress || 0,
+          status: update.status || 'processing',
+          timestamp: new Date().toISOString(),
+          details: update.metadata || {}
+        },
+        created_at: new Date().toISOString()
+      })
+  } catch (error) {
+    console.warn('Failed to send progress update:', error)
+  }
+}
