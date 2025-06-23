@@ -51,14 +51,14 @@ def get_agent_orchestrator():
     """Lazy load AgentOrchestrator only when needed."""
     global _agent_orchestrator, AGENT_ORCHESTRATOR_AVAILABLE
     if _agent_orchestrator is None and not AGENT_ORCHESTRATOR_AVAILABLE:
-try:
-    from graph.agent_orchestrator import AgentOrchestrator
+        try:
+            from graph.agent_orchestrator import AgentOrchestrator
             _agent_orchestrator = AgentOrchestrator()
-    AGENT_ORCHESTRATOR_AVAILABLE = True
+            AGENT_ORCHESTRATOR_AVAILABLE = True
             logger.info("✅ AgentOrchestrator loaded on-demand")
-except ImportError as e:
+        except ImportError as e:
             logger.error(f"❌ AgentOrchestrator import failed: {e}")
-    AGENT_ORCHESTRATOR_AVAILABLE = False
+            AGENT_ORCHESTRATOR_AVAILABLE = False
             return None
     return _agent_orchestrator
 
@@ -195,14 +195,14 @@ class EdgeFunctionOrchestrator:
         
         async with aiohttp.ClientSession(timeout=timeout) as session:
             try:
-            if method.upper() == 'POST':
-                async with session.post(url, json=payload, headers=headers) as response:
-                    return await self._handle_response(response, function_name)
-            elif method.upper() == 'PATCH':
-                async with session.patch(url, json=payload, headers=headers) as response:
-                    return await self._handle_response(response, function_name)
-            else:
-                raise ValueError(f"Unsupported HTTP method: {method}")
+                if method.upper() == 'POST':
+                    async with session.post(url, json=payload, headers=headers) as response:
+                        return await self._handle_response(response, function_name)
+                elif method.upper() == 'PATCH':
+                    async with session.patch(url, json=payload, headers=headers) as response:
+                        return await self._handle_response(response, function_name)
+                else:
+                    raise ValueError(f"Unsupported HTTP method: {method}")
             except asyncio.TimeoutError:
                 logger.error(f"❌ Edge function {function_name} timeout (120s)")
                 raise HTTPException(
@@ -221,15 +221,15 @@ class EdgeFunctionOrchestrator:
         try:
             response_text = await response.text()
             
-        if response.status == 200:
+            if response.status == 200:
                 try:
                     result = json.loads(response_text) if response_text else {}
-            logger.info(f"✅ Edge function {function_name} succeeded")
-            return result
+                    logger.info(f"✅ Edge function {function_name} succeeded")
+                    return result
                 except json.JSONDecodeError:
                     logger.warning(f"⚠️ Edge function {function_name} returned non-JSON response")
                     return {"success": True, "message": response_text}
-        else:
+            else:
                 # Enhanced error logging for debugging
                 logger.error(f"❌ Edge function {function_name} failed: {response.status}")
                 logger.error(f"Response body: {response_text[:500]}...")
@@ -256,8 +256,8 @@ class EdgeFunctionOrchestrator:
                 else:
                     error_message = f"Edge function {function_name} failed with status {response.status}"
                 
-            raise HTTPException(
-                status_code=response.status,
+                raise HTTPException(
+                    status_code=response.status,
                     detail={"error": error_message, "details": error_details}
                 )
         except Exception as e:
@@ -281,16 +281,16 @@ class EdgeFunctionOrchestrator:
         
         async with aiohttp.ClientSession(timeout=timeout) as session:
             try:
-            async with session.put(signed_url, data=file_data, headers=headers) as response:
-                if response.status in [200, 201, 204]:
-                    logger.info(f"✅ File uploaded successfully to storage")
-                    return True
-                else:
-                    error_text = await response.text()
-                    logger.error(f"❌ File upload failed: {response.status} - {error_text}")
-                    raise HTTPException(
-                        status_code=response.status,
-                        detail=f"File upload failed: {error_text}"
+                async with session.put(signed_url, data=file_data, headers=headers) as response:
+                    if response.status in [200, 201, 204]:
+                        logger.info(f"✅ File uploaded successfully to storage")
+                        return True
+                    else:
+                        error_text = await response.text()
+                        logger.error(f"❌ File upload failed: {response.status} - {error_text}")
+                        raise HTTPException(
+                            status_code=response.status,
+                            detail=f"File upload failed: {error_text}"
                         )
             except asyncio.TimeoutError:
                 logger.error(f"❌ File upload timeout - file size: {len(file_data)} bytes")
@@ -303,7 +303,7 @@ class EdgeFunctionOrchestrator:
                 raise HTTPException(
                     status_code=500,
                     detail=f"File upload failed: {str(e)}"
-                    )
+                )
 
 # Initialize orchestrator
 edge_orchestrator = EdgeFunctionOrchestrator()
@@ -618,10 +618,10 @@ async def upload_document_backend(
                 'doc-parser',  # ✅ Call doc-parser directly to process uploaded file
                 'POST',
                 processing_payload,
-                user_token,
-                current_user.id
-            )
-            
+            user_token,
+            current_user.id
+        )
+        
             # Check if edge function processing actually succeeded
             if processing_result.get('status') == 'success' or processing_result.get('success'):
                 logger.info(f"✅ Step 3 complete: Document processing triggered successfully")
@@ -941,10 +941,10 @@ async def upload_regulatory_document(
                 'doc-parser',  # Use doc-parser directly like user uploads
                 'POST',
                 processing_payload,
-                user_token,
-                current_user.id
-            )
-            
+            user_token,
+            current_user.id
+        )
+        
             # Check if edge function processing actually succeeded
             if processing_result.get('status') == 'success' or processing_result.get('success'):
                 logger.info(f"✅ Step 3 complete: Regulatory document processing triggered successfully")
@@ -973,7 +973,7 @@ async def upload_regulatory_document(
                 """, document_id)
                 await conn.execute("""
                     UPDATE documents SET status = 'failed', updated_at = NOW()
-                    WHERE id = $1
+                WHERE id = $1
                 """, document_id)
         
         # Determine processing method
