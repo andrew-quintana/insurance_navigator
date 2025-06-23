@@ -4,22 +4,40 @@ interface ParseRequest {
   documentId: string;
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+}
+
 Deno.serve(async (req) => {
-  console.log('🚀 doc-parser invoked')
-  
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   try {
-    console.log('🔧 Initializing Supabase client...')
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    console.log('🔍 Doc-parser started - method:', req.method)
+    
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseKey)
 
-    console.log('📥 Parsing request body...')
-    const { documentId }: ParseRequest = await req.json()
-    console.log('📋 Document ID:', documentId)
+    // ✅ REFACTORED: Simplified authentication - expects payload with document info
+    const { documentId, path, filename, contentType, fileSize } = await req.json()
+    
+    if (!documentId || !path) {
+      return new Response(JSON.stringify({ 
+        error: 'Document ID and storage path are required' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
 
-    // Get document record
-    console.log('📄 Fetching document record...')
+    console.log('📄 Processing document:', { documentId, path, filename, contentType })
+
+    // Get document record from database 
     const { data: document, error: docError } = await supabase
       .from('documents')
       .select('*')
@@ -27,168 +45,127 @@ Deno.serve(async (req) => {
       .single()
 
     if (docError || !document) {
-      console.error('❌ Error fetching document:', docError)
-      return new Response(
-        JSON.stringify({ error: 'Document not found' }),
-        { status: 404 }
-      )
+      console.error('❌ Document not found:', docError)
+      return new Response(JSON.stringify({ 
+        error: 'Document not found' 
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
 
-    console.log('✅ Document found:', document.original_filename)
-
     // Update status to parsing
-    console.log('📝 Updating status to parsing...')
     await supabase
       .from('documents')
       .update({
         status: 'parsing',
-        progress_percentage: 20
+        progress_percentage: 30,
+        updated_at: new Date().toISOString()
       })
       .eq('id', documentId)
 
-    // Download file from storage
-    console.log('⬇️ Downloading file from storage...')
+    console.log('📁 Downloading file from storage:', path)
+    
+    // Download file from Supabase Storage
     const { data: fileData, error: downloadError } = await supabase.storage
       .from('documents')
-      .download(document.storage_path)
+      .download(path)
 
-    if (downloadError) {
-      console.error('❌ Error downloading file:', downloadError)
-      await updateDocumentError(supabase, documentId, 'Failed to download file from storage')
-      return new Response(
-        JSON.stringify({ error: 'Failed to download file' }),
-        { status: 400 }
-      )
+    if (downloadError || !fileData) {
+      console.error('❌ Failed to download file:', downloadError)
+      await supabase
+        .from('documents')
+        .update({
+          status: 'failed',
+          error_message: `Failed to download file: ${downloadError?.message || 'Unknown error'}`,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', documentId)
+      
+      return new Response(JSON.stringify({ 
+        error: 'Failed to download file from storage',
+        details: downloadError?.message 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
-
-    console.log('✅ File downloaded successfully')
 
     let extractedText = ''
     
-    try {
-      if (document.content_type === 'application/pdf') {
-        // Check LlamaParse API key
-        const llamaApiKey = Deno.env.get('LLAMAPARSE_API_KEY')
-        console.log('🔑 LlamaParse API Key check:', {
-          hasKey: !!llamaApiKey,
-          keyLength: llamaApiKey?.length || 0
+    // Check if we should use LlamaParse for PDFs
+    if (contentType === 'application/pdf') {
+      console.log('🦙 Using LlamaParse for PDF processing...')
+      
+      // Update status to indicate LlamaParse processing
+      await supabase
+        .from('documents')
+        .update({
+          status: 'parsing',
+          progress_percentage: 40,
+          metadata: {
+            processing_method: 'llamaparse',
+            parsing_started_at: new Date().toISOString()
+          }
+        })
+        .eq('id', documentId)
+
+      try {
+        const llamaCloudKey = Deno.env.get('LLAMA_CLOUD_API_KEY')
+        
+        if (!llamaCloudKey) {
+          throw new Error('LlamaCloud API key not configured')
+        }
+
+        // Prepare file for LlamaCloud upload
+        const formData = new FormData()
+        formData.append('file', fileData, filename)
+
+        const uploadResponse = await fetch('https://api.cloud.llamaindex.ai/api/parsing/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${llamaCloudKey}`,
+          },
+          body: formData
         })
 
-        if (!llamaApiKey) {
-          console.log('⚠️ LlamaParse API key missing, using fallback text extraction')
-          // Fallback: Extract basic text from PDF bytes
-          const arrayBuffer = await fileData.arrayBuffer()
-          const text = new TextDecoder().decode(arrayBuffer)
-          extractedText = text.replace(/[^\x20-\x7E\n\r\t]/g, ' ').trim()
-          console.log('✅ Fallback extraction completed, length:', extractedText.length)
-        } else {
-          console.log('🦙 Using LlamaParse for PDF extraction...')
-          // Convert to base64 for LlamaParse
-          const arrayBuffer = await fileData.arrayBuffer()
-          const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+        if (!uploadResponse.ok) {
+          throw new Error(`LlamaCloud upload failed: ${uploadResponse.status}`)
+        }
 
-          // Update progress
-          await supabase
-            .from('documents')
-            .update({ progress_percentage: 40 })
-            .eq('id', documentId)
+        const uploadResult = await uploadResponse.json()
+        const jobId = uploadResult.id
 
-          try {
-            console.log('🌐 Making request to LlamaCloud API...')
-            console.log('🔍 LlamaCloud request details:', {
-              url: 'https://api.cloud.llamaindex.ai/api/v1/parsing/upload',
-              method: 'POST',
-              hasAuth: !!llamaApiKey,
-              keyPrefix: llamaApiKey?.substring(0, 10) + '...',
-              fileSize: arrayBuffer.byteLength
-            })
+        console.log('📤 File uploaded to LlamaCloud, job ID:', jobId)
 
-            // Step 1: Upload file to LlamaCloud
-            const formData = new FormData()
-            const blob = new Blob([arrayBuffer], { type: 'application/pdf' })
-            formData.append('file', blob, document.original_filename)
-            
-            console.log('📤 Uploading file to LlamaCloud...')
-            const uploadResponse = await fetch('https://api.cloud.llamaindex.ai/api/v1/parsing/upload', {
-              method: 'POST',
+        // Poll for completion with timeout
+        let attempts = 0
+        const maxAttempts = 60 // Wait up to 5 minutes
+        
+        while (attempts < maxAttempts) {
+          const statusResponse = await fetch(`https://api.cloud.llamaindex.ai/api/parsing/job/${jobId}`, {
+            headers: {
+              'Authorization': `Bearer ${llamaCloudKey}`,
+            }
+          })
+
+          if (!statusResponse.ok) {
+            throw new Error(`Status check failed: ${statusResponse.status}`)
+          }
+
+          const statusResult = await statusResponse.json()
+          console.log(`🔄 LlamaCloud status (attempt ${attempts + 1}):`, statusResult.status)
+
+          if (statusResult.status === 'SUCCESS') {
+            // Get the result
+            const resultResponse = await fetch(`https://api.cloud.llamaindex.ai/api/parsing/job/${jobId}/result/markdown`, {
               headers: {
-                'Authorization': `Bearer ${llamaApiKey}`,
-                // Don't set Content-Type for FormData, let browser set it with boundary
-              },
-              body: formData
-            })
-
-            console.log('📡 LlamaCloud upload response:', {
-              status: uploadResponse.status,
-              statusText: uploadResponse.statusText,
-              ok: uploadResponse.ok
-            })
-
-            if (!uploadResponse.ok) {
-              const errorText = await uploadResponse.text()
-              console.error(`❌ LlamaCloud upload error:`, {
-                status: uploadResponse.status,
-                statusText: uploadResponse.statusText,
-                errorBody: errorText
-              })
-              throw new Error(`LlamaCloud upload error: ${uploadResponse.status} - ${errorText}`)
-            }
-
-            const uploadResult = await uploadResponse.json()
-            const jobId = uploadResult.id
-            console.log('✅ File uploaded to LlamaCloud, job ID:', jobId)
-
-            // Step 2: Poll for job completion
-            console.log('⏳ Polling for job completion...')
-            let jobComplete = false
-            let attempts = 0
-            const maxAttempts = 30 // 5 minutes max wait
-            
-            while (!jobComplete && attempts < maxAttempts) {
-              await new Promise(resolve => setTimeout(resolve, 10000)) // Wait 10 seconds
-              attempts++
-              
-              const statusResponse = await fetch(`https://api.cloud.llamaindex.ai/api/v1/parsing/job/${jobId}`, {
-                headers: {
-                  'Authorization': `Bearer ${llamaApiKey}`,
-                  'Accept': 'application/json'
-                }
-              })
-
-              if (statusResponse.ok) {
-                const status = await statusResponse.json()
-                console.log(`🔄 Job status check ${attempts}:`, status.status)
-                
-                if (status.status === 'SUCCESS') {
-                  jobComplete = true
-                } else if (status.status === 'ERROR') {
-                  throw new Error(`LlamaCloud job failed: ${status.error || 'Unknown error'}`)
-                }
-              } else {
-                console.log(`⚠️ Status check failed, attempt ${attempts}/${maxAttempts}`)
-              }
-            }
-
-            if (!jobComplete) {
-              throw new Error('LlamaCloud job timeout - job did not complete within 5 minutes')
-            }
-
-            // Step 3: Get results
-            console.log('📥 Fetching parsed results...')
-            const resultResponse = await fetch(`https://api.cloud.llamaindex.ai/api/v1/parsing/job/${jobId}/result/markdown`, {
-              headers: {
-                'Authorization': `Bearer ${llamaApiKey}`,
-                'Accept': 'application/json'
+                'Authorization': `Bearer ${llamaCloudKey}`,
               }
             })
 
             if (!resultResponse.ok) {
-              const errorText = await resultResponse.text()
-              console.error(`❌ LlamaCloud result error:`, {
-                status: resultResponse.status,
-                errorBody: errorText
-              })
-              throw new Error(`LlamaCloud result error: ${resultResponse.status} - ${errorText}`)
+              throw new Error(`Result fetch failed: ${resultResponse.status}`)
             }
 
             const result = await resultResponse.json()
@@ -197,118 +174,118 @@ Deno.serve(async (req) => {
               textLength: extractedText.length,
               hasText: !!extractedText
             })
-          } catch (llamaError) {
-            console.error('❌ LlamaParse error:', llamaError)
-            // Fallback to basic text extraction
-            const arrayBuffer = await fileData.arrayBuffer()
-            const text = new TextDecoder().decode(arrayBuffer)
-            extractedText = text.replace(/[^\x20-\x7E\n\r\t]/g, ' ').trim()
-            console.log('✅ Fallback extraction completed, length:', extractedText.length)
+            break
+          } else if (statusResult.status === 'ERROR') {
+            throw new Error(`LlamaCloud processing failed: ${statusResult.error || 'Unknown error'}`)
           }
+
+          attempts++
+          await new Promise(resolve => setTimeout(resolve, 5000)) // Wait 5 seconds
         }
-      } else if (document.content_type === 'text/plain') {
-        // Handle text files directly
-        console.log('📝 Extracting text from plain text file...')
-        extractedText = await fileData.text()
-      } else {
-        // For other document types, try to extract as text
-        console.log('📄 Extracting text from other document type...')
-        extractedText = await fileData.text()
+
+        if (attempts >= maxAttempts) {
+          throw new Error('LlamaCloud processing timeout')
+        }
+
+      } catch (llamaError) {
+        console.error('❌ LlamaParse error:', llamaError)
+        // Fallback to basic text extraction
+        const arrayBuffer = await fileData.arrayBuffer()
+        const text = new TextDecoder().decode(arrayBuffer)
+        extractedText = text.replace(/[^\x20-\x7E\n\r\t]/g, ' ').trim()
+        console.log('✅ Fallback extraction completed, length:', extractedText.length)
       }
+    } else {
+      // Direct text processing for non-PDF files
+      console.log('📝 Using direct text processing...')
+      const arrayBuffer = await fileData.arrayBuffer()
+      extractedText = new TextDecoder().decode(arrayBuffer)
+      console.log('✅ Direct text extraction completed, length:', extractedText.length)
+    }
 
-      console.log('📊 Final extracted text length:', extractedText.length)
-
-      if (!extractedText || extractedText.length < 10) {
-        console.error('❌ No text extracted from document')
-        await updateDocumentError(supabase, documentId, 'No text content found in document')
-        return new Response(
-          JSON.stringify({ error: 'No text content found' }),
-          { status: 400 }
-        )
-      }
-
-      // Update progress
-      console.log('📝 Updating document status to vectorizing...')
+    if (!extractedText || extractedText.length === 0) {
+      console.error('❌ No text extracted from document')
       await supabase
         .from('documents')
         .update({
-          status: 'vectorizing',
-          progress_percentage: 60,
-          metadata: {
-            ...document.metadata,
-            text_length: extractedText.length,
-            extraction_completed_at: new Date().toISOString()
-          }
+          status: 'failed',
+          error_message: 'No text could be extracted from the document',
+          updated_at: new Date().toISOString()
         })
         .eq('id', documentId)
-
-      // ✅ CRITICAL FIX: Trigger vector-processor automatically
-      console.log('🚀 Triggering vector-processor for document:', documentId)
-      try {
-        const { data: vectorResult, error: vectorError } = await supabase.functions.invoke('vector-processor', {
-          body: { 
-            documentId: documentId,
-            extractedText: extractedText
-          }
-        })
-
-        if (vectorError) {
-          console.error('❌ vector-processor invocation failed:', vectorError)
-          throw new Error(`vector-processor failed: ${vectorError.message}`)
-        }
-
-        console.log('✅ vector-processor invoked successfully for document:', documentId)
-        
-        return new Response(
-          JSON.stringify({ 
-            success: true,
-            message: 'Document parsed and vectorization started',
-            documentId: documentId,
-            textLength: extractedText.length,
-            nextStage: 'vectorizing'
-          }),
-          { status: 200 }
-        )
-
-      } catch (vectorError) {
-        console.error(`❌ Vector processing failed for ${documentId}:`, vectorError)
-        
-        await supabase
-          .from('documents')
-          .update({
-            status: 'failed',
-            error_message: `Vector processing failed: ${vectorError.message}`,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', documentId)
-
-        return new Response(
-          JSON.stringify({ 
-            error: 'Vector processing failed',
-            details: vectorError.message
-          }),
-          { status: 500 }
-        )
-      }
-
-    } catch (extractionError) {
-      console.error('❌ Text extraction failed:', extractionError)
-      await updateDocumentError(supabase, documentId, `Text extraction failed: ${extractionError.message}`)
-      return new Response(
-        JSON.stringify({ error: 'Text extraction failed' }),
-        { status: 400 }
-      )
+      
+      return new Response(JSON.stringify({ 
+        error: 'No text extracted',
+        message: 'Document processing completed but no text was extracted'
+      }), {
+        status: 422,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
+
+    // Update document with extracted text
+    await supabase
+      .from('documents')
+      .update({
+        status: 'vectorizing',
+        progress_percentage: 60,
+        extracted_text: extractedText,
+        text_extracted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', documentId)
+
+    console.log('✅ Text extraction completed, triggering vector processing...')
+
+    // ✅ AUTOMATIC PIPELINE: Trigger vector processor
+    console.log('🚀 Triggering vector-processor for document:', documentId)
+    const { data: vectorResult, error: vectorError } = await supabase.functions.invoke('vector-processor', {
+      body: { documentId: documentId }
+    })
+
+    if (vectorError) {
+      console.error('❌ Vector processor invocation failed:', vectorError)
+      await supabase
+        .from('documents')
+        .update({
+          status: 'failed',
+          error_message: `Vector processing failed: ${vectorError.message}`,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', documentId)
+      
+      return new Response(JSON.stringify({ 
+        error: 'Vector processing failed',
+        details: vectorError.message,
+        textLength: extractedText.length
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    console.log('✅ Vector processor triggered successfully')
+
+    return new Response(JSON.stringify({
+      success: true,
+      documentId: documentId,
+      textLength: extractedText.length,
+      status: 'vectorizing',
+      message: 'Document parsing completed, vectorization in progress'
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+
   } catch (error) {
-    console.error('❌ doc-parser error:', error)
-    await updateDocumentError(supabase, documentId, `Parsing failed: ${error.message}`)
-    return new Response(
-      JSON.stringify({ 
-        error: 'Document parsing failed',
-        details: error.message
-      }),
-      { status: 500 }
-    )
+    console.error('❌ Doc-parser error:', error)
+    return new Response(JSON.stringify({ 
+      error: 'Document parsing failed',
+      details: error.message 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
   }
 })
 
