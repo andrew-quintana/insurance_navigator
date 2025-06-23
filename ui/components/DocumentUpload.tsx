@@ -315,16 +315,34 @@ export default function DocumentUpload({
 
         {/* Upload Progress */}
         {isUploading && (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600">{uploadMessage}</span>
-              <span className="text-teal-600">{uploadProgress}%</span>
+              <span className="text-teal-600 font-medium">{uploadProgress}%</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
               <div 
-                className="bg-teal-600 h-2 rounded-full transition-all duration-300"
+                className={`
+                  h-3 rounded-full transition-all duration-500 ease-in-out
+                  ${uploadProgress === 100 
+                    ? 'bg-green-500' 
+                    : 'bg-gradient-to-r from-teal-500 to-teal-600'
+                  }
+                  ${uploadProgress > 0 && uploadProgress < 100 
+                    ? 'animate-pulse' 
+                    : ''
+                  }
+                `}
                 style={{ width: `${uploadProgress}%` }}
               />
+            </div>
+            
+            {/* Simple Processing Indicator */}
+            <div className="flex justify-center">
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <div className="animate-spin h-4 w-4 border-2 border-teal-500 border-t-transparent rounded-full"></div>
+                <span>Processing in background...</span>
+              </div>
             </div>
           </div>
         )}
