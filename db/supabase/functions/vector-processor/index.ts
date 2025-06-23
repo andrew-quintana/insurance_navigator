@@ -142,9 +142,26 @@ Deno.serve(async (req) => {
       })
       .eq('id', documentId)
 
-    // Chunk the text
-    const chunks = chunkText(extractedText)
-    console.log(`📦 Text chunked into ${chunks.length} pieces`)
+    // Chunk the text with size limits for large documents
+    const textLength = extractedText.length
+    let chunkSize = 1000
+    let overlap = 200
+    
+    // For very large documents (>1MB), use larger chunks to reduce processing time
+    if (textLength > 1000000) { // 1MB+
+      chunkSize = 2000
+      overlap = 300
+      console.log('📦 Using larger chunks for large document')
+    }
+    
+    const chunks = chunkText(extractedText, chunkSize, overlap)
+    console.log(`📦 Text chunked into ${chunks.length} pieces (${textLength.toLocaleString()} chars, ~${Math.round(textLength/1024)}KB)`)
+    
+    // Warn about potential timeout for very large documents
+    if (chunks.length > 1500) {
+      console.warn(`⚠️ Large document with ${chunks.length} chunks may hit edge function timeout`)
+      console.warn(`⚠️ Consider using asynchronous processing for documents >2MB`)
+    }
 
     // Get active encryption key
     console.log('🔐 Fetching encryption key...')
@@ -207,7 +224,7 @@ Deno.serve(async (req) => {
 
       // Insert text-only vectors
       const { error: insertError } = await supabase
-        .from('user_document_vectors')
+        .from('document_vectors')
         .insert(textOnlyVectors)
 
       if (insertError) {
@@ -250,7 +267,9 @@ Deno.serve(async (req) => {
 
     // Process chunks with embeddings (normal flow)
     console.log('🧠 Processing chunks with embeddings...')
-    const batchSize = 5
+    // Use larger batch size for large documents to reduce total processing time
+    const batchSize = chunks.length > 1000 ? 10 : 5
+    console.log(`📦 Using batch size: ${batchSize} (${chunks.length} total chunks)`)
     let processedChunks = 0
     
     for (let i = 0; i < chunks.length; i += batchSize) {
@@ -315,7 +334,7 @@ Deno.serve(async (req) => {
 
         // Insert batch to database
         const { error: insertError } = await supabase
-          .from('user_document_vectors')
+          .from('document_vectors')
           .insert(batchVectors)
 
         if (insertError) {

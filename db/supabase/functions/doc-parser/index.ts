@@ -240,7 +240,10 @@ Deno.serve(async (req) => {
     // ✅ AUTOMATIC PIPELINE: Trigger vector processor
     console.log('🚀 Triggering vector-processor for document:', documentId)
     const { data: vectorResult, error: vectorError } = await supabase.functions.invoke('vector-processor', {
-      body: { documentId: documentId }
+      body: { 
+        documentId: documentId,
+        extractedText: extractedText
+      }
     })
 
     if (vectorError) {
