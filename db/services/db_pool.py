@@ -54,15 +54,16 @@ class DatabasePool:
                 'pooler.supabase.com' in db_url
             )
             
-            # Prepare asyncpg connection pool kwargs with shorter timeouts for faster startup
+            # Prepare asyncpg connection pool kwargs optimized for Render startup
             pool_kwargs = {
-                'min_size': 2,  # Reduced for faster startup
-                'max_size': 10,  # Reduced for resource efficiency
-                'command_timeout': 30,  # Reduced timeout
-                'timeout': 10,  # Connection timeout
+                'min_size': 1,  # Minimal for fastest startup
+                'max_size': 5,  # Reduced for Render free tier
+                'command_timeout': 15,  # Faster timeout for startup
+                'timeout': 5,  # Aggressive connection timeout for startup
                 'server_settings': {
                     'jit': 'off',  # Disable JIT for better compatibility
-                    'application_name': 'insurance_navigator'
+                    'application_name': 'insurance_navigator',
+                    'statement_timeout': '15s'  # Prevent hanging queries
                 }
             }
             
