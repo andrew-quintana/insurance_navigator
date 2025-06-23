@@ -164,7 +164,7 @@ class EdgeFunctionOrchestrator:
         headers = {
             'Authorization': f'Bearer {self.supabase_service_role_key}',
             'Content-Type': 'application/json',
-            'apikey': self.supabase_service_role_key
+            'apikey': self.supabase_anon_key
         }
         
         # Add user ID header for user context
