@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
     
     // Download file from Supabase Storage
     const { data: fileData, error: downloadError } = await supabase.storage
-      .from('documents')
+      .from('raw_documents')
       .download(path)
 
     if (downloadError || !fileData) {
