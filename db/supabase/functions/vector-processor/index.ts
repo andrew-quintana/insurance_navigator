@@ -357,19 +357,59 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Mark as completed
+    // ✅ CRITICAL FIX: Mark as completed with proper notifications
     console.log('🎉 Marking document as completed...')
     const { error: completeError } = await supabase
       .from('documents')
       .update({
         status: 'completed',
         progress_percentage: 100,
-        processing_completed_at: new Date().toISOString()
+        processed_chunks: processedChunks,
+        total_chunks: chunks.length,
+        processing_completed_at: new Date().toISOString(),
+        metadata: {
+          ...document.metadata,
+          vectorization_completed_at: new Date().toISOString(),
+          vector_count: processedChunks,
+          embedding_model: 'text-embedding-3-small',
+          processing_method: 'openai_embeddings'
+        }
       })
       .eq('id', documentId)
 
     if (completeError) {
       console.error('⚠️ Error marking document as completed:', completeError)
+    } else {
+      console.log('✅ Document marked as completed in database')
+      
+      // Send real-time completion notification
+      try {
+        const { error: notificationError } = await supabase
+          .from('realtime_progress_updates')
+          .insert({
+            user_id: document.user_id,
+            document_id: documentId,
+            payload: {
+              documentId: documentId,
+              status: 'completed',
+              progress: 100,
+              filename: document.original_filename,
+              vector_count: processedChunks,
+              total_chunks: chunks.length,
+              processing_method: 'openai_embeddings',
+              completed_at: new Date().toISOString(),
+              message: `✅ Document processing completed! Generated ${processedChunks} searchable chunks.`
+            }
+          })
+
+        if (notificationError) {
+          console.warn('⚠️ Failed to send completion notification:', notificationError)
+        } else {
+          console.log('✅ Completion notification sent via real-time')
+        }
+      } catch (notificationErr) {
+        console.warn('⚠️ Real-time notification error:', notificationErr)
+      }
     }
 
     console.log('✅ vector-processor completed successfully')
@@ -378,7 +418,9 @@ Deno.serve(async (req) => {
       chunksProcessed: processedChunks,
       totalChunks: chunks.length,
       documentId: documentId,
-      embeddingMethod: 'openai'
+      embeddingMethod: 'openai',
+      completedAt: new Date().toISOString(),
+      message: `Document vectorization completed with ${processedChunks} chunks`
     }))
   } catch (error) {
     console.error('❌ vector-processor unexpected error:', error)

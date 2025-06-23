@@ -1,0 +1,46 @@
+{
+  "timestamp": "2025-06-18T17:52:27.774406",
+  "tests": {
+    "Authentication - Login": {
+      "status": "PASS",
+      "timestamp": "2025-06-18T17:52:30.288783",
+      "details": {
+        "email": "validator@example.com",
+        "token_received": true
+      }
+    },
+    "Regulatory Document Upload": {
+      "status": "FAIL",
+      "timestamp": "2025-06-18T17:52:52.819273",
+      "details": {
+        "status_code": 502,
+        "error": "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <title>502</title>\n    <style>@font-face {\n  font-family: \"Roobert\";\n  font-weight: 500;\n  font-style: normal;\n  font-stretch: normal;\n  src: url(\"data:font/woff2;base64,d09GMk9UVE8AAKewAAwAAAABa6QAAKdfAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAADYKmehqCHhuC4UocpRQGYACLBgE2AiQDkygEBgWFRwcgW8pqkQKZcr0u0nk2H+gc25rBL5CqkDOqYXNqo87dNmL1mgByHi4yIGwcgLFJz2f/////f/pS"
+      }
+    },
+    "User Document Upload": {
+      "status": "FAIL",
+      "timestamp": "2025-06-18T17:53:23.859894",
+      "details": {
+        "error": "HTTPSConnectionPool(host='insurance-navigator-api.onrender.com', port=443): Read timed out. (read timeout=30)"
+      }
+    },
+    "Document Search": {
+      "status": "PASS",
+      "timestamp": "2025-06-18T17:53:27.190758",
+      "details": {
+        "response_received": true,
+        "message_length": 0,
+        "has_sources": false
+      }
+    },
+    "Document Listing": {
+      "status": "FAIL",
+      "timestamp": "2025-06-18T17:53:28.357586",
+      "details": {
+        "status_code": 405,
+        "error": "{\"detail\":\"Method Not Allowed\"}"
+      }
+    }
+  },
+  "overall_status": "failure"
+}

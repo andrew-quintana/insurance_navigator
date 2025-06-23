@@ -153,72 +153,146 @@ class EdgeFunctionOrchestrator:
         self.supabase_anon_key = os.getenv('SUPABASE_ANON_KEY')
         self.supabase_service_role_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
         
-        if not all([self.supabase_url, self.supabase_anon_key]):
-            raise ValueError("Missing Supabase configuration")
+        if not all([self.supabase_url, self.supabase_anon_key, self.supabase_service_role_key]):
+            raise ValueError("Missing Supabase configuration - need URL, anon key, and service role key")
     
     async def call_edge_function(self, function_name: str, method: str, payload: Dict[str, Any], user_token: str, user_id: str = None) -> Dict[str, Any]:
         """Call a Supabase Edge Function with proper authentication."""
         url = f"{self.supabase_url}/functions/v1/{function_name}"
         
-        # Use service role key for edge function authentication
+        # ✅ CRITICAL FIX: Use service role key for backend-to-edge-function calls
+        # This ensures edge functions have the necessary permissions
         headers = {
             'Authorization': f'Bearer {self.supabase_service_role_key}',
             'Content-Type': 'application/json',
-            'apikey': self.supabase_anon_key
+            'apikey': self.supabase_anon_key,
+            'X-Client-Info': 'insurance-navigator/3.0.0'
         }
         
-        # Add user ID header for user context
+        # Add user context headers for edge function user identification
         if user_id:
             headers['X-User-ID'] = user_id
             headers['X-User-Token'] = user_token
+            headers['X-User-Context'] = 'backend-orchestrated'
         
-        timeout = aiohttp.ClientTimeout(total=60)  # 60 second timeout
+        # Add request ID for tracing
+        headers['X-Request-ID'] = str(uuid.uuid4())
+        
+        timeout = aiohttp.ClientTimeout(total=120)  # Increased timeout for Render
+        
+        logger.info(f"🔗 Calling edge function {function_name} with method {method}")
         
         async with aiohttp.ClientSession(timeout=timeout) as session:
-            if method.upper() == 'POST':
-                async with session.post(url, json=payload, headers=headers) as response:
-                    return await self._handle_response(response, function_name)
-            elif method.upper() == 'PATCH':
-                async with session.patch(url, json=payload, headers=headers) as response:
-                    return await self._handle_response(response, function_name)
-            else:
-                raise ValueError(f"Unsupported HTTP method: {method}")
+            try:
+                if method.upper() == 'POST':
+                    async with session.post(url, json=payload, headers=headers) as response:
+                        return await self._handle_response(response, function_name)
+                elif method.upper() == 'PATCH':
+                    async with session.patch(url, json=payload, headers=headers) as response:
+                        return await self._handle_response(response, function_name)
+                else:
+                    raise ValueError(f"Unsupported HTTP method: {method}")
+            except asyncio.TimeoutError:
+                logger.error(f"❌ Edge function {function_name} timeout (120s)")
+                raise HTTPException(
+                    status_code=504,
+                    detail=f"Edge function {function_name} timeout - processing may continue in background"
+                )
+            except aiohttp.ClientError as e:
+                logger.error(f"❌ Edge function {function_name} connection error: {e}")
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Edge function {function_name} connection failed"
+                )
     
     async def _handle_response(self, response: aiohttp.ClientResponse, function_name: str) -> Dict[str, Any]:
-        """Handle edge function response with proper error handling."""
-        if response.status == 200:
-            result = await response.json()
-            logger.info(f"✅ Edge function {function_name} succeeded")
-            return result
-        else:
-            error_text = await response.text()
-            logger.error(f"❌ Edge function {function_name} failed: {response.status} - {error_text}")
+        """Handle edge function response with comprehensive error handling."""
+        try:
+            response_text = await response.text()
+            
+            if response.status == 200:
+                try:
+                    result = json.loads(response_text) if response_text else {}
+                    logger.info(f"✅ Edge function {function_name} succeeded")
+                    return result
+                except json.JSONDecodeError:
+                    logger.warning(f"⚠️ Edge function {function_name} returned non-JSON response")
+                    return {"success": True, "message": response_text}
+            else:
+                # Enhanced error logging for debugging
+                logger.error(f"❌ Edge function {function_name} failed: {response.status}")
+                logger.error(f"Response body: {response_text[:500]}...")
+                
+                # Parse error details if available
+                error_details = {"status": response.status, "raw_response": response_text}
+                try:
+                    error_json = json.loads(response_text)
+                    error_details.update(error_json)
+                except json.JSONDecodeError:
+                    pass
+                
+                # Create user-friendly error messages
+                if response.status == 401:
+                    error_message = "Authentication failed with edge function"
+                elif response.status == 403:
+                    error_message = "Access denied to edge function"
+                elif response.status == 404:
+                    error_message = f"Edge function {function_name} not found"
+                elif response.status == 500:
+                    error_message = f"Edge function {function_name} internal error"
+                elif response.status == 504:
+                    error_message = f"Edge function {function_name} timeout"
+                else:
+                    error_message = f"Edge function {function_name} failed with status {response.status}"
+                
+                raise HTTPException(
+                    status_code=response.status,
+                    detail={"error": error_message, "details": error_details}
+                )
+        except Exception as e:
+            if isinstance(e, HTTPException):
+                raise
+            logger.error(f"❌ Edge function {function_name} response handling error: {e}")
             raise HTTPException(
-                status_code=response.status,
-                detail=f"Edge function {function_name} failed: {error_text}"
+                status_code=500,
+                detail=f"Edge function {function_name} response handling failed"
             )
     
     async def upload_file_to_signed_url(self, signed_url: str, file_data: bytes, content_type: str) -> bool:
-        """Upload file data to Supabase Storage using signed URL."""
+        """Upload file data to Supabase Storage using signed URL with Render optimizations."""
         headers = {
             'Content-Type': content_type,
             'Content-Length': str(len(file_data))
         }
         
-        timeout = aiohttp.ClientTimeout(total=300)  # 5 minute timeout for large files
+        # ✅ RENDER FIX: Shorter timeout for serverless environment
+        timeout = aiohttp.ClientTimeout(total=300, connect=30, sock_read=60)  # 5 min total, faster connection/read
         
         async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.put(signed_url, data=file_data, headers=headers) as response:
-                if response.status in [200, 201, 204]:
-                    logger.info(f"✅ File uploaded successfully to storage")
-                    return True
-                else:
-                    error_text = await response.text()
-                    logger.error(f"❌ File upload failed: {response.status} - {error_text}")
-                    raise HTTPException(
-                        status_code=response.status,
-                        detail=f"File upload failed: {error_text}"
-                    )
+            try:
+                async with session.put(signed_url, data=file_data, headers=headers) as response:
+                    if response.status in [200, 201, 204]:
+                        logger.info(f"✅ File uploaded successfully to storage")
+                        return True
+                    else:
+                        error_text = await response.text()
+                        logger.error(f"❌ File upload failed: {response.status} - {error_text}")
+                        raise HTTPException(
+                            status_code=response.status,
+                            detail=f"File upload failed: {error_text}"
+                        )
+            except asyncio.TimeoutError:
+                logger.error(f"❌ File upload timeout - file size: {len(file_data)} bytes")
+                raise HTTPException(
+                    status_code=504,
+                    detail="File upload timeout - please try with a smaller file"
+                )
+            except Exception as e:
+                logger.error(f"❌ File upload error: {e}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"File upload failed: {str(e)}"
+                )
 
 # Initialize orchestrator
 edge_orchestrator = EdgeFunctionOrchestrator()
@@ -348,37 +422,72 @@ async def upload_document_backend(
     """
     Backend-orchestrated document upload using Supabase Edge Functions pipeline.
     
+    ✅ RENDER-OPTIMIZED VERSION 3.0.0
+    
     This endpoint:
     1. Initializes upload via upload-handler edge function
     2. Uploads file to Supabase Storage using signed URL
     3. Triggers processing completion via upload-handler PATCH
     4. Ensures LlamaParse is used for PDF processing
+    5. Handles Render deployment constraints and timeouts
     """
+    upload_start_time = time.time()
+    
     try:
         logger.info(f"🚀 Starting backend-orchestrated upload for user {current_user.id}: {file.filename}")
         
-        # Read file data
+        # Read file data with size validation early
         file_data = await file.read()
         
-        # Validate file size (50MB limit)
+        # Validate file size (50MB limit) - fail fast
         MAX_FILE_SIZE = 50 * 1024 * 1024
         if len(file_data) > MAX_FILE_SIZE:
+            logger.warning(f"❌ File too large: {len(file_data)} bytes (max: {MAX_FILE_SIZE})")
             raise HTTPException(
                 status_code=413,
-                detail=f"File too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)}MB"
+                detail={
+                    "error": "File too large",
+                    "message": f"File size is {len(file_data) // (1024*1024)}MB. Maximum allowed is {MAX_FILE_SIZE // (1024*1024)}MB",
+                    "max_size_mb": MAX_FILE_SIZE // (1024*1024),
+                    "actual_size_mb": len(file_data) // (1024*1024)
+                }
             )
         
         if len(file_data) == 0:
-            raise HTTPException(status_code=400, detail="Empty file")
+            raise HTTPException(
+                status_code=400, 
+                detail={
+                    "error": "Empty file",
+                    "message": "The uploaded file is empty. Please select a valid file."
+                }
+            )
         
+        # Validate file type
+        allowed_types = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
+        if file.content_type not in allowed_types:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "Unsupported file type",
+                    "message": f"File type '{file.content_type}' is not supported. Please upload PDF, DOCX, or TXT files.",
+                    "allowed_types": ["PDF", "DOCX", "TXT"]
+                }
+            )
+
         # Get user token for edge function calls
         auth_header = request.headers.get("authorization")
         user_token = auth_header.split(" ")[1] if auth_header else None
         
         if not user_token:
-            raise HTTPException(status_code=401, detail="Missing user token")
-        
-        # Step 1: Initialize upload via edge function
+            raise HTTPException(
+                status_code=401, 
+                detail={
+                    "error": "Missing authentication",
+                    "message": "User authentication token is required"
+                }
+            )
+
+        # Step 1: Initialize upload via edge function with enhanced error handling
         logger.info(f"📤 Step 1: Initializing upload via edge function...")
         
         upload_init_payload = {
@@ -387,38 +496,111 @@ async def upload_document_backend(
             "fileSize": len(file_data)
         }
         
-        upload_result = await edge_orchestrator.call_edge_function(
-            'upload-handler', 
-            'POST', 
-            upload_init_payload, 
-            user_token,
-            current_user.id
-        )
-        
-        document_id = upload_result.get('documentId')
-        upload_url = upload_result.get('uploadUrl')
-        storage_path = upload_result.get('path')
-        
-        if not all([document_id, upload_url, storage_path]):
+        try:
+            upload_result = await edge_orchestrator.call_edge_function(
+                'upload-handler', 
+                'POST', 
+                upload_init_payload, 
+                user_token,
+                current_user.id
+            )
+            
+            # ✅ CRITICAL FIX: Debug the actual response format
+            logger.info(f"📊 Upload initialization response: {upload_result}")
+            
+        except HTTPException as e:
+            logger.error(f"❌ Upload initialization failed: {e.detail}")
+            if e.status_code == 504:
+                # Handle timeout gracefully - processing may still succeed
+                raise HTTPException(
+                    status_code=202,
+                    detail={
+                        "error": "Upload initialization timeout",
+                        "message": "Upload initialization is taking longer than expected. Please check the document status in a few minutes.",
+                        "status": "processing_in_background"
+                    }
+                )
             raise HTTPException(
-                status_code=500,
-                detail="Upload initialization failed: missing required fields"
+                status_code=e.status_code,
+                detail={
+                    "error": "Upload initialization failed",
+                    "message": "Failed to initialize document upload. Please try again.",
+                    "details": e.detail
+                }
             )
         
-        logger.info(f"✅ Step 1 complete: Document ID {document_id}")
+        # ✅ CRITICAL FIX: Handle different response field names
+        document_id = (upload_result.get('documentId') or 
+                      upload_result.get('document_id') or 
+                      upload_result.get('id'))
         
-        # Step 2: Upload file to Supabase Storage
+        upload_url = (upload_result.get('uploadUrl') or 
+                     upload_result.get('upload_url') or 
+                     upload_result.get('signedURL'))
+        
+        storage_path = (upload_result.get('path') or 
+                       upload_result.get('storage_path') or 
+                       upload_result.get('storagePath'))
+        
+        # Enhanced error reporting
+        if not all([document_id, upload_url, storage_path]):
+            logger.error(f"❌ Upload initialization incomplete.")
+            logger.error(f"Response keys: {list(upload_result.keys())}")
+            logger.error(f"document_id: {document_id}")
+            logger.error(f"upload_url: {upload_url}")
+            logger.error(f"storage_path: {storage_path}")
+            logger.error(f"Full response: {upload_result}")
+            
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": "Upload initialization failed",
+                    "message": "Upload initialization returned incomplete data. Please try again.",
+                    "missing_fields": {
+                        "document_id": not bool(document_id),
+                        "upload_url": not bool(upload_url), 
+                        "storage_path": not bool(storage_path)
+                    },
+                    "response_keys": list(upload_result.keys()),
+                    "debug_response": upload_result
+                }
+            )
+
+        logger.info(f"✅ Step 1 complete: Document ID {document_id}")
+
+        # Step 2: Upload file to Supabase Storage with retry logic
         logger.info(f"📁 Step 2: Uploading file to Supabase Storage...")
         
-        await edge_orchestrator.upload_file_to_signed_url(
-            upload_url, 
-            file_data, 
-            file.content_type
-        )
+        upload_attempts = 0
+        max_upload_attempts = 3
         
-        logger.info(f"✅ Step 2 complete: File uploaded to storage")
-        
-        # Step 3: Trigger processing completion via edge function
+        while upload_attempts < max_upload_attempts:
+            try:
+                await edge_orchestrator.upload_file_to_signed_url(
+                    upload_url, 
+                    file_data, 
+                    file.content_type
+                )
+                logger.info(f"✅ Step 2 complete: File uploaded to storage on attempt {upload_attempts + 1}")
+                break
+            except Exception as upload_error:
+                upload_attempts += 1
+                logger.warning(f"⚠️ Upload attempt {upload_attempts} failed: {upload_error}")
+                
+                if upload_attempts >= max_upload_attempts:
+                    raise HTTPException(
+                        status_code=500,
+                        detail={
+                            "error": "File upload failed",
+                            "message": f"Failed to upload file after {max_upload_attempts} attempts. Please try again.",
+                            "attempts": upload_attempts
+                        }
+                    )
+                
+                # Brief delay before retry
+                await asyncio.sleep(1)
+
+        # Step 3: Trigger processing completion via edge function (async)
         logger.info(f"🔄 Step 3: Triggering processing completion...")
         
         completion_payload = {
@@ -426,35 +608,52 @@ async def upload_document_backend(
             "path": storage_path
         }
         
-        completion_result = await edge_orchestrator.call_edge_function(
-            'upload-handler',
-            'PATCH',
-            completion_payload,
-            user_token,
-            current_user.id
-        )
-        
-        logger.info(f"✅ Step 3 complete: Processing triggered")
-        
+        try:
+            completion_result = await edge_orchestrator.call_edge_function(
+                'upload-handler',
+                'PATCH',
+                completion_payload,
+                user_token,
+                current_user.id
+            )
+            logger.info(f"✅ Step 3 complete: Processing triggered")
+            
+        except HTTPException as e:
+            logger.warning(f"⚠️ Processing trigger timeout/error: {e.detail}")
+            # Don't fail the request - processing may still succeed
+            completion_result = {
+                "status": "background_processing",
+                "message": "Processing triggered but response timeout - monitoring in background"
+            }
+
         # Determine processing method
         processing_method = "llamaparse" if file.content_type == "application/pdf" else "direct"
         
+        processing_time = time.time() - upload_start_time
+        logger.info(f"📊 Upload completed in {processing_time:.2f}s")
+
         return DocumentUploadResponse(
             success=True,
             document_id=document_id,
             filename=file.filename,
             status="processing",
-            message=f"Upload successful! Processing with {processing_method}. You'll receive updates via realtime notifications.",
+            message=f"Document '{file.filename}' uploaded successfully. Processing with {processing_method} method in background.",
             processing_method=processing_method
         )
-        
+
     except HTTPException:
+        # Re-raise HTTP exceptions as-is
         raise
     except Exception as e:
-        logger.error(f"❌ Backend-orchestrated upload failed: {str(e)}")
+        processing_time = time.time() - upload_start_time
+        logger.error(f"❌ Unexpected error after {processing_time:.2f}s: {e}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"Upload failed: {str(e)}"
+            detail={
+                "error": "Internal server error",
+                "message": "An unexpected error occurred during upload. Please try again.",
+                "processing_time": f"{processing_time:.2f}s"
+            }
         )
 
 # 🎯 NEW: Webhook Handlers for Edge Function Status Updates

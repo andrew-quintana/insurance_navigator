@@ -1,0 +1,197 @@
+{
+  "metadata": {
+    "database_type": "vectorized_policy_documents",
+    "version": "1.0",
+    "description": "Placeholder vectorized document database for testing document requirements agent",
+    "embedding_model": "text-embedding-ada-002",
+    "chunk_size": 512,
+    "created_date": "2025-06-21"
+  },
+  "documents": [
+    {
+      "document_id": "ins_policy_001",
+      "document_type": "insurance_policy_document",
+      "title": "Sample Health Insurance Policy - Premium Plan",
+      "content_chunks": [
+        {
+          "chunk_id": "chunk_001_001",
+          "text": "This health insurance policy provides comprehensive coverage for medical services. Annual deductible: $1,500 individual, $3,000 family. Copayments: Primary care $25, Specialist $50, Emergency room $200.",
+          "embedding": [0.1, 0.2, 0.3, 0.4, 0.5],
+          "metadata": {
+            "section": "coverage_summary",
+            "page": 1,
+            "relevance_keywords": ["deductible", "copay", "primary care", "specialist", "emergency"]
+          }
+        },
+        {
+          "chunk_id": "chunk_001_002", 
+          "text": "Covered services include preventive care, diagnostic tests, hospitalization, prescription drugs, mental health services, and maternity care. Network providers must be used for full coverage benefits.",
+          "embedding": [0.2, 0.3, 0.4, 0.5, 0.6],
+          "metadata": {
+            "section": "covered_services",
+            "page": 2,
+            "relevance_keywords": ["preventive care", "diagnostic", "hospitalization", "prescription", "mental health", "maternity", "network"]
+          }
+        }
+      ],
+      "document_metadata": {
+        "plan_type": "premium",
+        "insurance_company": "HealthCare Plus",
+        "policy_number": "HP-2024-001",
+        "effective_date": "2024-01-01",
+        "expiration_date": "2024-12-31"
+      }
+    },
+    {
+      "document_id": "med_eligibility_001",
+      "document_type": "medicare_eligibility_guidelines",
+      "title": "Medicare Eligibility Requirements 2024",
+      "content_chunks": [
+        {
+          "chunk_id": "chunk_002_001",
+          "text": "Medicare eligibility begins at age 65 for most individuals. Younger individuals may qualify if they receive Social Security Disability Insurance (SSDI) for 24 months or have end-stage renal disease.",
+          "embedding": [0.3, 0.4, 0.5, 0.6, 0.7],
+          "metadata": {
+            "section": "age_requirements",
+            "page": 1,
+            "relevance_keywords": ["age 65", "disability", "SSDI", "renal disease", "eligibility"]
+          }
+        },
+        {
+          "chunk_id": "chunk_002_002",
+          "text": "Income-based Medicare programs include Medicare Savings Programs (MSP) for individuals with income up to 135% of Federal Poverty Level. Required documents: Social Security statement, tax returns, bank statements.",
+          "embedding": [0.4, 0.5, 0.6, 0.7, 0.8],
+          "metadata": {
+            "section": "income_requirements",
+            "page": 3,
+            "relevance_keywords": ["income", "poverty level", "MSP", "documents", "tax returns", "bank statements"]
+          }
+        }
+      ],
+      "document_metadata": {
+        "document_source": "CMS.gov",
+        "document_year": "2024",
+        "document_category": "federal_guidelines",
+        "last_updated": "2024-01-15"
+      }
+    },
+    {
+      "document_id": "med_application_001",
+      "document_type": "medicaid_application_form",
+      "title": "State Medicaid Application Form - California",
+      "content_chunks": [
+        {
+          "chunk_id": "chunk_003_001",
+          "text": "Complete all sections of this application. Required documents include: proof of identity (driver's license, passport), proof of income (pay stubs, tax returns), proof of residency (utility bills, lease agreement).",
+          "embedding": [0.5, 0.6, 0.7, 0.8, 0.9],
+          "metadata": {
+            "section": "required_documents",
+            "page": 1,
+            "relevance_keywords": ["identity", "income", "residency", "driver's license", "passport", "pay stubs", "tax returns", "utility bills"]
+          }
+        },
+        {
+          "chunk_id": "chunk_003_002",
+          "text": "Household information required: List all household members, their relationships, ages, and income sources. Include Social Security numbers for all family members applying for coverage.",
+          "embedding": [0.6, 0.7, 0.8, 0.9, 1.0],
+          "metadata": {
+            "section": "household_information",
+            "page": 2,
+            "relevance_keywords": ["household", "family members", "relationships", "ages", "income sources", "social security"]
+          }
+        }
+      ],
+      "document_metadata": {
+        "state": "California",
+        "form_version": "2024.1",
+        "form_number": "MC-001",
+        "languages_available": ["English", "Spanish", "Chinese", "Vietnamese"]
+      }
+    },
+    {
+      "document_id": "chip_info_001",
+      "document_type": "chip_benefits_summary",
+      "title": "Children's Health Insurance Program (CHIP) Benefits Overview",
+      "content_chunks": [
+        {
+          "chunk_id": "chunk_004_001",
+          "text": "CHIP provides health coverage for children in families with incomes too high for Medicaid but cannot afford private insurance. Income limits vary by state, typically 200-400% of Federal Poverty Level.",
+          "embedding": [0.7, 0.8, 0.9, 1.0, 0.1],
+          "metadata": {
+            "section": "program_overview",
+            "page": 1,
+            "relevance_keywords": ["children", "income limits", "Medicaid", "private insurance", "poverty level"]
+          }
+        },
+        {
+          "chunk_id": "chunk_004_002",
+          "text": "CHIP covers doctor visits, immunizations, hospitalizations, emergency services, prescription medications, dental care, and vision care. Some states may require small copayments for certain services.",
+          "embedding": [0.8, 0.9, 1.0, 0.1, 0.2],
+          "metadata": {
+            "section": "covered_benefits",
+            "page": 2,
+            "relevance_keywords": ["doctor visits", "immunizations", "hospitalizations", "emergency", "prescription", "dental", "vision", "copayments"]
+          }
+        }
+      ],
+      "document_metadata": {
+        "program_type": "federal_state",
+        "target_population": "children",
+        "document_category": "benefits_overview",
+        "last_updated": "2024-02-01"
+      }
+    },
+    {
+      "document_id": "form_guide_001",
+      "document_type": "form_completion_guide",
+      "title": "Insurance Enrollment Form Completion Guide",
+      "content_chunks": [
+        {
+          "chunk_id": "chunk_005_001",
+          "text": "Step-by-step instructions for completing insurance enrollment forms. Section 1: Personal Information - Provide full legal name as it appears on government ID, current address, phone number, and email address.",
+          "embedding": [0.9, 1.0, 0.1, 0.2, 0.3],
+          "metadata": {
+            "section": "personal_information",
+            "page": 1,
+            "relevance_keywords": ["legal name", "government ID", "address", "phone", "email"]
+          }
+        },
+        {
+          "chunk_id": "chunk_005_002",
+          "text": "Section 2: Household Information - List all family members to be covered. Include birth dates, Social Security numbers, and relationship to primary applicant. Attach birth certificates for children.",
+          "embedding": [1.0, 0.1, 0.2, 0.3, 0.4],
+          "metadata": {
+            "section": "household_information",
+            "page": 2,
+            "relevance_keywords": ["family members", "birth dates", "social security", "relationship", "birth certificates"]
+          }
+        }
+      ],
+      "document_metadata": {
+        "guide_type": "general_enrollment",
+        "applicable_forms": ["health_insurance", "medicaid", "chip"],
+        "language": "English",
+        "complexity_level": "beginner"
+      }
+    }
+  ],
+  "search_indices": {
+    "document_types": [
+      "insurance_policy_document",
+      "medicare_eligibility_guidelines", 
+      "medicaid_application_form",
+      "chip_benefits_summary",
+      "form_completion_guide"
+    ],
+    "keywords": [
+      "copay", "deductible", "eligibility", "income", "application", "forms",
+      "documents", "verification", "household", "children", "benefits"
+    ],
+    "workflow_mappings": {
+      "information_retrieval": ["insurance_policy_document", "medicare_eligibility_guidelines", "chip_benefits_summary"],
+      "determine_eligibility": ["medicare_eligibility_guidelines", "medicaid_application_form"],
+      "service_access_strategy": ["medicaid_application_form", "form_completion_guide"],
+      "form_preparation": ["form_completion_guide", "medicaid_application_form"]
+    }
+  }
+} 
