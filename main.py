@@ -616,7 +616,7 @@ async def upload_document_backend(
             "filename": file.filename,
             "contentType": file.content_type,
             "fileSize": len(file_data),
-            "documentType": "regulatory"  # Regulatory uploads go to 'regulatory_documents' table
+            "documentType": "user"  # User uploads go to 'documents' table
         }
         
         processing_success = False
