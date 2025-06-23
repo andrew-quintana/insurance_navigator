@@ -74,22 +74,50 @@ Deno.serve(async (req) => {
 
     console.log('📄 Processing document:', { documentId, path, filename, contentType })
 
-    // Get document record from database 
-    const { data: document, error: docError } = await supabase
+    // Get document record from database with improved error handling
+    console.log('🔍 Querying for document ID:', documentId)
+    const { data: documents, error: docError } = await supabase
       .from('documents')
       .select('*')
       .eq('id', documentId)
-      .single()
 
-    if (docError || !document) {
-      console.error('❌ Document not found:', docError)
+    console.log('📋 Query result:', { documentsFound: documents?.length || 0, error: docError })
+
+    if (docError) {
+      console.error('❌ Database query error:', docError)
       return new Response(JSON.stringify({ 
-        error: 'Document not found' 
+        error: 'Document not found in database',
+        details: docError.message || 'Database query failed'
       }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
+
+    if (!documents || documents.length === 0) {
+      console.error('❌ No document found with ID:', documentId)
+      return new Response(JSON.stringify({ 
+        error: 'Document not found in database',
+        details: 'No document record exists with the provided ID'
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (documents.length > 1) {
+      console.error('❌ Multiple documents found with ID:', documentId, 'Count:', documents.length)
+      return new Response(JSON.stringify({ 
+        error: 'Document not found in database',
+        details: 'Multiple documents found with the same ID'
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    const document = documents[0]
+    console.log('✅ Document found:', { id: document.id, filename: document.original_filename, status: document.status })
 
     // Update status to parsing
     await supabase
@@ -114,7 +142,6 @@ Deno.serve(async (req) => {
       .from('documents')
         .update({
           status: 'failed',
-          error_message: `Failed to download file: ${downloadError?.message || 'Unknown error'}`,
           updated_at: new Date().toISOString()
         })
         .eq('id', documentId)
@@ -246,7 +273,6 @@ Deno.serve(async (req) => {
         .from('documents')
         .update({
           status: 'failed',
-          error_message: 'No text could be extracted from the document',
           updated_at: new Date().toISOString()
         })
         .eq('id', documentId)
@@ -285,14 +311,13 @@ Deno.serve(async (req) => {
 
       if (vectorError) {
       console.error('❌ Vector processor invocation failed:', vectorError)
-      await supabase
-        .from('documents')
-        .update({
-          status: 'failed',
-          error_message: `Vector processing failed: ${vectorError.message}`,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', documentId)
+              await supabase
+          .from('documents')
+          .update({
+            status: 'failed',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', documentId)
       
       return new Response(JSON.stringify({ 
         error: 'Vector processing failed',
@@ -334,9 +359,8 @@ async function updateDocumentError(supabase: any, documentId: string, errorMessa
     .from('documents')
     .update({ 
       status: 'failed',
-      error_message: errorMessage,
       progress_percentage: 0,
       updated_at: new Date().toISOString()
     })
     .eq('id', documentId)
-}
+} 
