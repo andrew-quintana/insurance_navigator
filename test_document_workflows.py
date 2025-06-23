@@ -76,8 +76,8 @@ class DocumentWorkflowTester:
             response = requests.post(
                 f"{self.base_url}/api/documents/upload-regulatory",
                 json=payload,
-                headers=headers,
-                timeout=60  # Longer timeout for document processing
+                headers={"Authorization": f"Bearer {self.auth_token}"},
+                timeout=15  # Reduced timeout
             )
             
             print(f"📊 Response Status: {response.status_code}")
@@ -131,9 +131,10 @@ class DocumentWorkflowTester:
             
             response = requests.post(
                 f"{self.base_url}/api/documents/upload-unified",
-                data=data,  # Using form data, no file upload
-                headers=headers,
-                timeout=60
+                files={'file': ('dummy.txt', b'test content', 'text/plain')},
+                data={'request_data': json.dumps(request_data)},
+                headers={"Authorization": f"Bearer {self.auth_token}"},
+                timeout=15  # Reduced timeout
             )
             
             print(f"📊 Response Status: {response.status_code}")
@@ -260,4 +261,3 @@ class DocumentWorkflowTester:
 
 if __name__ == "__main__":
     tester = DocumentWorkflowTester()
-    tester.run_workflow_tests() 

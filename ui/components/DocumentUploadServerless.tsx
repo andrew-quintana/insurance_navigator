@@ -47,7 +47,7 @@ export default function DocumentUploadServerless({
   const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null)
   const [documentId, setDocumentId] = useState<string | null>(null)
 
-  // Initialize Supabase client with error handling
+  // ✅ CRITICAL FIX: Singleton Supabase client to prevent multiple instances
   const supabase = useMemo(() => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -57,16 +57,77 @@ export default function DocumentUploadServerless({
       return null
     }
     
-    return createClient(url, key)
+    // Use a global singleton to prevent multiple GoTrueClient instances
+    const globalKey = '__insurance_navigator_supabase_client'
+    if (typeof window !== 'undefined') {
+      if ((window as any)[globalKey]) {
+        console.log('📡 Reusing existing Supabase client')
+        return (window as any)[globalKey]
+      }
+    }
+    
+    console.log('🔧 Creating new Supabase client')
+    const client = createClient(url, key, {
+      realtime: {
+        params: {
+          eventsPerSecond: 5, // Reduce frequency to prevent overload
+          timeout: 10000,     // 10 second timeout
+        },
+        heartbeatIntervalMs: 30000, // 30 second heartbeat
+        reconnectAfterMs: (tries: number) => Math.min(tries * 1000, 30000)
+      },
+      auth: {
+        persistSession: true,
+        detectSessionInUrl: false,
+        autoRefreshToken: false // Prevent auto-refresh conflicts
+      },
+      global: {
+        headers: {
+          'X-Client-Info': 'insurance-navigator-upload/1.0.0'
+        }
+      }
+    })
+    
+    if (typeof window !== 'undefined') {
+      (window as any)[globalKey] = client
+    }
+    
+    return client
   }, [])
 
-  // Pure real-time progress tracking (NO POLLING NEEDED)
+  // ✅ CRITICAL FIX: Improved real-time subscription with timeout handling
   useEffect(() => {
     if (!documentId || !supabase) return
 
     let subscriptionActive = true
+    let timeoutId: NodeJS.Timeout
+    let fallbackIntervalId: NodeJS.Timeout
 
     console.log('🔄 Setting up real-time subscription for document:', documentId)
+
+    // Fallback polling mechanism for when WebSocket fails
+    const startFallbackPolling = () => {
+      console.log('🚨 WebSocket failed, starting fallback polling...')
+      setUploadMessage("⚙️ Processing in background - checking progress...")
+      
+      fallbackIntervalId = setInterval(async () => {
+        if (!subscriptionActive) return
+        
+        try {
+          const { data: document, error } = await supabase
+            .from('documents')
+            .select('*')
+            .eq('id', documentId)
+            .single()
+          
+          if (!error && document) {
+            handleDocumentUpdate(document)
+          }
+        } catch (error) {
+          console.warn('Fallback polling error:', error)
+        }
+      }, 5000) // Poll every 5 seconds
+    }
 
     // Handle document updates from Supabase real-time
     const handleDocumentUpdate = (document: any) => {
@@ -74,6 +135,11 @@ export default function DocumentUploadServerless({
       
       console.log('📡 Real-time update received:', document)
       setUploadProgress(document.progress_percentage || 0)
+      
+      // Clear timeout since we received an update
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
       
       // Update status messages based on document status
       switch(document.status) {
@@ -90,10 +156,10 @@ export default function DocumentUploadServerless({
           setUploadMessage("✂️ Breaking down content into sections...")
           break
         case 'vectorizing':
-          setUploadMessage(`🧠 Generating embeddings (${document.processed_chunks}/${document.total_chunks} sections)...`)
+          setUploadMessage(`🧠 Generating embeddings (${document.processed_chunks || 0}/${document.total_chunks || 0} sections)...`)
           break
         case 'completed':
-          setUploadMessage(`✅ Success! Processed ${document.total_chunks} sections from your document.`)
+          setUploadMessage(`✅ Success! Processed ${document.total_chunks || 0} sections from your document.`)
           setUploadProgress(100)
           setUploadSuccess(true)
           setIsUploading(false)
@@ -105,8 +171,8 @@ export default function DocumentUploadServerless({
             filename: selectedFile?.name || document.original_filename || '',
             chunks_processed: document.processed_chunks || 0,
             total_chunks: document.total_chunks || 0,
-            text_length: 0,
-            message: `Document processed successfully with ${document.total_chunks} chunks`
+            text_length: document.metadata?.text_length || 0,
+            message: `Document processed successfully with ${document.total_chunks || 0} chunks`
           }
           
           if (onUploadSuccess) {
@@ -131,9 +197,23 @@ export default function DocumentUploadServerless({
       }
     }
 
-    // Set up Supabase real-time subscription (NO POLLING!)
+    // Set timeout for subscription establishment (30 seconds)
+    timeoutId = setTimeout(() => {
+      if (subscriptionActive) {
+        console.warn('⚠️ Real-time subscription timeout, switching to fallback polling')
+        startFallbackPolling()
+      }
+    }, 30000)
+
+    // Set up Supabase real-time subscription with enhanced error handling
     const channel = supabase
-      .channel('document-progress')
+      .channel(`document-progress-${documentId}`, {
+        config: {
+          presence: {
+            key: documentId
+          }
+        }
+      })
       .on('postgres_changes', 
         { 
           event: 'UPDATE', 
@@ -146,21 +226,31 @@ export default function DocumentUploadServerless({
           handleDocumentUpdate(payload.new)
         }
       )
-      .subscribe((status) => {
-        console.log('📡 Subscription status:', status)
+      .subscribe((status: string, err?: any) => {
+        console.log('📡 Subscription status:', status, err)
         
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Real-time subscription active - NO POLLING NEEDED!')
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('⚠️ Real-time subscription failed - backend should handle processing')
-          // Don't poll - let backend handle everything
-          setUploadMessage("⚙️ Processing in background - updates will appear automatically...")
+          console.log('✅ Real-time subscription active')
+          if (timeoutId) {
+            clearTimeout(timeoutId)
+          }
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.warn('⚠️ Real-time subscription failed:', status, err)
+          if (subscriptionActive) {
+            startFallbackPolling()
+          }
         }
       })
 
     return () => {
       subscriptionActive = false
-      if (supabase) {
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+      if (fallbackIntervalId) {
+        clearInterval(fallbackIntervalId)
+      }
+      if (supabase && channel) {
         supabase.removeChannel(channel)
       }
     }

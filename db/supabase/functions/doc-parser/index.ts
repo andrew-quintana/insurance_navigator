@@ -198,14 +198,9 @@ Deno.serve(async (req) => {
               hasText: !!extractedText
             })
           } catch (llamaError) {
-            console.log(`⚠️ LlamaCloud failed with detailed error:`, {
-              errorName: llamaError.name,
-              errorMessage: llamaError.message,
-              errorStack: llamaError.stack?.substring(0, 200) + '...'
-            })
-            console.log('🔄 Falling back to basic text extraction...')
-            
-            // Graceful fallback to basic text extraction
+            console.error('❌ LlamaParse error:', llamaError)
+            // Fallback to basic text extraction
+            const arrayBuffer = await fileData.arrayBuffer()
             const text = new TextDecoder().decode(arrayBuffer)
             extractedText = text.replace(/[^\x20-\x7E\n\r\t]/g, ' ').trim()
             console.log('✅ Fallback extraction completed, length:', extractedText.length)
@@ -223,42 +218,82 @@ Deno.serve(async (req) => {
 
       console.log('📊 Final extracted text length:', extractedText.length)
 
-      // Update document with extracted text metadata
-      console.log('💾 Updating document with extraction results...')
-      await supabase
-        .from('documents')
-        .update({
-          extracted_text_length: extractedText.length,
-          status: 'chunking',
-          progress_percentage: 60
-        })
-        .eq('id', documentId)
-
-      // Trigger vector processing
-      console.log('🔗 Invoking vector-processor...')
-      const { error: vectorError } = await supabase.functions.invoke('vector-processor', {
-        body: { documentId, extractedText }
-      })
-
-      if (vectorError) {
-        console.error('❌ Error invoking vector-processor:', vectorError)
-        await updateDocumentError(supabase, documentId, 'Failed to start vector processing')
+      if (!extractedText || extractedText.length < 10) {
+        console.error('❌ No text extracted from document')
+        await updateDocumentError(supabase, documentId, 'No text content found in document')
         return new Response(
-          JSON.stringify({ error: 'Failed to start vector processing' }),
+          JSON.stringify({ error: 'No text content found' }),
           { status: 400 }
         )
       }
 
-      console.log('✅ doc-parser completed successfully')
-      return new Response(JSON.stringify({ 
-        success: true, 
-        textLength: extractedText.length,
-        documentId: documentId,
-        usedLlamaParse: !!Deno.env.get('LLAMAPARSE_API_KEY')
-      }))
-    } catch (parseError) {
-      console.error('❌ Text extraction error:', parseError)
-      await updateDocumentError(supabase, documentId, `Text extraction failed: ${parseError.message}`)
+      // Update progress
+      console.log('📝 Updating document status to vectorizing...')
+      await supabase
+        .from('documents')
+        .update({
+          status: 'vectorizing',
+          progress_percentage: 60,
+          metadata: {
+            ...document.metadata,
+            text_length: extractedText.length,
+            extraction_completed_at: new Date().toISOString()
+          }
+        })
+        .eq('id', documentId)
+
+      // ✅ CRITICAL FIX: Trigger vector-processor automatically
+      console.log('🚀 Triggering vector-processor for document:', documentId)
+      try {
+        const { data: vectorResult, error: vectorError } = await supabase.functions.invoke('vector-processor', {
+          body: { 
+            documentId: documentId,
+            extractedText: extractedText
+          }
+        })
+
+        if (vectorError) {
+          console.error('❌ vector-processor invocation failed:', vectorError)
+          throw new Error(`vector-processor failed: ${vectorError.message}`)
+        }
+
+        console.log('✅ vector-processor invoked successfully for document:', documentId)
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            message: 'Document parsed and vectorization started',
+            documentId: documentId,
+            textLength: extractedText.length,
+            nextStage: 'vectorizing'
+          }),
+          { status: 200 }
+        )
+
+      } catch (vectorError) {
+        console.error(`❌ Vector processing failed for ${documentId}:`, vectorError)
+        
+        await supabase
+          .from('documents')
+          .update({
+            status: 'failed',
+            error_message: `Vector processing failed: ${vectorError.message}`,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', documentId)
+
+        return new Response(
+          JSON.stringify({ 
+            error: 'Vector processing failed',
+            details: vectorError.message
+          }),
+          { status: 500 }
+        )
+      }
+
+    } catch (extractionError) {
+      console.error('❌ Text extraction failed:', extractionError)
+      await updateDocumentError(supabase, documentId, `Text extraction failed: ${extractionError.message}`)
       return new Response(
         JSON.stringify({ error: 'Text extraction failed' }),
         { status: 400 }
@@ -266,8 +301,12 @@ Deno.serve(async (req) => {
     }
   } catch (error) {
     console.error('❌ doc-parser error:', error)
+    await updateDocumentError(supabase, documentId, `Parsing failed: ${error.message}`)
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ 
+        error: 'Document parsing failed',
+        details: error.message
+      }),
       { status: 500 }
     )
   }
@@ -276,10 +315,11 @@ Deno.serve(async (req) => {
 async function updateDocumentError(supabase: any, documentId: string, errorMessage: string) {
   await supabase
     .from('documents')
-    .update({ 
+    .update({
       status: 'failed',
       error_message: errorMessage,
-      processing_completed_at: new Date().toISOString()
+      progress_percentage: 0,
+      updated_at: new Date().toISOString()
     })
     .eq('id', documentId)
 } 

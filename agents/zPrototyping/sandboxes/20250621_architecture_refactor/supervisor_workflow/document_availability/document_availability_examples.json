@@ -1,0 +1,219 @@
+[
+  {
+    "input": "Required Documents: ['insurance_policy_document', 'benefits_summary'] | User ID: user_123 | Workflow: information_retrieval",
+    "output": {
+      "document_checks": [
+        {
+          "document_name": "insurance_policy_document",
+          "react_process": "Thought 1: I need to check if the user has uploaded their insurance policy document to proceed with information retrieval. Action 1: SearchDocument[insurance_policy_document] Observation 1: Document found - uploaded 2024-01-15, PDF format, 1MB size.",
+          "status": "available"
+        },
+        {
+          "document_name": "benefits_summary",
+          "react_process": "Thought 2: I need to check the benefits summary document availability. Action 2: SearchDocument[benefits_summary] Observation 2: Document found - uploaded 2024-02-01, PDF format, 512KB size.",
+          "status": "available"
+        }
+      ],
+      "available_documents": ["insurance_policy_document", "benefits_summary"],
+      "missing_documents": [],
+      "document_quality_issues": [],
+      "overall_readiness": "ready_to_proceed",
+      "readiness_confidence": 0.95,
+      "react_reasoning": "Thought: After checking both required documents systematically, I found that both insurance_policy_document and benefits_summary are available in the user's storage. Both documents exist and can be used for the information_retrieval workflow. Action: Finish[ready_to_proceed]",
+      "collection_guidance": []
+    },
+    "explanation": "Example showing successful document availability check with ReAct methodology for information retrieval workflow"
+  },
+  {
+    "input": "Required Documents: ['insurance_policy_document', 'benefits_summary', 'coverage_details'] | User ID: user_456 | Workflow: information_retrieval",
+    "output": {
+      "document_checks": [
+        {
+          "document_name": "insurance_policy_document",
+          "react_process": "Thought 1: Checking for insurance policy document - high availability pattern (90%). Action 1: SearchDocument[insurance_policy_document] Observation 1: Document found - uploaded 2024-03-10, PDF format, 1.2MB size, policy_basics: {\"deductible\": 1500, \"copay_primary\": 30, \"plan_type\": \"HMO\"}.",
+          "status": "available"
+        },
+        {
+          "document_name": "benefits_summary", 
+          "react_process": "Thought 2: Checking benefits summary - commonly available (85%). Action 2: SearchDocument[benefits_summary] Observation 2: Document found - uploaded 2024-03-12, PDF format, 800KB size, comprehensive benefits information available.",
+          "status": "available"
+        },
+        {
+          "document_name": "coverage_details",
+          "react_process": "Thought 3: Checking coverage details - good availability (80%). Action 3: SearchDocument[coverage_details] Observation 3: Document found - uploaded 2024-03-15, PDF format, 600KB size, detailed coverage breakdown available.",
+          "status": "available"
+        }
+      ],
+      "available_documents": ["insurance_policy_document", "benefits_summary", "coverage_details"],
+      "missing_documents": [],
+      "document_quality_issues": [],
+      "overall_readiness": "ready_to_proceed",
+      "readiness_confidence": 0.92,
+      "react_reasoning": "Thought: All three required documents for information retrieval are available in Supabase storage. Insurance_policy_document, benefits_summary, and coverage_details all exist with good metadata. This represents a typical successful case for information retrieval workflows. Action: Finish[ready_to_proceed]",
+      "collection_guidance": []
+    },
+    "explanation": "Complete document set for information retrieval - optimal PROCEED scenario with Supabase policy_basics data"
+  },
+  {
+    "input": "Required Documents: ['income_verification', 'tax_return_current_year', 'social_security_statement'] | User ID: user_123 | Workflow: determine_eligibility",
+    "output": {
+      "document_checks": [
+        {
+          "document_name": "income_verification",
+          "react_process": "Thought 1: I need to check if income verification document exists for eligibility determination. Action 1: SearchDocument[income_verification] Observation 1: Document not found in user's storage.",
+          "status": "missing"
+        },
+        {
+          "document_name": "tax_return_current_year",
+          "react_process": "Thought 2: I need to check the current year tax return document. Action 2: SearchDocument[tax_return_current_year] Observation 2: Document found - uploaded 2024-03-15, PDF format, 800KB size.",
+          "status": "available"
+        },
+        {
+          "document_name": "social_security_statement",
+          "react_process": "Thought 3: I need to check for the social security statement. Action 3: SearchDocument[social_security_statement] Observation 3: Document not found in user's storage.",
+          "status": "missing"
+        }
+      ],
+      "available_documents": ["tax_return_current_year"],
+      "missing_documents": ["income_verification", "social_security_statement"],
+      "document_quality_issues": [],
+      "overall_readiness": "needs_documents",
+      "readiness_confidence": 0.3,
+      "react_reasoning": "Thought: After systematically checking all three required documents for eligibility determination, I found that tax_return_current_year is available, but income_verification and social_security_statement are missing. The user cannot proceed with eligibility workflow due to missing documents. Action: Finish[needs_documents]",
+      "collection_guidance": [
+        "Upload current income verification document (pay stubs, employment letter, or tax documents)",
+        "Upload recent Social Security statement from SSA.gov"
+      ]
+    },
+    "explanation": "Example showing systematic document checking with missing documents requiring user action - COLLECT scenario"
+  },
+  {
+    "input": "Required Documents: ['medicare_application_form'] | User ID: user_456 | Workflow: service_access_strategy",
+    "output": {
+      "document_checks": [
+        {
+          "document_name": "medicare_application_form",
+          "react_process": "Thought 1: I need to check if the Medicare application form is available for the service access strategy workflow. Action 1: SearchDocument[medicare_application_form] Observation 1: Document found - uploaded 2024-06-01, PDF format, 600KB size.",
+          "status": "available"
+        }
+      ],
+      "available_documents": ["medicare_application_form"],
+      "missing_documents": [],
+      "document_quality_issues": [],
+      "overall_readiness": "ready_to_proceed",
+      "readiness_confidence": 0.95,
+      "react_reasoning": "Thought: I've systematically checked the required Medicare application form and found it exists in the user's storage. The user is ready to proceed with the service access strategy workflow. Action: Finish[ready_to_proceed]",
+      "collection_guidance": []
+    },
+    "explanation": "Example showing perfect document availability for immediate workflow execution"
+  },
+  {
+    "input": "Required Documents: ['chip_eligibility_guidelines', 'chip_application_form', 'income_verification', 'household_composition_form', 'residency_proof', 'child_identity_documents', 'chip_benefits_summary'] | User ID: user_789 | Workflow: complex_multi_workflow",
+    "output": {
+      "document_checks": [
+        {
+          "document_name": "chip_eligibility_guidelines",
+          "react_process": "Thought 1: I need to check if CHIP eligibility guidelines are available. Action 1: SearchDocument[chip_eligibility_guidelines] Observation 1: Document found - reference document available in system.",
+          "status": "available"
+        },
+        {
+          "document_name": "chip_application_form",
+          "react_process": "Thought 2: I need to check for the CHIP application form. Action 2: SearchDocument[chip_application_form] Observation 2: Document not found in user's storage.",
+          "status": "missing"
+        },
+        {
+          "document_name": "income_verification",
+          "react_process": "Thought 3: I need to check income verification document. Action 3: SearchDocument[income_verification] Observation 3: Document not found in user's storage.",
+          "status": "missing"
+        },
+        {
+          "document_name": "household_composition_form",
+          "react_process": "Thought 4: I need to check household composition form. Action 4: SearchDocument[household_composition_form] Observation 4: Document not found in user's storage.",
+          "status": "missing"
+        },
+        {
+          "document_name": "residency_proof",
+          "react_process": "Thought 5: I need to check residency proof document. Action 5: SearchDocument[residency_proof] Observation 5: Document not found in user's storage.",
+          "status": "missing"
+        },
+        {
+          "document_name": "child_identity_documents",
+          "react_process": "Thought 6: I need to check child identity documents. Action 6: SearchDocument[child_identity_documents] Observation 6: Document not found in user's storage.",
+          "status": "missing"
+        },
+        {
+          "document_name": "chip_benefits_summary",
+          "react_process": "Thought 7: I need to check CHIP benefits summary. Action 7: SearchDocument[chip_benefits_summary] Observation 7: Document found - reference document available in system.",
+          "status": "available"
+        }
+      ],
+      "available_documents": ["chip_eligibility_guidelines", "chip_benefits_summary"],
+      "missing_documents": ["chip_application_form", "income_verification", "household_composition_form", "residency_proof", "child_identity_documents"],
+      "document_quality_issues": [],
+      "overall_readiness": "needs_documents",
+      "readiness_confidence": 0.2,
+      "react_reasoning": "Thought: After systematically checking all seven required documents for the complex CHIP workflow, I found that only chip_eligibility_guidelines and chip_benefits_summary are available (reference documents). Five critical user-specific documents are missing: chip_application_form, income_verification, household_composition_form, residency_proof, and child_identity_documents. The user cannot proceed without these essential documents. Action: Finish[needs_documents]",
+      "collection_guidance": [
+        "Download and complete the CHIP application form for your state",
+        "Upload current income verification (pay stubs, tax returns, or employment verification)",
+        "Complete and upload household composition form with family member details",
+        "Upload proof of residency (utility bill, lease agreement, or mortgage statement)",
+        "Upload child identity documents (birth certificates, social security cards)"
+      ]
+    },
+    "explanation": "Example showing complex multi-workflow scenario with extensive missing documents - COLLECT scenario"
+  },
+  {
+    "input": "Required Documents: ['medicare_application_form'] | User ID: user_202 | Workflow: service_access_strategy",
+    "output": {
+      "document_checks": [
+        {
+          "document_name": "medicare_application_form",
+          "react_process": "Thought 1: Checking Medicare application form for service access. These forms have medium availability (40%) as some users prepare ahead. Action 1: SearchDocument[medicare_application_form] Observation 1: Document found - uploaded 2024-05-20, PDF format, 750KB size, appears to be completed Medicare enrollment form.",
+          "status": "available"
+        }
+      ],
+      "available_documents": ["medicare_application_form"],
+      "missing_documents": [],
+      "document_quality_issues": [],
+      "overall_readiness": "ready_to_proceed",
+      "readiness_confidence": 0.88,
+      "react_reasoning": "Thought: The required Medicare application form is available in the user's Supabase storage. This single-document requirement for service access strategy can proceed immediately. Action: Finish[ready_to_proceed]",
+      "collection_guidance": []
+    },
+    "explanation": "Single document requirement met - efficient PROCEED scenario"
+  },
+  {
+    "input": "Required Documents: ['identity_document', 'application_form', 'supporting_documentation'] | User ID: user_303 | Workflow: form_preparation",
+    "output": {
+      "document_checks": [
+        {
+          "document_name": "identity_document",
+          "react_process": "Thought 1: Checking identity document - good availability (70%). Action 1: SearchDocument[identity_document] Observation 1: Document found - uploaded 2024-06-01, PDF format, 400KB size, appears to be driver's license scan.",
+          "status": "available"
+        },
+        {
+          "document_name": "application_form",
+          "react_process": "Thought 2: Checking application form - low availability (20%). Action 2: SearchDocument[application_form] Observation 2: Document not found. Users typically need to download forms for preparation workflows.",
+          "status": "missing"
+        },
+        {
+          "document_name": "supporting_documentation",
+          "react_process": "Thought 3: Checking supporting documentation - varies widely (35%). Action 3: SearchDocument[supporting_documentation] Observation 3: Document not found. Users often need guidance on what supporting docs are required.",
+          "status": "missing"
+        }
+      ],
+      "available_documents": ["identity_document"],
+      "missing_documents": ["application_form", "supporting_documentation"],
+      "document_quality_issues": [],
+      "overall_readiness": "needs_documents",
+      "readiness_confidence": 0.45,
+      "react_reasoning": "Thought: For form preparation workflow, identity_document is available but application_form and supporting_documentation are missing. This is typical - users have basic ID but need help gathering specific forms and supporting materials. Action: Finish[needs_documents]",
+      "collection_guidance": [
+        "Download the specific application form required for your situation from the appropriate government website",
+        "Gather supporting documentation as specified in the application instructions (may include income statements, medical records, or other relevant documents)"
+      ]
+    },
+    "explanation": "Form preparation with mixed availability - realistic COLLECT scenario"
+  }
+] 

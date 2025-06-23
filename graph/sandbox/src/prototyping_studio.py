@@ -18,7 +18,7 @@ import inspect
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Union, Callable
 from dataclasses import dataclass
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 import json
 from datetime import datetime
 import logging
@@ -1226,6 +1226,428 @@ Focus on providing structured, accurate data in the expected format."""
             print(f"⚠️  Could not compare JSON structures: {e}")
 
 
+class MarkdownTemplateUtilities:
+    """Utilities for inserting JSON data into markdown templates."""
+    
+    @staticmethod
+    def insert_json_into_markdown(
+        markdown_template: str, 
+        json_data: Union[Dict, List, str, BaseModel], 
+        placeholder: str = "examples",
+        indent: int = 2,
+        format_as_code_block: bool = True,
+        code_block_language: str = "json"
+    ) -> str:
+        """
+        Insert JSON data into a markdown template by replacing placeholders.
+        
+        Args:
+            markdown_template: The markdown template with placeholders
+            json_data: The JSON data to insert (dict, list, JSON string, or Pydantic model)
+            placeholder: The placeholder name to look for (default: "examples")
+            indent: Indentation for JSON formatting (default: 2)
+            format_as_code_block: Whether to wrap JSON in code block (default: True)
+            code_block_language: Language for code block syntax highlighting (default: "json")
+            
+        Returns:
+            Markdown string with JSON data inserted
+            
+        Examples:
+            # Basic usage
+            template = "Here are some examples: {{examples}}"
+            data = {"key": "value"}
+            result = MarkdownTemplateUtilities.insert_json_into_markdown(template, data)
+            
+            # Custom placeholder
+            template = "Input data: {{input}}"
+            result = MarkdownTemplateUtilities.insert_json_into_markdown(
+                template, data, placeholder="input"
+            )
+            
+            # Multiple replacements
+            template = "Examples: {{examples}} and Input: {{input}}"
+            result = MarkdownTemplateUtilities.insert_json_into_markdown(
+                template, {"examples": [1,2,3], "input": {"test": True}}
+            )
+        """
+        try:
+            # Convert input data to JSON string
+            if isinstance(json_data, BaseModel):
+                json_str = json_data.model_dump_json(indent=indent)
+            elif isinstance(json_data, str):
+                # Assume it's already JSON, validate and reformat
+                parsed = json.loads(json_data)
+                json_str = json.dumps(parsed, indent=indent)
+            else:
+                json_str = json.dumps(json_data, indent=indent)
+            
+            # Format as code block if requested
+            if format_as_code_block:
+                formatted_json = f"```{code_block_language}\n{json_str}\n```"
+            else:
+                formatted_json = json_str
+            
+            # Replace placeholders - support both {{placeholder}} and {placeholder} formats
+            placeholder_patterns = [
+                f"{{{{{placeholder}}}}}",  # {{placeholder}}
+                f"{{{placeholder}}}",      # {placeholder}
+            ]
+            
+            result = markdown_template
+            for pattern in placeholder_patterns:
+                result = result.replace(pattern, formatted_json)
+            
+            return result
+            
+        except Exception as e:
+            print(f"❌ Error inserting JSON into markdown: {e}")
+            return markdown_template
+    
+    @staticmethod
+    def insert_data_into_template(
+        template: str,
+        data: Any,
+        placeholder: str = "input",
+        auto_detect_format: bool = True,
+        force_json: bool = False,
+        format_as_code_block: bool = None,
+        code_block_language: str = None,
+        indent: int = 2
+    ) -> str:
+        """
+        Insert any type of data into a template, intelligently formatting based on data type.
+        
+        This is a more flexible version that handles various input types without forcing JSON.
+        
+        Args:
+            template: The template with placeholders
+            data: Any data to insert (string, number, dict, list, etc.)
+            placeholder: The placeholder name to look for (default: "input")
+            auto_detect_format: Whether to auto-detect formatting (default: True)
+            force_json: Force JSON formatting even for simple types (default: False)
+            format_as_code_block: Whether to wrap in code block (auto-detected if None)
+            code_block_language: Language for syntax highlighting (auto-detected if None)
+            indent: Indentation for structured data (default: 2)
+            
+        Returns:
+            Template with data inserted
+            
+        Examples:
+            # Simple string - no code block
+            template = "User asked: {{input}}"
+            result = insert_data_into_template(template, "What is the copay?")
+            # Result: "User asked: What is the copay?"
+            
+            # Dictionary - JSON code block
+            template = "Config: {{config}}"
+            result = insert_data_into_template(template, {"temp": 0.1, "model": "claude"})
+            # Result: "Config: ```json\n{\"temp\": 0.1, \"model\": \"claude\"}\n```"
+            
+            # Force simple formatting
+            template = "Query: {{query}}"
+            result = insert_data_into_template(template, {"q": "help"}, force_json=False)
+            # Result: "Query: {'q': 'help'}"
+        """
+        try:
+            # Handle different data types intelligently
+            if auto_detect_format and not force_json:
+                formatted_data = MarkdownTemplateUtilities._format_data_intelligently(
+                    data, format_as_code_block, code_block_language, indent
+                )
+            else:
+                # Force JSON formatting
+                formatted_data = MarkdownTemplateUtilities._format_as_json(
+                    data, format_as_code_block, code_block_language, indent
+                )
+            
+            # Replace placeholders - support both {{placeholder}} and {placeholder} formats
+            placeholder_patterns = [
+                f"{{{{{placeholder}}}}}",  # {{placeholder}}
+                f"{{{placeholder}}}",      # {placeholder}
+            ]
+            
+            result = template
+            for pattern in placeholder_patterns:
+                result = result.replace(pattern, formatted_data)
+            
+            return result
+            
+        except Exception as e:
+            print(f"❌ Error inserting data into template: {e}")
+            return template
+    
+    @staticmethod
+    def _format_data_intelligently(
+        data: Any,
+        format_as_code_block: bool = None,
+        code_block_language: str = None,
+        indent: int = 2
+    ) -> str:
+        """Intelligently format data based on its type."""
+        
+        # Simple string - return as-is (most common case)
+        if isinstance(data, str):
+            # Check if it's already JSON
+            try:
+                json.loads(data)
+                # It's JSON string, format it properly
+                return MarkdownTemplateUtilities._format_as_json(
+                    data, format_as_code_block, code_block_language, indent
+                )
+            except (json.JSONDecodeError, TypeError):
+                # Regular string, return as-is
+                return data
+        
+        # Numbers - return as string
+        elif isinstance(data, (int, float, bool)):
+            return str(data)
+        
+        # None - return empty string
+        elif data is None:
+            return ""
+        
+        # Pydantic models - format as JSON
+        elif isinstance(data, BaseModel):
+            formatted_json = data.model_dump_json(indent=indent)
+            code_block = format_as_code_block if format_as_code_block is not None else True
+            language = code_block_language if code_block_language is not None else "json"
+            
+            if code_block:
+                return f"```{language}\n{formatted_json}\n```"
+            else:
+                return formatted_json
+        
+        # Complex data (dict, list) - format as JSON with code block
+        elif isinstance(data, (dict, list, tuple, set)):
+            return MarkdownTemplateUtilities._format_as_json(
+                data, 
+                format_as_code_block if format_as_code_block is not None else True,
+                code_block_language if code_block_language is not None else "json",
+                indent
+            )
+        
+        # Everything else - convert to string
+        else:
+            return str(data)
+    
+    @staticmethod
+    def _format_as_json(
+        data: Any,
+        format_as_code_block: bool = None,
+        code_block_language: str = None,
+        indent: int = 2
+    ) -> str:
+        """Format data as JSON."""
+        if isinstance(data, BaseModel):
+            json_str = data.model_dump_json(indent=indent)
+        elif isinstance(data, str):
+            # Assume it's already JSON, validate and reformat
+            parsed = json.loads(data)
+            json_str = json.dumps(parsed, indent=indent)
+        else:
+            json_str = json.dumps(data, indent=indent)
+        
+        # Apply code block formatting
+        code_block = format_as_code_block if format_as_code_block is not None else True
+        language = code_block_language if code_block_language is not None else "json"
+        
+        if code_block:
+            return f"```{language}\n{json_str}\n```"
+        else:
+            return json_str
+    
+    @staticmethod
+    def insert_multiple_json_into_markdown(
+        markdown_template: str,
+        json_data_dict: Dict[str, Union[Dict, List, str, BaseModel]],
+        indent: int = 2,
+        format_as_code_block: bool = True,
+        code_block_language: str = "json"
+    ) -> str:
+        """
+        Insert multiple JSON data sets into a markdown template.
+        
+        Args:
+            markdown_template: The markdown template with multiple placeholders
+            json_data_dict: Dictionary mapping placeholder names to JSON data
+            indent: Indentation for JSON formatting
+            format_as_code_block: Whether to wrap JSON in code blocks
+            code_block_language: Language for code block syntax highlighting
+            
+        Returns:
+            Markdown string with all JSON data inserted
+            
+        Example:
+            template = '''
+            # Examples
+            {{examples}}
+            
+            # Input Schema
+            {{input}}
+            
+            # Expected Output
+            {{output}}
+            '''
+            
+            data = {
+                "examples": [{"name": "John", "age": 30}],
+                "input": {"user_query": "string"},
+                "output": {"result": "string", "confidence": "float"}
+            }
+            
+            result = MarkdownTemplateUtilities.insert_multiple_json_into_markdown(template, data)
+        """
+        result = markdown_template
+        
+        for placeholder, json_data in json_data_dict.items():
+            result = MarkdownTemplateUtilities.insert_json_into_markdown(
+                result, 
+                json_data, 
+                placeholder=placeholder,
+                indent=indent,
+                format_as_code_block=format_as_code_block,
+                code_block_language=code_block_language
+            )
+        
+        return result
+    
+    @staticmethod
+    def create_prompt_with_examples(
+        base_prompt: str,
+        examples: List[Dict[str, Any]],
+        examples_placeholder: str = "examples",
+        format_examples: bool = True
+    ) -> str:
+        """
+        Create a prompt template with examples inserted.
+        
+        Args:
+            base_prompt: Base prompt template with examples placeholder
+            examples: List of example dictionaries
+            examples_placeholder: Placeholder name for examples
+            format_examples: Whether to format examples nicely
+            
+        Returns:
+            Complete prompt with examples inserted
+            
+        Example:
+            prompt_template = '''
+            You are a helpful assistant. Here are some examples:
+            
+            {{examples}}
+            
+            Please follow similar patterns in your response.
+            '''
+            
+            examples = [
+                {"input": "Hello", "output": "Hi there!"},
+                {"input": "Goodbye", "output": "See you later!"}
+            ]
+            
+            result = MarkdownTemplateUtilities.create_prompt_with_examples(
+                prompt_template, examples
+            )
+        """
+        if format_examples:
+            # Format examples in a more readable way
+            formatted_examples = []
+            for i, example in enumerate(examples, 1):
+                formatted_example = f"Example {i}:\n"
+                for key, value in example.items():
+                    if isinstance(value, (dict, list)):
+                        value_str = json.dumps(value, indent=2)
+                    else:
+                        value_str = str(value)
+                    formatted_example += f"{key.capitalize()}: {value_str}\n"
+                formatted_examples.append(formatted_example)
+            
+            examples_text = "\n".join(formatted_examples)
+        else:
+            examples_text = json.dumps(examples, indent=2)
+        
+        return MarkdownTemplateUtilities.insert_json_into_markdown(
+            base_prompt,
+            examples_text,
+            placeholder=examples_placeholder,
+            format_as_code_block=False
+        )
+    
+    @staticmethod
+    def extract_placeholders(markdown_template: str) -> List[str]:
+        """
+        Extract all placeholder names from a markdown template.
+        
+        Args:
+            markdown_template: The markdown template to analyze
+            
+        Returns:
+            List of placeholder names found
+            
+        Example:
+            template = "Here is {{examples}} and {{input}} data"
+            placeholders = MarkdownTemplateUtilities.extract_placeholders(template)
+            # Returns: ["examples", "input"]
+        """
+        import re
+        
+        # Find both {{placeholder}} and {placeholder} patterns
+        patterns = [
+            r'\{\{([^}]+)\}\}',  # {{placeholder}}
+            r'\{([^}]+)\}',      # {placeholder} (but avoid double braces)
+        ]
+        
+        placeholders = set()
+        for pattern in patterns:
+            matches = re.findall(pattern, markdown_template)
+            for match in matches:
+                # Skip if it's part of a double brace pattern
+                if '{{' + match + '}}' not in markdown_template or pattern == patterns[0]:
+                    placeholders.add(match.strip())
+        
+        return sorted(list(placeholders))
+    
+    @staticmethod
+    def validate_template(
+        markdown_template: str,
+        required_placeholders: List[str],
+        available_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Validate that a template has the required placeholders and data is available.
+        
+        Args:
+            markdown_template: The template to validate
+            required_placeholders: List of required placeholder names
+            available_data: Dictionary of available data keys
+            
+        Returns:
+            Validation result with details
+            
+        Example:
+            template = "Examples: {{examples}} Input: {{input}}"
+            required = ["examples", "input"]
+            data = {"examples": [], "input": {}}
+            
+            result = MarkdownTemplateUtilities.validate_template(template, required, data)
+        """
+        found_placeholders = MarkdownTemplateUtilities.extract_placeholders(markdown_template)
+        
+        missing_placeholders = [p for p in required_placeholders if p not in found_placeholders]
+        extra_placeholders = [p for p in found_placeholders if p not in required_placeholders]
+        missing_data = [p for p in required_placeholders if p not in available_data]
+        
+        is_valid = len(missing_placeholders) == 0 and len(missing_data) == 0
+        
+        return {
+            "is_valid": is_valid,
+            "found_placeholders": found_placeholders,
+            "missing_placeholders": missing_placeholders,
+            "extra_placeholders": extra_placeholders,
+            "missing_data": missing_data,
+            "summary": f"Found {len(found_placeholders)} placeholders, {len(missing_placeholders)} missing, {len(missing_data)} without data"
+        }
+
+
 # Insurance-specific JSON Models for Testing
 
 class PatientIntakeInput(BaseModel):
@@ -1308,6 +1730,81 @@ class RegulatoryAnalysis(BaseModel):
     regulatory_citations: List[str] = Field(default_factory=list, description="Specific regulatory citations")
     enforcement_mechanisms: List[str] = Field(default_factory=list, description="Enforcement options")
     regulatory_timeline: Dict[str, str] = Field(default_factory=dict, description="Regulatory timelines")
+
+class WorkflowPrescriptionOutput(BaseModel):
+    """Output model for workflow prescription - requires a simple list of workflow names."""
+    workflows: List[str] = Field(
+        description="List of required workflows for the user request. Must be one or more of: 'information_retrieval', 'service_access_strategy', 'determine_eligibility', 'form_preparation'",
+        examples=[
+            ["information_retrieval"],
+            ["service_access_strategy", "form_preparation"],
+            ["determine_eligibility", "information_retrieval"]
+        ],
+        min_items=1,
+        max_items=4
+    )
+    
+    @field_validator('workflows')
+    @classmethod
+    def validate_workflows(cls, v):
+        """Validate that all workflows are from the allowed set."""
+        allowed_workflows = {
+            'information_retrieval',
+            'service_access_strategy', 
+            'determine_eligibility',
+            'form_preparation'
+        }
+        
+        for workflow in v:
+            if workflow not in allowed_workflows:
+                raise ValueError(f"Invalid workflow '{workflow}'. Must be one of: {', '.join(allowed_workflows)}")
+        
+        return v
+    
+    @classmethod
+    def from_list(cls, workflow_list: List[str]) -> 'WorkflowPrescriptionOutput':
+        """Create WorkflowPrescriptionOutput from a simple list of workflows."""
+        return cls(workflows=workflow_list)
+    
+    @classmethod
+    def parse_output(cls, output: Union[str, List[str], Dict]) -> 'WorkflowPrescriptionOutput':
+        """Parse various output formats into WorkflowPrescriptionOutput."""
+        if isinstance(output, list):
+            # Direct list format like ["information_retrieval"]
+            return cls.from_list(output)
+        elif isinstance(output, str):
+            # Try to parse as JSON
+            try:
+                import json
+                parsed = json.loads(output)
+                if isinstance(parsed, list):
+                    return cls.from_list(parsed)
+                elif isinstance(parsed, dict) and 'workflows' in parsed:
+                    return cls(**parsed)
+                else:
+                    raise ValueError("String output must be a JSON list or dict with 'workflows' key")
+            except json.JSONDecodeError:
+                raise ValueError("String output must be valid JSON")
+        elif isinstance(output, dict):
+            # Dictionary format
+            return cls(**output)
+        else:
+            raise ValueError(f"Unsupported output format: {type(output)}")
+
+# Convenience class for simpler parsing
+class SimpleWorkflowOutput(BaseModel):
+    """Ultra-simple workflow output that accepts just a list of strings."""
+    workflows: List[str]
+    
+    def __init__(self, **data):
+        if isinstance(data, list):
+            # Handle direct list input
+            super().__init__(workflows=data)
+        elif len(data) == 1 and isinstance(list(data.values())[0], list):
+            # Handle single key with list value
+            super().__init__(workflows=list(data.values())[0])
+        else:
+            super().__init__(**data)
 
 
 # Test Case Factories
@@ -1392,6 +1889,7 @@ def get_json_utilities():
     """Get all JSON testing utilities in one convenient object."""
     return {
         'utils': JSONModelUtilities,
+        'markdown_utils': MarkdownTemplateUtilities,
         'models': {
             'workflow': {
                 'input': PatientIntakeInput,
@@ -1407,4 +1905,497 @@ def get_json_utilities():
             }
         },
         'factory': JSONTestCaseFactory
+    }
+
+
+# Convenience function for notebook usage
+def insert_json_into_markdown(
+    markdown_template: str, 
+    json_data: Union[Dict, List, str, BaseModel], 
+    placeholder: str = "examples",
+    **kwargs
+) -> str:
+    """
+    Convenient function for inserting JSON into markdown templates in notebooks.
+    
+    Args:
+        markdown_template: The markdown template with placeholders
+        json_data: The JSON data to insert
+        placeholder: The placeholder name to look for (default: "examples")
+        **kwargs: Additional formatting options (indent, format_as_code_block, etc.)
+        
+    Returns:
+        Markdown string with JSON data inserted
+        
+    Example:
+        template = "Here are some examples: {{examples}}"
+        data = {"key": "value"}
+        result = insert_json_into_markdown(template, data)
+        print(result)
+    """
+    return MarkdownTemplateUtilities.insert_json_into_markdown(
+        markdown_template, json_data, placeholder, **kwargs
+    )
+
+
+# Input-agnostic convenience function  
+def insert_data_into_template(
+    template: str,
+    data: Any,
+    placeholder: str = "input",
+    **kwargs
+) -> str:
+    """
+    Input-agnostic function for inserting any data type into templates.
+    
+    This function intelligently handles strings, numbers, dicts, lists, etc.
+    without forcing JSON formatting for simple types.
+    
+    Args:
+        template: The template with placeholders
+        data: Any data to insert (string, number, dict, list, etc.)
+        placeholder: The placeholder name to look for (default: "input")
+        **kwargs: Additional formatting options
+        
+    Returns:
+        Template with data inserted
+        
+    Examples:
+        # Simple string - no code block
+        template = "User asked: {{input}}"
+        result = insert_data_into_template(template, "What is the copay?")
+        # Result: "User asked: What is the copay?"
+        
+        # Dictionary - JSON code block  
+        template = "Config: {{config}}"
+        result = insert_data_into_template(template, {"temp": 0.1})
+        # Result: "Config: ```json\n{\"temp\": 0.1}\n```"
+    """
+    return MarkdownTemplateUtilities.insert_data_into_template(
+        template, data, placeholder, **kwargs
+    )
+
+
+class EnhancedJSONModelUtilities:
+    """Enhanced JSON utilities with better Pydantic integration and agent patterns."""
+    
+    @staticmethod
+    def create_structured_agent(
+        lab: PrototypingLab, 
+        name: str,
+        system_prompt: str,
+        user_prompt_template: str,
+        output_model: Type[BaseModel],
+        temperature: float = 0.1,
+        max_tokens: int = 300
+    ) -> AgentPrototype:
+        """
+        Create an agent with structured output using custom prompts and Pydantic validation.
+        Models the pattern used in /agents directory.
+        """
+        
+        # Enhanced system prompt with JSON output instructions
+        json_enhanced_system_prompt = f"""{system_prompt}
+
+CRITICAL OUTPUT FORMAT REQUIREMENTS:
+You must respond with valid JSON that matches this exact structure:
+{output_model.model_json_schema()}
+
+VALIDATION RULES:
+- Always validate your JSON against the schema above
+- Include all required fields
+- Respect field constraints and descriptions
+- Respond ONLY with the JSON object, no additional text
+
+Example valid response:
+{json.dumps(output_model.model_validate(output_model.model_construct()).model_dump(), indent=2)}
+"""
+        
+        # Create the agent with enhanced prompt
+        agent = lab.quick_agent(
+            name,
+            system_prompt=json_enhanced_system_prompt,
+            prompt=user_prompt_template,
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
+        
+        # Add structured validation method
+        def validate_and_process(self, input_data):
+            """Process input and validate JSON output against Pydantic model."""
+            try:
+                # Get raw response
+                response = self.process(input_data)
+                raw_result = response.get('result', str(response))
+                
+                # Try to parse as JSON
+                import json
+                import re
+                
+                try:
+                    json_data = json.loads(raw_result)
+                except json.JSONDecodeError:
+                    # Try to extract JSON from text response
+                    json_match = re.search(r'\{.*\}', raw_result, re.DOTALL)
+                    if json_match:
+                        json_data = json.loads(json_match.group())
+                    else:
+                        # Try alternative extraction patterns
+                        lines = raw_result.strip().split('\n')
+                        for line in lines:
+                            line = line.strip()
+                            if line.startswith('{') and line.endswith('}'):
+                                json_data = json.loads(line)
+                                break
+                        else:
+                            raise ValueError("No valid JSON found in response")
+                
+                # Validate with Pydantic
+                validated_output = output_model(**json_data)
+                
+                return {
+                    'success': True,
+                    'validated_output': validated_output,
+                    'raw_response': raw_result,
+                    'json_data': json_data,
+                    **validated_output.model_dump()
+                }
+                
+            except Exception as e:
+                return {
+                    'success': False,
+                    'error': str(e),
+                    'raw_response': raw_result if 'raw_result' in locals() else 'No response',
+                    'validation_error': True,
+                    'error_type': type(e).__name__
+                }
+        
+        # Bind the validation method to the agent instance
+        import types
+        agent.validate_and_process = types.MethodType(validate_and_process, agent)
+        agent.output_model = output_model
+        
+        return agent
+    
+    @staticmethod
+    def create_workflow_prescription_agent(
+        lab: PrototypingLab,
+        project_root: str,
+        name: str = "workflow_prescription_agent",
+        temperature: float = 0.1
+    ) -> AgentPrototype:
+        """
+        Create a workflow prescription agent using the /agents pattern.
+        Loads prompts from files and uses structured output.
+        """
+        
+        # Load system prompt and examples
+        try:
+            with open(f"{project_root}/agents/workflow_prescription/prompt_system_workflow_prescription_v0_1.md") as f:
+                system_prompt_template = f.read()
+            
+            with open(f"{project_root}/agents/workflow_prescription/examples_prompt_workflow_prescription_v0_1.md") as f:
+                examples = f.read()
+            
+            with open(f"{project_root}/agents/workflow_prescription/prompt_human_workflow_prescription_v0_1.md") as f:
+                user_prompt_template = f.read()
+        except FileNotFoundError as e:
+            print(f"Warning: Could not load prompt files: {e}")
+            # Fallback to basic prompts
+            system_prompt_template = """You are an expert triage agent for public healthcare access workflows.
+Your task is to classify user requests into workflows: information_retrieval, service_access_strategy, determine_eligibility, form_preparation.
+
+{examples}
+
+Always output valid JSON with workflows and reasoning."""
+            
+            examples = """Example: "What is my deductible?" → ["information_retrieval"]
+Example: "How do I apply for Medicaid?" → ["service_access_strategy"]"""
+            
+            user_prompt_template = "Classify this request: {input}"
+        
+        # Insert examples into system prompt
+        system_prompt = MarkdownTemplateUtilities.insert_data_into_template(
+            system_prompt_template,
+            examples,
+            placeholder="examples"
+        )
+        
+        # Create structured agent
+        agent = EnhancedJSONModelUtilities.create_structured_agent(
+            lab=lab,
+            name=name,
+            system_prompt=system_prompt,
+            user_prompt_template=user_prompt_template,
+            output_model=WorkflowPrescriptionOutput,
+            temperature=temperature
+        )
+        
+        return agent
+    
+    @staticmethod
+    def create_agent_from_directory(
+        lab: PrototypingLab,
+        agent_directory: str,
+        agent_name: str,
+        output_model: Type[BaseModel],
+        temperature: float = 0.1,
+        prompt_version: str = "v0_1"
+    ) -> AgentPrototype:
+        """
+        Create an agent from an /agents directory structure.
+        Follows the standard pattern of system prompt, examples, and user template.
+        """
+        
+        # Load prompts following /agents pattern
+        try:
+            # Try different prompt file patterns
+            prompt_files = [
+                f"{agent_directory}/prompt_system_{agent_name}_{prompt_version}.md",
+                f"{agent_directory}/prompts/prompt_{agent_name}_{prompt_version}.md",
+                f"{agent_directory}/prompt_{agent_name}_{prompt_version}.md"
+            ]
+            
+            system_prompt = None
+            for prompt_file in prompt_files:
+                try:
+                    with open(prompt_file) as f:
+                        system_prompt = f.read()
+                        break
+                except FileNotFoundError:
+                    continue
+            
+            if not system_prompt:
+                raise FileNotFoundError(f"No system prompt found in {agent_directory}")
+            
+            # Try to load examples
+            example_files = [
+                f"{agent_directory}/examples_prompt_{agent_name}_{prompt_version}.md",
+                f"{agent_directory}/prompt_examples_{agent_name}_{prompt_version}.json",
+                f"{agent_directory}/examples_{agent_name}_{prompt_version}.md"
+            ]
+            
+            examples = ""
+            for example_file in example_files:
+                try:
+                    with open(example_file) as f:
+                        examples = f.read()
+                        break
+                except FileNotFoundError:
+                    continue
+            
+            # Try to load user prompt template
+            user_template_files = [
+                f"{agent_directory}/prompt_human_{agent_name}_{prompt_version}.md",
+                f"{agent_directory}/user_prompt_{agent_name}_{prompt_version}.md"
+            ]
+            
+            user_template = "Process this input: {input}"
+            for template_file in user_template_files:
+                try:
+                    with open(template_file) as f:
+                        user_template = f.read()
+                        break
+                except FileNotFoundError:
+                    continue
+            
+            # Insert examples if available
+            if examples and "{examples}" in system_prompt:
+                system_prompt = MarkdownTemplateUtilities.insert_data_into_template(
+                    system_prompt,
+                    examples,
+                    placeholder="examples"
+                )
+            
+            # Create structured agent
+            agent = EnhancedJSONModelUtilities.create_structured_agent(
+                lab=lab,
+                name=f"{agent_name}_structured",
+                system_prompt=system_prompt,
+                user_prompt_template=user_template,
+                output_model=output_model,
+                temperature=temperature
+            )
+            
+            return agent
+            
+        except Exception as e:
+            raise ValueError(f"Failed to create agent from directory {agent_directory}: {e}")
+    
+    @staticmethod
+    def batch_validate_outputs(
+        agent: AgentPrototype,
+        test_cases: List[str],
+        expected_model: Type[BaseModel]
+    ) -> Dict[str, Any]:
+        """
+        Batch validate agent outputs against expected model.
+        Returns comprehensive validation report.
+        """
+        
+        results = []
+        successful_validations = 0
+        
+        for i, test_case in enumerate(test_cases):
+            try:
+                if hasattr(agent, 'validate_and_process'):
+                    result = agent.validate_and_process(test_case)
+                else:
+                    # Fallback to manual validation
+                    response = agent.process(test_case)
+                    raw_result = response.get('result', str(response))
+                    result = JSONModelUtilities.validate_json_output(
+                        raw_result, expected_model, f"test_case_{i}"
+                    )
+                
+                results.append({
+                    'test_case': test_case,
+                    'result': result,
+                    'success': result.get('success', False)
+                })
+                
+                if result.get('success', False):
+                    successful_validations += 1
+                    
+            except Exception as e:
+                results.append({
+                    'test_case': test_case,
+                    'result': {'success': False, 'error': str(e)},
+                    'success': False
+                })
+        
+        return {
+            'total_tests': len(test_cases),
+            'successful_validations': successful_validations,
+            'success_rate': successful_validations / len(test_cases) if test_cases else 0,
+            'results': results,
+            'model_schema': expected_model.model_json_schema()
+        }
+
+
+class AgentPatternUtilities:
+    """Utilities for following /agents directory patterns in prototyping."""
+    
+    @staticmethod
+    def discover_agent_prompts(agents_directory: str) -> Dict[str, Dict[str, str]]:
+        """
+        Discover all prompt files in /agents directory structure.
+        Returns organized mapping of agent -> prompt type -> file path.
+        """
+        import os
+        import glob
+        
+        agent_prompts = {}
+        
+        # Look for agent directories
+        for agent_dir in glob.glob(f"{agents_directory}/*/"):
+            agent_name = os.path.basename(agent_dir.rstrip('/'))
+            
+            # Skip common directories
+            if agent_name in ['common', '__pycache__']:
+                continue
+            
+            agent_prompts[agent_name] = {}
+            
+            # Look for different types of prompt files
+            prompt_patterns = {
+                'system': ['prompt_system_*.md', 'prompt_*.md', 'prompts/prompt_*.md'],
+                'examples': ['examples_*.md', 'prompt_examples_*.json', '*_examples.md'],
+                'human': ['prompt_human_*.md', 'user_prompt_*.md'],
+                'templates': ['prompts/templates/*.md']
+            }
+            
+            for prompt_type, patterns in prompt_patterns.items():
+                for pattern in patterns:
+                    files = glob.glob(f"{agent_dir}/{pattern}")
+                    if files:
+                        agent_prompts[agent_name][prompt_type] = files
+        
+        return agent_prompts
+    
+    @staticmethod
+    def create_agent_from_pattern(
+        lab: PrototypingLab,
+        agents_directory: str,
+        agent_name: str,
+        output_model: Type[BaseModel] = None,
+        **kwargs
+    ) -> AgentPrototype:
+        """
+        Create an agent following the discovered /agents pattern.
+        """
+        
+        agent_prompts = AgentPatternUtilities.discover_agent_prompts(agents_directory)
+        
+        if agent_name not in agent_prompts:
+            raise ValueError(f"Agent {agent_name} not found in {agents_directory}")
+        
+        prompts = agent_prompts[agent_name]
+        
+        # Load system prompt
+        system_prompt = ""
+        if 'system' in prompts and prompts['system']:
+            with open(prompts['system'][0]) as f:
+                system_prompt = f.read()
+        
+        # Load examples
+        examples = ""
+        if 'examples' in prompts and prompts['examples']:
+            example_files = prompts['examples']
+            for example_file in example_files:
+                with open(example_file) as f:
+                    examples = f.read()
+        
+        # Load user prompt template
+        user_template = "Process this input: {input}"
+        if 'human' in prompts and prompts['human']:
+            with open(prompts['human'][0]) as f:
+                user_template = f.read()
+        
+        # Insert examples if available
+        if examples and "{examples}" in system_prompt:
+            system_prompt = MarkdownTemplateUtilities.insert_data_into_template(
+                system_prompt,
+                examples,
+                placeholder="examples"
+            )
+        
+        # Create agent
+        if output_model:
+            agent = EnhancedJSONModelUtilities.create_structured_agent(
+                lab=lab,
+                name=f"{agent_name}_from_pattern",
+                system_prompt=system_prompt,
+                user_prompt_template=user_template,
+                output_model=output_model,
+                **kwargs
+            )
+        else:
+            agent = lab.quick_agent(
+                f"{agent_name}_from_pattern",
+                system_prompt=system_prompt,
+                prompt=user_template,
+                **kwargs
+            )
+        
+        return agent
+
+
+def get_enhanced_json_utilities():
+    """
+    Get enhanced JSON utilities for structured agent creation.
+    Returns utilities that follow /agents directory patterns.
+    """
+    return {
+        'enhanced_utils': EnhancedJSONModelUtilities,
+        'pattern_utils': AgentPatternUtilities,
+        'models': {
+            'WorkflowPrescriptionOutput': WorkflowPrescriptionOutput,
+            # Add other models as needed
+        },
+        'markdown_utils': MarkdownTemplateUtilities,
+        'create_workflow_prescription_agent': EnhancedJSONModelUtilities.create_workflow_prescription_agent,
+        'create_structured_agent': EnhancedJSONModelUtilities.create_structured_agent,
+        'create_agent_from_directory': EnhancedJSONModelUtilities.create_agent_from_directory,
+        'discover_agent_prompts': AgentPatternUtilities.discover_agent_prompts
     } 
