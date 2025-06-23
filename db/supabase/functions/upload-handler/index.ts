@@ -211,6 +211,13 @@ async function handleUpload(req: Request, supabase: any, userId: string) {
     .from('documents')
     .createSignedUploadUrl(document.storage_path)
 
+  console.log('🔍 Upload URL Debug:', {
+    uploadUrl,
+    urlError,
+    signedURL: uploadUrl?.signedURL,
+    hasSignedURL: !!uploadUrl?.signedURL
+  })
+
   if (urlError) {
     console.error('Error generating upload URL:', urlError)
     return new Response(JSON.stringify({ 
@@ -221,6 +228,20 @@ async function handleUpload(req: Request, supabase: any, userId: string) {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
+
+  // ✅ CRITICAL FIX: Ensure uploadUrl has signedURL property
+  if (!uploadUrl || !uploadUrl.signedURL) {
+    console.error('❌ Upload URL generation failed - no signedURL returned:', uploadUrl)
+    return new Response(JSON.stringify({ 
+      error: 'Failed to generate upload URL',
+      details: 'Signed URL not generated properly' 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  }
+
+  console.log('✅ Upload URL generated successfully, length:', uploadUrl.signedURL.length)
 
   // Update document status to uploading
   await supabase
@@ -243,7 +264,8 @@ async function handleUpload(req: Request, supabase: any, userId: string) {
     }
   })
 
-  return new Response(JSON.stringify({
+  // ✅ CRITICAL FIX: Build response object with explicit logging
+  const responseObj = {
     documentId: document.id,
     uploadUrl: uploadUrl.signedURL,
     path: document.storage_path,
@@ -251,7 +273,14 @@ async function handleUpload(req: Request, supabase: any, userId: string) {
     chunkSize: chunkSize,
     expiresIn: 3600,
     message: 'Upload initialized successfully'
-  }), {
+  }
+
+  console.log('📤 Final response object keys:', Object.keys(responseObj))
+  console.log('📤 Response documentId:', responseObj.documentId)
+  console.log('📤 Response uploadUrl length:', responseObj.uploadUrl?.length || 'MISSING')
+  console.log('📤 Response path:', responseObj.path)
+
+  return new Response(JSON.stringify(responseObj), {
     status: 200,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   })

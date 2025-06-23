@@ -383,36 +383,33 @@ export default function DocumentUploadServerless({
       // Real-time progress tracking will monitor the job queue status
       
     } catch (error) {
-      console.error('Upload error:', error)
-      
-      // Enhanced error handling with specific guidance
-      let errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-      
-      // Detect authentication issues
-      if (errorMessage.includes('unauthorized') || errorMessage.includes('401')) {
-        errorMessage = `🔐 Authentication failed. Please log in again.`
-      }
-      
-      // Detect file size issues
-      if (errorMessage.includes('too large') || errorMessage.includes('413')) {
-        errorMessage = `📦 File too large. Please upload a file smaller than 50MB.`
-      }
-      
-      // Detect network issues
-      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
-        errorMessage = `🌐 Network connection failed. Please check your internet connection and try again.`
-      }
-      
-      setUploadError(errorMessage)
-      setUploadProgress(0)
-      setUploadMessage("")
-      setIsUploading(false)
-      setDocumentId(null)
-      
-      if (onUploadError) {
-        onUploadError(errorMessage)
-      }
+      handleUploadError(error)
     }
+  }
+
+  // ✅ CRITICAL FIX: Proper error handling for upload responses
+  const handleUploadError = (error: any) => {
+    console.error('Upload error:', error)
+    
+    // Better error message handling
+    let errorMessage = 'Upload failed'
+    if (error && typeof error === 'object') {
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+    } else if (typeof error === 'string') {
+      errorMessage = error
+    } else {
+      errorMessage = JSON.stringify(error)
+    }
+    
+    console.log('Upload failed:', errorMessage)
+    setUploadError(errorMessage)
+    setIsUploading(false)
+    setUploadProgress(0)
+    onUploadError?.(errorMessage)
   }
 
   // Reset form
