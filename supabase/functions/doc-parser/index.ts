@@ -38,10 +38,8 @@ async function parseDocumentWithLlamaParse(supabase: any, filePath: string, docu
 
     console.log(`📄 File downloaded, size: ${fileData.size} bytes`);
 
-    // Convert blob to base64
+    // Convert blob to array buffer for direct FormData usage
     const arrayBuffer = await fileData.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
-    const base64String = btoa(String.fromCharCode(...uint8Array));
 
     console.log(`🚀 Sending to LlamaParse for processing...`);
 
