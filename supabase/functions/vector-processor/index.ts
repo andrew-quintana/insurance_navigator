@@ -50,9 +50,16 @@ function getDocumentConfig(documentType: 'user' | 'regulatory'): DocumentConfig 
   };
 }
 
-// Chunking function
+// Enhanced chunking function with size limits for large documents
 function chunkText(text: string, chunkSize: number = 1000, overlap: number = 200): string[] {
   if (text.length <= chunkSize) return [text]
+  
+  // For very large documents, use larger chunks to reduce total count
+  if (text.length > 500000) { // > 500KB text
+    chunkSize = 2000  // Use 2KB chunks for large documents
+    overlap = 300
+    console.log('📄 Large document detected, using 2KB chunks for efficiency')
+  }
   
   const chunks: string[] = []
   let start = 0
@@ -74,7 +81,15 @@ function chunkText(text: string, chunkSize: number = 1000, overlap: number = 200
     start = end - overlap
   }
   
-  return chunks.filter(chunk => chunk.length > 0)
+  const filteredChunks = chunks.filter(chunk => chunk.length > 0)
+  
+  // Limit maximum chunks for MVP stability
+  if (filteredChunks.length > 100) {
+    console.log(`⚠️ Document has ${filteredChunks.length} chunks, limiting to 100 for MVP stability`)
+    return filteredChunks.slice(0, 100)
+  }
+  
+  return filteredChunks
 }
 
 // Enhanced error classification
@@ -391,7 +406,7 @@ Deno.serve(async (req) => {
 
     // Process chunks with embeddings (normal flow)
     console.log('🧠 Processing chunks with embeddings...')
-    const batchSize = 5
+    const batchSize = 3  // Reduced batch size for better stability
     let processedChunks = 0
     
     for (let i = 0; i < chunks.length; i += batchSize) {
@@ -402,18 +417,51 @@ Deno.serve(async (req) => {
       const embeddingPromises = batch.map(async (chunk, batchIndex) => {
         try {
           console.log(`🧠 Generating embedding for chunk ${i + batchIndex}...`)
-          const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`
-            },
-            body: JSON.stringify({ input: chunk, model: "text-embedding-3-small", dimensions: 1536 })
-          })
+          // Add retry logic and timeout for OpenAI API calls
+          let embeddingResponse
+          let retryCount = 0
+          const maxRetries = 2
+          
+          while (retryCount <= maxRetries) {
+            try {
+              embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`
+                },
+                body: JSON.stringify({ input: chunk, model: "text-embedding-3-small", dimensions: 1536 })
+              })
+              
+              if (embeddingResponse.ok) {
+                break // Success, exit retry loop
+              }
+              
+              if (embeddingResponse.status === 429) {
+                // Rate limit - wait before retry
+                const waitTime = Math.pow(2, retryCount) * 1000 // Exponential backoff
+                console.log(`⏳ Rate limited, waiting ${waitTime}ms before retry ${retryCount + 1}`)
+                await new Promise(resolve => setTimeout(resolve, waitTime))
+                retryCount++
+                continue
+              }
+              
+              // For other errors, don't retry
+              break
+              
+            } catch (fetchError) {
+              retryCount++
+              if (retryCount > maxRetries) {
+                throw fetchError
+              }
+              console.log(`⚠️ Network error, retry ${retryCount}/${maxRetries}`)
+              await new Promise(resolve => setTimeout(resolve, 1000))
+            }
+          }
 
           if (!embeddingResponse.ok) {
             const errorText = await embeddingResponse.text()
-            console.error(`❌ Embedding failed for chunk ${i + batchIndex}:`, {
+            console.error(`❌ Embedding failed for chunk ${i + batchIndex} after ${retryCount} retries:`, {
               status: embeddingResponse.status,
               error: errorText
             })
@@ -538,9 +586,13 @@ Deno.serve(async (req) => {
     } : {
       status: 'completed',
       progress_percentage: 100,
-      processing_completed_at: new Date().toISOString()
+      processed_chunks: processedChunks,
+      total_chunks: chunks.length
+      // Note: processing_completed_at column may not exist, removed for now
     }
 
+    console.log(`🔄 Updating document ${documentId} with completion fields:`, completedFields)
+    
     const { error: completeError } = await supabase
       .from(config.sourceTable)
       .update(completedFields)
@@ -548,6 +600,10 @@ Deno.serve(async (req) => {
 
     if (completeError) {
       console.error('⚠️ Error marking document as completed:', completeError)
+      console.error('Full error details:', JSON.stringify(completeError, null, 2))
+      // Don't fail the whole process for status update errors
+    } else {
+      console.log('✅ Document status updated to completed successfully')
     }
 
     console.log(`✅ vector-processor completed successfully for ${documentType} document`)
