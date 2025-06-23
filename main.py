@@ -24,6 +24,7 @@ import logging
 import json
 import time
 from starlette.middleware.base import BaseHTTPMiddleware
+import hashlib
 
 # Database service imports
 from db.services.user_service import get_user_service, UserService
@@ -412,7 +413,7 @@ async def get_current_user_info(current_user: UserResponse = Depends(get_current
     """Get current user information."""
     return current_user
 
-# 🚀 NEW: Backend-Orchestrated Document Upload Endpoint
+# 🚀 REFACTORED: Backend-First Document Upload Endpoint
 @app.post("/upload-document-backend", response_model=DocumentUploadResponse)
 async def upload_document_backend(
     request: Request,
@@ -420,21 +421,18 @@ async def upload_document_backend(
     file: UploadFile = File(...)
 ):
     """
-    Backend-orchestrated document upload using Supabase Edge Functions pipeline.
+    REFACTORED: Backend-first document upload flow.
     
-    ✅ RENDER-OPTIMIZED VERSION 3.0.0
-    
-    This endpoint:
-    1. Initializes upload via upload-handler edge function
-    2. Uploads file to Supabase Storage using signed URL
-    3. Triggers processing completion via upload-handler PATCH
-    4. Ensures LlamaParse is used for PDF processing
-    5. Handles Render deployment constraints and timeouts
+    ✅ NEW ARCHITECTURE:
+    1. Backend generates signed URL directly from storage
+    2. Backend uploads file to signed URL
+    3. Backend calls edge function to process uploaded file
+    4. Edge function focuses on processing, not storage management
     """
     upload_start_time = time.time()
     
     try:
-        logger.info(f"🚀 Starting backend-orchestrated upload for user {current_user.id}: {file.filename}")
+        logger.info(f"🚀 Starting backend-first upload for user {current_user.id}: {file.filename}")
         
         # Read file data with size validation early
         file_data = await file.read()
@@ -487,92 +485,69 @@ async def upload_document_backend(
                 }
             )
 
-        # Step 1: Initialize upload via edge function with enhanced error handling
-        logger.info(f"📤 Step 1: Initializing upload via edge function...")
+        # ✅ STEP 1: Create document record and get signed URL directly from backend
+        logger.info(f"📄 Step 1: Creating document record and generating signed URL...")
         
-        upload_init_payload = {
-            "filename": file.filename,
-            "contentType": file.content_type,
-            "fileSize": len(file_data)
-        }
+        # Generate file hash for deduplication
+        file_hash = hashlib.sha256(f"{file.filename}-{len(file_data)}-{current_user.id}-{time.time()}".encode()).hexdigest()
         
-        try:
-            upload_result = await edge_orchestrator.call_edge_function(
-                'upload-handler', 
-                'POST', 
-                upload_init_payload, 
-                user_token,
-                current_user.id
-            )
-            
-            # ✅ CRITICAL FIX: Debug the actual response format
-            logger.info(f"📊 Upload initialization response: {upload_result}")
-            
-        except HTTPException as e:
-            logger.error(f"❌ Upload initialization failed: {e.detail}")
-            if e.status_code == 504:
-                # Handle timeout gracefully - processing may still succeed
-                raise HTTPException(
-                    status_code=202,
-                    detail={
-                        "error": "Upload initialization timeout",
-                        "message": "Upload initialization is taking longer than expected. Please check the document status in a few minutes.",
-                        "status": "processing_in_background"
-                    }
-                )
-            raise HTTPException(
-                status_code=e.status_code,
-                detail={
-                    "error": "Upload initialization failed",
-                    "message": "Failed to initialize document upload. Please try again.",
-                    "details": e.detail
-                }
-            )
+        # Create storage path
+        storage_path = f"{current_user.id}/{file_hash}/{file.filename}"
         
-        # ✅ CRITICAL FIX: Handle different response field names
-        document_id = (upload_result.get('documentId') or 
-                      upload_result.get('document_id') or 
-                      upload_result.get('id'))
+        # Get storage service
+        global storage_service_instance
+        if not storage_service_instance:
+            storage_service_instance = await get_storage_service()
         
-        upload_url = (upload_result.get('uploadUrl') or 
-                     upload_result.get('upload_url') or 
-                     upload_result.get('signedURL'))
+        # Generate signed upload URL directly from backend
+        signed_url_response = await storage_service_instance.supabase.storage.from_('documents').create_signed_upload_url(storage_path)
         
-        storage_path = (upload_result.get('path') or 
-                       upload_result.get('storage_path') or 
-                       upload_result.get('storagePath'))
-        
-        # Enhanced error reporting
-        if not all([document_id, upload_url, storage_path]):
-            logger.error(f"❌ Upload initialization incomplete.")
-            logger.error(f"Response keys: {list(upload_result.keys())}")
-            logger.error(f"document_id: {document_id}")
-            logger.error(f"upload_url: {upload_url}")
-            logger.error(f"storage_path: {storage_path}")
-            logger.error(f"Full response: {upload_result}")
-            
+        if hasattr(signed_url_response, 'error') and signed_url_response.error:
+            logger.error(f"❌ Failed to generate signed URL: {signed_url_response.error}")
             raise HTTPException(
                 status_code=500,
                 detail={
-                    "error": "Upload initialization failed",
-                    "message": "Upload initialization returned incomplete data. Please try again.",
-                    "missing_fields": {
-                        "document_id": not bool(document_id),
-                        "upload_url": not bool(upload_url), 
-                        "storage_path": not bool(storage_path)
-                    },
-                    "response_keys": list(upload_result.keys()),
-                    "debug_response": upload_result
+                    "error": "Failed to generate upload URL",
+                    "message": "Could not create signed upload URL for storage"
                 }
             )
-
-        logger.info(f"✅ Step 1 complete: Document ID {document_id}")
-
-        # Step 2: Upload file to Supabase Storage with retry logic
-        logger.info(f"📁 Step 2: Uploading file to Supabase Storage...")
         
-        upload_attempts = 0
+        # Extract signed URL
+        upload_url = signed_url_response.data.get('signedURL') if hasattr(signed_url_response, 'data') else signed_url_response.get('signedURL')
+        
+        if not upload_url:
+            logger.error(f"❌ No signed URL returned from storage service")
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": "Failed to generate upload URL", 
+                    "message": "Storage service did not return a valid signed URL"
+                }
+            )
+        
+        # Create document record in database
+        pool = await get_db_pool()
+        document_id = str(uuid.uuid4())
+        
+        async with pool.get_connection() as conn:
+            await conn.execute("""
+                INSERT INTO documents (
+                    id, user_id, original_filename, file_size, content_type, 
+                    file_hash, storage_path, status, progress_percentage,
+                    processed_chunks, failed_chunks, created_at, updated_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+            """, 
+            document_id, current_user.id, file.filename, len(file_data), file.content_type,
+            file_hash, storage_path, 'uploading', 5, 0, 0
+            )
+        
+        logger.info(f"✅ Step 1 complete: Document record created with ID {document_id}")
+        
+        # ✅ STEP 2: Upload file directly to signed URL
+        logger.info(f"📤 Step 2: Uploading file to storage...")
+        
         max_upload_attempts = 3
+        upload_attempts = 0
         
         while upload_attempts < max_upload_attempts:
             try:
@@ -588,6 +563,13 @@ async def upload_document_backend(
                 logger.warning(f"⚠️ Upload attempt {upload_attempts} failed: {upload_error}")
                 
                 if upload_attempts >= max_upload_attempts:
+                    # Update document status to failed
+                    async with pool.get_connection() as conn:
+                        await conn.execute("""
+                            UPDATE documents SET status = 'failed', error_message = $2, updated_at = NOW()
+                            WHERE id = $1
+                        """, document_id, f"File upload failed after {max_upload_attempts} attempts")
+                    
                     raise HTTPException(
                         status_code=500,
                         detail={
@@ -599,29 +581,40 @@ async def upload_document_backend(
                 
                 # Brief delay before retry
                 await asyncio.sleep(1)
-
-        # Step 3: Trigger processing completion via edge function (async)
-        logger.info(f"🔄 Step 3: Triggering processing completion...")
         
-        completion_payload = {
+        # Update document status to processing
+        async with pool.get_connection() as conn:
+            await conn.execute("""
+                UPDATE documents SET status = 'processing', progress_percentage = 20, 
+                upload_completed_at = NOW(), updated_at = NOW()
+                WHERE id = $1
+            """, document_id)
+        
+        # ✅ STEP 3: Call edge function to process the uploaded file
+        logger.info(f"🔄 Step 3: Triggering document processing...")
+        
+        processing_payload = {
             "documentId": document_id,
-            "path": storage_path
+            "path": storage_path,
+            "filename": file.filename,
+            "contentType": file.content_type,
+            "fileSize": len(file_data)
         }
         
         try:
-            completion_result = await edge_orchestrator.call_edge_function(
-                'upload-handler',
-                'PATCH',
-                completion_payload,
+            processing_result = await edge_orchestrator.call_edge_function(
+                'doc-parser',  # ✅ Call doc-parser directly to process uploaded file
+                'POST',
+                processing_payload,
                 user_token,
                 current_user.id
             )
-            logger.info(f"✅ Step 3 complete: Processing triggered")
+            logger.info(f"✅ Step 3 complete: Document processing triggered")
             
         except HTTPException as e:
             logger.warning(f"⚠️ Processing trigger timeout/error: {e.detail}")
             # Don't fail the request - processing may still succeed
-            completion_result = {
+            processing_result = {
                 "status": "background_processing",
                 "message": "Processing triggered but response timeout - monitoring in background"
             }
