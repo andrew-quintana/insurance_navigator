@@ -566,14 +566,14 @@ async def upload_document_backend(
                         UPDATE documents SET status = 'failed', updated_at = NOW()
                         WHERE id = $1
                     """, document_id)
-                
-            raise HTTPException(
-                status_code=500,
-                    detail={
-                        "error": "File upload failed",
-                        "message": f"Storage error: {upload_error}",
-                        "document_id": document_id
-                    }
+                    
+                raise HTTPException(
+                    status_code=500,
+                        detail={
+                            "error": "File upload failed",
+                            "message": f"Storage error: {upload_error}",
+                            "document_id": document_id
+                        }
             )
         
             logger.info(f"✅ Step 2 complete: File uploaded to {storage_path}")
