@@ -791,12 +791,14 @@ async def upload_regulatory_document(
             # Create record in regulatory_documents table (uses document_id as primary key)
             await conn.execute("""
                 INSERT INTO regulatory_documents (
-                    document_id, title, source_url, raw_document_path, 
-                    document_type, jurisdiction, program, created_at, updated_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+                    document_id, raw_document_path, title, jurisdiction, program, 
+                    document_type, source_url, extraction_method, 
+                    created_at, updated_at, version
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW(), $9)
             """, 
-            document_id, document_title, source_url, storage_path,
-            document_type, 'federal', ['insurance']
+            document_id, storage_path, document_title, additional_metadata.get('jurisdiction', 'federal'), 
+            [additional_metadata.get('program', 'insurance')], document_type, source_url, 
+            'api_upload', 1
             )
             
             # Also create in documents table for vectorization compatibility
