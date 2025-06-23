@@ -26,7 +26,7 @@ class StorageService:
         """Initialize the storage service with Supabase client."""
         self.supabase_url = config.supabase.url
         self.supabase_service_key = config.supabase.service_role_key
-        self.bucket_name = config.supabase.storage_bucket or 'documents'
+        self.bucket_name = config.supabase.storage_bucket or 'raw_documents'
         self.signed_url_expiry = config.supabase.signed_url_expiry or 3600
         self.max_file_size = getattr(config.supabase, 'max_file_size_mb', 10) * 1024 * 1024  # Convert MB to bytes
         
