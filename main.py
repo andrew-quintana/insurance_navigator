@@ -792,13 +792,13 @@ async def upload_regulatory_document(
             await conn.execute("""
                 INSERT INTO regulatory_documents (
                     document_id, raw_document_path, title, jurisdiction, program, 
-                    document_type, source_url, extraction_method, 
-                    created_at, updated_at, version
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW(), $9)
+                    document_type, source_url, extraction_method, version,
+                    content_hash, priority_score, search_metadata
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             """, 
             document_id, storage_path, document_title, additional_metadata.get('jurisdiction', 'federal'), 
             [additional_metadata.get('program', 'insurance')], document_type, source_url, 
-            'api_upload', 1
+            'api_upload', 1, file_hash, 1.0, json.dumps({})
             )
             
             # Also create in documents table for vectorization compatibility
