@@ -70,11 +70,22 @@ export default function DocumentUploadServerless({
     const client = createClient(url, key, {
       realtime: {
         params: {
-          eventsPerSecond: 5, // Reduce frequency to prevent overload
-          timeout: 10000,     // 10 second timeout
+          eventsPerSecond: 2, // Reduce frequency to prevent overload
+          timeout: 30000,     // 30 second timeout (increased)
         },
-        heartbeatIntervalMs: 30000, // 30 second heartbeat
-        reconnectAfterMs: (tries: number) => Math.min(tries * 1000, 30000)
+        heartbeatIntervalMs: 60000, // 60 second heartbeat (increased)
+        reconnectAfterMs: (tries: number) => Math.min(tries * 2000, 60000), // Slower reconnection
+        encode: (payload: any, callback: any) => {
+          // Add custom encoding if needed
+          callback(JSON.stringify(payload))
+        },
+        decode: (payload: string, callback: any) => {
+          try {
+            callback(null, JSON.parse(payload))
+          } catch (err) {
+            callback(err, null)
+          }
+        }
       },
       auth: {
         persistSession: true,
@@ -197,13 +208,13 @@ export default function DocumentUploadServerless({
       }
     }
 
-    // Set timeout for subscription establishment (30 seconds)
+    // Set timeout for subscription establishment (60 seconds instead of 30)
     timeoutId = setTimeout(() => {
       if (subscriptionActive) {
         console.warn('⚠️ Real-time subscription timeout, switching to fallback polling')
         startFallbackPolling()
       }
-    }, 30000)
+    }, 60000) // Increased timeout
 
     // Set up Supabase real-time subscription with enhanced error handling
     const channel = supabase
@@ -220,23 +231,36 @@ export default function DocumentUploadServerless({
           schema: 'public', 
           table: 'documents',
           filter: `id=eq.${documentId}`
-        }, 
+        },
         (payload: any) => {
-          console.log('📡 Supabase real-time update:', payload.new)
-          handleDocumentUpdate(payload.new)
+          try {
+            console.log('📡 Supabase real-time update:', payload.new)
+            handleDocumentUpdate(payload.new)
+          } catch (err) {
+            console.error('Error handling real-time update:', err)
+          }
         }
       )
       .subscribe((status: string, err?: any) => {
-        console.log('📡 Subscription status:', status, err)
+        console.log(`📡 Background notification subscription status: ${status}`)
         
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Real-time subscription active')
+          console.log('✅ Background processing notifications active!')
+          subscriptionActive = true
           if (timeoutId) {
             clearTimeout(timeoutId)
           }
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          console.warn('⚠️ Real-time subscription failed:', status, err)
-          if (subscriptionActive) {
+        } else if (status === 'CLOSED') {
+          subscriptionActive = false
+          console.log('🔄 Cleaning up background notification subscription')
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn(`⚠️ Background notification subscription failed: ${status}`)
+          if (err) {
+            console.error('Subscription error details:', err)
+          }
+          subscriptionActive = false
+          // Start fallback polling immediately on error
+          if (!fallbackIntervalId) {
             startFallbackPolling()
           }
         }
@@ -362,8 +386,50 @@ export default function DocumentUploadServerless({
       }
 
       if (!uploadResponse.ok) {
-        const errorData = await uploadResponse.json().catch(() => ({}))
-        throw new Error(errorData.detail || `Upload failed: ${uploadResponse.status}`)
+        // Enhanced error handling for backend API responses
+        let errorData
+        try {
+          errorData = await uploadResponse.json()
+        } catch (jsonError) {
+          console.warn('Could not parse error response as JSON, trying as text')
+          try {
+            const textData = await uploadResponse.text()
+            errorData = { error: textData || 'Unknown error' }
+          } catch (textError) {
+            errorData = { error: `Upload failed with status ${uploadResponse.status}` }
+          }
+        }
+        
+        // Extract error message from various response formats
+        let errorMessage = 'Upload failed'
+        if (errorData) {
+          if (typeof errorData === 'string') {
+            errorMessage = errorData
+          } else if (errorData.detail) {
+            // FastAPI format
+            if (typeof errorData.detail === 'string') {
+              errorMessage = errorData.detail
+            } else if (errorData.detail.message) {
+              errorMessage = errorData.detail.message
+            } else if (errorData.detail.error) {
+              errorMessage = errorData.detail.error
+            } else {
+              errorMessage = JSON.stringify(errorData.detail)
+            }
+          } else if (errorData.error) {
+            errorMessage = errorData.error
+          } else if (errorData.message) {
+            errorMessage = errorData.message
+          } else {
+            // Fallback to stringifying the whole object
+            errorMessage = JSON.stringify(errorData)
+          }
+        }
+        
+        // Add status code to error message
+        errorMessage = `${errorMessage} (Status: ${uploadResponse.status})`
+        
+        throw new Error(errorMessage)
       }
 
       const uploadResult = await uploadResponse.json()

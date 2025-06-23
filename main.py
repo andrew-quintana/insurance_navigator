@@ -485,8 +485,8 @@ async def upload_document_backend(
                 }
             )
 
-        # ✅ STEP 1: Create document record and get signed URL directly from backend
-        logger.info(f"📄 Step 1: Creating document record and generating signed URL...")
+        # ✅ STEP 1: Create document record and upload file directly
+        logger.info(f"📄 Step 1: Creating document record and uploading file directly...")
         
         # Generate file hash for deduplication
         file_hash = hashlib.sha256(f"{file.filename}-{len(file_data)}-{current_user.id}-{time.time()}".encode()).hexdigest()
@@ -499,33 +499,7 @@ async def upload_document_backend(
         if not storage_service_instance:
             storage_service_instance = await get_storage_service()
         
-        # Generate signed upload URL directly from backend
-        signed_url_response = await storage_service_instance.supabase.storage.from_('documents').create_signed_upload_url(storage_path)
-        
-        if hasattr(signed_url_response, 'error') and signed_url_response.error:
-            logger.error(f"❌ Failed to generate signed URL: {signed_url_response.error}")
-            raise HTTPException(
-                status_code=500,
-                detail={
-                    "error": "Failed to generate upload URL",
-                    "message": "Could not create signed upload URL for storage"
-                }
-            )
-        
-        # Extract signed URL
-        upload_url = signed_url_response.data.get('signedURL') if hasattr(signed_url_response, 'data') else signed_url_response.get('signedURL')
-        
-        if not upload_url:
-            logger.error(f"❌ No signed URL returned from storage service")
-            raise HTTPException(
-                status_code=500,
-                detail={
-                    "error": "Failed to generate upload URL", 
-                    "message": "Storage service did not return a valid signed URL"
-                }
-            )
-        
-        # Create document record in database
+        # Create document record in database first
         pool = await get_db_pool()
         document_id = str(uuid.uuid4())
         
@@ -541,46 +515,60 @@ async def upload_document_backend(
             file_hash, storage_path, 'uploading', 5, 0, 0
             )
         
-        logger.info(f"✅ Step 1 complete: Document record created with ID {document_id}")
+        logger.info(f"✅ Step 1a: Document record created with ID {document_id}")
         
-        # ✅ STEP 2: Upload file directly to signed URL
-        logger.info(f"📤 Step 2: Uploading file to storage...")
+        # ✅ STEP 2: Upload file directly to Supabase Storage
+        logger.info(f"📤 Step 2: Uploading file directly to storage...")
         
-        max_upload_attempts = 3
-        upload_attempts = 0
-        
-        while upload_attempts < max_upload_attempts:
-            try:
-                await edge_orchestrator.upload_file_to_signed_url(
-                    upload_url, 
-                    file_data, 
-                    file.content_type
+        try:
+            # Upload using storage service
+            upload_response = storage_service_instance.supabase.storage.from_('documents').upload(
+                storage_path,
+                file_data,
+                file_options={
+                    "content-type": file.content_type,
+                    "upsert": "false"  # Don't allow overwrite
+                }
+            )
+            
+            # Check if upload was successful
+            if hasattr(upload_response, 'error') and upload_response.error:
+                logger.error(f"❌ File upload failed: {upload_response.error}")
+                # Update document status to failed
+                async with pool.get_connection() as conn:
+                    await conn.execute("""
+                        UPDATE documents SET status = 'failed', error_message = $2, updated_at = NOW()
+                        WHERE id = $1
+                    """, document_id, f"Upload failed: {upload_response.error}")
+                
+                raise HTTPException(
+                    status_code=500,
+                    detail={
+                        "error": "File upload failed",
+                        "message": f"Storage error: {upload_response.error}",
+                        "document_id": document_id
+                    }
                 )
-                logger.info(f"✅ Step 2 complete: File uploaded to storage on attempt {upload_attempts + 1}")
-                break
-            except Exception as upload_error:
-                upload_attempts += 1
-                logger.warning(f"⚠️ Upload attempt {upload_attempts} failed: {upload_error}")
-                
-                if upload_attempts >= max_upload_attempts:
-                    # Update document status to failed
-                    async with pool.get_connection() as conn:
-                        await conn.execute("""
-                            UPDATE documents SET status = 'failed', error_message = $2, updated_at = NOW()
-                            WHERE id = $1
-                        """, document_id, f"File upload failed after {max_upload_attempts} attempts")
-                    
-                    raise HTTPException(
-                        status_code=500,
-                        detail={
-                            "error": "File upload failed",
-                            "message": f"Failed to upload file after {max_upload_attempts} attempts. Please try again.",
-                            "attempts": upload_attempts
-                        }
-                    )
-                
-                # Brief delay before retry
-                await asyncio.sleep(1)
+            
+            logger.info(f"✅ Step 2 complete: File uploaded to {storage_path}")
+            
+        except Exception as upload_error:
+            logger.error(f"❌ File upload exception: {upload_error}")
+            # Update document status to failed
+            async with pool.get_connection() as conn:
+                await conn.execute("""
+                    UPDATE documents SET status = 'failed', error_message = $2, updated_at = NOW()
+                    WHERE id = $1
+                """, document_id, f"Upload exception: {str(upload_error)}")
+            
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": "File upload failed",
+                    "message": f"Upload error: {str(upload_error)}",
+                    "document_id": document_id
+                }
+            )
         
         # Update document status to processing
         async with pool.get_connection() as conn:
