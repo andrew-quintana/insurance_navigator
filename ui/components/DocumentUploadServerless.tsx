@@ -38,37 +38,29 @@ export default function DocumentUploadServerless({
   const [error, setError] = useState<string | null>(null)
   const [documentId, setDocumentId] = useState<string | null>(null)
 
-  // Simple timer that runs during upload
+  // Smart timer that moves faster to 85% and stops there until backend responds
   useEffect(() => {
     let interval: NodeJS.Timeout
     
-    if (isUploading && uploadStartTime) {
+    if (isUploading && uploadStartTime && !isComplete) {
       interval = setInterval(() => {
         const now = new Date()
         const elapsed = Math.floor((now.getTime() - uploadStartTime.getTime()) / 1000)
         setElapsedTime(elapsed)
         
-        // Simple logic: estimate 5 minutes total, adjust based on elapsed time
-        const remaining = Math.max(0, estimatedTimeRemaining - elapsed)
+        // Faster progression to 85% - reaches 85% in about 2 minutes instead of 4.25 minutes
+        // This gives better visual feedback while staying realistic
+        const progressToEightyFive = Math.min(85, (elapsed / 120) * 85)
+        
+        // Don't automatically complete - wait for backend response
+        // Only set estimatedTimeRemaining based on how close we are to 85%
+        const remaining = Math.max(0, Math.round((85 - progressToEightyFive) / 85 * 120))
         setEstimatedTimeRemaining(remaining)
         
-        // Auto-complete after 5 minutes (fallback safety)
+        // Fallback: if 5 minutes pass and still no response, assume failure
         if (elapsed >= 300) {
-          setUploadSuccess(true)
+          setUploadError("Upload took longer than expected. Please try again.")
           setIsUploading(false)
-          
-          // Call success handler
-          if (onUploadSuccess && selectedFile) {
-            onUploadSuccess({
-              success: true,
-              document_id: documentId || 'processing',
-              filename: selectedFile.name,
-              chunks_processed: 1,
-              total_chunks: 1,
-              text_length: 0,
-              message: 'Document processed successfully!'
-            })
-          }
         }
       }, 1000)
     }
@@ -76,7 +68,7 @@ export default function DocumentUploadServerless({
     return () => {
       if (interval) clearInterval(interval)
     }
-  }, [isUploading, uploadStartTime, estimatedTimeRemaining, documentId, selectedFile, onUploadSuccess])
+  }, [isUploading, uploadStartTime, isComplete])
 
   // File validation
   const validateFile = (file: File): string | null => {
@@ -178,33 +170,48 @@ export default function DocumentUploadServerless({
       }
 
       const result = await uploadResponse.json()
-      console.log('✅ Upload successful:', result)
+      console.log('✅ Upload response received:', result)
       
       // Store document ID for reference
       setDocumentId(result.document_id || result.id || 'unknown')
       
-      // Complete upload immediately when backend responds successfully
+      // Complete upload immediately when backend responds (success or failure)
       setIsComplete(true)
       
-      // Give a brief moment for progress bar to animate to 100%, then show success
-      setTimeout(() => {
-        setUploadSuccess(true)
-        setIsUploading(false)
-        setEstimatedTimeRemaining(0)
-        
-        // Call success handler
-        if (onUploadSuccess) {
-          onUploadSuccess({
-            success: true,
-            document_id: result.document_id || result.id || 'unknown',
-            filename: selectedFile.name,
-            chunks_processed: result.chunks_processed || 1,
-            total_chunks: result.total_chunks || 1,
-            text_length: result.text_length || 0,
-            message: result.message || 'Document processed successfully!'
-          })
-        }
-      }, 1500) // 1.5 second delay for smooth animation
+      // Check if processing actually succeeded
+      if (result.success) {
+        // Give a brief moment for progress bar to animate to 100%, then show success
+        setTimeout(() => {
+          setUploadSuccess(true)
+          setIsUploading(false)
+          setEstimatedTimeRemaining(0)
+          
+          // Call success handler
+          if (onUploadSuccess) {
+            onUploadSuccess({
+              success: true,
+              document_id: result.document_id || result.id || 'unknown',
+              filename: selectedFile.name,
+              chunks_processed: 1,
+              total_chunks: 1,
+              text_length: 0,
+              message: result.message || 'Document processed successfully!'
+            })
+          }
+        }, 1500) // 1.5-second animation delay for polished completion effect
+      } else {
+        // Backend reported processing failure
+        setTimeout(() => {
+          setUploadError(result.message || 'Document processing failed')
+          setIsUploading(false)
+          setEstimatedTimeRemaining(0)
+          
+          // Call error handler
+          if (onUploadError) {
+            onUploadError(result.message || 'Document processing failed')
+          }
+        }, 1500)
+      }
       
     } catch (error) {
       console.error("Upload error:", error)
@@ -340,7 +347,7 @@ export default function DocumentUploadServerless({
                 <div 
                   className="bg-gradient-to-r from-teal-500 to-teal-600 h-4 rounded-full transition-all duration-1000 ease-out"
                   style={{ 
-                    width: `${isComplete ? 100 : Math.min(85, Math.max(5, (elapsedTime / 300) * 85 + 5))}%` 
+                    width: `${isComplete ? 100 : Math.min(85, Math.max(5, (elapsedTime / 120) * 85 + 5))}%` 
                   }}
                 ></div>
               </div>

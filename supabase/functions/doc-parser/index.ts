@@ -177,6 +177,46 @@ Document metadata:
     // Simulate final processing
     console.log(`✅ Document processing completed`)
 
+    // Step 4: Call vector-processor to generate embeddings
+    console.log(`🧮 Triggering vector processor for document ${documentId}`)
+    
+    const { data: vectorResult, error: vectorError } = await supabase.functions.invoke('vector-processor', {
+      body: { 
+        documentId: documentId,
+        extractedText: processedContent,
+        documentType: 'regulatory'
+      }
+    })
+
+    if (vectorError) {
+      console.error('❌ Vector processor invocation failed:', vectorError)
+      
+      // Update document to indicate parsing succeeded but vectorization failed
+      await supabase
+        .from('regulatory_documents')
+        .update({
+          status: 'parsing_complete_vectorization_failed',
+          progress_percentage: 85,
+          extraction_method: 'edge_function_processing',
+          updated_at: new Date().toISOString()
+        })
+        .eq('document_id', documentId)
+      
+      return new Response(JSON.stringify({ 
+        success: false,
+        error: 'Vector processing failed',
+        details: vectorError.message,
+        documentId: documentId,
+        textLength: processedContent.length,
+        stage: 'vectorization'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    console.log('✅ Vector processor triggered successfully')
+    
     // Update document to completed status
     await supabase
       .from('regulatory_documents')
@@ -188,18 +228,16 @@ Document metadata:
       })
       .eq('document_id', documentId)
 
-    // TODO: Create processing job for vector generation
-    // TODO: Trigger notification job for user
-    
     console.log(`🎉 Document ${documentId} processed successfully`)
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         documentId,
-        message: 'Document processed successfully',
+        message: 'Document parsing and vectorization completed successfully',
         processedContent: processedContent.substring(0, 200) + '...',
-        extractedText: processedContent
+        extractedText: processedContent,
+        vectorResult: vectorResult
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
