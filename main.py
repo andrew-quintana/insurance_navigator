@@ -531,7 +531,7 @@ async def upload_document_backend(
         
         try:
             # Upload using storage service
-            upload_response = storage_service_instance.supabase.storage.from_('documents').upload(
+            upload_response = storage_service_instance.supabase.storage.from_('raw_documents').upload(
                 storage_path,
                 file_data,
                 file_options={
