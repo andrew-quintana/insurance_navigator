@@ -14,9 +14,32 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
-
+  
   try {
     console.log('🔍 Doc-parser started - method:', req.method)
+    
+    // Handle GET requests for health checks
+    if (req.method === 'GET') {
+      return new Response(JSON.stringify({
+        status: 'healthy',
+        service: 'doc-parser',
+        timestamp: new Date().toISOString()
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+    
+    // Only handle POST requests for document processing
+    if (req.method !== 'POST') {
+      return new Response(JSON.stringify({
+        error: 'Method not allowed',
+        allowed_methods: ['POST', 'GET', 'OPTIONS']
+      }), {
+        status: 405,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
     
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -24,7 +47,21 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     // ✅ REFACTORED: Simplified authentication - expects payload with document info
-    const { documentId, path, filename, contentType, fileSize } = await req.json()
+    let requestData: any
+    try {
+      requestData = await req.json()
+    } catch (jsonError) {
+      console.error('❌ JSON parsing error:', jsonError)
+      return new Response(JSON.stringify({ 
+        error: 'Invalid JSON payload',
+        details: 'Request body must be valid JSON'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+    
+    const { documentId, path, filename, contentType, fileSize } = requestData
     
     if (!documentId || !path) {
       return new Response(JSON.stringify({ 
@@ -74,7 +111,7 @@ Deno.serve(async (req) => {
     if (downloadError || !fileData) {
       console.error('❌ Failed to download file:', downloadError)
       await supabase
-        .from('documents')
+      .from('documents')
         .update({
           status: 'failed',
           error_message: `Failed to download file: ${downloadError?.message || 'Unknown error'}`,
@@ -98,8 +135,8 @@ Deno.serve(async (req) => {
       console.log('🦙 Using LlamaParse for PDF processing...')
       
       // Update status to indicate LlamaParse processing
-      await supabase
-        .from('documents')
+          await supabase
+            .from('documents')
         .update({
           status: 'parsing',
           progress_percentage: 40,
@@ -108,9 +145,9 @@ Deno.serve(async (req) => {
             parsing_started_at: new Date().toISOString()
           }
         })
-        .eq('id', documentId)
+            .eq('id', documentId)
 
-      try {
+          try {
         const llamaCloudKey = Deno.env.get('LLAMA_CLOUD_API_KEY')
         
         if (!llamaCloudKey) {
@@ -118,36 +155,36 @@ Deno.serve(async (req) => {
         }
 
         // Prepare file for LlamaCloud upload
-        const formData = new FormData()
+            const formData = new FormData()
         formData.append('file', fileData, filename)
-
+            
         const uploadResponse = await fetch('https://api.cloud.llamaindex.ai/api/parsing/upload', {
-          method: 'POST',
-          headers: {
+              method: 'POST',
+              headers: {
             'Authorization': `Bearer ${llamaCloudKey}`,
-          },
-          body: formData
-        })
+              },
+              body: formData
+            })
 
-        if (!uploadResponse.ok) {
+            if (!uploadResponse.ok) {
           throw new Error(`LlamaCloud upload failed: ${uploadResponse.status}`)
-        }
+            }
 
-        const uploadResult = await uploadResponse.json()
-        const jobId = uploadResult.id
+            const uploadResult = await uploadResponse.json()
+            const jobId = uploadResult.id
 
         console.log('📤 File uploaded to LlamaCloud, job ID:', jobId)
 
         // Poll for completion with timeout
-        let attempts = 0
+            let attempts = 0
         const maxAttempts = 60 // Wait up to 5 minutes
-        
+            
         while (attempts < maxAttempts) {
           const statusResponse = await fetch(`https://api.cloud.llamaindex.ai/api/parsing/job/${jobId}`, {
-            headers: {
+                headers: {
               'Authorization': `Bearer ${llamaCloudKey}`,
-            }
-          })
+                }
+              })
 
           if (!statusResponse.ok) {
             throw new Error(`Status check failed: ${statusResponse.status}`)
@@ -155,7 +192,7 @@ Deno.serve(async (req) => {
 
           const statusResult = await statusResponse.json()
           console.log(`🔄 LlamaCloud status (attempt ${attempts + 1}):`, statusResult.status)
-
+                
           if (statusResult.status === 'SUCCESS') {
             // Get the result
             const resultResponse = await fetch(`https://api.cloud.llamaindex.ai/api/parsing/job/${jobId}/result/markdown`, {
@@ -187,15 +224,15 @@ Deno.serve(async (req) => {
           throw new Error('LlamaCloud processing timeout')
         }
 
-      } catch (llamaError) {
+          } catch (llamaError) {
         console.error('❌ LlamaParse error:', llamaError)
         // Fallback to basic text extraction
         const arrayBuffer = await fileData.arrayBuffer()
-        const text = new TextDecoder().decode(arrayBuffer)
-        extractedText = text.replace(/[^\x20-\x7E\n\r\t]/g, ' ').trim()
-        console.log('✅ Fallback extraction completed, length:', extractedText.length)
-      }
-    } else {
+            const text = new TextDecoder().decode(arrayBuffer)
+            extractedText = text.replace(/[^\x20-\x7E\n\r\t]/g, ' ').trim()
+            console.log('✅ Fallback extraction completed, length:', extractedText.length)
+          }
+      } else {
       // Direct text processing for non-PDF files
       console.log('📝 Using direct text processing...')
       const arrayBuffer = await fileData.arrayBuffer()
@@ -213,7 +250,7 @@ Deno.serve(async (req) => {
           updated_at: new Date().toISOString()
         })
         .eq('id', documentId)
-      
+
       return new Response(JSON.stringify({ 
         error: 'No text extracted',
         message: 'Document processing completed but no text was extracted'
@@ -244,9 +281,9 @@ Deno.serve(async (req) => {
         documentId: documentId,
         extractedText: extractedText
       }
-    })
+      })
 
-    if (vectorError) {
+      if (vectorError) {
       console.error('❌ Vector processor invocation failed:', vectorError)
       await supabase
         .from('documents')
@@ -295,11 +332,11 @@ Deno.serve(async (req) => {
 async function updateDocumentError(supabase: any, documentId: string, errorMessage: string) {
   await supabase
     .from('documents')
-    .update({
+    .update({ 
       status: 'failed',
       error_message: errorMessage,
       progress_percentage: 0,
       updated_at: new Date().toISOString()
     })
     .eq('id', documentId)
-} 
+}
