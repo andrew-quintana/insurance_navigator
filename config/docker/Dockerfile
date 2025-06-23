@@ -9,7 +9,8 @@ RUN apt-get update && apt-get install -y \
 
 # Copy requirements and install Python dependencies
 COPY config/python/requirements-prod.txt requirements.txt
-RUN pip install --no-cache-dir --user -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir --user -r requirements.txt
 
 # Final stage - smaller image
 FROM python:3.11-slim
@@ -20,21 +21,24 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Copy pre-built dependencies from builder stage
-COPY --from=builder /root/.local /root/.local
+# Create non-root user first
+RUN useradd --create-home --shell /bin/bash app
 
-# Make sure scripts in .local are usable
-ENV PATH=/root/.local/bin:$PATH
+# Copy pre-built dependencies from builder stage to app user's home
+COPY --from=builder /root/.local /home/app/.local
+RUN chown -R app:app /home/app/.local
 
-# Set working directory
+# Set working directory and copy app code
 WORKDIR /app
-
-# Copy application code
 COPY . .
+RUN chown -R app:app /app
 
-# Create non-root user for security
-RUN useradd --create-home --shell /bin/bash app && chown -R app:app /app
+# Switch to app user
 USER app
+
+# Make sure Python scripts are available in PATH for app user
+ENV PATH=/home/app/.local/bin:$PATH
+ENV PYTHONPATH=/home/app/.local/lib/python3.11/site-packages:$PYTHONPATH
 
 # Expose port and set environment variables
 EXPOSE 8000
@@ -46,5 +50,5 @@ ENV PYTHONDONTWRITEBYTECODE=1
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=2 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Optimized startup command
-CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"] 
+# Use the app user's local bin path for uvicorn
+CMD ["/home/app/.local/bin/uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"] 
