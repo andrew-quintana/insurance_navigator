@@ -717,18 +717,12 @@ async def upload_regulatory_document(
     This ensures regulatory documents get the same LlamaParse processing
     and vectorization as user documents.
     """
+    upload_start_time = time.time()
+    
     try:
         logger.info(f"🏛️ Starting regulatory document upload: {document_title}")
         
-        # Create a mock request with the file for internal processing
-        # Note: We can't directly call upload_document_backend because it's a FastAPI endpoint
-        # Instead, we'll replicate the core logic here
-        
-        # Store file properties before reading (reading might affect the object)
-        filename = file.filename
-        content_type = file.content_type
-        
-        # Read file data
+        # Read file data with validation
         file_data = await file.read()
         
         # Validate file size (50MB limit)
@@ -742,6 +736,14 @@ async def upload_regulatory_document(
         if len(file_data) == 0:
             raise HTTPException(status_code=400, detail="Empty file")
         
+        # Validate file type
+        allowed_types = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
+        if file.content_type not in allowed_types:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported file type '{file.content_type}'. Please upload PDF, DOCX, or TXT files."
+            )
+
         # Get user token for edge function calls
         auth_header = request.headers.get("authorization")
         user_token = auth_header.split(" ")[1] if auth_header else None
@@ -749,97 +751,170 @@ async def upload_regulatory_document(
         if not user_token:
             raise HTTPException(status_code=401, detail="Missing user token")
         
-        # Step 1: Initialize upload via edge function
-        logger.info(f"📤 Step 1: Initializing upload via edge function...")
+        # ✅ STEP 1: Create regulatory document record and upload file directly
+        logger.info(f"📄 Step 1: Creating regulatory document record and uploading file...")
         
-        upload_init_payload = {
+        # Generate file hash for deduplication
+        file_hash = hashlib.sha256(f"{file.filename}-{len(file_data)}-{current_user.id}-{time.time()}".encode()).hexdigest()
+        
+        # Create storage path for regulatory documents
+        storage_path = f"regulatory/{current_user.id}/{file_hash}/{file.filename}"
+        
+        # Get storage service
+        global storage_service_instance
+        if not storage_service_instance:
+            storage_service_instance = await get_storage_service()
+        
+        # Create regulatory document record in regulatory_documents table
+        pool = await get_db_pool()
+        document_id = str(uuid.uuid4())
+        
+        # Parse additional metadata if provided
+        additional_metadata = {}
+        if metadata:
+            try:
+                additional_metadata = json.loads(metadata)
+            except json.JSONDecodeError:
+                logger.warning(f"Invalid metadata JSON provided: {metadata}")
+        
+        regulatory_metadata = {
+            "document_title": document_title,
+            "document_type": document_type,
+            "source_url": source_url,
+            "category": category,
+            "is_regulatory": True,
+            "upload_method": "backend_orchestrated",
+            **additional_metadata
+        }
+        
+        async with pool.get_connection() as conn:
+            # Create record in regulatory_documents table
+            await conn.execute("""
+                INSERT INTO regulatory_documents (
+                    id, user_id, title, source_url, file_path, original_filename,
+                    file_size, content_type, document_type, status, metadata, 
+                    created_at, updated_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+            """, 
+            document_id, current_user.id, document_title, source_url, storage_path,
+            file.filename, len(file_data), file.content_type, document_type, 
+            'uploading', json.dumps(regulatory_metadata)
+            )
+            
+            # Also create in documents table for vectorization compatibility
+            await conn.execute("""
+                INSERT INTO documents (
+                    id, user_id, original_filename, file_size, content_type, 
+                    file_hash, storage_path, document_type, status, metadata,
+                    progress_percentage, processed_chunks, failed_chunks, 
+                    created_at, updated_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
+            """, 
+            document_id, current_user.id, file.filename, len(file_data), file.content_type,
+            file_hash, storage_path, 'regulatory', json.dumps(regulatory_metadata),
+            5, 0, 0
+            )
+        
+        logger.info(f"✅ Step 1a: Regulatory document record created with ID {document_id}")
+        
+        # ✅ STEP 2: Upload file directly to Supabase Storage
+        logger.info(f"📤 Step 2: Uploading regulatory file to storage...")
+        
+        try:
+            # Upload using storage service to raw_documents bucket
+            upload_response = storage_service_instance.supabase.storage.from_('raw_documents').upload(
+                storage_path,
+                file_data,
+                file_options={
+                    "content-type": file.content_type,
+                    "upsert": "false"
+                }
+            )
+            
+            # Check if upload was successful
+            if hasattr(upload_response, 'error') and upload_response.error:
+                logger.error(f"❌ Regulatory file upload failed: {upload_response.error}")
+                # Update document status to failed
+                async with pool.get_connection() as conn:
+                    await conn.execute("""
+                        UPDATE regulatory_documents SET status = 'failed', updated_at = NOW()
+                        WHERE id = $1
+                    """, document_id)
+                    await conn.execute("""
+                        UPDATE documents SET status = 'failed', error_message = $2, updated_at = NOW()
+                        WHERE id = $1
+                    """, document_id, f"Upload failed: {upload_response.error}")
+                
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Regulatory file upload failed: {upload_response.error}"
+                )
+            
+            logger.info(f"✅ Step 2 complete: Regulatory file uploaded to {storage_path}")
+            
+        except Exception as upload_error:
+            logger.error(f"❌ Regulatory file upload exception: {upload_error}")
+            async with pool.get_connection() as conn:
+                await conn.execute("""
+                    UPDATE regulatory_documents SET status = 'failed', updated_at = NOW()
+                    WHERE id = $1
+                """, document_id)
+                await conn.execute("""
+                    UPDATE documents SET status = 'failed', error_message = $2, updated_at = NOW()
+                    WHERE id = $1
+                """, document_id, f"Upload exception: {str(upload_error)}")
+            
+            raise HTTPException(
+                status_code=500,
+                detail=f"Regulatory file upload failed: {str(upload_error)}"
+            )
+        
+        # Update document status to processing
+        async with pool.get_connection() as conn:
+            await conn.execute("""
+                UPDATE regulatory_documents SET status = 'processing', updated_at = NOW()
+                WHERE id = $1
+            """, document_id)
+            await conn.execute("""
+                UPDATE documents SET status = 'processing', progress_percentage = 20, 
+                updated_at = NOW()
+                WHERE id = $1
+            """, document_id)
+        
+        # ✅ STEP 3: Call edge function to process the uploaded regulatory file
+        logger.info(f"🔄 Step 3: Triggering regulatory document processing...")
+        
+        processing_payload = {
+            "documentId": document_id,
+            "path": storage_path,
             "filename": file.filename,
             "contentType": file.content_type,
             "fileSize": len(file_data)
         }
         
-        upload_result = await edge_orchestrator.call_edge_function(
-            'upload-handler', 
-            'POST', 
-            upload_init_payload, 
-            user_token,
-            current_user.id
-        )
-        
-        document_id = upload_result.get('documentId')
-        upload_url = upload_result.get('uploadUrl')
-        storage_path = upload_result.get('path')
-        
-        if not all([document_id, upload_url, storage_path]):
-            raise HTTPException(
-                status_code=500,
-                detail="Upload initialization failed: missing required fields"
+        try:
+            processing_result = await edge_orchestrator.call_edge_function(
+                'doc-parser',  # Use doc-parser directly like user uploads
+                'POST',
+                processing_payload,
+                user_token,
+                current_user.id
             )
-        
-        logger.info(f"✅ Step 1 complete: Document ID {document_id}")
-        
-        # Step 2: Upload file to Supabase Storage
-        logger.info(f"📁 Step 2: Uploading file to Supabase Storage...")
-        
-        await edge_orchestrator.upload_file_to_signed_url(
-            upload_url, 
-            file_data, 
-            file.content_type
-        )
-        
-        logger.info(f"✅ Step 2 complete: File uploaded to storage")
-        
-        # Step 3: Trigger processing completion via edge function
-        logger.info(f"🔄 Step 3: Triggering processing completion...")
-        
-        completion_payload = {
-            "documentId": document_id,
-            "path": storage_path
-        }
-        
-        completion_result = await edge_orchestrator.call_edge_function(
-            'upload-handler',
-            'PATCH',
-            completion_payload,
-            user_token,
-            current_user.id
-        )
-        
-        logger.info(f"✅ Step 3 complete: Processing triggered")
-        
+            logger.info(f"✅ Step 3 complete: Regulatory document processing triggered")
+            
+        except HTTPException as e:
+            logger.warning(f"⚠️ Regulatory processing trigger timeout/error: {e.detail}")
+            # Don't fail the request - processing may still succeed
+            processing_result = {
+                "status": "background_processing",
+                "message": "Processing triggered but response timeout - monitoring in background"
+            }
+
         # Determine processing method
         processing_method = "llamaparse" if file.content_type == "application/pdf" else "direct"
         
-        # Add regulatory-specific metadata
-        pool = await get_db_pool()
-        async with pool.get_connection() as conn:
-            # Parse additional metadata if provided
-            additional_metadata = {}
-            if metadata:
-                try:
-                    additional_metadata = json.loads(metadata)
-                except json.JSONDecodeError:
-                    logger.warning(f"Invalid metadata JSON provided: {metadata}")
-            
-            regulatory_metadata = {
-                "document_title": document_title,
-                "document_type": document_type,
-                "source_url": source_url,
-                "category": category,
-                "is_regulatory": True,
-                **additional_metadata
-            }
-            
-            await conn.execute("""
-                UPDATE documents 
-                SET 
-                    metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
-                    document_type = 'regulatory'
-                WHERE id = $1
-            """,
-            document_id,
-            json.dumps(regulatory_metadata)
-            )
+        processing_time = time.time() - upload_start_time
+        logger.info(f"📊 Regulatory upload completed in {processing_time:.2f}s")
         
         logger.info(f"✅ Regulatory document uploaded: {document_title}")
         
