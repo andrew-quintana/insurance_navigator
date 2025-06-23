@@ -216,7 +216,7 @@ Document metadata:
     }
 
     console.log('✅ Vector processor triggered successfully')
-    
+
     // Update document to completed status
     await supabase
       .from('regulatory_documents')
@@ -227,7 +227,7 @@ Document metadata:
         updated_at: new Date().toISOString()
       })
       .eq('document_id', documentId)
-
+    
     console.log(`🎉 Document ${documentId} processed successfully`)
 
     return new Response(
