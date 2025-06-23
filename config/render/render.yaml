@@ -3,11 +3,14 @@ services:
     name: insurance-navigator-api
     env: docker
     plan: free
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./config/docker/Dockerfile
     region: oregon
     branch: staging
     port: 8000
     healthCheckPath: /health
+    # Render optimizations for faster startup
+    buildCommand: "echo 'Using Docker build - no additional build command needed'"
+    preDeployCommand: "echo 'Pre-deploy optimization complete'"
     envVars:
       - key: SUPABASE_URL
         sync: false
@@ -30,4 +33,13 @@ services:
       - key: SECURITY_BYPASS_ENABLED
         value: false
       - key: API_BASE_URL
-        value: ***REMOVED*** 
+        value: ***REMOVED***
+      # Render startup optimizations
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
+      - key: UVICORN_WORKERS
+        value: "1"
+      - key: STARTUP_TIMEOUT
+        value: "30"

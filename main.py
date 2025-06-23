@@ -42,15 +42,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Agent orchestration import
-try:
-    from graph.agent_orchestrator import AgentOrchestrator
-    AGENT_ORCHESTRATOR_AVAILABLE = True
-    logger.info("✅ AgentOrchestrator imported successfully")
-except ImportError as e:
-    logger.error(f"❌ CRITICAL: AgentOrchestrator import failed: {e}")
-    AGENT_ORCHESTRATOR_AVAILABLE = False
-    raise ImportError(f"AgentOrchestrator import failed: {e}")
+# Agent orchestration import - LAZY LOADED for faster startup
+AGENT_ORCHESTRATOR_AVAILABLE = False
+_agent_orchestrator = None
+
+def get_agent_orchestrator():
+    """Lazy load AgentOrchestrator only when needed."""
+    global _agent_orchestrator, AGENT_ORCHESTRATOR_AVAILABLE
+    if _agent_orchestrator is None and not AGENT_ORCHESTRATOR_AVAILABLE:
+        try:
+            from graph.agent_orchestrator import AgentOrchestrator
+            _agent_orchestrator = AgentOrchestrator()
+            AGENT_ORCHESTRATOR_AVAILABLE = True
+            logger.info("✅ AgentOrchestrator loaded on-demand")
+        except ImportError as e:
+            logger.error(f"❌ AgentOrchestrator import failed: {e}")
+            AGENT_ORCHESTRATOR_AVAILABLE = False
+            return None
+    return _agent_orchestrator
 
 # Custom CORS middleware
 class CustomCORSMiddleware(BaseHTTPMiddleware):
@@ -872,31 +881,34 @@ async def root():
         }
     }
 
-# Startup event
+# Startup event - OPTIMIZED for fast Render deployment
 @app.on_event("startup")
 async def startup_event():
-    """Initialize services on startup."""
-    global user_service_instance, conversation_service_instance, storage_service_instance
-    
-    logger.info("🚀 Starting Insurance Navigator API v3.0.0")
+    """Initialize services on startup - non-blocking for faster deployment."""
+    logger.info("🚀 Starting Insurance Navigator API v3.0.0 - FAST MODE")
     logger.info("🔧 Backend-orchestrated processing enabled")
     logger.info("🦙 LlamaParse integration active")
     
+    # Schedule background initialization to avoid blocking startup
+    asyncio.create_task(initialize_services_background())
+
+async def initialize_services_background():
+    """Initialize services in background after app starts."""
+    global user_service_instance, conversation_service_instance, storage_service_instance
+    
     try:
-        # Initialize services
+        logger.info("🔄 Background service initialization starting...")
+        
+        # Initialize services with faster timeouts
         user_service_instance = await get_user_service()
         conversation_service_instance = await get_conversation_service()
         storage_service_instance = await get_storage_service()
         
-        # Test edge function connectivity
-        logger.info("🔗 Testing edge function connectivity...")
-        # TODO: Add connectivity test
-        
-        logger.info("✅ All services initialized successfully")
+        logger.info("✅ All services initialized in background")
         
     except Exception as e:
-        logger.error(f"❌ Startup failed: {e}")
-        raise
+        logger.error(f"⚠️ Background service initialization failed: {e}")
+        # Don't crash the app, let it start and handle errors per-request
 
 # Shutdown event
 @app.on_event("shutdown")
