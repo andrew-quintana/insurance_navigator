@@ -1,0 +1,158 @@
+{
+  "timestamp": "2025-06-23T08:42:08.641628",
+  "test_type": "full_production_pipeline",
+  "render_api_health": {
+    "/health": {
+      "status": "degraded",
+      "http_status": 404,
+      "description": "Health check endpoint",
+      "response_length": 10,
+      "content_type": "text/plain; charset=utf-8",
+      "response_preview": "Not Found\n"
+    },
+    "/": {
+      "status": "degraded",
+      "http_status": 404,
+      "description": "Root endpoint",
+      "response_length": 10,
+      "content_type": "text/plain; charset=utf-8",
+      "response_preview": "Not Found\n"
+    },
+    "/docs": {
+      "status": "degraded",
+      "http_status": 404,
+      "description": "API documentation",
+      "response_length": 10,
+      "content_type": "text/plain; charset=utf-8",
+      "response_preview": "Not Found\n"
+    },
+    "/me": {
+      "status": "degraded",
+      "http_status": 404,
+      "description": "User endpoint (should be 401/403 without auth)",
+      "response_length": 10,
+      "content_type": "text/plain; charset=utf-8",
+      "response_preview": "Not Found\n"
+    },
+    "working_endpoints_count": 0,
+    "total_endpoints": 4,
+    "success_rate": 0.0,
+    "overall_status": "failed"
+  },
+  "edge_function_health": {
+    "doc-parser": {
+      "status": "healthy",
+      "http_status": 200,
+      "response_length": 100,
+      "response": "{\"service\":\"doc-parser\",\"status\":\"healthy\",\"timestamp\":\"2025-06-23T15:42:09.300Z\",\"version\":\"1.0.0\"}",
+      "parsed_response": {
+        "service": "doc-parser",
+        "status": "healthy",
+        "timestamp": "2025-06-23T15:42:09.300Z",
+        "version": "1.0.0"
+      }
+    },
+    "vector-processor": {
+      "status": "healthy",
+      "http_status": 200,
+      "response_length": 106,
+      "response": "{\"service\":\"vector-processor\",\"status\":\"healthy\",\"timestamp\":\"2025-06-23T15:42:09.492Z\",\"version\":\"1.0.0\"}",
+      "parsed_response": {
+        "service": "vector-processor",
+        "status": "healthy",
+        "timestamp": "2025-06-23T15:42:09.492Z",
+        "version": "1.0.0"
+      }
+    },
+    "healthy_functions_count": 2,
+    "total_functions": 2,
+    "health_rate": 1.0,
+    "overall_healthy": true
+  },
+  "end_to_end_processing": {
+    "document_info": {
+      "document_id": "bf98c5b5-a215-4a8f-9d8a-19afd548b655",
+      "title": "Health Insurance Marketplace Standards 2025",
+      "raw_document_path": "regulatory/59629cd5-0529-479b-8c41-61fb9c47ee92/11713fb0fa694674002530a832fb831d1c1a9a36465e91b69f7944feb016daa7/marketplace_regulations_2025.txt",
+      "status": "completed",
+      "vectors_generated": true,
+      "vector_count": 1,
+      "created_at": "2025-06-23T14:51:59.561407+00:00"
+    },
+    "doc_parser_test": {
+      "http_status": 200,
+      "success": true,
+      "response_length": 923,
+      "response": {
+        "success": true,
+        "documentId": "bf98c5b5-a215-4a8f-9d8a-19afd548b655",
+        "message": "Document processed successfully",
+        "processedContent": "Processed content for document: Health Insurance Marketplace Standards 2025\n    \nThis is a mock processing result. In production, this would contain:\n- Extracted text from the document\n- Structured da...",
+        "extractedText": "Processed content for document: Health Insurance Marketplace Standards 2025\n    \nThis is a mock processing result. In production, this would contain:\n- Extracted text from the document\n- Structured data extraction\n- Policy information parsing\n- Coverage details analysis\n\nDocument metadata:\n- Title: Health Insurance Marketplace Standards 2025\n- File path: regulatory/59629cd5-0529-479b-8c41-61fb9c47ee92/11713fb0fa694674002530a832fb831d1c1a9a36465e91b69f7944feb016daa7/marketplace_regulations_2025.txt\n- Upload date: 2025-06-23T14:51:59.561407+00:00\n"
+      },
+      "extracted_text": "Processed content for document: Health Insurance Marketplace Standards 2025\n    \nThis is a mock processing result. In production, this would contain:\n- Extracted text from the document\n- Structured data extraction\n- Policy information parsing\n- Coverage details analysis\n\nDocument metadata:\n- Title: Health Insurance Marketplace Standards 2025\n- File path: regulatory/59629cd5-0529-479b-8c41-61fb9c47ee92/11713fb0fa694674002530a832fb831d1c1a9a36465e91b69f7944feb016daa7/marketplace_regulations_2025.txt\n- Upload date: 2025-06-23T14:51:59.561407+00:00\n"
+    },
+    "vector_processor_test": {
+      "http_status": 200,
+      "success": true,
+      "response_length": 159,
+      "response": {
+        "success": true,
+        "chunksProcessed": 1,
+        "totalChunks": 1,
+        "documentId": "bf98c5b5-a215-4a8f-9d8a-19afd548b655",
+        "documentType": "regulatory",
+        "embeddingMethod": "openai"
+      },
+      "vectors_created": 0
+    },
+    "database_verification": {
+      "success": true,
+      "document_status": {
+        "status": "completed",
+        "vectors_generated": true,
+        "vector_count": 1,
+        "updated_at": "2025-06-23T15:42:10.044000+00:00"
+      },
+      "actual_vector_count": 3,
+      "vectors_exist": true,
+      "vector_timestamps": {
+        "first_created": "2025-06-23T15:35:01.316000+00:00",
+        "last_created": "2025-06-23T15:42:11.229000+00:00"
+      }
+    }
+  },
+  "database_validation": {
+    "success": true,
+    "regulatory_documents": {
+      "total_documents": 5,
+      "documents_with_vectors": 1,
+      "total_vector_count": 1,
+      "completed_documents": 1,
+      "recent_documents_24h": 5
+    },
+    "vector_table": {
+      "total_vectors": 212,
+      "documents_with_actual_vectors": 1,
+      "recent_vectors_24h": 212
+    },
+    "success_rates": {
+      "vector_generation_rate": 0.2,
+      "document_completion_rate": 0.2
+    }
+  },
+  "summary": {
+    "render_api_working": false,
+    "render_api_status": "failed",
+    "render_success_rate": 0.0,
+    "edge_functions_healthy": true,
+    "edge_health_rate": 1.0,
+    "doc_parser_working": true,
+    "vector_processor_working": true,
+    "database_vectors_exist": true,
+    "database_validation_success": true,
+    "total_production_vectors": 212,
+    "vector_generation_rate": 0.2,
+    "overall_production_status": "good"
+  }
+}
