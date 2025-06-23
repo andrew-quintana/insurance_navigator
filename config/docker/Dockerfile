@@ -1,16 +1,20 @@
 # Multi-stage build for faster deployment
 FROM python:3.11-slim as builder
 
+# Create app user in builder stage and install as that user
+RUN useradd --create-home --shell /bin/bash app
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
-COPY config/python/requirements-prod.txt requirements.txt
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir --user -r requirements.txt
+# Copy requirements and install as app user
+COPY config/python/requirements-prod.txt /tmp/requirements.txt
+USER app
+RUN pip install --upgrade pip --user && \
+    pip install --no-cache-dir --user -r /tmp/requirements.txt
 
 # Final stage - smaller image
 FROM python:3.11-slim
@@ -21,17 +25,15 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Create non-root user first
+# Create app user in final stage
 RUN useradd --create-home --shell /bin/bash app
 
-# Copy pre-built dependencies from builder stage to app user's home
-COPY --from=builder /root/.local /home/app/.local
-RUN chown -R app:app /home/app/.local
+# Copy pre-built dependencies with correct ownership from start
+COPY --from=builder --chown=app:app /home/app/.local /home/app/.local
 
 # Set working directory and copy app code
 WORKDIR /app
-COPY . .
-RUN chown -R app:app /app
+COPY --chown=app:app . .
 
 # Switch to app user
 USER app
