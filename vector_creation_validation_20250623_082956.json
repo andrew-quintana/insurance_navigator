@@ -1,0 +1,8 @@
+{
+  "timestamp": "2025-06-23T08:29:56.670587",
+  "validation_type": "vector_creation_check",
+  "recent_documents": [],
+  "vector_status": {},
+  "summary": {},
+  "error": "prepared statement \"__asyncpg_stmt_1__\" already exists\nHINT:  \nNOTE: pgbouncer with pool_mode set to \"transaction\" or\n\"statement\" does not support prepared statements properly.\nYou have two options:\n\n* if you are using pgbouncer for connection pooling to a\n  single server, switch to the connection pool functionality\n  provided by asyncpg, it is a much better option for this\n  purpose;\n\n* if you have no option of avoiding the use of pgbouncer,\n  then you can set statement_cache_size to 0 when creating\n  the asyncpg connection object.\n"
+}

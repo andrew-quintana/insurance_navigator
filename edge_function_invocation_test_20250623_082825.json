@@ -1,0 +1,206 @@
+{
+  "timestamp": "2025-06-23T08:28:22.708863",
+  "test_type": "edge_function_direct_invocation",
+  "edge_function_tests": {
+    "doc-parser_health": {
+      "status": "success",
+      "http_status": 200,
+      "response_time": 1.0859919999998056,
+      "response_data": "{\"service\":\"doc-parser\",\"status\":\"healthy\",\"timestamp\":\"2025-06-23T15:28:23.816Z\",\"version\":\"1.0.0\"}",
+      "headers": {
+        "Date": "Mon, 23 Jun 2025 15:28:23 GMT",
+        "Content-Type": "application/json",
+        "Content-Length": "107",
+        "Connection": "keep-alive",
+        "CF-Ray": "954503ce8e301590-SJC",
+        "CF-Cache-Status": "DYNAMIC",
+        "Access-Control-Allow-Origin": "*",
+        "Content-Encoding": "gzip",
+        "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+        "Vary": "Accept-Encoding",
+        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "sb-project-ref": "jhrespvvhbnloxrieycf",
+        "X-Content-Type-Options": "nosniff",
+        "x-deno-execution-id": "26af5b8d-5c9d-4625-a65a-253b9bee00cf",
+        "x-sb-edge-region": "us-west-1",
+        "x-served-by": "supabase-edge-runtime",
+        "Set-Cookie": "__cf_bm=jfAQEvU6kNaoRtdVRTuY7.dazggIr.ATKhgWxNeGbl8-1750692503-1.0.1.1-FZFt0lTA.Ql_Dd_lXWIharrJFmIoTlwByt0.cF6b7uvYzeziPPs3ytLqXTK7x8jZNBV1P9EZ1UAQL2fGhGoNYPvqvAfI_zS2vKBmhCie_0Y; path=/; expires=Mon, 23-Jun-25 15:58:23 GMT; domain=.supabase.co; HttpOnly; Secure; SameSite=None",
+        "Server": "cloudflare",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "response_json": {
+        "service": "doc-parser",
+        "status": "healthy",
+        "timestamp": "2025-06-23T15:28:23.816Z",
+        "version": "1.0.0"
+      }
+    },
+    "vector-processor_health": {
+      "status": "success",
+      "http_status": 200,
+      "response_time": 0.9909858330001953,
+      "response_data": "{\"service\":\"vector-processor\",\"status\":\"healthy\",\"timestamp\":\"2025-06-23T15:28:24.791Z\",\"version\":\"1.0.0\"}",
+      "headers": {
+        "Date": "Mon, 23 Jun 2025 15:28:24 GMT",
+        "Content-Type": "application/json",
+        "Content-Length": "115",
+        "Connection": "keep-alive",
+        "CF-Ray": "954503d52acc175f-SJC",
+        "CF-Cache-Status": "DYNAMIC",
+        "Access-Control-Allow-Origin": "*",
+        "Content-Encoding": "gzip",
+        "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+        "Vary": "Accept-Encoding",
+        "sb-project-ref": "jhrespvvhbnloxrieycf",
+        "X-Content-Type-Options": "nosniff",
+        "x-deno-execution-id": "c492cf07-1b1e-459d-95a1-9cd38afce360",
+        "x-sb-edge-region": "us-west-1",
+        "x-served-by": "supabase-edge-runtime",
+        "Set-Cookie": "__cf_bm=aH066naqkUUX3b5DGHACnDi9mvCIN25bw8WH413klVs-1750692504-1.0.1.1-oArpd7oWQR5BseWZ2orP3.eUkgBkUxfV6s7d323hjgcBTAEgt6N7CHaJirCUkkPdhhTV7dBNLjPez0SxN_J9zehEjShdf5LUcE6bS96rv3w; path=/; expires=Mon, 23-Jun-25 15:58:24 GMT; domain=.supabase.co; HttpOnly; Secure; SameSite=None",
+        "Server": "cloudflare",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "response_json": {
+        "service": "vector-processor",
+        "status": "healthy",
+        "timestamp": "2025-06-23T15:28:24.791Z",
+        "version": "1.0.0"
+      }
+    },
+    "doc_parser_invocation": {
+      "status": "failed",
+      "http_status": 400,
+      "response_time": 0.15829983399999037,
+      "response_data": "{\"error\":\"Document ID and storage path are required\",\"details\":\"documentId parameter is missing\"}",
+      "payload_sent": {
+        "document_id": "test-doc-parser-12345",
+        "document_path": "/test/sample.txt",
+        "title": "Test Document for Doc Parser"
+      },
+      "headers": {
+        "Date": "Mon, 23 Jun 2025 15:28:25 GMT",
+        "Content-Type": "application/json",
+        "Content-Length": "101",
+        "Connection": "keep-alive",
+        "CF-Ray": "954503de9e26ceb9-SJC",
+        "CF-Cache-Status": "DYNAMIC",
+        "Access-Control-Allow-Origin": "*",
+        "Content-Encoding": "gzip",
+        "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+        "Vary": "Accept-Encoding",
+        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "sb-project-ref": "jhrespvvhbnloxrieycf",
+        "x-deno-execution-id": "73e87df9-232e-42de-8265-d898a0125b50",
+        "x-sb-edge-region": "us-west-1",
+        "x-served-by": "supabase-edge-runtime",
+        "Set-Cookie": "__cf_bm=QPqjTDXQ7c0XHCE_vuhUBkFs_foZiGieVRgyaWm9vlM-1750692505-1.0.1.1-c3EoqTesDxwc7Sx7eDdGCEibUYB7Qw1KwqRv09aL0JQcnvS3wSJSOrc5zlViA5juGvdNpc.i6mTZYXSn8Yc1FZO0OyEK9sOMnKwSPF6MJSU; path=/; expires=Mon, 23-Jun-25 15:58:25 GMT; domain=.supabase.co; HttpOnly; Secure; SameSite=None",
+        "Server": "cloudflare",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "response_json": {
+        "error": "Document ID and storage path are required",
+        "details": "documentId parameter is missing"
+      }
+    },
+    "vector_processor_invocation": {
+      "status": "failed",
+      "http_status": 400,
+      "response_time": 0.15579254200019932,
+      "response_data": "{\"error\":\"Missing required parameters\",\"details\":\"Both documentId and extractedText are required\"}",
+      "payload_sent": {
+        "document_id": "test-vector-processor-12345",
+        "force_reprocess": true
+      },
+      "headers": {
+        "Date": "Mon, 23 Jun 2025 15:28:25 GMT",
+        "Content-Type": "text/plain;charset=UTF-8",
+        "Content-Length": "104",
+        "Connection": "keep-alive",
+        "CF-Ray": "954503df9cf6d438-SJC",
+        "CF-Cache-Status": "DYNAMIC",
+        "Content-Encoding": "gzip",
+        "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+        "Vary": "Accept-Encoding",
+        "sb-project-ref": "jhrespvvhbnloxrieycf",
+        "x-deno-execution-id": "4c36ed10-72ff-4630-9078-55aae9b95a8d",
+        "x-sb-edge-region": "us-west-1",
+        "x-served-by": "supabase-edge-runtime",
+        "Set-Cookie": "__cf_bm=KfJJOwQuiFdsr2lpcVQPmacM0Iewgf6BQ8Mr1XMjPOM-1750692505-1.0.1.1-1kbze15LnG_2RBtvowAGeYZm7Ztep6Xgw0FipWjd7RPtZVQs4rfrcKu3lvfdj4cniP0gXpExWIAPzF.fwZHQGfxm9m9xQkPFlMqgHU726B8; path=/; expires=Mon, 23-Jun-25 15:58:25 GMT; domain=.supabase.co; HttpOnly; Secure; SameSite=None",
+        "Server": "cloudflare",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "response_json": {
+        "error": "Missing required parameters",
+        "details": "Both documentId and extractedText are required"
+      }
+    }
+  },
+  "real_document_processing": {
+    "status": "completed",
+    "document": {
+      "id": "bf98c5b5-a215-4a8f-9d8a-19afd548b655",
+      "title": "Health Insurance Marketplace Standards 2025",
+      "path": "regulatory/59629cd5-0529-479b-8c41-61fb9c47ee92/11713fb0fa694674002530a832fb831d1c1a9a36465e91b69f7944feb016daa7/marketplace_regulations_2025.txt"
+    },
+    "doc_parser_result": {
+      "status": "failed",
+      "http_status": 400,
+      "response_time": 0.3180603330001759,
+      "response_data": "{\"error\":\"Document ID and storage path are required\",\"details\":\"documentId parameter is missing\"}",
+      "payload_sent": {
+        "document_id": "bf98c5b5-a215-4a8f-9d8a-19afd548b655",
+        "document_path": "regulatory/59629cd5-0529-479b-8c41-61fb9c47ee92/11713fb0fa694674002530a832fb831d1c1a9a36465e91b69f7944feb016daa7/marketplace_regulations_2025.txt",
+        "title": "Health Insurance Marketplace Standards 2025"
+      },
+      "headers": {
+        "Date": "Mon, 23 Jun 2025 15:28:25 GMT",
+        "Content-Type": "application/json",
+        "Content-Length": "101",
+        "Connection": "keep-alive",
+        "CF-Ray": "954503dc9dac1668-SJC",
+        "CF-Cache-Status": "DYNAMIC",
+        "Access-Control-Allow-Origin": "*",
+        "Content-Encoding": "gzip",
+        "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+        "Vary": "Accept-Encoding",
+        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "sb-project-ref": "jhrespvvhbnloxrieycf",
+        "x-deno-execution-id": "c68ddec1-bb1d-4267-ae38-4b442c5167ec",
+        "x-sb-edge-region": "us-west-1",
+        "x-served-by": "supabase-edge-runtime",
+        "Set-Cookie": "__cf_bm=_HNG.Sz6wA6uDtTXLvpGfj0Y8phPMVAQgNtbBx_dEUI-1750692505-1.0.1.1-xKB8EKTz7Wi5B98LsKxhtO7JtxZ.LpziE7KadzcuE5Fb_lKLa.vOtR4lI6put5hESHr1NCNMCplmtARkqhPFXe0.Dq8l9o35HkHKnNmAdyQ; path=/; expires=Mon, 23-Jun-25 15:58:25 GMT; domain=.supabase.co; HttpOnly; Secure; SameSite=None",
+        "Server": "cloudflare",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "response_json": {
+        "error": "Document ID and storage path are required",
+        "details": "documentId parameter is missing"
+      }
+    },
+    "vector_processor_result": {
+      "status": "skipped",
+      "reason": "doc_parser_failed"
+    }
+  },
+  "summary": {
+    "overall_status": "partial",
+    "health_checks_working": true,
+    "edge_functions_invokable": false,
+    "real_document_processing": true,
+    "doc_parser_functional": false,
+    "vector_processor_functional": false,
+    "critical_issues": [
+      "Edge functions cannot be invoked with POST requests",
+      "Doc-parser function not working properly",
+      "Vector-processor function not working properly"
+    ],
+    "recommendations": [
+      "Investigate edge function authentication and request handling",
+      "Check doc-parser implementation and our JSON parsing fixes",
+      "Check vector-processor implementation and database connectivity"
+    ]
+  }
+}

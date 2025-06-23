@@ -120,6 +120,36 @@ Deno.serve(async (req) => {
   let documentId: string | null = null
   let documentType: 'user' | 'regulatory' = 'user'
   
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { 
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      }
+    })
+  }
+
+  // Handle GET requests (health checks)
+  if (req.method === 'GET') {
+    return new Response(
+      JSON.stringify({ 
+        service: 'vector-processor',
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0'
+      }),
+      { 
+        headers: { 
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json' 
+        },
+        status: 200 
+      }
+    )
+  }
+  
   try {
     console.log('🚀 vector-processor started (agnostic mode)')
     
@@ -128,7 +158,30 @@ Deno.serve(async (req) => {
   (Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) ?? ''
     )
 
-    const requestBody = await req.json()
+    // Parse request with proper error handling
+    let requestBody;
+    try {
+      const bodyText = await req.text();
+      if (!bodyText || bodyText.trim() === '') {
+        throw new Error('Request body is empty');
+      }
+      requestBody = JSON.parse(bodyText);
+    } catch (parseError) {
+      console.error('JSON parsing error:', parseError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid JSON in request body',
+          details: parseError.message
+        }),
+        { 
+          headers: { 
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'application/json' 
+          },
+          status: 400 
+        }
+      );
+    }
     console.log('📥 Request received:', { 
       hasDocumentId: !!requestBody.documentId,
       textLength: requestBody.extractedText?.length || 0,
