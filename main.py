@@ -30,6 +30,7 @@ import hashlib
 from db.services.user_service import get_user_service, UserService
 from db.services.conversation_service import get_conversation_service, ConversationService
 from db.services.storage_service import get_storage_service, StorageService
+from db.services.document_service import DocumentService
 from db.services.db_pool import get_db_pool
 
 # Centralized CORS configuration
@@ -858,6 +859,60 @@ async def upload_regulatory_document(
             detail=f"Regulatory upload failed: {str(e)}"
         )
 
+# 📄 NEW: Document Management Endpoints
+@app.get("/documents")
+async def list_user_documents(
+    current_user: UserResponse = Depends(get_current_user),
+    limit: int = 50,
+    document_type: Optional[str] = None
+):
+    """List user's documents."""
+    try:
+        # Use the document service to list documents
+        document_service = DocumentService()
+        documents = await document_service.list_user_documents(
+            user_id=current_user.id,
+            limit=limit,
+            document_type=document_type
+        )
+        
+        return documents
+        
+    except Exception as e:
+        logger.error(f"Error listing documents for user {current_user.id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to list documents: {str(e)}"
+        )
+
+@app.get("/documents/{document_id}/status")
+async def get_document_status(
+    document_id: str,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Get specific document status."""
+    try:
+        # Use the document service to get status
+        document_service = DocumentService()
+        status = await document_service.get_document_status(
+            document_id=document_id,
+            user_id=current_user.id
+        )
+        
+        if 'error' in status:
+            raise HTTPException(status_code=404, detail=status['error'])
+        
+        return status
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting document status {document_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get document status: {str(e)}"
+        )
+
 # Root endpoint
 @app.get("/")
 async def root():
@@ -877,6 +932,8 @@ async def root():
             "docs": "/docs",
             "upload_user_document": "/upload-document-backend",
             "upload_regulatory_document": "/upload-regulatory-document",
+            "list_documents": "/documents",
+            "document_status": "/documents/{document_id}/status",
             "webhook_processing": "/webhooks/document-processing"
         }
     }
