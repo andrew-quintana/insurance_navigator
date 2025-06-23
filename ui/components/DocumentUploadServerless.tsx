@@ -47,7 +47,7 @@ export default function DocumentUploadServerless({
   const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null)
   const [documentId, setDocumentId] = useState<string | null>(null)
 
-  // ✅ CRITICAL FIX: Singleton Supabase client to prevent multiple instances
+  // ✅ CRITICAL FIX: Global Supabase singleton to prevent multiple instances
   const supabase = useMemo(() => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -57,40 +57,29 @@ export default function DocumentUploadServerless({
       return null
     }
     
-    // Use a global singleton to prevent multiple GoTrueClient instances
+    // Use global singleton pattern to prevent multiple GoTrueClient instances
     const globalKey = '__insurance_navigator_supabase_client'
-    if (typeof window !== 'undefined') {
-      if ((window as any)[globalKey]) {
-        console.log('📡 Reusing existing Supabase client')
-        return (window as any)[globalKey]
-      }
+    
+    // Check if we already have a client instance
+    if (typeof window !== 'undefined' && (window as any)[globalKey]) {
+      console.log('📡 Reusing existing Supabase client')
+      return (window as any)[globalKey]
     }
     
     console.log('🔧 Creating new Supabase client')
     const client = createClient(url, key, {
       realtime: {
         params: {
-          eventsPerSecond: 2, // Reduce frequency to prevent overload
-          timeout: 30000,     // 30 second timeout (increased)
+          eventsPerSecond: 1, // Further reduced to prevent overload
         },
-        heartbeatIntervalMs: 60000, // 60 second heartbeat (increased)
-        reconnectAfterMs: (tries: number) => Math.min(tries * 2000, 60000), // Slower reconnection
-        encode: (payload: any, callback: any) => {
-          // Add custom encoding if needed
-          callback(JSON.stringify(payload))
-        },
-        decode: (payload: string, callback: any) => {
-          try {
-            callback(null, JSON.parse(payload))
-          } catch (err) {
-            callback(err, null)
-          }
-        }
+        heartbeatIntervalMs: 30000, // 30 second heartbeat
+        reconnectAfterMs: (tries: number) => Math.min(tries * 5000, 30000), // Less aggressive reconnection
       },
       auth: {
-        persistSession: true,
+        persistSession: false, // Disable session persistence to prevent conflicts
         detectSessionInUrl: false,
-        autoRefreshToken: false // Prevent auto-refresh conflicts
+        autoRefreshToken: false,
+        storage: undefined // Disable auth storage completely
       },
       global: {
         headers: {
@@ -99,6 +88,7 @@ export default function DocumentUploadServerless({
       }
     })
     
+    // Store in global scope to prevent multiple instances
     if (typeof window !== 'undefined') {
       (window as any)[globalKey] = client
     }
