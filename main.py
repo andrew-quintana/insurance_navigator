@@ -788,17 +788,15 @@ async def upload_regulatory_document(
         }
         
         async with pool.get_connection() as conn:
-            # Create record in regulatory_documents table
+            # Create record in regulatory_documents table (uses document_id as primary key)
             await conn.execute("""
                 INSERT INTO regulatory_documents (
-                    id, user_id, title, source_url, file_path, original_filename,
-                    file_size, content_type, document_type, status, metadata, 
-                    created_at, updated_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+                    document_id, title, source_url, raw_document_path, 
+                    document_type, jurisdiction, program, created_at, updated_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
             """, 
-            document_id, current_user.id, document_title, source_url, storage_path,
-            file.filename, len(file_data), file.content_type, document_type, 
-            'uploading', json.dumps(regulatory_metadata)
+            document_id, document_title, source_url, storage_path,
+            document_type, 'federal', ['insurance']
             )
             
             # Also create in documents table for vectorization compatibility
@@ -837,8 +835,8 @@ async def upload_regulatory_document(
                 # Update document status to failed
                 async with pool.get_connection() as conn:
                     await conn.execute("""
-                        UPDATE regulatory_documents SET status = 'failed', updated_at = NOW()
-                        WHERE id = $1
+                        UPDATE regulatory_documents SET updated_at = NOW()
+                        WHERE document_id = $1
                     """, document_id)
                     await conn.execute("""
                         UPDATE documents SET status = 'failed', error_message = $2, updated_at = NOW()
@@ -856,8 +854,8 @@ async def upload_regulatory_document(
             logger.error(f"❌ Regulatory file upload exception: {upload_error}")
             async with pool.get_connection() as conn:
                 await conn.execute("""
-                    UPDATE regulatory_documents SET status = 'failed', updated_at = NOW()
-                    WHERE id = $1
+                    UPDATE regulatory_documents SET updated_at = NOW()
+                    WHERE document_id = $1
                 """, document_id)
                 await conn.execute("""
                     UPDATE documents SET status = 'failed', error_message = $2, updated_at = NOW()
@@ -872,8 +870,8 @@ async def upload_regulatory_document(
         # Update document status to processing
         async with pool.get_connection() as conn:
             await conn.execute("""
-                UPDATE regulatory_documents SET status = 'processing', updated_at = NOW()
-                WHERE id = $1
+                UPDATE regulatory_documents SET updated_at = NOW()
+                WHERE document_id = $1
             """, document_id)
             await conn.execute("""
                 UPDATE documents SET status = 'processing', progress_percentage = 20, 
