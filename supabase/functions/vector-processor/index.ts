@@ -54,11 +54,15 @@ function getDocumentConfig(documentType: 'user' | 'regulatory'): DocumentConfig 
 function chunkText(text: string, chunkSize: number = 1000, overlap: number = 200): string[] {
   if (text.length <= chunkSize) return [text]
   
-  // For very large documents, use larger chunks to reduce total count
+  // Aggressive chunking for very large documents - MVP stability focus
   if (text.length > 500000) { // > 500KB text
-    chunkSize = 2000  // Use 2KB chunks for large documents
-    overlap = 300
-    console.log('📄 Large document detected, using 2KB chunks for efficiency')
+    chunkSize = 5000  // Use 5KB chunks for very large documents
+    overlap = 500
+    console.log('📄 Very large document detected, using 5KB chunks for MVP stability')
+  } else if (text.length > 100000) { // > 100KB text
+    chunkSize = 3000  // Use 3KB chunks for large documents
+    overlap = 400
+    console.log('📄 Large document detected, using 3KB chunks for efficiency')
   }
   
   const chunks: string[] = []
@@ -83,10 +87,10 @@ function chunkText(text: string, chunkSize: number = 1000, overlap: number = 200
   
   const filteredChunks = chunks.filter(chunk => chunk.length > 0)
   
-  // Limit maximum chunks for MVP stability
-  if (filteredChunks.length > 100) {
-    console.log(`⚠️ Document has ${filteredChunks.length} chunks, limiting to 100 for MVP stability`)
-    return filteredChunks.slice(0, 100)
+  // Limit maximum chunks for MVP stability - conservative approach
+  if (filteredChunks.length > 50) {
+    console.log(`⚠️ Document has ${filteredChunks.length} chunks, limiting to 50 for MVP stability`)
+    return filteredChunks.slice(0, 50)
   }
   
   return filteredChunks
@@ -406,7 +410,7 @@ Deno.serve(async (req) => {
 
     // Process chunks with embeddings (normal flow)
     console.log('🧠 Processing chunks with embeddings...')
-    const batchSize = 3  // Reduced batch size for better stability
+    const batchSize = 2  // Very conservative batch size for large documents
     let processedChunks = 0
     
     for (let i = 0; i < chunks.length; i += batchSize) {
