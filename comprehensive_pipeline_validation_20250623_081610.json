@@ -1,0 +1,87 @@
+{
+  "timestamp": "2025-06-23T08:16:08.734516",
+  "validation_phase": "post_fix_characterization",
+  "infrastructure_health": {
+    "api_health": {
+      "status": "degraded",
+      "response_time": 0.14882922172546387,
+      "http_status": 404
+    },
+    "root_endpoint": {
+      "status": "degraded",
+      "http_status": 404,
+      "has_content": true
+    }
+  },
+  "authentication_flow": {
+    "registration": {
+      "status": "failed",
+      "http_status": 404,
+      "error": "Not Found\n"
+    }
+  },
+  "edge_function_characterization": {
+    "doc-parser": {
+      "get_health_check": {
+        "status": "exception",
+        "error": "Cannot connect to host zltxyfhcefzffjlbphnh.supabase.co:443 ssl:default [nodename nor servname provided, or not known]"
+      }
+    },
+    "vector-processor": {
+      "get_health_check": {
+        "status": "exception",
+        "error": "Cannot connect to host zltxyfhcefzffjlbphnh.supabase.co:443 ssl:default [nodename nor servname provided, or not known]"
+      }
+    }
+  },
+  "upload_pipeline_validation": {
+    "status": "skipped",
+    "reason": "no_auth_token"
+  },
+  "error_handling_validation": {
+    "malformed_json": {
+      "status": "unexpected_status",
+      "response_time": 0.12723994255065918,
+      "expected_status": 400,
+      "actual_status": 404,
+      "response": "Not Found\n"
+    },
+    "missing_auth_header": {
+      "status": "unexpected_status",
+      "response_time": 0.12798285484313965,
+      "expected_status": 401,
+      "actual_status": 404
+    }
+  },
+  "performance_characterization": {
+    "_health": {
+      "avg_response_time": 0.11876503626505534,
+      "min_response_time": 0.11238598823547363,
+      "max_response_time": 0.12308216094970703,
+      "samples": 3
+    },
+    "root": {
+      "avg_response_time": 0.11209368705749512,
+      "min_response_time": 0.10715913772583008,
+      "max_response_time": 0.12090396881103516,
+      "samples": 3
+    }
+  },
+  "summary": {
+    "overall_status": "degraded",
+    "fixes_effective": "0/5",
+    "api_health": "degraded",
+    "authentication": "issues",
+    "edge_functions": "needs_attention",
+    "upload_pipeline": "issues",
+    "error_handling": "needs_work",
+    "critical_issues_resolved": [],
+    "remaining_issues": [
+      "Upload pipeline still has issues",
+      "Authentication flow needs attention"
+    ],
+    "recommendations": [
+      "Additional fixes needed - investigate remaining deployment issues"
+    ]
+  }
+}

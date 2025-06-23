@@ -9,12 +9,29 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 }
 
 serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
+  }
+
+  // Handle GET requests (health checks)
+  if (req.method === 'GET') {
+    return new Response(
+      JSON.stringify({ 
+        service: 'doc-parser',
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0'
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    )
   }
 
   try {
@@ -29,47 +46,95 @@ serve(async (req: Request) => {
     // Create Supabase client
     const supabase = createClient(supabaseUrl, serviceRoleKey)
 
-    // Parse request
-    const { documentId } = await req.json()
+    // Parse request with proper error handling
+    let requestBody;
+    try {
+      const bodyText = await req.text();
+      if (!bodyText || bodyText.trim() === '') {
+        throw new Error('Request body is empty');
+      }
+      requestBody = JSON.parse(bodyText);
+    } catch (parseError) {
+      console.error('JSON parsing error:', parseError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid JSON in request body',
+          details: parseError.message
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    const { documentId, document_path, title } = requestBody;
     console.log(`📄 Processing document: ${documentId}`)
 
     if (!documentId) {
-      throw new Error('Document ID is required')
+      return new Response(
+        JSON.stringify({ 
+          error: 'Document ID and storage path are required',
+          details: 'documentId parameter is missing'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
     }
 
-    // Get document info from database
+    // Get document info from database (use regulatory_documents table)
     const { data: document, error: docError } = await supabase
-      .from('documents')
+      .from('regulatory_documents')
       .select('*')
-      .eq('id', documentId)
+      .eq('document_id', documentId)
       .single()
 
     if (docError || !document) {
       console.error('Document not found:', docError)
-      throw new Error('Document not found in database')
+      return new Response(
+        JSON.stringify({ 
+          error: 'Document not found in database',
+          details: docError?.message || 'No document found'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      );
     }
 
     // TODO: Add file size validation and optimization for large files
     // TODO: Implement virus scanning before processing
     
     // Use both file_path and storage_path for compatibility
-    const filePath = document.file_path || document.storage_path
+    const filePath = document.raw_document_path || document_path
     if (!filePath) {
-      console.error('No file path found for document:', document.id)
-      throw new Error('Document file path not found')
+      console.error('No file path found for document:', document.document_id)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Document file path not found',
+          details: 'No storage path available for processing'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
     }
 
     console.log(`📁 Using file path: ${filePath}`)
 
     // Update document status to parsing with progress
     await supabase
-      .from('documents')
+      .from('regulatory_documents')
       .update({ 
         status: 'parsing',
         progress_percentage: 20,
         updated_at: new Date().toISOString()
       })
-      .eq('id', documentId)
+      .eq('document_id', documentId)
 
     // TODO: Replace with actual document processing logic
     // TODO: Implement text extraction based on file type (PDF, DOC, etc.)
@@ -80,7 +145,7 @@ serve(async (req: Request) => {
     console.log(`🔄 Processing document content...`)
     
     // For now, create mock processed content
-    const processedContent = `Processed content for document: ${document.original_filename}
+    const processedContent = `Processed content for document: ${document.title || title}
     
 This is a mock processing result. In production, this would contain:
 - Extracted text from the document
@@ -89,8 +154,8 @@ This is a mock processing result. In production, this would contain:
 - Coverage details analysis
 
 Document metadata:
-- Original filename: ${document.original_filename}
-- File size: ${document.file_size} bytes
+- Title: ${document.title || title}
+- File path: ${filePath}
 - Upload date: ${document.created_at}
 `
 
@@ -99,12 +164,12 @@ Document metadata:
     
     // Update progress to 60%
     await supabase
-      .from('documents')
+      .from('regulatory_documents')
       .update({ 
         progress_percentage: 60,
         updated_at: new Date().toISOString()
       })
-      .eq('id', documentId)
+      .eq('document_id', documentId)
 
     // TODO: Store processed chunks in database
     // TODO: Create searchable index for document content
@@ -114,16 +179,14 @@ Document metadata:
 
     // Update document to completed status
     await supabase
-      .from('documents')
+      .from('regulatory_documents')
       .update({ 
-        status: 'completed',
+        status: 'processed',
         progress_percentage: 100,
-        processed_content: processedContent,
-        processed_chunks: 1,
-        total_chunks: 1,
+        extraction_method: 'edge_function_processing',
         updated_at: new Date().toISOString()
       })
-      .eq('id', documentId)
+      .eq('document_id', documentId)
 
     // TODO: Create processing job for vector generation
     // TODO: Trigger notification job for user
@@ -135,7 +198,8 @@ Document metadata:
         success: true, 
         documentId,
         message: 'Document processed successfully',
-        processedContent: processedContent.substring(0, 200) + '...'
+        processedContent: processedContent.substring(0, 200) + '...',
+        extractedText: processedContent
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -152,8 +216,8 @@ Document metadata:
     
     return new Response(
       JSON.stringify({ 
-        success: false, 
-        error: error.message,
+        error: 'Document parsing failed',
+        details: error.message,
         timestamp: new Date().toISOString()
       }),
       { 

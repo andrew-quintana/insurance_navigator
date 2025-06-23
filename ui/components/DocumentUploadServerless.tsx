@@ -203,70 +203,70 @@ export default function DocumentUploadServerless({
       setUploadMessage(config.message)
       
       if (document.status === 'completed') {
-        setUploadSuccess(true)
-        setIsUploading(false)
-        
-        // Create success result
-        const result: UploadResponse = {
-          success: true,
-          document_id: document.id,
-          filename: selectedFile?.name || document.original_filename || '',
+          setUploadSuccess(true)
+          setIsUploading(false)
+          
+          // Create success result
+          const result: UploadResponse = {
+            success: true,
+            document_id: document.id,
+            filename: selectedFile?.name || document.original_filename || '',
           chunks_processed: 1, // Simplified - don't track chunks
           total_chunks: 1,
           text_length: 0, // Will be calculated later if needed
           message: `Document processed successfully!`
-        }
-        
-        if (onUploadSuccess) {
-          onUploadSuccess(result)
-        }
-        
-        // Auto-reset after success
-        setTimeout(() => {
-          resetUpload()
-        }, 3000)
+          }
+          
+          if (onUploadSuccess) {
+            onUploadSuccess(result)
+          }
+          
+          // Auto-reset after success
+          setTimeout(() => {
+            resetUpload()
+          }, 3000)
         
       } else if (document.status === 'failed') {
-        setUploadError(document.error_message || 'Document processing failed')
-        setUploadProgress(0)
-        setUploadMessage("")
-        setIsUploading(false)
-        
-        if (onUploadError) {
-          onUploadError(document.error_message || 'Document processing failed')
-        }
+          setUploadError(document.error_message || 'Document processing failed')
+          setUploadProgress(0)
+          setUploadMessage("")
+          setIsUploading(false)
+          
+          if (onUploadError) {
+            onUploadError(document.error_message || 'Document processing failed')
+          }
       }
     }
 
     // Start with WebSocket, fallback to polling
     const attemptWebSocketConnection = () => {
-      const channel = supabase
+    const channel = supabase
         .channel(`document-progress-${documentId}`, {
           config: {
             presence: { key: documentId },
             broadcast: { self: true }
           }
         })
-        .on('postgres_changes', 
-          { 
-            event: 'UPDATE', 
-            schema: 'public', 
-            table: 'documents',
-            filter: `id=eq.${documentId}`
-          },
-          (payload: any) => {
+      .on('postgres_changes', 
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'documents',
+          filter: `id=eq.${documentId}`
+        }, 
+        (payload: any) => {
             try {
               console.log('📡 WebSocket update received:', payload.new)
-              handleDocumentUpdate(payload.new)
+          handleDocumentUpdate(payload.new)
             } catch (err) {
               console.error('Error handling WebSocket update:', err)
             }
-          }
-        )
+        }
+      )
         .subscribe((status: string, err?: any) => {
           console.log(`📡 WebSocket status: ${status}`)
-          
-          if (status === 'SUBSCRIBED') {
+        
+        if (status === 'SUBSCRIBED') {
             console.log('✅ WebSocket connected successfully!')
             subscriptionActive = true
             if (timeoutId) clearTimeout(timeoutId)
@@ -275,7 +275,7 @@ export default function DocumentUploadServerless({
             subscriptionActive = false
             console.log('🔄 WebSocket connection closed')
             
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             console.warn(`⚠️ WebSocket failed: ${status}`)
             if (err) console.error('WebSocket error:', err)
             subscriptionActive = false
@@ -500,8 +500,8 @@ export default function DocumentUploadServerless({
 
   // ✅ CRITICAL FIX: Proper error handling for upload responses
   const handleUploadError = (error: any) => {
-    console.error('Upload error:', error)
-    
+      console.error('Upload error:', error)
+      
     // Better error message handling
     let errorMessage = 'Upload failed'
     if (error && typeof error === 'object') {
@@ -560,8 +560,8 @@ export default function DocumentUploadServerless({
           }
         } else if (document.status === 'failed') {
           setUploadError(document.error_message || 'Document processing failed')
-          setUploadProgress(0)
-          setIsUploading(false)
+      setUploadProgress(0)
+      setIsUploading(false)
         } else {
                      // Still processing
            const statusProgress: Record<string, number> = {
@@ -880,4 +880,4 @@ export default function DocumentUploadServerless({
       </div>
     </Card>
   )
-}
+} 
