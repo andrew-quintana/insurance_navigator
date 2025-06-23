@@ -811,7 +811,7 @@ async def upload_regulatory_document(
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
             """, 
             document_id, current_user.id, file.filename, len(file_data), file.content_type,
-            file_hash, storage_path, 'regulatory', json.dumps(regulatory_metadata),
+            file_hash, storage_path, 'regulatory', 'uploading', json.dumps(regulatory_metadata),
             5, 0, 0
             )
         
