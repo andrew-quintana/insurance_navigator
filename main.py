@@ -541,25 +541,26 @@ async def upload_document_backend(
                 }
             )
             
-            # Check if upload was successful
-            if hasattr(upload_response, 'error') and upload_response.error:
-                logger.error(f"❌ File upload failed: {upload_response.error}")
+            # Check if upload failed - proper Supabase storage response handling
+            if not upload_response or (hasattr(upload_response, 'get') and upload_response.get('error')):
+                error_msg = upload_response.get('error', 'Unknown storage error') if upload_response else 'No response from storage'
+                logger.error(f"❌ File upload failed: {error_msg}")
                 # Update document status to failed
                 async with pool.get_connection() as conn:
                     await conn.execute("""
-                        UPDATE documents SET status = 'failed', error_message = $2, updated_at = NOW()
+                        UPDATE documents SET status = 'failed', updated_at = NOW()
                         WHERE id = $1
-                    """, document_id, f"Upload failed: {upload_response.error}")
+                    """, document_id)
                 
-            raise HTTPException(
-                status_code=500,
+                raise HTTPException(
+                    status_code=500,
                     detail={
                         "error": "File upload failed",
-                        "message": f"Storage error: {upload_response.error}",
+                        "message": f"Storage error: {error_msg}",
                         "document_id": document_id
                     }
-            )
-        
+                )
+            
             logger.info(f"✅ Step 2 complete: File uploaded to {storage_path}")
             
         except Exception as upload_error:
@@ -567,9 +568,9 @@ async def upload_document_backend(
             # Update document status to failed
             async with pool.get_connection() as conn:
                 await conn.execute("""
-                    UPDATE documents SET status = 'failed', error_message = $2, updated_at = NOW()
+                    UPDATE documents SET status = 'failed', updated_at = NOW()
                     WHERE id = $1
-                """, document_id, f"Upload exception: {str(upload_error)}")
+                """, document_id)
             
             raise HTTPException(
                 status_code=500,
@@ -676,15 +677,13 @@ async def document_processing_webhook(
                 SET 
                     status = $2,
                     progress_percentage = COALESCE($3, progress_percentage),
-                    error_message = $4,
-                    metadata = COALESCE(metadata, '{}'::jsonb) || COALESCE($5::jsonb, '{}'::jsonb),
+                    metadata = COALESCE(metadata, '{}'::jsonb) || COALESCE($4::jsonb, '{}'::jsonb),
                     updated_at = NOW()
                 WHERE id = $1
             """, 
             payload.document_id,
             payload.status,
             payload.progress,
-            payload.error,
             json.dumps(payload.metadata) if payload.metadata else None
             )
         
@@ -831,9 +830,10 @@ async def upload_regulatory_document(
                 }
             )
             
-            # Check if upload was successful
-            if hasattr(upload_response, 'error') and upload_response.error:
-                logger.error(f"❌ Regulatory file upload failed: {upload_response.error}")
+            # Check if upload failed - proper Supabase storage response handling
+            if not upload_response or (hasattr(upload_response, 'get') and upload_response.get('error')):
+                error_msg = upload_response.get('error', 'Unknown storage error') if upload_response else 'No response from storage'
+                logger.error(f"❌ Regulatory file upload failed: {error_msg}")
                 # Update document status to failed
                 async with pool.get_connection() as conn:
                     await conn.execute("""
@@ -841,14 +841,14 @@ async def upload_regulatory_document(
                         WHERE document_id = $1
                     """, document_id)
                     await conn.execute("""
-                        UPDATE documents SET status = 'failed', error_message = $2, updated_at = NOW()
+                        UPDATE documents SET status = 'failed', updated_at = NOW()
                         WHERE id = $1
-                    """, document_id, f"Upload failed: {upload_response.error}")
+                    """, document_id)
                 
-            raise HTTPException(
-                status_code=500,
-                    detail=f"Regulatory file upload failed: {upload_response.error}"
-            )
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Regulatory file upload failed: {error_msg}"
+                )
         
             logger.info(f"✅ Step 2 complete: Regulatory file uploaded to {storage_path}")
             
@@ -860,9 +860,9 @@ async def upload_regulatory_document(
                     WHERE document_id = $1
                 """, document_id)
                 await conn.execute("""
-                    UPDATE documents SET status = 'failed', error_message = $2, updated_at = NOW()
+                    UPDATE documents SET status = 'failed', updated_at = NOW()
                     WHERE id = $1
-                """, document_id, f"Upload exception: {str(upload_error)}")
+                """, document_id)
             
             raise HTTPException(
                 status_code=500,
