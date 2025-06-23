@@ -574,7 +574,7 @@ async def upload_document_backend(
         async with pool.get_connection() as conn:
             await conn.execute("""
                 UPDATE documents SET status = 'processing', progress_percentage = 20, 
-                upload_completed_at = NOW(), updated_at = NOW()
+                processing_started_at = NOW(), updated_at = NOW()
                 WHERE id = $1
             """, document_id)
         
