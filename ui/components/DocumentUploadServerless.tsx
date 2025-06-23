@@ -31,7 +31,8 @@ export default function DocumentUploadServerless({
   const [isUploading, setIsUploading] = useState(false)
   const [uploadStartTime, setUploadStartTime] = useState<Date | null>(null)
   const [elapsedTime, setElapsedTime] = useState(0)
-  const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState(300) // 5 minutes default
+  const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState(300) // 5 minutes in seconds
+  const [isComplete, setIsComplete] = useState(false)
   const [uploadSuccess, setUploadSuccess] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -149,6 +150,7 @@ export default function DocumentUploadServerless({
     setUploadStartTime(new Date())
     setElapsedTime(0)
     setEstimatedTimeRemaining(300) // Reset to 5 minutes
+    setIsComplete(false)
     setUploadSuccess(false)
     setUploadError(null)
 
@@ -182,22 +184,27 @@ export default function DocumentUploadServerless({
       setDocumentId(result.document_id || result.id || 'unknown')
       
       // Complete upload immediately when backend responds successfully
-      setUploadSuccess(true)
-      setIsUploading(false)
-      setEstimatedTimeRemaining(0)
+      setIsComplete(true)
       
-      // Call success handler
-      if (onUploadSuccess) {
-        onUploadSuccess({
-          success: true,
-          document_id: result.document_id || result.id || 'unknown',
-          filename: selectedFile.name,
-          chunks_processed: result.chunks_processed || 1,
-          total_chunks: result.total_chunks || 1,
-          text_length: result.text_length || 0,
-          message: result.message || 'Document processed successfully!'
-        })
-      }
+      // Give a brief moment for progress bar to animate to 100%, then show success
+      setTimeout(() => {
+        setUploadSuccess(true)
+        setIsUploading(false)
+        setEstimatedTimeRemaining(0)
+        
+        // Call success handler
+        if (onUploadSuccess) {
+          onUploadSuccess({
+            success: true,
+            document_id: result.document_id || result.id || 'unknown',
+            filename: selectedFile.name,
+            chunks_processed: result.chunks_processed || 1,
+            total_chunks: result.total_chunks || 1,
+            text_length: result.text_length || 0,
+            message: result.message || 'Document processed successfully!'
+          })
+        }
+      }, 1500) // 1.5 second delay for smooth animation
       
     } catch (error) {
       console.error("Upload error:", error)
@@ -242,6 +249,7 @@ export default function DocumentUploadServerless({
     setUploadStartTime(null)
     setElapsedTime(0)
     setEstimatedTimeRemaining(300)
+    setIsComplete(false)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -326,34 +334,20 @@ export default function DocumentUploadServerless({
               <span className="text-lg font-medium text-gray-800">Processing your document...</span>
             </div>
             
-            {/* Time-Based Progress Display */}
+            {/* Smart Progress Bar */}
             <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 flex items-center">
-                  <Clock className="h-4 w-4 mr-2" />
-                  Time elapsed:
-                </span>
-                <span className="font-mono text-lg font-semibold text-teal-600">
-                  {formatTime(elapsedTime)}
-                </span>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Estimated remaining:</span>
-                <span className="font-mono text-lg font-semibold text-gray-700">
-                  {formatTime(estimatedTimeRemaining)}
-                </span>
-              </div>
-              
-              {/* Progress bar showing remaining time (counts down) */}
-              <div className="w-full bg-gray-200 rounded-full h-3">
+              <div className="w-full bg-gray-200 rounded-full h-4">
                 <div 
-                  className="bg-teal-600 h-3 rounded-full transition-all duration-1000"
+                  className="bg-gradient-to-r from-teal-500 to-teal-600 h-4 rounded-full transition-all duration-1000 ease-out"
                   style={{ 
-                    width: `${Math.max(0, (estimatedTimeRemaining / 300) * 100)}%` 
+                    width: `${isComplete ? 100 : Math.min(85, Math.max(5, (elapsedTime / 300) * 85 + 5))}%` 
                   }}
                 ></div>
               </div>
+              
+              <p className="text-center text-gray-600">
+                Analyzing and processing your document...
+              </p>
             </div>
             
             <p className="text-sm text-gray-500 text-center">
