@@ -126,8 +126,8 @@ export default function DocumentUploadServerless({
     if (!documentId || !supabase) return
 
     let subscriptionActive = true
-    let timeoutId: NodeJS.Timeout
-    let fallbackIntervalId: NodeJS.Timeout
+    let timeoutId: NodeJS.Timeout | null = null
+    let fallbackIntervalId: NodeJS.Timeout | null = null
     let retryCount = 0
     const maxRetries = 3
 
@@ -138,36 +138,59 @@ export default function DocumentUploadServerless({
       console.log('🚨 WebSocket failed, starting smart fallback polling...')
       setUploadMessage("⚙️ Processing in background - checking progress...")
       
-      const pollInterval = Math.min(3000 + (retryCount * 2000), 10000) // 3s -> 5s -> 7s -> max 10s
+      const pollInterval = Math.min(3000 + (retryCount * 1000), 8000) // 3s -> 4s -> 5s -> max 8s
       
       fallbackIntervalId = setInterval(async () => {
-        if (!subscriptionActive) return
+        if (!subscriptionActive && fallbackIntervalId) return // Check if we should still be polling
         
         try {
+          // Check document status
           const { data: document, error } = await supabase
             .from('documents')
-            .select('id, status, progress_percentage, error_message, original_filename, created_at')
+            .select('id, status, progress_percentage, error_message, original_filename, created_at, updated_at')
             .eq('id', documentId)
             .single()
           
           if (!error && document) {
+            console.log('📊 Polling update:', { status: document.status, progress: document.progress_percentage })
             handleDocumentUpdate(document)
             
             // Stop polling if document is completed or failed
             if (document.status === 'completed' || document.status === 'failed') {
-              clearInterval(fallbackIntervalId)
+              console.log(`🏁 Polling complete: document ${document.status}`)
+              if (fallbackIntervalId) {
+                clearInterval(fallbackIntervalId)
+                fallbackIntervalId = null
+              }
+              return
             }
+            
+            // Reset retry count on successful poll
+            retryCount = 0
           } else {
             retryCount++
+            console.warn(`⚠️ Polling attempt ${retryCount}/${maxRetries} failed:`, error?.message)
+            
             if (retryCount >= maxRetries) {
               console.error('Max retries reached for document polling')
-              clearInterval(fallbackIntervalId)
-              setUploadError('Unable to track document progress. Please check manually.')
+              if (fallbackIntervalId) {
+                clearInterval(fallbackIntervalId)
+                fallbackIntervalId = null
+              }
+              setUploadError('Unable to track document progress. Please refresh and check status manually.')
             }
           }
         } catch (error) {
           console.warn('Fallback polling error:', error)
           retryCount++
+          
+          if (retryCount >= maxRetries) {
+            if (fallbackIntervalId) {
+              clearInterval(fallbackIntervalId)
+              fallbackIntervalId = null
+            }
+            setUploadError('Connection issues. Please refresh and check document status.')
+          }
         }
       }, pollInterval)
     }
@@ -240,42 +263,48 @@ export default function DocumentUploadServerless({
 
     // Start with WebSocket, fallback to polling
     const attemptWebSocketConnection = () => {
-    const channel = supabase
+      // Enhanced WebSocket connection with better error handling
+      const channel = supabase
         .channel(`document-progress-${documentId}`, {
           config: {
             presence: { key: documentId },
-            broadcast: { self: true }
+            broadcast: { self: true },
+            private: false
           }
         })
-      .on('postgres_changes', 
-        { 
-          event: 'UPDATE', 
-          schema: 'public', 
-          table: 'documents',
-          filter: `id=eq.${documentId}`
-        }, 
-        (payload: any) => {
+        .on('postgres_changes', 
+          { 
+            event: 'UPDATE', 
+            schema: 'public', 
+            table: 'documents',
+            filter: `id=eq.${documentId}`
+          }, 
+          (payload: any) => {
             try {
-              console.log('📡 WebSocket update received:', payload.new)
-          handleDocumentUpdate(payload.new)
+              console.log('📡 Document table update received:', payload.new)
+              handleDocumentUpdate(payload.new)
             } catch (err) {
-              console.error('Error handling WebSocket update:', err)
+              console.error('Error handling document update:', err)
             }
-        }
-      )
+          }
+        )
         .subscribe((status: string, err?: any) => {
           console.log(`📡 WebSocket status: ${status}`)
         
-        if (status === 'SUBSCRIBED') {
+          if (status === 'SUBSCRIBED') {
             console.log('✅ WebSocket connected successfully!')
             subscriptionActive = true
-            if (timeoutId) clearTimeout(timeoutId)
+            if (timeoutId) {
+              clearTimeout(timeoutId)
+              timeoutId = null
+            }
             
           } else if (status === 'CLOSED') {
             subscriptionActive = false
             console.log('🔄 WebSocket connection closed')
+            // Don't immediately start polling on close - might be intentional
             
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             console.warn(`⚠️ WebSocket failed: ${status}`)
             if (err) console.error('WebSocket error:', err)
             subscriptionActive = false
@@ -285,27 +314,37 @@ export default function DocumentUploadServerless({
 
       // Cleanup function
       return () => {
-        if (supabase && channel) {
-          supabase.removeChannel(channel)
+        try {
+          if (supabase && channel) {
+            supabase.removeChannel(channel)
+          }
+        } catch (cleanupError) {
+          console.warn('Error during WebSocket cleanup:', cleanupError)
         }
       }
     }
 
-    // Try WebSocket first, with timeout fallback
+    // Try WebSocket first, with shorter timeout for faster fallback
     timeoutId = setTimeout(() => {
-      if (subscriptionActive) {
+      if (!subscriptionActive) {
         console.warn('⚠️ WebSocket timeout - switching to polling')
         startFallbackPolling()
       }
-    }, 15000) // Reduced timeout for faster fallback
+    }, 8000) // Shorter timeout for faster fallback
 
     const cleanupWebSocket = attemptWebSocketConnection()
 
     // Cleanup function
     return () => {
       subscriptionActive = false
-      if (timeoutId) clearTimeout(timeoutId)
-      if (fallbackIntervalId) clearInterval(fallbackIntervalId)
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+        timeoutId = null
+      }
+      if (fallbackIntervalId) {
+        clearInterval(fallbackIntervalId)
+        fallbackIntervalId = null
+      }
       cleanupWebSocket()
     }
   }, [documentId, supabase, selectedFile, onUploadSuccess, onUploadError])
