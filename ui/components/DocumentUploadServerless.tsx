@@ -181,8 +181,23 @@ export default function DocumentUploadServerless({
       // Store document ID for reference
       setDocumentId(result.document_id || result.id || 'unknown')
       
-      // Let the timer handle completion, but we could also complete early if backend is fast
-      // For now, just let it run naturally
+      // Complete upload immediately when backend responds successfully
+      setUploadSuccess(true)
+      setIsUploading(false)
+      setEstimatedTimeRemaining(0)
+      
+      // Call success handler
+      if (onUploadSuccess) {
+        onUploadSuccess({
+          success: true,
+          document_id: result.document_id || result.id || 'unknown',
+          filename: selectedFile.name,
+          chunks_processed: result.chunks_processed || 1,
+          total_chunks: result.total_chunks || 1,
+          text_length: result.text_length || 0,
+          message: result.message || 'Document processed successfully!'
+        })
+      }
       
     } catch (error) {
       console.error("Upload error:", error)
@@ -330,12 +345,12 @@ export default function DocumentUploadServerless({
                 </span>
               </div>
               
-              {/* Simple progress bar based on time */}
+              {/* Progress bar showing remaining time (counts down) */}
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div 
                   className="bg-teal-600 h-3 rounded-full transition-all duration-1000"
                   style={{ 
-                    width: `${Math.min(100, (elapsedTime / 300) * 100)}%` 
+                    width: `${Math.max(0, (estimatedTimeRemaining / 300) * 100)}%` 
                   }}
                 ></div>
               </div>
