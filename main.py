@@ -624,12 +624,12 @@ async def upload_document_backend(
         
         try:
             processing_result = await edge_orchestrator.call_edge_function(
-                'doc-parser',  # ✅ Call doc-parser directly to process uploaded file
+                'doc-parser',  # Use doc-parser directly like user uploads
                 'POST',
                 processing_payload,
-            user_token,
-            current_user.id
-        )
+                user_token,
+                current_user.id
+            )
         
             # Check if edge function processing actually succeeded
             if processing_result.get('status') == 'success' or processing_result.get('success'):
@@ -954,11 +954,11 @@ async def upload_regulatory_document(
         try:
             processing_result = await edge_orchestrator.call_edge_function(
                 'doc-parser',  # Use doc-parser directly like user uploads
-                'POST',
-                processing_payload,
-            user_token,
-            current_user.id
-        )
+                    'POST',
+                    processing_payload,
+                    user_token,
+                current_user.id
+            )
         
             # Check if edge function processing actually succeeded
             if processing_result.get('status') == 'success' or processing_result.get('success'):
