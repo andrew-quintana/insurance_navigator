@@ -351,10 +351,10 @@ export default function ChatPage() {
   const handleUploadSuccess = (result: any) => {
     console.log('Upload successful:', result)
     
-    // Add a message to the chat indicating successful upload with background processing
+    // Add a message to the chat indicating successful upload
     const successMessage: Message = {
       id: messages.length + 1,
-      text: `✅ **Document Upload Complete!**\n\nYour document "${result.filename}" has been uploaded successfully and is now being processed in the background.\n\n**Upload Details:**\n• File uploaded and verified\n• Background processing started\n• Document ID: ${result.document_id}\n\n**Next Steps:**\nI'll automatically notify you here in the chat when processing is complete and the document is ready for questions!`,
+      text: `✅ **Document Upload Complete!**\n\nYour document "${result.filename}" has been uploaded successfully.`,
       sender: "bot"
     }
     
