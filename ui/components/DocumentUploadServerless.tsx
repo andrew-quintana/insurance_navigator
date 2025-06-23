@@ -47,7 +47,7 @@ export default function DocumentUploadServerless({
         const now = new Date()
         const elapsed = Math.floor((now.getTime() - uploadStartTime.getTime()) / 1000)
         setElapsedTime(elapsed)
-        
+      
         // Faster progression to 85% - reaches 85% in about 2 minutes instead of 4.25 minutes
         // This gives better visual feedback while staying realistic
         const progressToEightyFive = Math.min(85, (elapsed / 120) * 85)
@@ -63,8 +63,8 @@ export default function DocumentUploadServerless({
           setIsUploading(false)
         }
       }, 1000)
-    }
-    
+        }
+
     return () => {
       if (interval) clearInterval(interval)
     }
@@ -119,7 +119,7 @@ export default function DocumentUploadServerless({
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setIsDragOver(false)
-
+    
     const files = Array.from(e.dataTransfer.files)
     if (files.length > 0) {
       handleFileSelect(files[0])
@@ -154,7 +154,7 @@ export default function DocumentUploadServerless({
       const formData = new FormData()
       formData.append('file', selectedFile)
       formData.append('policy_id', selectedFile.name.replace(/\.[^/.]+$/, ""))
-
+      
       // Upload to backend
       const uploadResponse = await fetch(`${apiBaseUrl}/upload-document-backend`, {
         method: 'POST',
@@ -200,17 +200,16 @@ export default function DocumentUploadServerless({
           }
         }, 1500) // 1.5-second animation delay for polished completion effect
       } else {
-        // Backend reported processing failure
-        setTimeout(() => {
-          setUploadError(result.message || 'Document processing failed')
-          setIsUploading(false)
-          setEstimatedTimeRemaining(0)
-          
-          // Call error handler
-          if (onUploadError) {
-            onUploadError(result.message || 'Document processing failed')
-          }
-        }, 1500)
+        // Backend reported processing failure - immediately show error and stop progress bar
+        setUploadError(result.message || 'Document processing failed')
+        setIsUploading(false)
+        setIsComplete(false) // Don't trigger completion animation
+        setEstimatedTimeRemaining(0)
+        
+        // Call error handler
+        if (onUploadError) {
+          onUploadError(result.message || 'Document processing failed')
+        }
       }
       
     } catch (error) {
@@ -273,28 +272,28 @@ export default function DocumentUploadServerless({
         </div>
 
         {/* File Selection Area */}
-        {!selectedFile && !isUploading && !uploadSuccess && (
-          <div 
-            className={`
+        {!selectedFile && !isUploading && !uploadSuccess && !uploadError && (
+        <div
+          className={`
               border-2 border-dashed rounded-lg p-12 text-center transition-colors cursor-pointer
-              ${isDragOver 
-                ? 'border-teal-500 bg-teal-50' 
-                : 'border-gray-300 hover:border-teal-400 hover:bg-teal-50'
-              }
-            `}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.doc,.docx,.txt"
-              onChange={handleFileInputChange}
-              className="hidden"
-            />
-            
+            ${isDragOver 
+              ? 'border-teal-500 bg-teal-50' 
+              : 'border-gray-300 hover:border-teal-400 hover:bg-teal-50'
+            }
+          `}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.doc,.docx,.txt"
+            onChange={handleFileInputChange}
+            className="hidden"
+          />
+
             <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600 mb-4">Choose your insurance document</p>
             <p className="text-sm text-gray-500">
@@ -304,7 +303,7 @@ export default function DocumentUploadServerless({
         )}
 
         {/* Selected File Display */}
-        {selectedFile && !isUploading && !uploadSuccess && (
+        {selectedFile && !isUploading && !uploadSuccess && !uploadError && (
           <div className="space-y-4">
             <div className="flex items-center justify-center space-x-3 p-4 bg-teal-50 rounded-lg">
               <File className="h-6 w-6 text-teal-600" />
@@ -314,8 +313,8 @@ export default function DocumentUploadServerless({
                   {(selectedFile.size / 1024 / 1024).toFixed(1)} MB
                 </p>
               </div>
-            </div>
-            
+        </div>
+
             <div className="flex space-x-3">
               <button
                 onClick={handleUpload}
@@ -344,7 +343,7 @@ export default function DocumentUploadServerless({
             {/* Smart Progress Bar */}
             <div className="bg-gray-50 rounded-lg p-6 space-y-4">
               <div className="w-full bg-gray-200 rounded-full h-4">
-                <div 
+              <div 
                   className="bg-gradient-to-r from-teal-500 to-teal-600 h-4 rounded-full transition-all duration-1000 ease-out"
                   style={{ 
                     width: `${isComplete ? 100 : Math.min(85, Math.max(5, (elapsedTime / 120) * 85 + 5))}%` 
@@ -439,7 +438,7 @@ export default function DocumentUploadServerless({
             </div>
           </div>
         )}
-        
+
       </div>
     </Card>
   )
