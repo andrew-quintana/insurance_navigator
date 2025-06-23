@@ -481,7 +481,7 @@ async def upload_document_backend(
                     "allowed_types": ["PDF", "DOCX", "TXT"]
                 }
             )
-
+        
         # Get user token for edge function calls
         auth_header = request.headers.get("authorization")
         user_token = auth_header.split(" ")[1] if auth_header else None
@@ -494,7 +494,7 @@ async def upload_document_backend(
                     "message": "User authentication token is required"
                 }
             )
-
+        
         # ✅ STEP 1: Create document record and upload file directly
         logger.info(f"📄 Step 1: Creating document record and uploading file directly...")
         
@@ -551,15 +551,15 @@ async def upload_document_backend(
                         WHERE id = $1
                     """, document_id, f"Upload failed: {upload_response.error}")
                 
-                raise HTTPException(
-                    status_code=500,
+            raise HTTPException(
+                status_code=500,
                     detail={
                         "error": "File upload failed",
                         "message": f"Storage error: {upload_response.error}",
                         "document_id": document_id
                     }
-                )
-            
+            )
+        
             logger.info(f"✅ Step 2 complete: File uploaded to {storage_path}")
             
         except Exception as upload_error:
@@ -604,9 +604,9 @@ async def upload_document_backend(
                 'doc-parser',  # ✅ Call doc-parser directly to process uploaded file
                 'POST',
                 processing_payload,
-                user_token,
-                current_user.id
-            )
+            user_token,
+            current_user.id
+        )
             logger.info(f"✅ Step 3 complete: Document processing triggered")
             
         except HTTPException as e:
@@ -616,13 +616,13 @@ async def upload_document_backend(
                 "status": "background_processing",
                 "message": "Processing triggered but response timeout - monitoring in background"
             }
-
+        
         # Determine processing method
         processing_method = "llamaparse" if file.content_type == "application/pdf" else "direct"
         
         processing_time = time.time() - upload_start_time
         logger.info(f"📊 Upload completed in {processing_time:.2f}s")
-
+        
         return DocumentUploadResponse(
             success=True,
             document_id=document_id,
@@ -631,7 +631,7 @@ async def upload_document_backend(
             message=f"Document '{file.filename}' uploaded successfully. Processing with {processing_method} method in background.",
             processing_method=processing_method
         )
-
+        
     except HTTPException:
         # Re-raise HTTP exceptions as-is
         raise
@@ -743,7 +743,7 @@ async def upload_regulatory_document(
                 status_code=400,
                 detail=f"Unsupported file type '{file.content_type}'. Please upload PDF, DOCX, or TXT files."
             )
-
+        
         # Get user token for edge function calls
         auth_header = request.headers.get("authorization")
         user_token = auth_header.split(" ")[1] if auth_header else None
@@ -845,11 +845,11 @@ async def upload_regulatory_document(
                         WHERE id = $1
                     """, document_id, f"Upload failed: {upload_response.error}")
                 
-                raise HTTPException(
-                    status_code=500,
+            raise HTTPException(
+                status_code=500,
                     detail=f"Regulatory file upload failed: {upload_response.error}"
-                )
-            
+            )
+        
             logger.info(f"✅ Step 2 complete: Regulatory file uploaded to {storage_path}")
             
         except Exception as upload_error:
@@ -897,9 +897,9 @@ async def upload_regulatory_document(
                 'doc-parser',  # Use doc-parser directly like user uploads
                 'POST',
                 processing_payload,
-                user_token,
-                current_user.id
-            )
+            user_token,
+            current_user.id
+        )
             logger.info(f"✅ Step 3 complete: Regulatory document processing triggered")
             
         except HTTPException as e:
@@ -909,7 +909,7 @@ async def upload_regulatory_document(
                 "status": "background_processing",
                 "message": "Processing triggered but response timeout - monitoring in background"
             }
-
+        
         # Determine processing method
         processing_method = "llamaparse" if file.content_type == "application/pdf" else "direct"
         

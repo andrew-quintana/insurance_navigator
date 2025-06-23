@@ -79,18 +79,65 @@ function classifyError(error: any): ProcessingError {
   }
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+}
+
 Deno.serve(async (req) => {
   let documentId: string | null = null
   
   try {
     console.log('🚀 vector-processor started')
     
+    // Handle OPTIONS requests
+    if (req.method === 'OPTIONS') {
+      return new Response('ok', { headers: corsHeaders })
+    }
+    
+    // Handle GET requests for health checks
+    if (req.method === 'GET') {
+      return new Response(JSON.stringify({
+        status: 'healthy',
+        service: 'vector-processor',
+        timestamp: new Date().toISOString()
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+    
+    // Only handle POST requests for vector processing
+    if (req.method !== 'POST') {
+      return new Response(JSON.stringify({
+        error: 'Method not allowed',
+        allowed_methods: ['POST', 'GET', 'OPTIONS']
+      }), {
+        status: 405,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+    
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const requestBody = await req.json()
+    let requestBody: any
+    try {
+      requestBody = await req.json()
+    } catch (jsonError) {
+      console.error('❌ JSON parsing error:', jsonError)
+      return new Response(JSON.stringify({
+        error: 'Invalid JSON payload',
+        details: 'Request body must be valid JSON'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+    
     console.log('📥 Request received:', { 
       hasDocumentId: !!requestBody.documentId,
       textLength: requestBody.extractedText?.length || 0
@@ -247,7 +294,6 @@ Deno.serve(async (req) => {
         .update({
           status: 'completed',
           progress_percentage: 100,
-          processing_completed_at: new Date().toISOString(),
           processed_chunks: chunks.length,
           total_chunks: chunks.length,
           error_message: 'Processed without embeddings due to OpenAI quota limits. Text search available.'
@@ -385,7 +431,7 @@ Deno.serve(async (req) => {
         progress_percentage: 100,
         processed_chunks: processedChunks,
         total_chunks: chunks.length,
-        processing_completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
         metadata: {
           ...document.metadata,
           vectorization_completed_at: new Date().toISOString(),
