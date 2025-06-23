@@ -51,14 +51,14 @@ def get_agent_orchestrator():
     """Lazy load AgentOrchestrator only when needed."""
     global _agent_orchestrator, AGENT_ORCHESTRATOR_AVAILABLE
     if _agent_orchestrator is None and not AGENT_ORCHESTRATOR_AVAILABLE:
-        try:
-            from graph.agent_orchestrator import AgentOrchestrator
+try:
+    from graph.agent_orchestrator import AgentOrchestrator
             _agent_orchestrator = AgentOrchestrator()
-            AGENT_ORCHESTRATOR_AVAILABLE = True
+    AGENT_ORCHESTRATOR_AVAILABLE = True
             logger.info("✅ AgentOrchestrator loaded on-demand")
-        except ImportError as e:
+except ImportError as e:
             logger.error(f"❌ AgentOrchestrator import failed: {e}")
-            AGENT_ORCHESTRATOR_AVAILABLE = False
+    AGENT_ORCHESTRATOR_AVAILABLE = False
             return None
     return _agent_orchestrator
 
@@ -195,14 +195,14 @@ class EdgeFunctionOrchestrator:
         
         async with aiohttp.ClientSession(timeout=timeout) as session:
             try:
-                if method.upper() == 'POST':
-                    async with session.post(url, json=payload, headers=headers) as response:
-                        return await self._handle_response(response, function_name)
-                elif method.upper() == 'PATCH':
-                    async with session.patch(url, json=payload, headers=headers) as response:
-                        return await self._handle_response(response, function_name)
-                else:
-                    raise ValueError(f"Unsupported HTTP method: {method}")
+            if method.upper() == 'POST':
+                async with session.post(url, json=payload, headers=headers) as response:
+                    return await self._handle_response(response, function_name)
+            elif method.upper() == 'PATCH':
+                async with session.patch(url, json=payload, headers=headers) as response:
+                    return await self._handle_response(response, function_name)
+            else:
+                raise ValueError(f"Unsupported HTTP method: {method}")
             except asyncio.TimeoutError:
                 logger.error(f"❌ Edge function {function_name} timeout (120s)")
                 raise HTTPException(
@@ -221,15 +221,15 @@ class EdgeFunctionOrchestrator:
         try:
             response_text = await response.text()
             
-            if response.status == 200:
+        if response.status == 200:
                 try:
                     result = json.loads(response_text) if response_text else {}
-                    logger.info(f"✅ Edge function {function_name} succeeded")
-                    return result
+            logger.info(f"✅ Edge function {function_name} succeeded")
+            return result
                 except json.JSONDecodeError:
                     logger.warning(f"⚠️ Edge function {function_name} returned non-JSON response")
                     return {"success": True, "message": response_text}
-            else:
+        else:
                 # Enhanced error logging for debugging
                 logger.error(f"❌ Edge function {function_name} failed: {response.status}")
                 logger.error(f"Response body: {response_text[:500]}...")
@@ -256,8 +256,8 @@ class EdgeFunctionOrchestrator:
                 else:
                     error_message = f"Edge function {function_name} failed with status {response.status}"
                 
-                raise HTTPException(
-                    status_code=response.status,
+            raise HTTPException(
+                status_code=response.status,
                     detail={"error": error_message, "details": error_details}
                 )
         except Exception as e:
@@ -281,16 +281,16 @@ class EdgeFunctionOrchestrator:
         
         async with aiohttp.ClientSession(timeout=timeout) as session:
             try:
-                async with session.put(signed_url, data=file_data, headers=headers) as response:
-                    if response.status in [200, 201, 204]:
-                        logger.info(f"✅ File uploaded successfully to storage")
-                        return True
-                    else:
-                        error_text = await response.text()
-                        logger.error(f"❌ File upload failed: {response.status} - {error_text}")
-                        raise HTTPException(
-                            status_code=response.status,
-                            detail=f"File upload failed: {error_text}"
+            async with session.put(signed_url, data=file_data, headers=headers) as response:
+                if response.status in [200, 201, 204]:
+                    logger.info(f"✅ File uploaded successfully to storage")
+                    return True
+                else:
+                    error_text = await response.text()
+                    logger.error(f"❌ File upload failed: {response.status} - {error_text}")
+                    raise HTTPException(
+                        status_code=response.status,
+                        detail=f"File upload failed: {error_text}"
                         )
             except asyncio.TimeoutError:
                 logger.error(f"❌ File upload timeout - file size: {len(file_data)} bytes")
@@ -303,7 +303,7 @@ class EdgeFunctionOrchestrator:
                 raise HTTPException(
                     status_code=500,
                     detail=f"File upload failed: {str(e)}"
-                )
+                    )
 
 # Initialize orchestrator
 edge_orchestrator = EdgeFunctionOrchestrator()
@@ -552,15 +552,15 @@ async def upload_document_backend(
                         WHERE id = $1
                     """, document_id)
                 
-                raise HTTPException(
-                    status_code=500,
+            raise HTTPException(
+                status_code=500,
                     detail={
                         "error": "File upload failed",
                         "message": f"Storage error: {error_msg}",
                         "document_id": document_id
                     }
-                )
-            
+            )
+        
             logger.info(f"✅ Step 2 complete: File uploaded to {storage_path}")
             
         except Exception as upload_error:
@@ -845,10 +845,10 @@ async def upload_regulatory_document(
                         WHERE id = $1
                     """, document_id)
                 
-                raise HTTPException(
-                    status_code=500,
+            raise HTTPException(
+                status_code=500,
                     detail=f"Regulatory file upload failed: {error_msg}"
-                )
+            )
         
             logger.info(f"✅ Step 2 complete: Regulatory file uploaded to {storage_path}")
             
@@ -941,17 +941,46 @@ async def list_user_documents(
     limit: int = 50,
     document_type: Optional[str] = None
 ):
-    """List user's documents."""
+    """List user's documents - SIMPLIFIED MVP VERSION."""
     try:
-        # Use the document service to list documents
-        document_service = DocumentService()
-        documents = await document_service.list_user_documents(
-            user_id=current_user.id,
-            limit=limit,
-            document_type=document_type
-        )
-        
-        return documents
+        # Direct database query - no service dependencies  
+        pool = await get_db_pool()
+        async with pool.get_connection() as conn:
+            # Build query with optional document_type filter
+            where_clause = "WHERE user_id = $1"
+            params = [current_user.id]
+            
+            if document_type:
+                where_clause += " AND document_type = $2"
+                params.append(document_type)
+                params.append(limit)
+                limit_param = "$3"
+            else:
+                params.append(limit)
+                limit_param = "$2"
+            
+            docs = await conn.fetch(f"""
+                SELECT 
+                    id, original_filename, status, progress_percentage,
+                    file_size, content_type, document_type, created_at
+                FROM documents
+                {where_clause}
+                ORDER BY created_at DESC
+                LIMIT {limit_param}
+            """, *params)
+            
+            # Return clean document list
+            return [{
+                'document_id': str(doc['id']),
+                'filename': doc['original_filename'],
+                'status': doc['status'],
+                'progress_percentage': doc['progress_percentage'] or 0,
+                'file_size': doc['file_size'],
+                'content_type': doc['content_type'],
+                'document_type': doc['document_type'],
+                'created_at': doc['created_at'],
+                'processing_complete': doc['status'] in ['completed', 'ready']
+            } for doc in docs]
         
     except Exception as e:
         logger.error(f"Error listing documents for user {current_user.id}: {str(e)}")
@@ -965,19 +994,36 @@ async def get_document_status(
     document_id: str,
     current_user: UserResponse = Depends(get_current_user)
 ):
-    """Get specific document status."""
+    """Get specific document status - SIMPLIFIED MVP VERSION."""
     try:
-        # Use the document service to get status
-        document_service = DocumentService()
-        status = await document_service.get_document_status(
-            document_id=document_id,
-            user_id=current_user.id
-        )
-        
-        if 'error' in status:
-            raise HTTPException(status_code=404, detail=status['error'])
-        
-        return status
+        # Direct database query - no service dependencies
+        pool = await get_db_pool()
+        async with pool.get_connection() as conn:
+            doc = await conn.fetchrow("""
+                SELECT 
+                    id, original_filename, status, progress_percentage,
+                    file_size, content_type, created_at, updated_at,
+                    document_type
+                FROM documents
+                WHERE id = $1 AND user_id = $2
+            """, document_id, current_user.id)
+            
+            if not doc:
+                raise HTTPException(status_code=404, detail="Document not found")
+            
+            # Return clean status response
+            return {
+                'document_id': str(doc['id']),
+                'filename': doc['original_filename'],
+                'status': doc['status'],
+                'progress_percentage': doc['progress_percentage'] or 0,
+                'file_size': doc['file_size'],
+                'content_type': doc['content_type'],
+                'document_type': doc['document_type'],
+                'created_at': doc['created_at'],
+                'updated_at': doc['updated_at'],
+                'processing_complete': doc['status'] in ['completed', 'ready']
+            }
         
     except HTTPException:
         raise
@@ -1009,9 +1055,54 @@ async def root():
             "upload_regulatory_document": "/upload-regulatory-document",
             "list_documents": "/documents",
             "document_status": "/documents/{document_id}/status",
-            "webhook_processing": "/webhooks/document-processing"
+            "webhook_processing": "/webhooks/document-processing",
+            "debug_progress": "/debug/documents/{document_id}/progress"
         }
     }
+
+# 🛠️ DEBUG: Manual progress update for testing
+@app.post("/debug/documents/{document_id}/progress")
+async def debug_update_progress(
+    document_id: str,
+    progress: int,
+    status: str = "processing",
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Debug endpoint to manually update document progress for testing."""
+    try:
+        pool = await get_db_pool()
+        async with pool.get_connection() as conn:
+            # Verify document belongs to user
+            doc_exists = await conn.fetchval("""
+                SELECT EXISTS(SELECT 1 FROM documents WHERE id = $1 AND user_id = $2)
+            """, document_id, current_user.id)
+            
+            if not doc_exists:
+                raise HTTPException(status_code=404, detail="Document not found")
+            
+            # Update progress
+            await conn.execute("""
+                UPDATE documents 
+                SET progress_percentage = $1, status = $2, updated_at = NOW()
+                WHERE id = $3 AND user_id = $4
+            """, progress, status, document_id, current_user.id)
+            
+            return {
+                "success": True,
+                "document_id": document_id,
+                "progress": progress,
+                "status": status,
+                "message": f"Progress updated to {progress}%"
+            }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating progress for {document_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update progress: {str(e)}"
+        )
 
 # Startup event - OPTIMIZED for fast Render deployment
 @app.on_event("startup")
