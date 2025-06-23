@@ -12,6 +12,110 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 }
 
+// LlamaParse integration function
+async function parseDocumentWithLlamaParse(supabase: any, filePath: string, documentId: string): Promise<string> {
+  try {
+    const llamaParseApiKey = Deno.env.get('LLAMA_PARSE_API_KEY');
+    if (!llamaParseApiKey) {
+      throw new Error('LLAMA_PARSE_API_KEY environment variable is required');
+    }
+
+    console.log(`🔍 Downloading file from storage: ${filePath}`);
+    
+    // Download file from Supabase storage
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from('raw_documents')
+      .download(filePath);
+
+    if (downloadError) {
+      console.error('File download error:', downloadError);
+      throw new Error(`Failed to download file: ${downloadError.message}`);
+    }
+
+    if (!fileData) {
+      throw new Error('No file data received from storage');
+    }
+
+    console.log(`📄 File downloaded, size: ${fileData.size} bytes`);
+
+    // Convert blob to base64
+    const arrayBuffer = await fileData.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    const base64String = btoa(String.fromCharCode(...uint8Array));
+
+    console.log(`🚀 Sending to LlamaParse for processing...`);
+
+    // Call LlamaParse API
+    const formData = new FormData();
+    formData.append('file', new Blob([arrayBuffer], { type: 'application/pdf' }), 'document.pdf');
+    
+    const parseResponse = await fetch('https://api.cloud.llamaindex.ai/api/parsing/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${llamaParseApiKey}`,
+      },
+      body: formData
+    });
+
+    if (!parseResponse.ok) {
+      const errorText = await parseResponse.text();
+      throw new Error(`LlamaParse API error: ${parseResponse.status} - ${errorText}`);
+    }
+
+    const parseResult = await parseResponse.json();
+    console.log(`📋 LlamaParse job created: ${parseResult.id}`);
+
+    // Poll for results
+    let attempts = 0;
+    const maxAttempts = 30; // 30 attempts with 2-second intervals = 1 minute max
+    
+    while (attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+      attempts++;
+      
+      const statusResponse = await fetch(`https://api.cloud.llamaindex.ai/api/parsing/job/${parseResult.id}`, {
+        headers: {
+          'Authorization': `Bearer ${llamaParseApiKey}`,
+        }
+      });
+
+      if (!statusResponse.ok) {
+        console.error(`Status check failed: ${statusResponse.status}`);
+        continue;
+      }
+
+      const statusResult = await statusResponse.json();
+      console.log(`🔄 Parse status: ${statusResult.status} (attempt ${attempts}/${maxAttempts})`);
+
+      if (statusResult.status === 'SUCCESS') {
+        const resultResponse = await fetch(`https://api.cloud.llamaindex.ai/api/parsing/job/${parseResult.id}/result/markdown`, {
+          headers: {
+            'Authorization': `Bearer ${llamaParseApiKey}`,
+          }
+        });
+
+        if (resultResponse.ok) {
+          const extractedText = await resultResponse.text();
+          console.log(`✅ Text extraction completed, length: ${extractedText.length} characters`);
+          return extractedText;
+        } else {
+          throw new Error(`Failed to get parse results: ${resultResponse.status}`);
+        }
+      } else if (statusResult.status === 'ERROR') {
+        throw new Error(`LlamaParse job failed: ${statusResult.error || 'Unknown error'}`);
+      }
+      
+      // Continue polling for PENDING status
+    }
+
+    throw new Error('LlamaParse job timed out after 1 minute');
+
+  } catch (error) {
+    console.error('LlamaParse error:', error);
+    throw error;
+  }
+}
+
 serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -68,8 +172,8 @@ serve(async (req: Request) => {
       );
     }
 
-    const { documentId, document_path, title } = requestBody;
-    console.log(`📄 Processing document: ${documentId}`)
+    const { documentId, document_path, title, documentType } = requestBody;
+    console.log(`📄 Processing document: ${documentId} (type: ${documentType})`)
 
     if (!documentId) {
       return new Response(
@@ -84,19 +188,40 @@ serve(async (req: Request) => {
       );
     }
 
-    // Get document info from database (use regulatory_documents table)
-    const { data: document, error: docError } = await supabase
-      .from('regulatory_documents')
-      .select('*')
-      .eq('document_id', documentId)
-      .single()
+    // Determine which table to query based on document type
+    const tableName = documentType === 'regulatory' ? 'regulatory_documents' : 'documents';
+    const idField = documentType === 'regulatory' ? 'document_id' : 'id';
+    
+    console.log(`🗄️ Querying table: ${tableName} with field: ${idField} = ${documentId}`)
 
-    if (docError || !document) {
-      console.error('Document not found:', docError)
+    // Get document info from database (use appropriate table)
+    const { data: documents, error: docError } = await supabase
+      .from(tableName)
+      .select('*')
+      .eq(idField, documentId)
+
+    console.log(`📊 Query result: found ${documents?.length || 0} documents`)
+    
+    if (docError) {
+      console.error('Database query error:', docError)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Database query failed',
+          details: docError?.message || 'Database error occurred'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    if (!documents || documents.length === 0) {
+      console.error(`No documents found in ${tableName} with ${idField} = ${documentId}`)
       return new Response(
         JSON.stringify({ 
           error: 'Document not found in database',
-          details: docError?.message || 'No document found'
+          details: `No document found in ${tableName} table with ${idField} = ${documentId}`
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -105,13 +230,35 @@ serve(async (req: Request) => {
       );
     }
 
+    if (documents.length > 1) {
+      console.error(`Multiple documents found in ${tableName} with ${idField} = ${documentId}:`, documents.length)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Multiple documents found',
+          details: `Found ${documents.length} documents with the same ID in ${tableName}`
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 409 
+        }
+      );
+    }
+
+    const document = documents[0];
+
     // TODO: Add file size validation and optimization for large files
     // TODO: Implement virus scanning before processing
     
-    // Use both file_path and storage_path for compatibility
-    const filePath = document.raw_document_path || document_path
+    // Use different file path fields for different document types
+    let filePath;
+    if (documentType === 'regulatory') {
+      filePath = document.raw_document_path || document_path;
+    } else {
+      filePath = document.storage_path || document_path;
+    }
+    
     if (!filePath) {
-      console.error('No file path found for document:', document.document_id)
+      console.error('No file path found for document:', documentId)
       return new Response(
         JSON.stringify({ 
           error: 'Document file path not found',
@@ -128,54 +275,57 @@ serve(async (req: Request) => {
 
     // Update document status to parsing with progress
     await supabase
-      .from('regulatory_documents')
+      .from(tableName)
       .update({ 
         status: 'parsing',
         progress_percentage: 20,
         updated_at: new Date().toISOString()
       })
-      .eq('document_id', documentId)
+      .eq(idField, documentId)
 
-    // TODO: Replace with actual document processing logic
-    // TODO: Implement text extraction based on file type (PDF, DOC, etc.)
-    // TODO: Add OCR support for scanned documents
-    // TODO: Implement chunking strategy for vector storage
+    // Extract text using LlamaParse
+    console.log(`🔄 Starting document processing with LlamaParse...`)
     
-    // Simulate document processing
-    console.log(`🔄 Processing document content...`)
-    
-    // For now, create mock processed content
-    const processedContent = `Processed content for document: ${document.title || title}
-    
-This is a mock processing result. In production, this would contain:
-- Extracted text from the document
-- Structured data extraction
-- Policy information parsing
-- Coverage details analysis
-
-Document metadata:
-- Title: ${document.title || title}
-- File path: ${filePath}
-- Upload date: ${document.created_at}
-`
-
-    // TODO: Implement vector embedding generation
-    // TODO: Store embeddings in vector database for semantic search
-    
-    // Update progress to 60%
-    await supabase
-      .from('regulatory_documents')
-      .update({ 
-        progress_percentage: 60,
-        updated_at: new Date().toISOString()
+    let processedContent: string;
+    try {
+      processedContent = await parseDocumentWithLlamaParse(supabase, filePath, documentId);
+      
+      // Update progress to 60%
+      await supabase
+        .from(tableName)
+        .update({ 
+          progress_percentage: 60,
+          updated_at: new Date().toISOString()
+        })
+        .eq(idField, documentId)
+        
+    } catch (parseError) {
+      console.error('❌ Document parsing failed:', parseError);
+      
+      // Update document status to indicate parsing failed
+      await supabase
+        .from(tableName)
+        .update({
+          status: 'parsing_failed',
+          progress_percentage: 30,
+          error_message: parseError.message,
+          updated_at: new Date().toISOString()
+        })
+        .eq(idField, documentId)
+      
+      return new Response(JSON.stringify({ 
+        success: false,
+        error: 'Document parsing failed',
+        details: parseError.message,
+        documentId: documentId,
+        stage: 'text_extraction'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
-      .eq('document_id', documentId)
+    }
 
-    // TODO: Store processed chunks in database
-    // TODO: Create searchable index for document content
-    
-    // Simulate final processing
-    console.log(`✅ Document processing completed`)
+    console.log(`✅ Document processing completed, extracted ${processedContent.length} characters`)
 
     // Step 4: Call vector-processor to generate embeddings
     console.log(`🧮 Triggering vector processor for document ${documentId}`)
@@ -184,7 +334,7 @@ Document metadata:
       body: { 
         documentId: documentId,
         extractedText: processedContent,
-        documentType: 'regulatory'
+        documentType: documentType
       }
     })
 
@@ -193,14 +343,14 @@ Document metadata:
       
       // Update document to indicate parsing succeeded but vectorization failed
       await supabase
-        .from('regulatory_documents')
+        .from(tableName)
         .update({
           status: 'parsing_complete_vectorization_failed',
           progress_percentage: 85,
-          extraction_method: 'edge_function_processing',
+          extraction_method: 'llamaparse',
           updated_at: new Date().toISOString()
         })
-        .eq('document_id', documentId)
+        .eq(idField, documentId)
       
       return new Response(JSON.stringify({ 
         success: false,
@@ -219,14 +369,14 @@ Document metadata:
 
     // Update document to completed status
     await supabase
-      .from('regulatory_documents')
+      .from(tableName)
       .update({ 
         status: 'processed',
         progress_percentage: 100,
-        extraction_method: 'edge_function_processing',
+        extraction_method: 'llamaparse',
         updated_at: new Date().toISOString()
       })
-      .eq('document_id', documentId)
+      .eq(idField, documentId)
     
     console.log(`🎉 Document ${documentId} processed successfully`)
 
@@ -237,7 +387,9 @@ Document metadata:
         message: 'Document parsing and vectorization completed successfully',
         processedContent: processedContent.substring(0, 200) + '...',
         extractedText: processedContent,
-        vectorResult: vectorResult
+        vectorResult: vectorResult,
+        textLength: processedContent.length,
+        extractionMethod: 'llamaparse'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
