@@ -541,10 +541,20 @@ async def upload_document_backend(
                 }
             )
             
-            # Check if upload failed - proper Supabase storage response handling
-            if not upload_response or (hasattr(upload_response, 'get') and upload_response.get('error')):
-                error_msg = upload_response.get('error', 'Unknown storage error') if upload_response else 'No response from storage'
-                logger.error(f"❌ File upload failed: {error_msg}")
+            # Check if upload failed - simplified robust handling
+            upload_error = None
+            if not upload_response:
+                upload_error = 'No response from storage'
+            else:
+                try:
+                    if hasattr(upload_response, 'get') and upload_response.get('error'):
+                        upload_error = upload_response.get('error', 'Unknown storage error')
+                except Exception:
+                    # If we can't access the response, treat as unknown error
+                    upload_error = 'Unable to parse storage response'
+            
+            if upload_error:
+                logger.error(f"❌ File upload failed: {upload_error}")
                 # Update document status to failed
                 async with pool.get_connection() as conn:
                     await conn.execute("""
@@ -552,14 +562,14 @@ async def upload_document_backend(
                         WHERE id = $1
                     """, document_id)
                 
-            raise HTTPException(
-                status_code=500,
+                raise HTTPException(
+                    status_code=500,
                     detail={
                         "error": "File upload failed",
-                        "message": f"Storage error: {error_msg}",
+                        "message": f"Storage error: {upload_error}",
                         "document_id": document_id
                     }
-            )
+                )
         
             logger.info(f"✅ Step 2 complete: File uploaded to {storage_path}")
             
@@ -830,10 +840,20 @@ async def upload_regulatory_document(
                 }
             )
             
-            # Check if upload failed - proper Supabase storage response handling
-            if not upload_response or (hasattr(upload_response, 'get') and upload_response.get('error')):
-                error_msg = upload_response.get('error', 'Unknown storage error') if upload_response else 'No response from storage'
-                logger.error(f"❌ Regulatory file upload failed: {error_msg}")
+            # Check if upload failed - simplified robust handling
+            upload_error = None
+            if not upload_response:
+                upload_error = 'No response from storage'
+            else:
+                try:
+                    if hasattr(upload_response, 'get') and upload_response.get('error'):
+                        upload_error = upload_response.get('error', 'Unknown storage error')
+                except Exception:
+                    # If we can't access the response, treat as unknown error
+                    upload_error = 'Unable to parse storage response'
+            
+            if upload_error:
+                logger.error(f"❌ File upload failed: {upload_error}")
                 # Update document status to failed
                 async with pool.get_connection() as conn:
                     await conn.execute("""
@@ -845,10 +865,10 @@ async def upload_regulatory_document(
                         WHERE id = $1
                     """, document_id)
                 
-            raise HTTPException(
-                status_code=500,
-                    detail=f"Regulatory file upload failed: {error_msg}"
-            )
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Regulatory file upload failed: {upload_error}"
+                )
         
             logger.info(f"✅ Step 2 complete: Regulatory file uploaded to {storage_path}")
             
