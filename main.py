@@ -59,6 +59,19 @@ app = FastAPI(
 # Add middleware
 app.add_middleware(CORSMiddleware, **cors_config.get_fastapi_cors_middleware_config())
 
+# Add custom middleware for OPTIONS requests
+@app.middleware("http")
+async def handle_options(request: Request, call_next):
+    """Handle OPTIONS requests with proper CORS headers."""
+    if request.method == "OPTIONS":
+        response = Response()
+        # Get origin from request headers
+        origin = request.headers.get("origin", "")
+        # Add CORS headers
+        response.headers.update(cors_config.create_preflight_response(origin))
+        return response
+    return await call_next(request)
+
 # Health check cache
 _health_cache = {"result": None, "timestamp": 0}
 
@@ -79,7 +92,7 @@ async def health_check():
         db_pool = await get_db_pool()
         if db_pool:
             try:
-                async with db_pool.acquire() as conn:
+                async with db_pool.get_connection() as conn:  # Changed from acquire() to get_connection()
                     await conn.execute("SELECT 1")
                 db_status = "healthy"
                 logger.debug("✅ Health check: Database connection successful")
@@ -447,6 +460,52 @@ async def initialize_services_background():
 async def shutdown_event():
     """Cleanup on shutdown."""
     logger.info("🛑 Shutting down Insurance Navigator API")
+
+# Login endpoint with CORS support
+@app.post("/login")
+async def login(request: Request, response: Response):
+    """Login endpoint with proper CORS handling."""
+    # Add CORS headers to response
+    origin = request.headers.get("origin", "")
+    response.headers.update(cors_config.add_cors_headers({}, origin))
+    
+    try:
+        # Get request body
+        body = await request.json()
+        email = body.get("email")
+        password = body.get("password")
+        
+        if not email or not password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email and password are required"
+            )
+        
+        # Get user service
+        user_service = await get_user_service()
+        
+        # Authenticate user
+        auth_result = await user_service.authenticate_user(email, password)
+        if not auth_result:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
+        
+        return {
+            "access_token": auth_result["access_token"],
+            "token_type": "bearer",
+            "user": auth_result["user"]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Login error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred"
+        )
 
 if __name__ == "__main__":
     import uvicorn

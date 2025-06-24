@@ -15,15 +15,18 @@ class CORSConfig:
     def __init__(self):
         self.allowed_origins = [
             "http://localhost:3000",
+            "http://localhost:8000",
             "https://insurance-navigator.vercel.app",
             "https://insurance-navigator-staging.vercel.app",
             "https://insurance-navigator-dev.vercel.app",
+            "***REMOVED***",
+            "https://insurance-navigator-api-staging.onrender.com",
             # Add any additional origins as needed
         ]
         
         # Allow any origin in development
         if os.getenv("ENVIRONMENT") == "development":
-            self.allowed_origins.append("*")
+            self.allowed_origins = ["*"]
             
         self.allowed_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"]
         self.allowed_headers = [
@@ -55,26 +58,43 @@ class CORSConfig:
             "allow_methods": self.allowed_methods,
             "allow_headers": self.allowed_headers,
             "expose_headers": self.expose_headers,
-            "max_age": self.max_age
+            "max_age": self.max_age,
+            "allow_origin_regex": None  # Disable regex for security
         }
     
     def create_preflight_response(self, origin: str) -> Dict[str, str]:
         """Create CORS preflight response headers."""
+        # In development, allow any origin
+        if os.getenv("ENVIRONMENT") == "development":
+            allowed_origin = origin
+        else:
+            # In production, only allow whitelisted origins
+            allowed_origin = origin if origin in self.allowed_origins else self.allowed_origins[0]
+        
         return {
-            "Access-Control-Allow-Origin": origin if origin in self.allowed_origins else self.allowed_origins[0],
+            "Access-Control-Allow-Origin": allowed_origin,
             "Access-Control-Allow-Methods": ", ".join(self.allowed_methods),
             "Access-Control-Allow-Headers": ", ".join(self.allowed_headers),
             "Access-Control-Expose-Headers": ", ".join(self.expose_headers),
             "Access-Control-Max-Age": str(self.max_age),
-            "Access-Control-Allow-Credentials": "true"
+            "Access-Control-Allow-Credentials": "true",
+            "Vary": "Origin"  # Important for CDN caching
         }
     
     def add_cors_headers(self, headers: Dict[str, str], origin: str) -> Dict[str, str]:
         """Add CORS headers to response."""
+        # In development, allow any origin
+        if os.getenv("ENVIRONMENT") == "development":
+            allowed_origin = origin
+        else:
+            # In production, only allow whitelisted origins
+            allowed_origin = origin if origin in self.allowed_origins else self.allowed_origins[0]
+        
         headers.update({
-            "Access-Control-Allow-Origin": origin if origin in self.allowed_origins else self.allowed_origins[0],
+            "Access-Control-Allow-Origin": allowed_origin,
             "Access-Control-Allow-Credentials": "true",
-            "Access-Control-Expose-Headers": ", ".join(self.expose_headers)
+            "Access-Control-Expose-Headers": ", ".join(self.expose_headers),
+            "Vary": "Origin"  # Important for CDN caching
         })
         return headers
 
