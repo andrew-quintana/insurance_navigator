@@ -56,29 +56,10 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Add CORS middleware with direct configuration
+# Add CORS middleware with centralized configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:8000",
-        "https://insurance-navigator.vercel.app",
-        "https://insurance-navigator-staging.vercel.app",
-        "https://insurance-navigator-dev.vercel.app",
-        "***REMOVED***",
-        "https://insurance-navigator-api-staging.onrender.com"
-    ],
-    allow_origin_regex=r"https://insurance-navigator-.*\.vercel\.app",
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=[
-        "Content-Length",
-        "Content-Range",
-        "X-Total-Count",
-        "X-Processing-Status"
-    ],
-    max_age=600
+    **cors_config.get_fastapi_cors_middleware_config()
 )
 
 # Health check cache
