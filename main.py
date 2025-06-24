@@ -57,7 +57,8 @@ app = FastAPI(
 origins = [
     "https://insurance-navigator-staging.vercel.app",
     "https://insurance-navigator.vercel.app",
-    "https://insurance-navigator-hr7oebcu2-andrew-quintanas-projects.vercel.app"
+    "https://insurance-navigator-hr7oebcu2-andrew-quintanas-projects.vercel.app",
+    "https://insurance-navigator-gdievtrsx-andrew-quintanas-projects.vercel.app"  # New preview URL
 ]
 
 if os.getenv("ENVIRONMENT") == "development":
