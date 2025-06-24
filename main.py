@@ -68,7 +68,7 @@ app.add_middleware(
         "https://insurance-navigator-api.onrender.com",
         "https://insurance-navigator-api-staging.onrender.com"
     ],
-    allow_origin_regex=r"https://insurance-navigator-[a-z0-9\-]+-andrew-quintanas-projects\.vercel\.app",
+    allow_origin_regex=r"https://insurance-navigator-.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
