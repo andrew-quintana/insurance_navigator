@@ -394,34 +394,62 @@ async def notify_document_status(
         logger.error(f"Failed to send WebSocket notification: {e}")
         # Don't re-raise the exception as this is a non-critical operation
 
-# Startup event - OPTIMIZED for fast Render deployment
+# Startup event
 @app.on_event("startup")
 async def startup_event():
-    """Initialize services on startup - non-blocking for faster deployment."""
-    logger.info("🚀 Starting Insurance Navigator API v3.0.0 - FAST MODE")
+    """Initialize services on startup."""
+    logger.info("🚀 Starting Insurance Navigator API v3.0.0")
     logger.info("🔧 Backend-orchestrated processing enabled")
     logger.info("🦙 LlamaParse integration active")
     
-    # Schedule background initialization to avoid blocking startup
-    asyncio.create_task(initialize_services_background())
-
-async def initialize_services_background():
-    """Initialize services in background after app starts."""
-    global user_service_instance, conversation_service_instance, storage_service_instance
-    
     try:
-        logger.info("🔄 Background service initialization starting...")
+        logger.info("🔄 Service initialization starting...")
+        global user_service_instance, conversation_service_instance, storage_service_instance
         
-        # Initialize services with faster timeouts
+        # Initialize core services synchronously to ensure they're ready
         user_service_instance = await get_user_service()
         conversation_service_instance = await get_conversation_service()
         storage_service_instance = await get_storage_service()
         
-        logger.info("✅ All services initialized in background")
+        logger.info("✅ Core services initialized")
+        
+        # Initialize remaining services in background
+        asyncio.create_task(initialize_background_services())
         
     except Exception as e:
+        logger.error(f"⚠️ Service initialization failed: {e}")
+        # Re-raise to prevent app from starting in bad state
+        raise
+
+async def initialize_background_services():
+    """Initialize non-critical services in background."""
+    try:
+        # Initialize additional services here
+        logger.info("🔄 Background service initialization complete")
+    except Exception as e:
         logger.error(f"⚠️ Background service initialization failed: {e}")
-        # Don't crash the app, let it start and handle errors per-request
+
+# Add request logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log all requests for debugging."""
+    start_time = time.time()
+    
+    # Log request details
+    logger.info(f"➡️ {request.method} {request.url.path}")
+    logger.info(f"Headers: {dict(request.headers)}")
+    
+    try:
+        response = await call_next(request)
+        
+        # Log response details
+        process_time = time.time() - start_time
+        logger.info(f"⬅️ {request.method} {request.url.path} - Status: {response.status_code} - Time: {process_time:.2f}s")
+        
+        return response
+    except Exception as e:
+        logger.error(f"❌ Request failed: {str(e)}")
+        raise
 
 # Shutdown event
 @app.on_event("shutdown")
