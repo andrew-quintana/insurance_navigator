@@ -118,39 +118,69 @@ export default function DocumentUploadServerless({
     const token = localStorage.getItem("token")
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
     
+    console.log('🔍 Debug - Upload starting:', {
+      fileName: fileStatus.file.name,
+      fileSize: fileStatus.file.size,
+      apiBaseUrl,
+      hasToken: !!token
+    })
+    
     const formData = new FormData()
     formData.append('file', fileStatus.file)
     formData.append('policy_id', fileStatus.file.name.replace(/\.[^/.]+$/, ""))
     
-    const uploadResponse = await fetch(`${apiBaseUrl}/upload-document-backend`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: formData,
-    })
+    console.log('📤 Debug - Sending request to:', `${apiBaseUrl}/upload-document-backend`)
+    
+    try {
+      const uploadResponse = await fetch(`${apiBaseUrl}/upload-document-backend`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      })
 
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text()
-      throw new Error(`Upload failed: ${uploadResponse.status} - ${errorText}`)
-    }
+      console.log('📥 Debug - Response received:', {
+        status: uploadResponse.status,
+        ok: uploadResponse.ok
+      })
 
-    const result = await uploadResponse.json()
-    return {
-      success: true,
-      document_id: result.document_id || result.id || 'unknown',
-      filename: fileStatus.file.name,
-      chunks_processed: result.chunks_processed || 1,
-      total_chunks: result.total_chunks || 1,
-      text_length: result.text_length || 0,
-      message: result.message || 'Document processed successfully!'
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text()
+        throw new Error(`Upload failed: ${uploadResponse.status} - ${errorText}`)
+      }
+
+      const result = await uploadResponse.json()
+      return {
+        success: true,
+        document_id: result.document_id || result.id || 'unknown',
+        filename: fileStatus.file.name,
+        chunks_processed: result.chunks_processed || 1,
+        total_chunks: result.total_chunks || 1,
+        text_length: result.text_length || 0,
+        message: result.message || 'Document processed successfully!'
+      }
+    } catch (err) {
+      console.error('❌ Debug - Upload error:', err)
+      throw err
     }
   }
 
   // Upload all files
   const handleUpload = async () => {
-    if (selectedFiles.length === 0) return
-    if (isUploading) return
+    console.log('🚀 Debug - Upload handler started', {
+      selectedFiles: selectedFiles.length,
+      isUploading
+    })
+
+    if (selectedFiles.length === 0) {
+      console.log('⚠️ Debug - No files selected')
+      return
+    }
+    if (isUploading) {
+      console.log('⚠️ Debug - Already uploading')
+      return
+    }
 
     setIsUploading(true)
     setError(null)
