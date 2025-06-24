@@ -170,8 +170,8 @@ export default function DocumentUploadServerless({
   const handleUpload = async () => {
     console.log('🚀 Debug - Upload handler started', {
       fileCount: selectedFiles.length,
-      isUploading: isUploading,
-      fileStatuses: selectedFiles.map(f => ({
+      isUploading,
+      files: selectedFiles.map(f => ({
         name: f.file.name,
         size: f.file.size,
         type: f.file.type,
@@ -188,62 +188,45 @@ export default function DocumentUploadServerless({
       return
     }
 
-    console.log('✅ Debug - Validation passed, starting upload')
     setIsUploading(true)
     setError(null)
 
-    // Update all pending files to uploading status
-    setSelectedFiles(prev => prev.map(file => 
-      file.status === 'pending' ? { ...file, status: 'uploading', progress: 0 } : file
-    ))
-
     try {
       console.log('📁 Debug - Processing files:', selectedFiles.length)
-      // Upload files sequentially to avoid overwhelming the server
+      
       for (const fileStatus of selectedFiles) {
-        if (fileStatus.status !== 'uploading') {
-          console.log('⏭️ Debug - Skipping file:', fileStatus.file.name, 'Status:', fileStatus.status)
-          continue
-        }
-
-        console.log('📤 Debug - Starting upload for:', fileStatus.file.name)
+        console.log('📄 Debug - Processing file:', fileStatus.file.name)
         try {
           const result = await uploadFile(fileStatus)
           
           console.log('✅ Debug - Upload successful:', fileStatus.file.name)
-          // Update file status to complete
           setSelectedFiles(prev => prev.map(f => 
-            f.file === fileStatus.file 
+            f.file.name === fileStatus.file.name 
               ? { ...f, status: 'complete', progress: 100, documentId: result.document_id }
               : f
           ))
 
-          // Call success handler for each file
           if (onUploadSuccess) {
             onUploadSuccess(result)
           }
-        } catch (err) {
-          console.error('❌ Debug - Upload failed for:', fileStatus.file.name, err)
-          const error = err instanceof Error ? err.message : 'Unknown error occurred'
-          
-          // Update file status to error
+        } catch (error: any) {
+          console.error('❌ Debug - File upload failed:', fileStatus.file.name, error)
           setSelectedFiles(prev => prev.map(f => 
-            f.file === fileStatus.file 
-              ? { ...f, status: 'error', progress: 0, error }
+            f.file.name === fileStatus.file.name 
+              ? { ...f, status: 'error', error: error.message || 'Unknown error' } 
               : f
           ))
-
-          // Call error handler
           if (onUploadError) {
-            onUploadError(`Failed to upload ${fileStatus.file.name}: ${error}`)
+            onUploadError(error.message || 'Unknown error')
           }
         }
       }
-    } catch (err) {
-      console.error('❌ Debug - Unexpected error in upload handler:', err)
+    } catch (error: any) {
+      console.error('❌ Debug - Upload handler error:', error)
+      setError(error.message || 'Unknown error')
     } finally {
-      console.log('🏁 Debug - Upload handler completed')
       setIsUploading(false)
+      console.log('🏁 Debug - Upload handler completed')
     }
   }
 
