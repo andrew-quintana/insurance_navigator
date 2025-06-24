@@ -57,7 +57,77 @@ app = FastAPI(
 )
 
 # Add middleware
-app.add_middleware(CORSMiddleware)
+app.add_middleware(CORSMiddleware, **cors_config.get_fastapi_cors_middleware_config())
+
+# Health check cache
+_health_cache = {"result": None, "timestamp": 0}
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint with caching to reduce database load."""
+    global _health_cache
+    current_time = time.time()
+    cache_duration = 30  # seconds
+    
+    # Return cached result if still valid
+    if _health_cache["result"] and (current_time - _health_cache["timestamp"]) < cache_duration:
+        return _health_cache["result"]
+    
+    # Perform actual health check
+    try:
+        # Test database connection
+        db_pool = await get_db_pool()
+        if db_pool:
+            try:
+                async with db_pool.acquire() as conn:
+                    await conn.execute("SELECT 1")
+                db_status = "healthy"
+                logger.debug("✅ Health check: Database connection successful")
+            except Exception as e:
+                db_status = f"error: {str(e)[:50]}"
+                logger.warning(f"⚠️ Health check: Database connection error: {e}")
+        else:
+            db_status = "unavailable"
+            logger.warning("⚠️ Health check: Database pool unavailable")
+
+        result = {
+            "status": "healthy" if db_status == "healthy" else "degraded",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database": db_status,
+            "version": "3.0.0",
+            "services": {
+                "database": db_status,
+                "user_service": "available",
+                "conversation_service": "available",
+                "storage_service": "available",
+                "agent_orchestrator": "available"
+            },
+            "cached": False
+        }
+        
+        # Cache the result
+        _health_cache["result"] = result
+        _health_cache["timestamp"] = current_time
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Health check error: {str(e)}")
+        error_result = {
+            "status": "unhealthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database": f"error: {str(e)[:50]}",
+            "version": "3.0.0",
+            "services": {
+                "database": "error",
+                "user_service": "unknown",
+                "conversation_service": "unknown",
+                "storage_service": "unknown",
+                "agent_orchestrator": "unknown"
+            },
+            "cached": False
+        }
+        return error_result
 
 # Pydantic models
 class UserResponse(BaseModel):
@@ -205,6 +275,143 @@ async def get_document_status(
             status_code=500,
             detail=f"Failed to get status: {str(e)}"
         )
+
+# Document upload endpoint
+@app.post("/upload-document-backend")
+async def upload_document_backend(
+    file: UploadFile = File(...),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Upload and process a document."""
+    start_time = time.time()
+    try:
+        # Read file data
+        file_data = await file.read()
+        
+        # Generate document ID
+        document_id = str(uuid.uuid4())
+        
+        # Get document service
+        doc_service = DocumentService()
+        
+        # Create document record
+        document = await doc_service.create_document(
+            user_id=current_user["id"],
+            filename=file.filename,
+            file_size=len(file_data),
+            content_type=file.content_type or "application/octet-stream",
+            file_hash=hashlib.sha256(file_data).hexdigest(),
+            storage_path=f"documents/{current_user['id']}/{document_id}/{file.filename}",
+            document_type="user_uploaded",
+            metadata={
+                "upload_timestamp": datetime.utcnow().isoformat(),
+                "uploader_email": current_user["email"],
+                "original_filename": file.filename
+            }
+        )
+        
+        # Get storage service
+        storage_service = await get_storage_service()
+        
+        # Upload to storage
+        storage_result = await storage_service.upload_document(
+            file_data=file_data,
+            filename=file.filename,
+            user_id=current_user["id"],
+            document_type="user_uploaded",
+            metadata={
+                "document_id": document["document_id"],
+                "uploader_email": current_user["email"]
+            }
+        )
+        
+        if not storage_result:
+            raise Exception("Failed to upload file to storage")
+        
+        # Start processing
+        processing_service = DocumentProcessingService()
+        process_result = await processing_service.process_document(
+            document_id=document["document_id"],
+            file_data=file_data,
+            filename=file.filename,
+            content_type=file.content_type or "application/octet-stream",
+            user_id=current_user["id"]
+        )
+        
+        # Send WebSocket notification about upload success
+        try:
+            await notify_document_status(
+                user_id=current_user["id"],
+                document_id=document["document_id"],
+                status="uploaded",
+                message="Document uploaded successfully and processing started"
+            )
+        except Exception as ws_error:
+            logger.warning(f"Failed to send WebSocket notification: {ws_error}")
+        
+        return {
+            "status": "success",
+            "document_id": document["document_id"],
+            "filename": file.filename,
+            "storage_path": storage_result["file_path"],
+            "processing_status": process_result["status"] if process_result else "queued",
+            "message": "Document uploaded and processing started"
+        }
+        
+    except Exception as e:
+        logger.error(f"Document upload error: {str(e)}")
+        logger.error(f"Error details: type={type(e).__name__}")
+        import traceback
+        logger.error(traceback.format_exc())
+        
+        # Send WebSocket notification about upload failure
+        try:
+            if 'document_id' in locals():
+                await notify_document_status(
+                    user_id=current_user["id"],
+                    document_id=document_id,
+                    status="failed",
+                    message=f"Upload failed: {str(e)[:100]}"
+                )
+        except Exception as ws_error:
+            logger.warning(f"Failed to send WebSocket notification: {ws_error}")
+        
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "Internal server error",
+                "message": "An unexpected error occurred during upload. Please try again.",
+                "processing_time": f"{time.time() - start_time:.2f}s"
+            }
+        )
+
+async def notify_document_status(
+    user_id: str,
+    document_id: str,
+    status: str,
+    message: str
+):
+    """Send document status notification via WebSocket."""
+    try:
+        # Get Supabase client
+        supabase = await get_supabase_client()
+        
+        # Send realtime notification
+        await supabase.realtime.send({
+            "type": "broadcast",
+            "event": "document_status",
+            "topic": f"user_documents:{user_id}",
+            "payload": {
+                "document_id": document_id,
+                "status": status,
+                "message": message,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to send WebSocket notification: {e}")
+        # Don't re-raise the exception as this is a non-critical operation
 
 # Startup event - OPTIMIZED for fast Render deployment
 @app.on_event("startup")
