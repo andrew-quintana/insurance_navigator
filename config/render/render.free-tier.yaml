@@ -1,0 +1,57 @@
+services:
+  - type: web
+    name: insurance-navigator-api
+    env: docker
+    plan: free
+    dockerfilePath: ./config/docker/Dockerfile.free-tier
+    region: oregon
+    branch: staging
+    port: 8000
+    healthCheckPath: /health
+    # Render optimizations for free tier
+    buildCommand: "echo 'Using Docker build - no additional build command needed'"
+    preDeployCommand: "echo 'Pre-deploy optimization complete'"
+    # Increased startup timeout and health check settings
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2 --timeout-keep-alive 75"
+    healthCheckTimeout: 60
+    numReplicas: 1
+    autoscaling:
+      enabled: false
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ASYNCPG_DISABLE_PREPARED_STATEMENTS
+        value: "1"
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: SECURITY_BYPASS_ENABLED
+        value: false
+      - key: API_BASE_URL
+        value: https://insurance-navigator-api.onrender.com
+      # Render startup optimizations
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
+      - key: UVICORN_WORKERS
+        value: "2"
+      - key: STARTUP_TIMEOUT
+        value: "60"
+      - key: KEEP_ALIVE
+        value: "75"
+      - key: MAX_REQUESTS
+        value: "1000"
+      - key: MAX_REQUESTS_JITTER
+        value: "100"
