@@ -10,6 +10,9 @@ RUN apt-get update && apt-get install -y \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
+# Add build arg to force cache invalidation
+ARG CACHEBUST=1
+
 # Copy requirements and install as app user
 COPY config/python/requirements-prod.txt /tmp/requirements.txt
 USER app
@@ -53,4 +56,4 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=2 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Use the app user's local bin path for uvicorn
-CMD ["/home/app/.local/bin/uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"] 
+CMD ["/home/app/.local/bin/uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
