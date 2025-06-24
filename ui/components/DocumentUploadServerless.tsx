@@ -169,8 +169,14 @@ export default function DocumentUploadServerless({
   // Upload all files
   const handleUpload = async () => {
     console.log('🚀 Debug - Upload handler started', {
-      selectedFiles: selectedFiles.length,
-      isUploading
+      fileCount: selectedFiles.length,
+      isUploading: isUploading,
+      fileStatuses: selectedFiles.map(f => ({
+        name: f.file.name,
+        size: f.file.size,
+        type: f.file.type,
+        status: f.status
+      }))
     })
 
     if (selectedFiles.length === 0) {
@@ -182,6 +188,7 @@ export default function DocumentUploadServerless({
       return
     }
 
+    console.log('✅ Debug - Validation passed, starting upload')
     setIsUploading(true)
     setError(null)
 
@@ -191,13 +198,19 @@ export default function DocumentUploadServerless({
     ))
 
     try {
+      console.log('📁 Debug - Processing files:', selectedFiles.length)
       // Upload files sequentially to avoid overwhelming the server
       for (const fileStatus of selectedFiles) {
-        if (fileStatus.status !== 'uploading') continue
+        if (fileStatus.status !== 'uploading') {
+          console.log('⏭️ Debug - Skipping file:', fileStatus.file.name, 'Status:', fileStatus.status)
+          continue
+        }
 
+        console.log('📤 Debug - Starting upload for:', fileStatus.file.name)
         try {
           const result = await uploadFile(fileStatus)
           
+          console.log('✅ Debug - Upload successful:', fileStatus.file.name)
           // Update file status to complete
           setSelectedFiles(prev => prev.map(f => 
             f.file === fileStatus.file 
@@ -210,7 +223,7 @@ export default function DocumentUploadServerless({
             onUploadSuccess(result)
           }
         } catch (err) {
-          console.error('File upload failed:', err)
+          console.error('❌ Debug - Upload failed for:', fileStatus.file.name, err)
           const error = err instanceof Error ? err.message : 'Unknown error occurred'
           
           // Update file status to error
@@ -226,7 +239,10 @@ export default function DocumentUploadServerless({
           }
         }
       }
+    } catch (err) {
+      console.error('❌ Debug - Unexpected error in upload handler:', err)
     } finally {
+      console.log('🏁 Debug - Upload handler completed')
       setIsUploading(false)
     }
   }
