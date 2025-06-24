@@ -31,4 +31,5 @@ anthropic>=0.8.0
 PyPDF2>=3.0.0
 
 # Utilities
-pytz==2024.1 
+pytz==2024.1
+backoff>=2.2.1
