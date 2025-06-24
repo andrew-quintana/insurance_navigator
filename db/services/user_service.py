@@ -85,8 +85,8 @@ class UserService:
             logger.error(f"Failed to create user {email}: {str(e)}")
             raise
     
-    async def authenticate_user(self, email: str, password: str) -> Optional[str]:
-        """Authenticate user with email and password and return JWT token."""
+    async def authenticate_user(self, email: str, password: str) -> Optional[Dict[str, Any]]:
+        """Authenticate user with email and password and return JWT token and user data."""
         try:
             pool = await get_db_pool()
             
@@ -130,9 +130,14 @@ class UserService:
                     "roles": user_roles
                 }
                 
-                # Create and return JWT token
-                token = self.create_access_token(user_data)
-                return token
+                # Create JWT token
+                access_token = self.create_access_token(user_data)
+                
+                # Return both token and user data
+                return {
+                    "access_token": access_token,
+                    "user": user_data
+                }
                 
         except Exception as e:
             logger.error(f"Authentication error for {email}: {str(e)}")
