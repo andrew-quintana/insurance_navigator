@@ -29,7 +29,7 @@ class CORSConfig:
             self.allowed_origins = ["*"]
             
         # Add Vercel preview URL pattern
-        self.allowed_origin_regex = r"https://insurance-navigator-[a-z0-9\-]+-andrew-quintanas-projects\.vercel\.app"
+        self.allowed_origin_regex = r"https://insurance-navigator-[a-z0-9\-]+(?:-andrew-quintanas-projects)?\.vercel\.app"
             
         self.allowed_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"]
         self.allowed_headers = [
@@ -139,4 +139,4 @@ def create_preflight_response(origin: str = None) -> Response:
 
 def is_origin_allowed(origin: str) -> bool:
     """Check if origin is allowed"""
-    return origin in cors_config.allowed_origins 
+    return cors_config.is_origin_allowed(origin) 
