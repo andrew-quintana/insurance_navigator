@@ -54,20 +54,32 @@ app = FastAPI(
 )
 
 # Add CORS middleware with environment-aware configuration
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"] if os.getenv("ENVIRONMENT") == "development" else [
-        "https://insurance-navigator-hr7oebcu2-andrew-quintanas-projects.vercel.app",
-        "https://insurance-navigator.vercel.app",
-        "https://insurance-navigator-staging.vercel.app",
+origins = [
+    "https://insurance-navigator-hr7oebcu2-andrew-quintanas-projects.vercel.app",
+    "https://insurance-navigator.vercel.app",
+    "https://insurance-navigator-staging.vercel.app"
+]
+
+if os.getenv("ENVIRONMENT") == "development":
+    origins.extend([
         "http://localhost:8080",
         "http://localhost:3000"
-    ],
+    ])
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],
-    allow_headers=["*"],
-    max_age=600,
-    expose_headers=["*"]
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "Accept",
+        "Origin",
+        "X-Requested-With"
+    ],
+    max_age=3600,
+    expose_headers=["Content-Length", "Content-Range"]
 )
 
 # Health check cache
@@ -396,10 +408,14 @@ async def shutdown_event():
     """Cleanup on shutdown."""
     logger.info("🛑 Shutting down Insurance Navigator API")
 
-# Login endpoint with CORS support
+@app.options("/login")
+async def login_preflight():
+    """Handle preflight requests for login endpoint."""
+    return Response(status_code=200)
+
 @app.post("/login")
 async def login(request: Request, response: Response):
-    """Login endpoint with proper CORS handling."""
+    """Login endpoint with proper CORS and error handling."""
     try:
         # Get request body
         body = await request.json()
@@ -407,6 +423,7 @@ async def login(request: Request, response: Response):
         password = body.get("password")
         
         if not email or not password:
+            logger.warning("Login attempt failed: Missing email or password")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email and password are required"
@@ -418,11 +435,13 @@ async def login(request: Request, response: Response):
         # Authenticate user
         auth_result = await user_service.authenticate_user(email, password)
         if not auth_result:
+            logger.warning(f"Login failed for user: {email}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password"
             )
         
+        logger.info(f"User logged in successfully: {email}")
         return {
             "access_token": auth_result["access_token"],
             "token_type": "bearer",
@@ -431,8 +450,14 @@ async def login(request: Request, response: Response):
         
     except HTTPException:
         raise
+    except json.JSONDecodeError:
+        logger.error("Login failed: Invalid JSON in request body")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid request format"
+        )
     except Exception as e:
-        logger.error(f"Login error: {str(e)}")
+        logger.error(f"Unexpected login error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred"
