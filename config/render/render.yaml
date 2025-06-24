@@ -30,12 +30,11 @@ services:
       - path: /*
         name: Vary
         value: "Origin"
-    # Render optimizations for free tier
+    # Render optimizations for cold starts and timeouts
     buildCommand: "echo 'Using Docker build - no additional build command needed'"
     preDeployCommand: "echo 'Pre-deploy optimization complete'"
-    # Increased startup timeout and health check settings
-    startCommand: "uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2 --timeout-keep-alive 75"
-    healthCheckTimeout: 60
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2 --timeout-keep-alive 75 --timeout 120"
+    healthCheckTimeout: 120
     numReplicas: 1
     envVars:
       - key: SUPABASE_URL
@@ -68,10 +67,15 @@ services:
       - key: UVICORN_WORKERS
         value: "2"
       - key: STARTUP_TIMEOUT
-        value: "60"
+        value: "120"
       - key: KEEP_ALIVE
         value: "75"
       - key: MAX_REQUESTS
         value: "1000"
       - key: MAX_REQUESTS_JITTER
         value: "100"
+      # Add proxy timeouts
+      - key: RENDER_PROXY_TIMEOUT
+        value: "120"
+      - key: RENDER_PROXY_CONNECT_TIMEOUT
+        value: "60"
