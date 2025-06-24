@@ -1,72 +1,58 @@
 """Helper utilities for database testing."""
 
 import os
-import pytest
-from typing import AsyncGenerator, Optional
-from unittest.mock import MagicMock
+from typing import Optional
 from supabase import create_client, Client
 
-async def setup_test_database():
-    """Set up a clean test database state."""
-    # Create Supabase client with test credentials
-    supabase = create_client(
-        os.getenv('SUPABASE_URL', 'https://test.supabase.co'),
-        os.getenv('SUPABASE_SERVICE_ROLE_KEY', 'test-service-role-key')
-    )
+def get_test_client(auth_type: str = "anon") -> Client:
+    """Get a Supabase client for testing.
+    Uses the main .env configuration.
     
-    # Clear existing test data
-    await clear_test_data(supabase)
+    Args:
+        auth_type: The type of authentication to use. Either "anon" or "service_role".
     
-    # Apply test migrations
-    await apply_test_migrations(supabase)
+    Returns:
+        Client: A configured Supabase client for testing
     
-    return supabase
-
-async def clear_test_data(supabase: Client):
-    """Clear all test data from the database."""
-    # List of tables to clear in order (respecting foreign key constraints)
-    tables = [
-        'user_roles',
-        'users',
-        'roles',
-        'encryption_keys',
-        'system_metadata'
-    ]
+    Raises:
+        ValueError: If required environment variables are not set
+    """
+    url = os.getenv("SUPABASE_URL")
     
-    for table in tables:
-        await supabase.table(table).delete().execute()
-
-async def apply_test_migrations(supabase: Client):
-    """Apply test migrations to set up the database schema."""
-    # Execute initial schema migration
-    with open('db/migrations/001_initial_schema.sql', 'r') as f:
-        schema_sql = f.read()
-        await supabase.rpc('exec_sql', {'sql': schema_sql}).execute()
+    if auth_type == "service_role":
+        key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        if not key:
+            raise ValueError("SUPABASE_SERVICE_ROLE_KEY environment variable must be set")
+    else:
+        key = os.getenv("SUPABASE_ANON_KEY")
+        if not key:
+            raise ValueError("SUPABASE_ANON_KEY environment variable must be set")
     
-    # Execute seed data migration
-    with open('db/migrations/002_initial_seed.sql', 'r') as f:
-        seed_sql = f.read()
-        await supabase.rpc('exec_sql', {'sql': seed_sql}).execute()
+    if not url:
+        raise ValueError("SUPABASE_URL environment variable must be set")
+    
+    return create_client(url, key)
 
-@pytest.fixture
-async def test_supabase() -> AsyncGenerator[Client, None]:
-    """Fixture to provide a test Supabase client with clean database state."""
-    supabase = await setup_test_database()
-    yield supabase
-    await clear_test_data(supabase)
-
-@pytest.fixture
-def mock_storage_service():
-    """Create a mock storage service for testing."""
-    mock = MagicMock()
-    mock.upload_file.return_value = "test-file-path"
-    mock.get_signed_url.return_value = "https://test-signed-url"
-    return mock
-
-@pytest.fixture
-def mock_encryption_service():
-    """Create a mock encryption service for testing."""
-    mock = MagicMock()
-    mock.encrypt.return_value = b"encrypted-data"
-    mock.decrypt.return_value = b"decrypted-data"
-    return mock 
+def cleanup_test_data(supabase: Client, document_id: Optional[str] = None, user_id: Optional[str] = None):
+    """Clean up test data from the database.
+    
+    Args:
+        supabase: The Supabase client
+        document_id: Optional document ID to clean up
+        user_id: Optional user ID to clean up all associated data
+    """
+    if document_id:
+        # Clean up vectors first due to foreign key constraint
+        supabase.table("document_vectors").delete().eq("document_record_id", document_id).execute()
+        # Clean up the document
+        supabase.table("documents").delete().eq("id", document_id).execute()
+    
+    if user_id:
+        # Get all documents for user
+        docs = supabase.table("documents").select("id").eq("user_id", user_id).execute()
+        if docs.data:
+            for doc in docs.data:
+                cleanup_test_data(supabase, doc["id"])
+        
+        # Clean up any orphaned vectors
+        supabase.table("document_vectors").delete().eq("user_id", user_id).execute()

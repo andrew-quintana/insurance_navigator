@@ -24,6 +24,7 @@ class DocumentService:
     
     def __init__(self):
         self.encryption_service = EncryptionServiceFactory.create_service('mock')
+        self.logger = logging.getLogger(__name__)
         
     async def extract_policy_basics(self, document_id: str, text: str) -> Dict[str, Any]:
         """
@@ -472,6 +473,169 @@ class DocumentService:
             summary['plan_type'] = policy_basics['plan_type']
         
         return summary
+
+    async def create_document(
+        self, 
+        user_id: str, 
+        filename: str, 
+        file_size: int, 
+        content_type: str,
+        file_hash: str,
+        storage_path: str,
+        document_type: str = 'user_uploaded',
+        metadata: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
+        """Create a new document record."""
+        try:
+            pool = await get_db_pool()
+            async with pool.get_connection() as conn:
+                document = await conn.fetchrow("""
+                    INSERT INTO documents (
+                        user_id, original_filename, file_size, content_type,
+                        file_hash, storage_path, document_type, metadata,
+                        status
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                    RETURNING id, original_filename, status, created_at
+                """, 
+                uuid.UUID(user_id), filename, file_size, content_type,
+                file_hash, storage_path, document_type, 
+                json.dumps(metadata or {}), 'pending'
+                )
+                
+                return {
+                    'document_id': str(document['id']),
+                    'filename': document['original_filename'],
+                    'status': document['status'],
+                    'created_at': document['created_at']
+                }
+        except Exception as e:
+            self.logger.error(f"Failed to create document: {e}")
+            raise
+
+    async def update_document_status(
+        self, 
+        document_id: str, 
+        status: str,
+        error_message: str = None
+    ) -> bool:
+        """Update document status."""
+        try:
+            pool = await get_db_pool()
+            async with pool.get_connection() as conn:
+                result = await conn.execute("""
+                    UPDATE documents 
+                    SET status = $1,
+                        error_message = $2,
+                        updated_at = NOW()
+                    WHERE id = $3
+                """, status, error_message, uuid.UUID(document_id))
+                return result == "UPDATE 1"
+        except Exception as e:
+            self.logger.error(f"Failed to update document status: {e}")
+            return False
+
+    async def get_document(self, document_id: str) -> Optional[Dict[str, Any]]:
+        """Get document by ID."""
+        try:
+            pool = await get_db_pool()
+            async with pool.get_connection() as conn:
+                doc = await conn.fetchrow("""
+                    SELECT 
+                        id, user_id, original_filename, file_size,
+                        content_type, file_hash, storage_path,
+                        document_type, status, error_message,
+                        metadata, created_at, updated_at,
+                        jurisdiction, program, effective_date,
+                        expiration_date, source_url, tags
+                    FROM documents
+                    WHERE id = $1
+                """, uuid.UUID(document_id))
+                
+                if not doc:
+                    return None
+                    
+                return {
+                    'document_id': str(doc['id']),
+                    'user_id': str(doc['user_id']),
+                    'filename': doc['original_filename'],
+                    'file_size': doc['file_size'],
+                    'content_type': doc['content_type'],
+                    'file_hash': doc['file_hash'],
+                    'storage_path': doc['storage_path'],
+                    'document_type': doc['document_type'],
+                    'status': doc['status'],
+                    'error_message': doc['error_message'],
+                    'metadata': doc['metadata'],
+                    'created_at': doc['created_at'],
+                    'updated_at': doc['updated_at'],
+                    'jurisdiction': doc['jurisdiction'],
+                    'program': doc['program'],
+                    'effective_date': doc['effective_date'],
+                    'expiration_date': doc['expiration_date'],
+                    'source_url': doc['source_url'],
+                    'tags': doc['tags']
+                }
+        except Exception as e:
+            self.logger.error(f"Failed to get document: {e}")
+            return None
+
+    async def list_user_documents(
+        self, 
+        user_id: str, 
+        document_type: Optional[str] = None,
+        limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """List documents for a user."""
+        try:
+            pool = await get_db_pool()
+            async with pool.get_connection() as conn:
+                where_clause = "WHERE user_id = $1"
+                params = [uuid.UUID(user_id)]
+                
+                if document_type:
+                    where_clause += " AND document_type = $2"
+                    params.append(document_type)
+                
+                docs = await conn.fetch(f"""
+                    SELECT 
+                        id, original_filename, status, document_type,
+                        file_size, metadata, created_at,
+                        jurisdiction, program, tags
+                    FROM documents
+                    {where_clause}
+                    ORDER BY created_at DESC
+                    LIMIT ${'2' if document_type else '3'}
+                """, *params, limit)
+                
+                return [{
+                    'document_id': str(doc['id']),
+                    'filename': doc['original_filename'],
+                    'status': doc['status'],
+                    'document_type': doc['document_type'],
+                    'file_size': doc['file_size'],
+                    'metadata': doc['metadata'],
+                    'jurisdiction': doc['jurisdiction'],
+                    'program': doc['program'],
+                    'tags': doc['tags'],
+                    'created_at': doc['created_at']
+                } for doc in docs]
+        except Exception as e:
+            self.logger.error(f"Failed to list documents: {e}")
+            return []
+
+    async def delete_document(self, document_id: str, user_id: str) -> bool:
+        """Delete a document."""
+        try:
+            pool = await get_db_pool()
+            async with pool.get_connection() as conn:
+                result = await conn.execute("""
+                    DELETE FROM documents
+                    WHERE id = $1 AND user_id = $2
+                """, uuid.UUID(document_id), uuid.UUID(user_id))
+                return result == "DELETE 1"
+        except Exception as e:
+            self.logger.error(f"Failed to delete document: {e}")
+            return False
 
 # Service factory function
 async def get_document_service() -> DocumentService:

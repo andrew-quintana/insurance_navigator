@@ -14,6 +14,14 @@ interface UploadResponse {
   message: string
 }
 
+interface FileUploadStatus {
+  file: File
+  status: 'pending' | 'uploading' | 'complete' | 'error'
+  progress: number
+  documentId?: string
+  error?: string
+}
+
 interface DocumentUploadProps {
   onUploadSuccess?: (result: UploadResponse) => void
   onUploadError?: (error: string) => void
@@ -26,49 +34,10 @@ export default function DocumentUploadServerless({
   className = ""
 }: DocumentUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<FileUploadStatus[]>([])
   const [isDragOver, setIsDragOver] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
-  const [uploadStartTime, setUploadStartTime] = useState<Date | null>(null)
-  const [elapsedTime, setElapsedTime] = useState(0)
-  const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState(300) // 5 minutes in seconds
-  const [isComplete, setIsComplete] = useState(false)
-  const [uploadSuccess, setUploadSuccess] = useState(false)
-  const [uploadError, setUploadError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [documentId, setDocumentId] = useState<string | null>(null)
-
-  // Smart timer that moves faster to 85% and stops there until backend responds
-  useEffect(() => {
-    let interval: NodeJS.Timeout
-    
-    if (isUploading && uploadStartTime && !isComplete) {
-      interval = setInterval(() => {
-        const now = new Date()
-        const elapsed = Math.floor((now.getTime() - uploadStartTime.getTime()) / 1000)
-        setElapsedTime(elapsed)
-      
-        // Faster progression to 85% - reaches 85% in about 2 minutes instead of 4.25 minutes
-        // This gives better visual feedback while staying realistic
-        const progressToEightyFive = Math.min(85, (elapsed / 120) * 85)
-        
-        // Don't automatically complete - wait for backend response
-        // Only set estimatedTimeRemaining based on how close we are to 85%
-        const remaining = Math.max(0, Math.round((85 - progressToEightyFive) / 85 * 120))
-        setEstimatedTimeRemaining(remaining)
-        
-        // Fallback: if 5 minutes pass and still no response, assume failure
-        if (elapsed >= 300) {
-          setUploadError("Upload took longer than expected. Please try again.")
-          setIsUploading(false)
-        }
-      }, 1000)
-        }
-
-    return () => {
-      if (interval) clearInterval(interval)
-    }
-  }, [isUploading, uploadStartTime, isComplete])
 
   // File validation
   const validateFile = (file: File): string | null => {
@@ -91,18 +60,27 @@ export default function DocumentUploadServerless({
     return null
   }
 
-  // Handle file selection
-  const handleFileSelect = useCallback((file: File) => {
-    const validation = validateFile(file)
-    if (validation) {
-      setError(validation)
-      return
-    }
+  // Handle file selection for multiple files
+  const handleFileSelect = useCallback((files: File[]) => {
+    const newFiles = files.map(file => {
+      const validation = validateFile(file)
+      if (validation) {
+        return {
+          file,
+          status: 'error' as const,
+          progress: 0,
+          error: validation
+        }
+      }
+      return {
+        file,
+        status: 'pending' as const,
+        progress: 0
+      }
+    })
 
-    setSelectedFile(file)
+    setSelectedFiles(prev => [...prev, ...newFiles])
     setError(null)
-    setUploadSuccess(false)
-    setUploadError(null)
   }, [])
 
   // Handle drag events
@@ -116,330 +94,245 @@ export default function DocumentUploadServerless({
     setIsDragOver(false)
   }, [])
 
+  // Update drop handler for multiple files
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setIsDragOver(false)
     
     const files = Array.from(e.dataTransfer.files)
     if (files.length > 0) {
-      handleFileSelect(files[0])
+      handleFileSelect(files)
     }
   }, [handleFileSelect])
 
-  // Handle file input change
+  // Update file input change handler for multiple files
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (files && files.length > 0) {
-      handleFileSelect(files[0])
+      handleFileSelect(Array.from(files))
     }
   }, [handleFileSelect])
 
-  // Upload file to backend
-  const handleUpload = async () => {
-    if (!selectedFile) return
+  // Upload single file
+  const uploadFile = async (fileStatus: FileUploadStatus): Promise<UploadResponse> => {
+    const token = localStorage.getItem("token")
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+    
+    const formData = new FormData()
+    formData.append('file', fileStatus.file)
+    formData.append('policy_id', fileStatus.file.name.replace(/\.[^/.]+$/, ""))
+    
+    const uploadResponse = await fetch(`${apiBaseUrl}/upload-document-backend`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    })
 
-    setIsUploading(true)
-    setUploadStartTime(new Date())
-    setElapsedTime(0)
-    setEstimatedTimeRemaining(300) // Reset to 5 minutes
-    setIsComplete(false)
-    setUploadSuccess(false)
-    setUploadError(null)
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text()
+      throw new Error(`Upload failed: ${uploadResponse.status} - ${errorText}`)
+    }
 
-    try {
-      const token = localStorage.getItem("token")
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
-      
-      // Create form data
-      const formData = new FormData()
-      formData.append('file', selectedFile)
-      formData.append('policy_id', selectedFile.name.replace(/\.[^/.]+$/, ""))
-      
-      // Upload to backend
-      const uploadResponse = await fetch(`${apiBaseUrl}/upload-document-backend`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
-      })
-
-      if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text()
-        throw new Error(`Upload failed: ${uploadResponse.status} - ${errorText}`)
-      }
-
-      const result = await uploadResponse.json()
-      console.log('✅ Upload response received:', result)
-      
-      // Store document ID for reference
-      setDocumentId(result.document_id || result.id || 'unknown')
-      
-      // Complete upload immediately when backend responds (success or failure)
-      setIsComplete(true)
-      
-      // Check if processing actually succeeded
-      if (result.success) {
-        // Give a brief moment for progress bar to animate to 100%, then show success
-        setTimeout(() => {
-          setUploadSuccess(true)
-          setIsUploading(false)
-          setEstimatedTimeRemaining(0)
-          
-          // Call success handler
-          if (onUploadSuccess) {
-            onUploadSuccess({
-              success: true,
-              document_id: result.document_id || result.id || 'unknown',
-              filename: selectedFile.name,
-              chunks_processed: 1,
-              total_chunks: 1,
-              text_length: 0,
-              message: result.message || 'Document processed successfully!'
-            })
-          }
-        }, 1500) // 1.5-second animation delay for polished completion effect
-      } else {
-        // Backend reported processing failure - immediately show error and stop progress bar
-        setUploadError(result.message || 'Document processing failed')
-        setIsUploading(false)
-        setIsComplete(false) // Don't trigger completion animation
-        setEstimatedTimeRemaining(0)
-        
-        // Call error handler
-        if (onUploadError) {
-          onUploadError(result.message || 'Document processing failed')
-        }
-      }
-      
-    } catch (error) {
-      console.error("Upload error:", error)
-      
-      let errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-      
-      // Detect common error types
-      if (errorMessage.includes('unauthorized') || errorMessage.includes('401')) {
-        errorMessage = '🔐 Authentication failed. Please log in again.'
-      } else if (errorMessage.includes('too large') || errorMessage.includes('413')) {
-        errorMessage = '📦 File too large. Please upload a file smaller than 50MB.'
-      } else if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
-        errorMessage = '🌐 Network connection failed. Please check your internet connection and try again.'
-      }
-      
-      setUploadError(errorMessage)
-      setIsUploading(false)
-      setUploadStartTime(null)
-      setElapsedTime(0)
-      
-      if (onUploadError) {
-        onUploadError(errorMessage)
-      }
+    const result = await uploadResponse.json()
+    return {
+      success: true,
+      document_id: result.document_id || result.id || 'unknown',
+      filename: fileStatus.file.name,
+      chunks_processed: result.chunks_processed || 1,
+      total_chunks: result.total_chunks || 1,
+      text_length: result.text_length || 0,
+      message: result.message || 'Document processed successfully!'
     }
   }
 
-  // Format time display
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
+  // Upload all files
+  const handleUpload = async () => {
+    if (selectedFiles.length === 0) return
+    if (isUploading) return
+
+    setIsUploading(true)
+    setError(null)
+
+    // Update all pending files to uploading status
+    setSelectedFiles(prev => prev.map(file => 
+      file.status === 'pending' ? { ...file, status: 'uploading', progress: 0 } : file
+    ))
+
+    try {
+      // Upload files sequentially to avoid overwhelming the server
+      for (const fileStatus of selectedFiles) {
+        if (fileStatus.status !== 'uploading') continue
+
+        try {
+          const result = await uploadFile(fileStatus)
+          
+          // Update file status to complete
+          setSelectedFiles(prev => prev.map(f => 
+            f.file === fileStatus.file 
+              ? { ...f, status: 'complete', progress: 100, documentId: result.document_id }
+              : f
+          ))
+
+          // Call success handler for each file
+          if (onUploadSuccess) {
+            onUploadSuccess(result)
+          }
+        } catch (err) {
+          console.error('File upload failed:', err)
+          const error = err instanceof Error ? err.message : 'Unknown error occurred'
+          
+          // Update file status to error
+          setSelectedFiles(prev => prev.map(f => 
+            f.file === fileStatus.file 
+              ? { ...f, status: 'error', progress: 0, error }
+              : f
+          ))
+
+          // Call error handler
+          if (onUploadError) {
+            onUploadError(`Failed to upload ${fileStatus.file.name}: ${error}`)
+          }
+        }
+      }
+    } finally {
+      setIsUploading(false)
+    }
   }
 
-  // Reset form
+  const removeFile = (file: File) => {
+    setSelectedFiles(prev => prev.filter(f => f.file !== file))
+  }
+
   const resetUpload = () => {
-    setSelectedFile(null)
+    setSelectedFiles([])
     setError(null)
-    setIsUploading(false)
-    setUploadSuccess(false)
-    setUploadError(null)
-    setDocumentId(null)
-    setUploadStartTime(null)
-    setElapsedTime(0)
-    setEstimatedTimeRemaining(300)
-    setIsComplete(false)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
   }
 
   return (
-    <Card className={`p-8 max-w-2xl mx-auto ${className}`}>
-      <div className="space-y-6">
+    <Card className={`p-6 ${className}`}>
+      <div
+        className={`border-2 border-dashed rounded-lg p-8 text-center ${
+          isDragOver ? 'border-teal-500 bg-teal-50' : 'border-gray-300'
+        }`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileInputChange}
+          className="hidden"
+          multiple
+          accept=".pdf,.doc,.docx,.txt"
+        />
+
+        <Upload className="mx-auto h-12 w-12 text-gray-400" />
         
-        {/* Title */}
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Your Document</h2>
-          <p className="text-gray-600">Processing typically takes 3-5 minutes</p>
-        </div>
+        <h3 className="mt-4 text-lg font-semibold text-gray-900">
+          Upload Your Documents
+        </h3>
+        
+        <p className="mt-2 text-sm text-gray-600">
+          Drag and drop your files here, or{' '}
+          <button
+            type="button"
+            className="text-teal-600 hover:text-teal-500 font-medium"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            browse
+          </button>
+        </p>
+        
+        <p className="mt-1 text-xs text-gray-500">
+          PDF, DOC, DOCX or TXT up to 50MB
+        </p>
+      </div>
 
-        {/* File Selection Area */}
-        {!selectedFile && !isUploading && !uploadSuccess && !uploadError && (
-        <div
-          className={`
-              border-2 border-dashed rounded-lg p-12 text-center transition-colors cursor-pointer
-            ${isDragOver 
-              ? 'border-teal-500 bg-teal-50' 
-              : 'border-gray-300 hover:border-teal-400 hover:bg-teal-50'
-            }
-          `}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.doc,.docx,.txt"
-            onChange={handleFileInputChange}
-            className="hidden"
-          />
-
-            <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 mb-4">Choose your insurance document</p>
-            <p className="text-sm text-gray-500">
-              Supports PDF, DOC, DOCX, TXT (max 50MB)
-            </p>
-          </div>
-        )}
-
-        {/* Selected File Display */}
-        {selectedFile && !isUploading && !uploadSuccess && !uploadError && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-center space-x-3 p-4 bg-teal-50 rounded-lg">
-              <File className="h-6 w-6 text-teal-600" />
-              <div className="text-center">
-                <p className="font-medium text-teal-800">{selectedFile.name}</p>
-                <p className="text-sm text-teal-600">
-                  {(selectedFile.size / 1024 / 1024).toFixed(1)} MB
-                </p>
-              </div>
-        </div>
-
-            <div className="flex space-x-3">
-              <button
-                onClick={handleUpload}
-                className="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
-              >
-                Start Processing
-              </button>
-              <button
-                onClick={resetUpload}
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Change File
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Processing State */}
-        {isUploading && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-center space-x-3">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
-              <span className="text-lg font-medium text-gray-800">Processing your document...</span>
-            </div>
-            
-            {/* Smart Progress Bar */}
-            <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-              <div className="w-full bg-gray-200 rounded-full h-4">
-              <div 
-                  className="bg-gradient-to-r from-teal-500 to-teal-600 h-4 rounded-full transition-all duration-1000 ease-out"
-                  style={{ 
-                    width: `${isComplete ? 100 : Math.min(85, Math.max(5, (elapsedTime / 120) * 85 + 5))}%` 
-                  }}
-                ></div>
-              </div>
-              
-              <p className="text-center text-gray-600">
-                Analyzing and processing your document...
-              </p>
-            </div>
-            
-            <p className="text-sm text-gray-500 text-center">
-              You can safely close this window. Processing continues in the background.
-            </p>
-          </div>
-        )}
-
-        {/* Success State */}
-        {uploadSuccess && (
-          <div className="space-y-4 text-center">
-            <div className="flex items-center justify-center space-x-3 text-green-600">
-              <CheckCircle className="h-8 w-8" />
-              <span className="text-lg font-medium">Document Ready!</span>
-            </div>
-            
-            <p className="text-gray-600">
-              Your document has been processed and is ready for use.
-            </p>
-            
-            <div className="flex space-x-3">
-              <button 
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
-                onClick={() => {
-                  // Navigate to chat or wherever appropriate
-                  console.log('Navigate to chat')
-                }}
-              >
-                Start Chatting
-              </button>
-              <button 
-                onClick={resetUpload}
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Upload Another
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Error State */}
-        {uploadError && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-start space-x-3">
-              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-red-700 font-medium">Upload failed</p>
-                <p className="text-xs text-red-600 mt-1 break-words">{uploadError}</p>
-                
-                <div className="flex flex-wrap gap-2 mt-3">
-                  <button
-                    onClick={resetUpload}
-                    className="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded transition-colors"
-                  >
-                    Try Again
-                  </button>
-                  <button
-                    onClick={() => setUploadError(null)}
-                    className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded transition-colors"
-                  >
-                    Dismiss
-                  </button>
+      {/* File List */}
+      {selectedFiles.length > 0 && (
+        <div className="mt-4 space-y-3">
+          {selectedFiles.map((fileStatus) => (
+            <div
+              key={fileStatus.file.name}
+              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+            >
+              <div className="flex items-center space-x-3">
+                <File className="h-5 w-5 text-gray-400" />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{fileStatus.file.name}</p>
+                  <p className="text-xs text-gray-500">
+                    {(fileStatus.file.size / (1024 * 1024)).toFixed(2)} MB
+                  </p>
                 </div>
               </div>
               
-              <button
-                onClick={() => setUploadError(null)}
-                className="text-red-400 hover:text-red-600 flex-shrink-0"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex items-center space-x-3">
+                {fileStatus.status === 'pending' && (
+                  <button
+                    onClick={() => removeFile(fileStatus.file)}
+                    className="text-gray-400 hover:text-gray-500"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                )}
+                
+                {fileStatus.status === 'uploading' && (
+                  <Clock className="h-5 w-5 text-teal-500 animate-spin" />
+                )}
+                
+                {fileStatus.status === 'complete' && (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                )}
+                
+                {fileStatus.status === 'error' && (
+                  <div className="flex items-center space-x-1 text-red-500">
+                    <AlertCircle className="h-5 w-5" />
+                    <span className="text-xs">{fileStatus.error}</span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          ))}
+        </div>
+      )}
 
-        {/* File validation error */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="h-5 w-5 text-red-600" />
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          </div>
-        )}
+      {/* Error Message */}
+      {error && (
+        <div className="mt-4 p-3 bg-red-50 text-red-700 rounded-lg flex items-center">
+          <AlertCircle className="h-5 w-5 mr-2" />
+          <span className="text-sm">{error}</span>
+        </div>
+      )}
 
-      </div>
+      {/* Upload Button */}
+      {selectedFiles.length > 0 && (
+        <div className="mt-4 flex justify-end space-x-3">
+          <button
+            onClick={resetUpload}
+            className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-800"
+            disabled={isUploading}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleUpload}
+            disabled={isUploading || selectedFiles.every(f => f.status === 'complete')}
+            className={`px-4 py-2 rounded-md text-sm font-medium text-white ${
+              isUploading
+                ? 'bg-teal-400 cursor-not-allowed'
+                : 'bg-teal-600 hover:bg-teal-700'
+            }`}
+          >
+            {isUploading ? 'Uploading...' : 'Upload Files'}
+          </button>
+        </div>
+      )}
     </Card>
   )
 } 

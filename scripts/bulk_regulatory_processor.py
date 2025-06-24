@@ -60,63 +60,44 @@ class UnifiedRegulatoryProcessor:
         
         logger.info(f"Starting processing of {len(urls)} regulatory documents")
         
-        # Process in batches to avoid overwhelming servers
         for i in range(0, len(urls), batch_size):
             batch = urls[i:i + batch_size]
-            batch_num = i//batch_size + 1
-            logger.info(f"Processing batch {batch_num}: {len(batch)} URLs")
+            batch_results = await asyncio.gather(
+                *[self._process_single_url(url) for url in batch],
+                return_exceptions=True
+            )
             
-            batch_tasks = [self._process_single_url(url) for url in batch]
-            batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
-            
-            for url, result in zip(batch, batch_results):
+            for result in batch_results:
                 if isinstance(result, Exception):
-                    logger.error(f"Failed to process {url}: {result}")
-                    results['failed'].append({'url': url, 'error': str(result)})
+                    logger.error(f"Batch processing error: {result}")
+                    continue
+                    
+                if result['status'] == 'processed':
+                    results['processed'].append(result)
+                    results['total_vectors_created'] += result.get('vector_count', 0)
+                elif result['status'] == 'duplicate':
+                    results['duplicates'].append(result)
                 else:
-                    if result['status'] == 'duplicate':
-                        results['duplicates'].append(result)
-                        logger.info(f"Duplicate found: {url}")
-                    else:
-                        results['processed'].append(result)
-                        results['total_vectors_created'] += result.get('vector_count', 0)
-                        logger.info(f"Successfully processed: {url} ({result.get('vector_count', 0)} vectors)")
+                    results['failed'].append(result)
             
-            # Small delay between batches to be respectful to servers
-            if i + batch_size < len(urls):
-                await asyncio.sleep(2)
-        
+            await asyncio.sleep(1)  # Rate limiting
+            
         results['processing_time'] = (datetime.now() - results['start_time']).total_seconds()
         return results
-    
+
     async def _process_single_url(self, url: str) -> Dict[str, Any]:
         """Process a single regulatory document URL."""
         try:
-            logger.info(f"Processing URL: {url}")
+            content_text, content_data, file_data, filename, content_type = await self._extract_content(url)
             
-            # Step 1: Download the actual file content
-            file_data, filename, content_type = await self._download_file_from_url(url)
+            # Generate content hash for deduplication
+            content_hash = hashlib.sha256(content_text.encode()).hexdigest()
             
-            # Step 2: Extract text content using regulatory agent
-            content_data = await self.regulatory_agent.extract_document_content(url)
-            
-            if not content_data or 'content' not in content_data:
-                raise ValueError(f"No content extracted from {url}")
-            
-            # Generate content hash for duplicate detection (use file content hash if available, otherwise text hash)
-            content_text = content_data['content']
-            if len(content_text.strip()) < 100:
-                raise ValueError(f"Content too short (< 100 chars): {len(content_text)} chars")
-            
-            # Use file data for hash if available (more reliable), otherwise use extracted text
-            hash_data = file_data if file_data else content_text.encode('utf-8')
-            content_hash = hashlib.sha256(hash_data).hexdigest()
-            
-            # Check for duplicates and insert document
             pool = await get_db_pool()
             async with pool.get_connection() as conn:
+                # Check for existing document
                 existing_doc = await conn.fetchrow(
-                    "SELECT document_id FROM regulatory_documents WHERE content_hash = $1",
+                    "SELECT id FROM documents WHERE file_hash = $1 AND document_type = 'regulatory'",
                     content_hash
                 )
                 
@@ -124,11 +105,11 @@ class UnifiedRegulatoryProcessor:
                     return {
                         'status': 'duplicate',
                         'url': url,
-                        'existing_document_id': str(existing_doc['document_id']),
+                        'existing_document_id': str(existing_doc['id']),
                         'message': 'Document already exists with same content hash'
                     }
                 
-                # Step 3: Store raw file in storage if we have file data
+                # Store raw file in storage if we have file data
                 storage_path = None
                 if file_data:
                     storage_path = await self._store_raw_file(file_data, filename, content_type)
@@ -138,29 +119,30 @@ class UnifiedRegulatoryProcessor:
                 title = content_data.get('title', filename or url.split('/')[-1] or 'Regulatory Document')
                 jurisdiction = content_data.get('jurisdiction', 'United States')
                 programs = content_data.get('programs', ['Healthcare', 'General'])
-                doc_type = content_data.get('document_type', 'regulatory')
+                doc_type = 'regulatory'  # Always regulatory in this processor
                 
-                # Insert regulatory document
+                # Insert into unified documents table
                 doc_id = await conn.fetchval("""
-                    INSERT INTO regulatory_documents (
-                        raw_document_path, title, jurisdiction, program, document_type,
-                        structured_contents, source_url, content_hash, 
-                        extraction_method, priority_score, search_metadata,
-                        tags, created_at, updated_at
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-                    RETURNING document_id
+                    INSERT INTO documents (
+                        storage_path, original_filename, document_type, jurisdiction,
+                        program, effective_date, expiration_date, source_url,
+                        source_last_checked, file_hash, priority_score, metadata,
+                        tags, status, created_at, updated_at
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+                    RETURNING id
                 """,
-                    storage_path or url,  # raw_document_path - use storage path if available
-                    title,
-                    jurisdiction,
-                    programs,
-                    doc_type,
-                    json.dumps(content_data),
-                    url,
-                    content_hash,
-                    'bulk_url_processing',
-                    content_data.get('priority_score', 1.0),
-                    json.dumps({
+                    storage_path or url,  # storage_path
+                    title,  # original_filename
+                    doc_type,  # document_type
+                    jurisdiction,  # jurisdiction
+                    programs,  # program
+                    content_data.get('effective_date'),  # effective_date
+                    content_data.get('expiration_date'),  # expiration_date
+                    url,  # source_url
+                    datetime.now(),  # source_last_checked
+                    content_hash,  # file_hash
+                    content_data.get('priority_score', 1.0),  # priority_score
+                    json.dumps({  # metadata
                         'processing_timestamp': datetime.now().isoformat(),
                         'source_method': 'bulk_processor',
                         'content_length': len(content_text),
@@ -170,20 +152,23 @@ class UnifiedRegulatoryProcessor:
                         'storage_path': storage_path,
                         'extraction_metadata': content_data.get('metadata', {})
                     }),
-                    content_data.get('tags', ['healthcare', 'regulatory']),
-                    datetime.now(),
-                    datetime.now()
+                    content_data.get('tags', ['healthcare', 'regulatory']),  # tags
+                    'completed',  # status
+                    datetime.now(),  # created_at
+                    datetime.now()  # updated_at
                 )
                 
-                logger.info(f"Created regulatory document {doc_id} for {url}")
+                logger.info(f"Created document {doc_id} for {url}")
                 
                 # Generate vectors using the unified system
                 embedding_service = await get_encryption_aware_embedding_service()
-                vector_ids = await self._create_regulatory_vectors(
+                vector_ids = await self._create_document_vectors(
                     embedding_service, str(doc_id), content_text, {
-                        **content_data,
                         'document_id': str(doc_id),
-                        'source_url': url
+                        'source_url': url,
+                        'document_type': doc_type,
+                        'jurisdiction': jurisdiction,
+                        'programs': programs
                     }
                 )
                 
@@ -207,14 +192,14 @@ class UnifiedRegulatoryProcessor:
             logger.error(f"Error processing {url}: {e}")
             raise Exception(f"Failed to process {url}: {str(e)}")
     
-    async def _create_regulatory_vectors(
+    async def _create_document_vectors(
         self, 
         embedding_service, 
-        regulatory_doc_id: str, 
+        document_id: str, 
         content_text: str,
         metadata: Dict[str, Any]
     ) -> List[str]:
-        """Create vectors for regulatory document using unified table."""
+        """Create vectors for document using unified table."""
         try:
             from langchain.text_splitter import RecursiveCharacterTextSplitter
             
@@ -226,7 +211,7 @@ class UnifiedRegulatoryProcessor:
             )
             
             chunks = text_splitter.split_text(content_text)
-            logger.info(f"Created {len(chunks)} chunks for regulatory document {regulatory_doc_id}")
+            logger.info(f"Created {len(chunks)} chunks for document {document_id}")
             
             # Generate embeddings for all chunks
             embeddings_list = []
@@ -248,7 +233,6 @@ class UnifiedRegulatoryProcessor:
             async with pool.get_connection() as conn:
                 for i, (chunk, embedding) in enumerate(zip(chunks, embeddings_list)):
                     try:
-                        # Simple storage without encryption for regulatory documents
                         chunk_metadata = {
                             **metadata, 
                             'chunk_index': i, 
@@ -257,35 +241,33 @@ class UnifiedRegulatoryProcessor:
                         
                         vector_id = await conn.fetchval("""
                             INSERT INTO document_vectors (
-                                user_id, document_id, regulatory_document_id, chunk_index, 
-                                chunk_embedding, chunk_text, chunk_metadata,
-                                document_source_type, is_active, created_at
-                            ) VALUES ($1, $2, $3, $4, $5::vector, $6, $7, $8, $9, $10)
+                                document_id, chunk_index, content_embedding, 
+                                chunk_text, chunk_metadata, document_source_type,
+                                is_active, created_at
+                            ) VALUES ($1, $2, $3::vector, $4, $5, $6, $7, $8)
                             RETURNING id
                         """,
-                            None,  # user_id is NULL for regulatory docs
-                            None,   # document_id is NULL for regulatory docs (no FK to user_documents)
-                            regulatory_doc_id,  # regulatory_document_id
-                            i,
-                            str(embedding),
-                            chunk,
-                            json.dumps(chunk_metadata),
-                            'regulatory_document',
-                            True,
-                            datetime.now()
+                            document_id,  # document_id
+                            i,  # chunk_index
+                            str(embedding),  # content_embedding
+                            chunk,  # chunk_text
+                            json.dumps(chunk_metadata),  # chunk_metadata
+                            'regulatory',  # document_source_type
+                            True,  # is_active
+                            datetime.now()  # created_at
                         )
                         
                         vector_ids.append(str(vector_id))
                         
                     except Exception as e:
-                        logger.error(f"Failed to store vector {i} for document {regulatory_doc_id}: {e}")
+                        logger.error(f"Failed to store vector {i} for document {document_id}: {e}")
                         continue
             
-            logger.info(f"Stored {len(vector_ids)} vectors for regulatory document {regulatory_doc_id}")
+            logger.info(f"Stored {len(vector_ids)} vectors for document {document_id}")
             return vector_ids
             
         except Exception as e:
-            logger.error(f"Failed to create vectors for regulatory document {regulatory_doc_id}: {e}")
+            logger.error(f"Failed to create vectors for document {document_id}: {e}")
             raise Exception(f"Failed to create vectors: {str(e)}")
 
     async def _download_file_from_url(self, url: str) -> tuple[Optional[bytes], Optional[str], Optional[str]]:

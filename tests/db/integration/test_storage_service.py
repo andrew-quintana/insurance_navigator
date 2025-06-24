@@ -7,7 +7,7 @@ import asyncio
 from typing import AsyncGenerator, Dict, Any
 
 from db.services.storage_service import StorageService
-from db.config import SupabaseConfig
+from db.config import config
 
 # Integration test markers
 pytestmark = [
@@ -16,9 +16,9 @@ pytestmark = [
 ]
 
 @pytest.fixture
-async def supabase_config() -> SupabaseConfig:
-    """Create Supabase configuration from environment variables."""
-    return SupabaseConfig.from_env()
+async def supabase_config():
+    """Get Supabase configuration."""
+    return config.supabase
 
 @pytest.fixture
 async def storage_service(supabase_config) -> StorageService:

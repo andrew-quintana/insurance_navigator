@@ -45,14 +45,18 @@ class TestRegulatoryAgent:
             new_results=1,
             documents=[
                 {
-                    "document_id": "test-doc-1",
-                    "title": "Medicare Coverage Determination Process",
-                    "url": "https://www.cms.gov/medicare/coverage/determination-process",
-                    "content": "Medicare coverage determinations are decisions about whether Medicare will cover specific medical items or services.",
-                    "document_type": "policy",
+                    "id": "test-doc-1",
+                    "original_filename": "Medicare Coverage Determination Process",
+                    "storage_path": "https://www.cms.gov/medicare/coverage/determination-process",
+                    "document_type": "regulatory",
                     "jurisdiction": "federal",
-                    "programs": ["Medicare"],
-                    "source": "web_search_new"
+                    "program": ["Medicare"],
+                    "source_url": "https://www.cms.gov/medicare/coverage/determination-process",
+                    "metadata": {
+                        "content": "Medicare coverage determinations are decisions about whether Medicare will cover specific medical items or services.",
+                        "extraction_method": "web_search_new"
+                    },
+                    "tags": ["medicare", "coverage", "policy"]
                 }
             ],
             search_timestamp=datetime.now(),
@@ -97,6 +101,131 @@ class TestRegulatoryAgent:
                 assert "Found 2 regulatory documents" in result
                 assert "Medicare Coverage Determination Process" in result
                 assert "cms.gov" in result
+
+    @pytest.mark.asyncio
+    async def test_document_processing(self, mock_db_config):
+        """Test document processing functionality."""
+        with patch('agents.regulatory.core.regulatory.get_db_config', return_value=mock_db_config):
+            with patch('agents.regulatory.core.regulatory.UnifiedRegulatoryProcessor') as mock_processor_class:
+                # Setup mock
+                mock_processor = AsyncMock()
+                mock_processor.process_single_regulatory_document.return_value = {
+                    "status": "success",
+                    "document_id": "test-doc-1",
+                    "vector_count": 5
+                }
+                mock_processor_class.return_value = mock_processor
+                
+                agent = RegulatoryAgent()
+                
+                # Test document processing
+                result = await agent.process_document(
+                    url="https://test.cms.gov/doc1",
+                    metadata={
+                        "jurisdiction": "federal",
+                        "programs": ["Medicare"],
+                        "tags": ["coverage", "policy"]
+                    }
+                )
+                
+                assert result["status"] == "success"
+                assert result["vector_count"] == 5
+                assert "document_id" in result
+
+    @pytest.mark.asyncio
+    async def test_bulk_document_processing(self, mock_db_config):
+        """Test bulk document processing functionality."""
+        with patch('agents.regulatory.core.regulatory.get_db_config', return_value=mock_db_config):
+            with patch('agents.regulatory.core.regulatory.UnifiedRegulatoryProcessor') as mock_processor_class:
+                # Setup mock
+                mock_processor = AsyncMock()
+                mock_processor.process_bulk_regulatory_documents.return_value = {
+                    "processed": [
+                        {
+                            "status": "success",
+                            "document_id": "test-doc-1",
+                            "vector_count": 5
+                        }
+                    ],
+                    "failed": [],
+                    "duplicates": [],
+                    "total_vectors_created": 5
+                }
+                mock_processor_class.return_value = mock_processor
+                
+                agent = RegulatoryAgent()
+                
+                # Test bulk processing
+                result = await agent.process_document_list([
+                    {
+                        "url": "https://test.cms.gov/doc1",
+                        "metadata": {
+                            "jurisdiction": "federal",
+                            "programs": ["Medicare"],
+                            "tags": ["coverage", "policy"]
+                        }
+                    }
+                ])
+                
+                assert len(result["processed"]) == 1
+                assert result["total_vectors_created"] == 5
+                assert len(result["failed"]) == 0
+
+    @pytest.mark.asyncio
+    async def test_document_type_estimation(self):
+        """Test document type estimation."""
+        agent = RegulatoryAgent()
+        
+        test_cases = [
+            {
+                "title": "Medicare Coverage Determination Process",
+                "content": "CMS guidance on coverage",
+                "url": "cms.gov/coverage",
+                "expected": "regulatory"
+            },
+            {
+                "title": "42 CFR 411 - Medicare regulations",
+                "content": "Federal regulations text",
+                "url": "ecfr.gov",
+                "expected": "regulatory"
+            },
+            {
+                "title": "Provider Enrollment Application",
+                "content": "Form for Medicare providers",
+                "url": "cms.gov/forms",
+                "expected": "regulatory"
+            }
+        ]
+        
+        for case in test_cases:
+            doc_type = agent._estimate_document_type(case["title"], case["content"], case["url"])
+            assert doc_type == case["expected"], f"Expected {case['expected']} for {case['title']}, got {doc_type}"
+
+    @pytest.mark.asyncio
+    async def test_error_handling(self, mock_db_config):
+        """Test error handling in document processing."""
+        with patch('agents.regulatory.core.regulatory.get_db_config', return_value=mock_db_config):
+            with patch('agents.regulatory.core.regulatory.UnifiedRegulatoryProcessor') as mock_processor_class:
+                # Setup mock to raise an exception
+                mock_processor = AsyncMock()
+                mock_processor.process_single_regulatory_document.side_effect = Exception("Test error")
+                mock_processor_class.return_value = mock_processor
+                
+                agent = RegulatoryAgent()
+                
+                # Test error handling
+                result = await agent.process_document(
+                    url="https://test.cms.gov/doc1",
+                    metadata={
+                        "jurisdiction": "federal",
+                        "programs": ["Medicare"],
+                        "tags": ["coverage", "policy"]
+                    }
+                )
+                
+                assert result["status"] == "failed"
+                assert "error" in result
+                assert "Test error" in result["error"]
 
 
 class TestRegulatoryAgentDemo:

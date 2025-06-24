@@ -158,10 +158,10 @@ class EmbeddingService:
                     }
                     
                     record_id = await conn.fetchval("""
-                        INSERT INTO user_document_vectors 
-                        (user_id, document_id, chunk_index, content_embedding, 
-                         chunk_text, chunk_metadata)
-                        VALUES ($1, $2, $3, $4::vector, $5, $6)
+                        INSERT INTO document_vectors 
+                        (user_id, document_record_id, chunk_index, content_embedding, 
+                         chunk_text, chunk_metadata, document_source_type)
+                        VALUES ($1, $2, $3, $4::vector, $5, $6, 'user_document')
                         RETURNING id
                     """,
                     user_id, document_id, i, str(embedding), 
