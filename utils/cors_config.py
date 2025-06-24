@@ -28,6 +28,9 @@ class CORSConfig:
         if os.getenv("ENVIRONMENT") == "development":
             self.allowed_origins = ["*"]
             
+        # Add Vercel preview URL pattern
+        self.allowed_origin_regex = r"https://insurance-navigator-[a-z0-9\-]+-andrew-quintanas-projects\.vercel\.app"
+            
         self.allowed_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"]
         self.allowed_headers = [
             "Content-Type",
@@ -59,8 +62,21 @@ class CORSConfig:
             "allow_headers": self.allowed_headers,
             "expose_headers": self.expose_headers,
             "max_age": self.max_age,
-            "allow_origin_regex": None  # Disable regex for security
+            "allow_origin_regex": self.allowed_origin_regex
         }
+    
+    def is_origin_allowed(self, origin: str) -> bool:
+        """Check if origin is allowed."""
+        if os.getenv("ENVIRONMENT") == "development":
+            return True
+            
+        if origin in self.allowed_origins:
+            return True
+            
+        if self.allowed_origin_regex and re.match(self.allowed_origin_regex, origin):
+            return True
+            
+        return False
     
     def create_preflight_response(self, origin: str) -> Dict[str, str]:
         """Create CORS preflight response headers."""
@@ -68,8 +84,11 @@ class CORSConfig:
         if os.getenv("ENVIRONMENT") == "development":
             allowed_origin = origin
         else:
-            # In production, only allow whitelisted origins
-            allowed_origin = origin if origin in self.allowed_origins else self.allowed_origins[0]
+            # In production, check against whitelist and regex pattern
+            allowed_origin = origin if self.is_origin_allowed(origin) else ""
+        
+        if not allowed_origin:
+            return {}  # Return empty headers if origin not allowed
         
         return {
             "Access-Control-Allow-Origin": allowed_origin,
@@ -87,8 +106,11 @@ class CORSConfig:
         if os.getenv("ENVIRONMENT") == "development":
             allowed_origin = origin
         else:
-            # In production, only allow whitelisted origins
-            allowed_origin = origin if origin in self.allowed_origins else self.allowed_origins[0]
+            # In production, check against whitelist and regex pattern
+            allowed_origin = origin if self.is_origin_allowed(origin) else ""
+        
+        if not allowed_origin:
+            return headers  # Return original headers if origin not allowed
         
         headers.update({
             "Access-Control-Allow-Origin": allowed_origin,
