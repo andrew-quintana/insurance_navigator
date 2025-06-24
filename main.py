@@ -56,21 +56,30 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Add middleware
-app.add_middleware(CORSMiddleware, **cors_config.get_fastapi_cors_middleware_config())
-
-# Add custom middleware for OPTIONS requests
-@app.middleware("http")
-async def handle_options(request: Request, call_next):
-    """Handle OPTIONS requests with proper CORS headers."""
-    if request.method == "OPTIONS":
-        response = Response()
-        # Get origin from request headers
-        origin = request.headers.get("origin", "")
-        # Add CORS headers
-        response.headers.update(cors_config.create_preflight_response(origin))
-        return response
-    return await call_next(request)
+# Add CORS middleware with direct configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "https://insurance-navigator.vercel.app",
+        "https://insurance-navigator-staging.vercel.app",
+        "https://insurance-navigator-dev.vercel.app",
+        "***REMOVED***",
+        "https://insurance-navigator-api-staging.onrender.com"
+    ],
+    allow_origin_regex=r"https://insurance-navigator-[a-z0-9\-]+-andrew-quintanas-projects\.vercel\.app",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=[
+        "Content-Length",
+        "Content-Range",
+        "X-Total-Count",
+        "X-Processing-Status"
+    ],
+    max_age=600
+)
 
 # Health check cache
 _health_cache = {"result": None, "timestamp": 0}
@@ -465,10 +474,6 @@ async def shutdown_event():
 @app.post("/login")
 async def login(request: Request, response: Response):
     """Login endpoint with proper CORS handling."""
-    # Add CORS headers to response
-    origin = request.headers.get("origin", "")
-    response.headers.update(cors_config.add_cors_headers({}, origin))
-    
     try:
         # Get request body
         body = await request.json()
