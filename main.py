@@ -37,9 +37,6 @@ from db.services.queue_service import QueueService
 from db.services.llamaparse_service import LlamaParseService
 from db.services.vector_service import VectorService
 
-# Centralized CORS configuration
-from utils.cors_config import cors_config, create_preflight_response, add_cors_headers
-
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
@@ -54,6 +51,23 @@ app = FastAPI(
     version="3.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
+)
+
+# Add CORS middleware with environment-aware configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"] if os.getenv("ENVIRONMENT") == "development" else [
+        "https://insurance-navigator-hr7oebcu2-andrew-quintanas-projects.vercel.app",
+        "https://insurance-navigator.vercel.app",
+        "https://insurance-navigator-staging.vercel.app",
+        "http://localhost:8080",
+        "http://localhost:3000"
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],
+    allow_headers=["*"],
+    max_age=600,
+    expose_headers=["*"]
 )
 
 # Health check cache
@@ -450,23 +464,6 @@ async def get_current_user_info(current_user: UserResponse = Depends(get_current
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred"
         )
-
-# Add CORS middleware with environment-aware configuration
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"] if os.getenv("ENVIRONMENT") == "development" else [
-        "https://insurance-navigator-hr7oebcu2-andrew-quintanas-projects.vercel.app",
-        "https://insurance-navigator.vercel.app",
-        "https://insurance-navigator-staging.vercel.app",
-        "http://localhost:8080",
-        "http://localhost:3000"
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    max_age=600,
-    expose_headers=["*"]
-)
 
 if __name__ == "__main__":
     import uvicorn
