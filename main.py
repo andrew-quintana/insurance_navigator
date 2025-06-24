@@ -293,7 +293,6 @@ async def upload_document_backend(
         # Validate file size
         contents = await file.read()
         file_size = len(contents)
-        await file.seek(0)
         
         if file_size > 50 * 1024 * 1024:  # 50MB limit
             logger.error(f"❌ File too large: {file_size} bytes")
@@ -304,12 +303,19 @@ async def upload_document_backend(
         # Initialize services
         services = await get_services()
         
+        # Generate document ID
+        document_id = str(uuid.uuid4())
+        
         # Process upload
         logger.info(f"🔄 Starting document processing for {file.filename}")
         result = await services["document_processing"].process_document(
-            file=file,
-            user_id=current_user.id,
-            policy_id=policy_id
+            document_id=document_id,
+            file_data=contents,
+            filename=file.filename,
+            content_type=file.content_type or "application/octet-stream",
+            user_id=str(current_user.id),
+            document_type="policy",
+            metadata={"policy_id": policy_id}
         )
         logger.info(f"✅ Document processing completed: {result}")
         
