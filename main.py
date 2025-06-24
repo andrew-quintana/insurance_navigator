@@ -76,7 +76,11 @@ app.add_middleware(
         "Authorization",
         "Accept",
         "Origin",
-        "X-Requested-With"
+        "X-Requested-With",
+        "Access-Control-Request-Method",
+        "Access-Control-Request-Headers",
+        "Access-Control-Allow-Origin",
+        "Access-Control-Allow-Credentials"
     ],
     max_age=3600,
     expose_headers=["Content-Length", "Content-Range"]
@@ -409,9 +413,22 @@ async def shutdown_event():
     logger.info("🛑 Shutting down Insurance Navigator API")
 
 @app.options("/login")
-async def login_preflight():
-    """Handle preflight requests for login endpoint."""
-    return Response(status_code=200)
+async def login_preflight(request: Request):
+    """Handle preflight requests for login endpoint with proper CORS headers."""
+    origin = request.headers.get("Origin")
+    
+    # Validate origin
+    if origin and origin in origins:
+        headers = {
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept, Origin, X-Requested-With",
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Max-Age": "3600"
+        }
+        return Response(status_code=200, headers=headers)
+    
+    return Response(status_code=400)
 
 @app.post("/login")
 async def login(request: Request, response: Response):
