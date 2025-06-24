@@ -66,6 +66,29 @@ if os.getenv("ENVIRONMENT") == "development":
         "http://localhost:3000"
     ])
 
+# Add debug logging middleware for CORS
+class CORSDebugMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        logger.info(f"🔍 Incoming request: {request.method} {request.url}")
+        logger.info(f"📨 Headers: {dict(request.headers)}")
+        
+        if request.method == "OPTIONS":
+            logger.info("🔄 CORS Preflight request detected")
+            logger.info(f"🌐 Origin: {request.headers.get('Origin')}")
+            logger.info(f"📝 Request Method: {request.headers.get('Access-Control-Request-Method')}")
+            logger.info(f"📋 Request Headers: {request.headers.get('Access-Control-Request-Headers')}")
+        
+        response = await call_next(request)
+        
+        logger.info(f"📤 Response status: {response.status_code}")
+        logger.info(f"📤 Response headers: {dict(response.headers)}")
+        
+        return response
+
+# Add debug middleware before CORS middleware
+app.add_middleware(CORSDebugMiddleware)
+
+# Update CORS middleware with logging
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -414,11 +437,18 @@ async def shutdown_event():
 
 @app.options("/login")
 async def login_preflight(request: Request):
-    """Handle preflight requests for login endpoint with proper CORS headers."""
+    """Handle preflight requests for login endpoint with proper CORS headers and logging."""
+    logger.info("👋 Login preflight request received")
     origin = request.headers.get("Origin")
+    logger.info(f"🌐 Request Origin: {origin}")
+    logger.info(f"📨 Request Headers: {dict(request.headers)}")
+    
+    # Log allowed origins for debugging
+    logger.info(f"✅ Allowed Origins: {origins}")
     
     # Validate origin
     if origin and origin in origins:
+        logger.info(f"✅ Origin {origin} is allowed")
         headers = {
             "Access-Control-Allow-Origin": origin,
             "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -426,21 +456,26 @@ async def login_preflight(request: Request):
             "Access-Control-Allow-Credentials": "true",
             "Access-Control-Max-Age": "3600"
         }
+        logger.info(f"📤 Responding with headers: {headers}")
         return Response(status_code=200, headers=headers)
     
+    logger.warning(f"❌ Origin {origin} is not allowed")
     return Response(status_code=400)
 
 @app.post("/login")
 async def login(request: Request, response: Response):
     """Login endpoint with proper CORS and error handling."""
+    logger.info("🔐 Login request received")
+    logger.info(f"📨 Request Headers: {dict(request.headers)}")
+    
     try:
         # Get request body
         body = await request.json()
         email = body.get("email")
-        password = body.get("password")
+        logger.info(f"📧 Login attempt for email: {email}")
         
-        if not email or not password:
-            logger.warning("Login attempt failed: Missing email or password")
+        if not email or "password" not in body:
+            logger.warning("❌ Login failed: Missing email or password")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email and password are required"
@@ -450,31 +485,31 @@ async def login(request: Request, response: Response):
         user_service = await get_user_service()
         
         # Authenticate user
-        auth_result = await user_service.authenticate_user(email, password)
+        auth_result = await user_service.authenticate_user(email, body["password"])
         if not auth_result:
-            logger.warning(f"Login failed for user: {email}")
+            logger.warning(f"❌ Authentication failed for user: {email}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password"
             )
         
-        logger.info(f"User logged in successfully: {email}")
+        logger.info(f"✅ User logged in successfully: {email}")
         return {
             "access_token": auth_result["access_token"],
             "token_type": "bearer",
             "user": auth_result["user"]
         }
         
-    except HTTPException:
-        raise
-    except json.JSONDecodeError:
-        logger.error("Login failed: Invalid JSON in request body")
+    except json.JSONDecodeError as e:
+        logger.error(f"❌ Login failed - Invalid JSON: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid request format"
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Unexpected login error: {str(e)}")
+        logger.error(f"❌ Unexpected login error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred"
