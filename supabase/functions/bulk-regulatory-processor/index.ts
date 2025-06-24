@@ -1,280 +1,195 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { corsHeaders } from '../_shared/cors.ts'
 
-interface BulkRegulatoryRequest {
-  documents: Array<{
-    url: string;
-    title?: string;
-    jurisdiction?: string;
-    document_type?: string;
-    tags?: string[];
-  }>;
-  batch_size?: number;
+interface ProcessingRequest {
+  urls: string[]
+  metadata?: {
+    jurisdiction?: string
+    programs?: string[]
+    tags?: string[]
+    [key: string]: any
+  }
 }
 
 interface ProcessingResult {
-  success: boolean;
-  document_id?: string;
-  title: string;
-  url: string;
-  vector_count?: number;
-  error?: string;
+  status: 'processed' | 'duplicate' | 'failed'
+  url: string
+  document_id?: string
+  existing_document_id?: string
+  message?: string
+  processing_result?: any
+  error?: string
 }
 
-// Utility function to extract content from URL
-async function extractContentFromUrl(url: string): Promise<{ content: string; title: string; filename: string }> {
-  try {
-    console.log(`🌐 Fetching content from: ${url}`)
-    
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SupabaseBot/1.0)'
-      }
-    })
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-    
-    const contentType = response.headers.get('content-type') || ''
-    const text = await response.text()
-    
-    let title = url.split('/').pop() || 'Regulatory Document'
-    let content = text
-    
-    // Basic HTML parsing for title extraction
-    if (contentType.includes('text/html')) {
-      const titleMatch = text.match(/<title[^>]*>([^<]+)<\/title>/i)
-      if (titleMatch) {
-        title = titleMatch[1].trim()
-      }
-      
-      // Remove HTML tags for content
-      content = text
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-    }
-    
-    if (content.length < 100) {
-      throw new Error('Content too short after extraction')
-    }
-    
-    return {
-      content,
-      title,
-      filename: url.split('/').pop() || 'document.html'
-    }
-  } catch (error) {
-    console.error(`❌ Content extraction failed for ${url}:`, error)
-    throw error
+interface BatchResults {
+  processed: ProcessingResult[]
+  failed: ProcessingResult[]
+  duplicates: ProcessingResult[]
+  total_vectors_created: number
+  processing_time: number | null
+  start_time: string
+}
+
+serve(async (req: Request) => {
+  // Handle CORS
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
   }
-}
 
-// Generate content hash for deduplication
-function generateContentHash(content: string): string {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(content)
-  
-  // Simple hash implementation (for demo - use crypto.subtle in production)
-  let hash = 0
-  for (let i = 0; i < data.length; i++) {
-    const char = data[i]
-    hash = ((hash << 5) - hash) + char
-    hash = hash & hash // Convert to 32-bit integer
-  }
-  
-  return Math.abs(hash).toString(16)
-}
-
-Deno.serve(async (req) => {
   try {
-    console.log('🚀 bulk-regulatory-processor started')
-    
-    const supabase = createClient(
+    // Create Supabase client
+    const supabaseClient: SupabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      (Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const requestBody: BulkRegulatoryRequest = await req.json()
-    const { documents, batch_size = 3 } = requestBody
-    
-    console.log(`📥 Bulk processing request: ${documents.length} documents, batch size: ${batch_size}`)
-    
-    if (!documents || documents.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'No documents provided' }),
-        { status: 400 }
-      )
+    // Parse request body
+    const { urls, metadata = {} } = await req.json() as ProcessingRequest
+
+    if (!urls || !Array.isArray(urls) || urls.length === 0) {
+      throw new Error('No URLs provided')
     }
 
-    const results: ProcessingResult[] = []
-    
-    // Process documents in batches
-    for (let i = 0; i < documents.length; i += batch_size) {
-      const batch = documents.slice(i, i + batch_size)
-      console.log(`📦 Processing batch ${Math.floor(i / batch_size) + 1}/${Math.ceil(documents.length / batch_size)}`)
-      
-      const batchPromises = batch.map(async (doc) => {
+    // Process URLs in batches to avoid timeouts
+    const batchSize = 3
+    const results: BatchResults = {
+      processed: [],
+      failed: [],
+      duplicates: [],
+      total_vectors_created: 0,
+      processing_time: null,
+      start_time: new Date().toISOString()
+    }
+
+    for (let i = 0; i < urls.length; i += batchSize) {
+      const batch = urls.slice(i, i + batchSize)
+      console.log(`Processing batch ${i/batchSize + 1}: ${batch.length} URLs`)
+
+      const batchPromises = batch.map(async (url): Promise<ProcessingResult> => {
         try {
-          // Step 1: Extract content from URL
-          const { content, title, filename } = await extractContentFromUrl(doc.url)
-          
-          // Step 2: Generate content hash for deduplication
-          const contentHash = generateContentHash(content)
-          
-          // Step 3: Check for duplicates
-          const { data: existingDoc } = await supabase
-            .from('regulatory_documents')
-            .select('document_id, title')
-            .eq('content_hash', contentHash)
+          // Check for existing document
+          const { data: existingDoc } = await supabaseClient
+            .from('documents')
+            .select('id')
+            .eq('source_url', url)
+            .eq('document_type', 'regulatory')
             .single()
-          
+
           if (existingDoc) {
-            console.log(`🔄 Duplicate found for ${doc.url}: ${existingDoc.title}`)
+            console.log(`Duplicate found for ${url}`)
             return {
-              success: false,
-              title: title,
-              url: doc.url,
-              error: `Duplicate document exists: ${existingDoc.title}`
+              status: 'duplicate',
+              url,
+              existing_document_id: existingDoc.id,
+              message: 'Document already exists with same URL'
             }
           }
-          
-          // Step 4: Create regulatory document record
-          const { data: newDoc, error: createError } = await supabase
-            .from('regulatory_documents')
+
+          // Create document record
+          const { data: doc, error: docError } = await supabaseClient
+            .from('documents')
             .insert({
-              raw_document_path: doc.url,
-              title: doc.title || title,
-              jurisdiction: doc.jurisdiction || 'United States',
-              program: ['Healthcare', 'General'],
-              document_type: doc.document_type || 'regulatory',
-              structured_contents: JSON.stringify({
-                content,
-                title,
-                url: doc.url,
-                filename,
-                processing_timestamp: new Date().toISOString()
-              }),
-              source_url: doc.url,
-              content_hash: contentHash,
-              extraction_method: 'bulk_edge_processing',
+              storage_path: url,
+              original_filename: url.split('/').pop() || 'regulatory_document',
+              document_type: 'regulatory',
+              jurisdiction: metadata.jurisdiction || 'United States',
+              program: metadata.programs || ['Healthcare', 'General'],
+              source_url: url,
+              source_last_checked: new Date().toISOString(),
               priority_score: 1.0,
-              search_metadata: JSON.stringify({
+              metadata: {
                 processing_timestamp: new Date().toISOString(),
-                source_method: 'bulk_edge_processor',
-                content_length: content.length,
-                extraction_metadata: { filename, content_type: 'text/html' }
-              }),
-              tags: doc.tags || ['healthcare', 'regulatory'],
-              processing_status: 'pending',
-              status: 'pending',
-              vectors_generated: false
+                source_method: 'bulk_processor',
+                extraction_method: 'edge_function',
+                metadata_override: metadata
+              },
+              tags: metadata.tags || ['healthcare', 'regulatory'],
+              status: 'pending'
             })
-            .select('document_id')
+            .select()
             .single()
-          
-          if (createError) {
-            throw new Error(`Database insert failed: ${createError.message}`)
+
+          if (docError) {
+            throw new Error(`Failed to create document record: ${docError.message}`)
           }
-          
-          console.log(`✅ Created regulatory document: ${newDoc.document_id}`)
-          
-          // Step 5: Trigger vector processing via the existing vector-processor
-          const vectorResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/vector-processor`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
-            },
-            body: JSON.stringify({
-              documentId: newDoc.document_id,
-              extractedText: content,
-              documentType: 'regulatory'
-            })
-          })
-          
-          if (!vectorResponse.ok) {
-            const errorText = await vectorResponse.text()
-            console.error(`❌ Vector processing failed for ${newDoc.document_id}:`, errorText)
-            // Don't fail the whole operation, just mark as needing retry
-            await supabase
-              .from('regulatory_documents')
-              .update({ 
-                processing_status: 'failed',
-                error_message: `Vector processing failed: ${errorText}`
+
+          // Call doc-parser to process the document
+          const processingResponse = await fetch(
+            `${Deno.env.get('SUPABASE_URL')}/functions/v1/doc-parser`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+              },
+              body: JSON.stringify({
+                documentId: doc.id,
+                url,
+                documentType: 'regulatory',
+                metadata: {
+                  jurisdiction: metadata.jurisdiction,
+                  programs: metadata.programs,
+                  tags: metadata.tags
+                }
               })
-              .eq('document_id', newDoc.document_id)
-            
-            return {
-              success: false,
-              title: title,
-              url: doc.url,
-              error: `Vector processing failed: ${errorText}`
             }
+          )
+
+          const processingResult = await processingResponse.json()
+
+          if (!processingResponse.ok) {
+            throw new Error(`Processing failed: ${processingResult.error || 'Unknown error'}`)
           }
-          
-          const vectorResult = await vectorResponse.json()
-          console.log(`✅ Vector processing completed for ${newDoc.document_id}: ${vectorResult.chunksProcessed} vectors`)
-          
+
           return {
-            success: true,
-            document_id: newDoc.document_id,
-            title: title,
-            url: doc.url,
-            vector_count: vectorResult.chunksProcessed
+            status: 'processed',
+            url,
+            document_id: doc.id,
+            processing_result: processingResult
           }
-          
+
         } catch (error) {
-          console.error(`❌ Failed to process ${doc.url}:`, error)
+          console.error(`Failed to process ${url}: ${error}`)
           return {
-            success: false,
-            title: doc.title || doc.url,
-            url: doc.url,
+            status: 'failed',
+            url,
             error: error.message
           }
         }
       })
-      
+
       const batchResults = await Promise.all(batchPromises)
-      results.push(...batchResults)
-      
-      // Small delay between batches to be respectful
-      if (i + batch_size < documents.length) {
-        await new Promise(resolve => setTimeout(resolve, 2000))
+
+      for (const result of batchResults) {
+        if (result.status === 'processed') {
+          results.processed.push(result)
+          results.total_vectors_created += result.processing_result?.vector_count || 0
+        } else if (result.status === 'duplicate') {
+          results.duplicates.push(result)
+        } else {
+          results.failed.push(result)
+        }
+      }
+
+      // Small delay between batches
+      if (i + batchSize < urls.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000))
       }
     }
-    
-    // Compile final results
-    const successful = results.filter(r => r.success)
-    const failed = results.filter(r => !r.success)
-    const totalVectors = successful.reduce((sum, r) => sum + (r.vector_count || 0), 0)
-    
-    console.log(`🎉 Bulk processing completed: ${successful.length} success, ${failed.length} failed, ${totalVectors} vectors`)
-    
-    return new Response(JSON.stringify({
-      success: true,
-      summary: {
-        total_documents: documents.length,
-        successful: successful.length,
-        failed: failed.length,
-        total_vectors_created: totalVectors
-      },
-      results: {
-        successful: successful,
-        failed: failed
-      }
-    }))
-    
-  } catch (error) {
-    console.error('❌ Bulk processor error:', error)
+
+    results.processing_time = (new Date().getTime() - new Date(results.start_time).getTime()) / 1000
+
     return new Response(
-      JSON.stringify({ 
-        error: 'Bulk processing failed',
-        details: error.message 
-      }),
-      { status: 500 }
+      JSON.stringify(results),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+
+  } catch (error) {
+    console.error('Bulk processing failed:', error)
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 }) 

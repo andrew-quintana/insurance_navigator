@@ -1,1 +1,0 @@
-This is a test insurance document for vectorization validation. It contains information about coverage types, policy details, and claim procedures. This content should be processed, chunked, and converted into embeddings for semantic search capabilities.

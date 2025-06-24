@@ -1,3 +1,4 @@
+"""Configuration module for the application."""
 import os
 from typing import Optional
 from dataclasses import dataclass
@@ -10,6 +11,23 @@ class SupabaseConfig:
     service_role_key: str
     storage_bucket: str
     signed_url_expiry: int
+
+    @classmethod
+    def from_env(cls) -> 'SupabaseConfig':
+        """Create a SupabaseConfig instance from environment variables."""
+        # Load test environment if TEST_MODE is set
+        if os.getenv('TEST_MODE') == 'true':
+            load_dotenv('.env.test')
+        else:
+            load_dotenv()
+
+        return cls(
+            url=os.getenv('SUPABASE_URL', ''),
+            anon_key=os.getenv('SUPABASE_ANON_KEY', ''),
+            service_role_key=os.getenv('SUPABASE_SERVICE_ROLE_KEY', ''),
+            storage_bucket=os.getenv('SUPABASE_STORAGE_BUCKET', 'policies'),
+            signed_url_expiry=int(os.getenv('SIGNED_URL_EXPIRY_SECONDS', '3600'))
+        )
 
 @dataclass
 class DatabaseConfig:

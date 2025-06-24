@@ -5,13 +5,7 @@ from unittest.mock import patch, AsyncMock
 import httpx
 from supabase import create_client, Client
 
-from db.config import SupabaseConfig
-from tests.db.unit.test_supabase_config import (
-    TEST_URL,
-    TEST_ANON_KEY,
-    TEST_SERVICE_KEY,
-    TEST_BUCKET
-)
+from db.config import config
 
 @pytest.fixture
 async def mock_http_client():
@@ -50,7 +44,7 @@ class TestSupabaseConnection:
     async def test_health_check(self, mock_supabase_client, mock_http_client):
         """Test Supabase health check query."""
         with patch('supabase.create_client', return_value=mock_supabase_client):
-            client = create_client(TEST_URL, TEST_ANON_KEY)
+            client = create_client(config.supabase.url, config.supabase.anon_key)
             
             # Execute health check query
             result = await client.table('health_check').select('count').execute()
@@ -69,14 +63,14 @@ class TestSupabaseConnection:
     async def test_storage_bucket_access(self, mock_supabase_client):
         """Test access to Supabase storage bucket."""
         with patch('supabase.create_client', return_value=mock_supabase_client):
-            client = create_client(TEST_URL, TEST_SERVICE_KEY)
+            client = create_client(config.supabase.url, config.supabase.service_role_key)
             
             # List storage buckets
             buckets = await client.storage.list_buckets()
             
             # Verify response
             assert len(buckets) == 1
-            assert buckets[0]['name'] == TEST_BUCKET
+            assert buckets[0]['name'] == config.supabase.storage_bucket
             assert not buckets[0]['public']
             
             # Verify mock calls
@@ -88,7 +82,7 @@ class TestSupabaseConnection:
         mock_supabase_client.table.side_effect = Exception("Connection failed")
         
         with patch('supabase.create_client', return_value=mock_supabase_client):
-            client = create_client(TEST_URL, TEST_ANON_KEY)
+            client = create_client(config.supabase.url, config.supabase.anon_key)
             
             with pytest.raises(Exception) as exc_info:
                 await client.table('health_check').select('count').execute()
@@ -103,9 +97,9 @@ class TestSupabaseConnection:
         )
         
         with patch('supabase.create_client', return_value=mock_supabase_client):
-            client = create_client(TEST_URL, TEST_SERVICE_KEY)
+            client = create_client(config.supabase.url, config.supabase.service_role_key)
             
             with pytest.raises(Exception) as exc_info:
                 await client.storage.list_buckets()
             
-            assert "Storage operation failed" in str(exc_info.value) 
+            assert "Storage operation failed" in str(exc_info.value)

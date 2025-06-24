@@ -1,8 +1,16 @@
 """Shared fixtures for database tests."""
+import os
+import sys
+from pathlib import Path
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 import uuid
 from datetime import datetime
+
+# Add project root to Python path
+project_root = str(Path(__file__).parent.parent.parent)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 from db.config import SupabaseConfig
 from tests.db.unit.test_supabase_config import (

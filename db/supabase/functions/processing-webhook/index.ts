@@ -492,22 +492,54 @@ async function handleInternalWebhook(supabase: any, document: any, webhookData: 
 // Helper functions
 
 async function triggerChunking(supabase: any, documentId: string, parseResult: any) {
-  // This would trigger the chunking process
-  // For now, we'll just update the status
   console.log('Triggering chunking for document:', documentId)
   
-  // In a real implementation, this would call the chunking service
-  // For Phase 3, we'll simulate progress
-  setTimeout(async () => {
+  try {
+    // Get document content
+    const { data: document, error: docError } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('id', documentId)
+      .single()
+
+    if (docError) throw docError
+    if (!document) throw new Error('Document not found')
+
+    // Get the text content to process
+    const text = parseResult?.text || document.content || document.extracted_text
+    if (!text) throw new Error('No text content found to process')
+
+    // Call chunking service
+    console.log('Calling chunking service...')
+    const response = await supabase.functions.invoke('chunking-service', {
+      body: JSON.stringify({
+        documentId,
+        text
+      })
+    })
+
+    if (!response.data?.success) {
+      throw new Error(`Chunking service failed: ${response.error?.message || 'Unknown error'}`)
+    }
+
+    console.log('Chunking service response:', response.data)
+    return response.data
+
+  } catch (error) {
+    console.error('Error in triggerChunking:', error)
+    
+    // Update document with error status
     await supabase
       .from('documents')
       .update({
-        status: 'embedding',
-        progress_percentage: 80,
+        status: 'failed',
+        error_message: `Chunking failed: ${error.message}`,
         updated_at: new Date().toISOString()
       })
       .eq('id', documentId)
-  }, 2000)
+    
+    throw error
+  }
 }
 
 async function triggerLlamaParseJob(supabase: any, documentId: string) {

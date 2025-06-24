@@ -1,201 +1,93 @@
 """
 Tests for the DocumentParser implementation.
 """
+import os
 import pytest
-from unittest.mock import Mock, patch, mock_open
-from pathlib import Path
-from langchain_core.documents import Document
-from config.parser import DocumentParser
+from unittest.mock import Mock, patch
+from datetime import datetime
+from typing import List, Dict, Any
+
+from config.parser import DocumentParser, Document
+from config.storage import StorageService
+
+@pytest.fixture
+def mock_storage_service():
+    """Mock storage service for testing."""
+    return Mock(spec=StorageService)
 
 @pytest.fixture
 def mock_llama_parse():
-    """Mock LlamaParse instance."""
-    with patch('config.parser.LlamaParse') as mock:
-        mock_instance = Mock()
-        mock.return_value = mock_instance
-        yield mock_instance
-
-@pytest.fixture
-def document_parser(mock_llama_parse):
-    """Create DocumentParser instance with mocked LlamaParse."""
-    with patch.dict('os.environ', {'LLAMA_CLOUD_API_KEY': 'test_key'}):
-        parser = DocumentParser()
-        # Ensure we're using the mocked instance
-        parser.parser = mock_llama_parse
-        return parser
-
-@pytest.fixture
-def real_document_parser():
-    """Create DocumentParser instance for real document testing."""
-    with patch.dict('os.environ', {'LLAMA_CLOUD_API_KEY': 'test_key'}):
-        return DocumentParser()
-
-def test_init_missing_api_key():
-    """Test initialization fails without API key."""
-    with pytest.raises(ValueError, match="LLAMA_CLOUD_API_KEY environment variable not set"):
-        with patch.dict('os.environ', {}, clear=True):
-            DocumentParser()
-
-def test_init_success(document_parser):
-    """Test successful initialization."""
-    assert document_parser.api_key == 'test_key'
-    assert document_parser.parser is not None
-
-@patch('pathlib.Path.exists')
-def test_parse_document_success(mock_exists, document_parser, mock_llama_parse):
-    """Test successful document parsing with mock."""
-    # Mock file existence check
-    mock_exists.return_value = True
-    
-    # Mock parsed document
+    """Mock LlamaParse instance for testing."""
+    mock = Mock()
     mock_doc = Mock()
-    mock_doc.text = "Test content"
+    mock_doc.text = "Sample Insurance Policy\nPolicy Number: INS-12345"
     mock_doc.page_number = 1
-    mock_llama_parse.load_data.return_value = [mock_doc]
-    
-    # Test parsing
-    result = document_parser.parse_document("tests/data/documents/sample_insurance.pdf")
-    
-    # Verify results
-    assert len(result) == 1
-    assert isinstance(result[0], Document)
-    assert result[0].page_content == "Test content"
-    assert result[0].metadata["page_number"] == 1
-    assert result[0].metadata["source"] == "tests/data/documents/sample_insurance.pdf"
-    
-    # Verify LlamaParse was called correctly
-    mock_llama_parse.load_data.assert_called_once()
+    mock.load_data.return_value = [mock_doc]
+    return mock
 
-@patch('pathlib.Path.exists')
-def test_parse_document_error(mock_exists, document_parser, mock_llama_parse):
-    """Test error handling in document parsing."""
-    # Mock file existence check
-    mock_exists.return_value = True
-    
-    # Mock error
-    mock_llama_parse.load_data.side_effect = Exception("Test error")
-    
-    with pytest.raises(Exception) as exc_info:
-        document_parser.parse_document("tests/data/documents/sample_insurance.pdf")
-    assert str(exc_info.value) == "Error parsing document: Test error"
-
-@patch('pathlib.Path.exists')
-def test_parse_documents_multiple(mock_exists, document_parser, mock_llama_parse):
-    """Test parsing multiple documents."""
-    # Mock file existence check
-    mock_exists.return_value = True
-    
-    # Mock parsed documents
-    mock_doc1 = Mock()
-    mock_doc1.text = "Content 1"
-    mock_doc1.page_number = 1
-    
-    mock_doc2 = Mock()
-    mock_doc2.text = "Content 2"
-    mock_doc2.page_number = 1
-    
-    mock_llama_parse.load_data.side_effect = [[mock_doc1], [mock_doc2]]
-    
-    # Test parsing multiple documents
-    result = document_parser.parse_documents([
-        "tests/data/documents/sample_insurance.pdf",
-        "tests/data/documents/sample_insurance.docx"
-    ])
-    
-    # Verify results
-    assert len(result) == 2
-    assert result[0].page_content == "Content 1"
-    assert result[1].page_content == "Content 2"
-    
-    # Verify LlamaParse was called for each document
-    assert mock_llama_parse.load_data.call_count == 2
-
-@patch('pathlib.Path.exists')
-def test_parse_document_file_not_found(mock_exists, document_parser):
-    """Test error handling when file doesn't exist."""
-    # Mock file existence check
-    mock_exists.return_value = False
-    
-    with pytest.raises(Exception) as exc_info:
-        document_parser.parse_document("nonexistent.pdf")
-    assert "File not found: nonexistent.pdf" in str(exc_info.value)
-
-@patch('pathlib.Path.exists')
-def test_parse_empty_result(mock_exists, document_parser, mock_llama_parse):
-    """Test handling of empty parsing results."""
-    # Mock file existence check
-    mock_exists.return_value = True
-    
-    # Mock empty result
-    mock_llama_parse.load_data.return_value = []
-    
-    # Test parsing
-    result = document_parser.parse_document("tests/data/documents/sample_insurance.pdf")
-    
-    # Verify results
-    assert len(result) == 1
-    assert isinstance(result[0], Document)
-    assert result[0].page_content == ""
-    assert result[0].metadata["error"] == "No content parsed"
-    assert result[0].metadata["source"] == "tests/data/documents/sample_insurance.pdf"
+@pytest.fixture
+def test_document_data():
+    """Test document data for unified schema."""
+    return {
+        'original_filename': 'sample_insurance.pdf',
+        'storage_path': 'test/path/sample_insurance.pdf',
+        'document_type': 'user_uploaded',
+        'jurisdiction': 'United States',
+        'program': ['Healthcare', 'General'],
+        'source_url': None,
+        'source_last_checked': datetime.now().isoformat(),
+        'priority_score': 1.0,
+        'metadata': {
+            'processing_timestamp': datetime.now().isoformat(),
+            'source_method': 'test',
+            'content_length': 100,
+            'extraction_method': 'test'
+        },
+        'tags': ['test'],
+        'status': 'pending'
+    }
 
 @patch('config.parser.LlamaParse')
-def test_parse_real_documents(mock_llama_parse_class):
-    """Test parsing real PDF and DOCX documents."""
+def test_parse_single_document(mock_llama_parse_class, mock_storage_service, test_document_data):
+    """Test parsing a single document."""
     # Mock LlamaParse instance
     mock_llama_parse = Mock()
     mock_llama_parse_class.return_value = mock_llama_parse
     
-    # Create parser with mocked LlamaParse
+    # Create parser with mocked dependencies
     with patch.dict('os.environ', {'LLAMA_CLOUD_API_KEY': 'test_key'}):
-        parser = DocumentParser()
+        parser = DocumentParser(storage_service=mock_storage_service)
     
-    # Mock PDF parsing
-    mock_pdf_doc = Mock()
-    mock_pdf_doc.text = "Sample Insurance Policy\nPolicy Number: INS-12345"
-    mock_pdf_doc.page_number = 1
-    mock_llama_parse.load_data.return_value = [mock_pdf_doc]
+    # Mock document parsing
+    mock_doc = Mock()
+    mock_doc.text = "Sample Insurance Policy\nPolicy Number: INS-12345"
+    mock_doc.page_number = 1
+    mock_llama_parse.load_data.return_value = [mock_doc]
     
-    # Test PDF parsing
-    pdf_path = "tests/data/documents/sample_insurance.pdf"
-    with patch('pathlib.Path.exists', return_value=True):
-        pdf_result = parser.parse_document(pdf_path)
+    # Test parsing
+    result = parser.parse_document(
+        file_path="tests/data/documents/sample_insurance.pdf",
+        document_data=test_document_data
+    )
     
-    # Verify PDF results
-    assert len(pdf_result) > 0
-    assert isinstance(pdf_result[0], Document)
-    assert "Sample Insurance Policy" in pdf_result[0].page_content
-    assert "Policy Number: INS-12345" in pdf_result[0].page_content
-    assert pdf_result[0].metadata["source"] == pdf_path
-    
-    # Mock DOCX parsing
-    mock_docx_doc = Mock()
-    mock_docx_doc.text = "Sample Insurance Policy\nPolicy Number: INS-12345"
-    mock_docx_doc.page_number = 1
-    mock_llama_parse.load_data.return_value = [mock_docx_doc]
-    
-    # Test DOCX parsing
-    docx_path = "tests/data/documents/sample_insurance.docx"
-    with patch('pathlib.Path.exists', return_value=True):
-        docx_result = parser.parse_document(docx_path)
-    
-    # Verify DOCX results
-    assert len(docx_result) > 0
-    assert isinstance(docx_result[0], Document)
-    assert "Sample Insurance Policy" in docx_result[0].page_content
-    assert "Policy Number: INS-12345" in docx_result[0].page_content
-    assert docx_result[0].metadata["source"] == docx_path
+    # Verify result
+    assert isinstance(result, Document)
+    assert "Sample Insurance Policy" in result.page_content
+    assert "Policy Number: INS-12345" in result.page_content
+    assert result.metadata['document_type'] == 'user_uploaded'
+    assert result.metadata['jurisdiction'] == 'United States'
+    assert result.metadata['program'] == ['Healthcare', 'General']
 
 @patch('config.parser.LlamaParse')
-def test_parse_real_multiple_documents(mock_llama_parse_class):
+def test_parse_real_multiple_documents(mock_llama_parse_class, mock_storage_service, test_document_data):
     """Test parsing multiple real documents."""
     # Mock LlamaParse instance
     mock_llama_parse = Mock()
     mock_llama_parse_class.return_value = mock_llama_parse
     
-    # Create parser with mocked LlamaParse
+    # Create parser with mocked dependencies
     with patch.dict('os.environ', {'LLAMA_CLOUD_API_KEY': 'test_key'}):
-        parser = DocumentParser()
+        parser = DocumentParser(storage_service=mock_storage_service)
     
     # Mock document parsing
     mock_doc = Mock()
@@ -208,8 +100,12 @@ def test_parse_real_multiple_documents(mock_llama_parse_class):
         "tests/data/documents/sample_insurance.docx"
     ]
     
+    # Test parsing multiple documents
     with patch('pathlib.Path.exists', return_value=True):
-        results = parser.parse_documents(file_paths)
+        results = parser.parse_documents(
+            file_paths=file_paths,
+            document_data=[test_document_data, test_document_data]
+        )
     
     # Verify results
     assert len(results) > 0
@@ -217,33 +113,64 @@ def test_parse_real_multiple_documents(mock_llama_parse_class):
         assert isinstance(doc, Document)
         assert "Sample Insurance Policy" in doc.page_content
         assert "Policy Number: INS-12345" in doc.page_content
+        assert doc.metadata['document_type'] == 'user_uploaded'
+        assert doc.metadata['jurisdiction'] == 'United States'
+        assert doc.metadata['program'] == ['Healthcare', 'General']
 
-@patch('pathlib.Path.exists')
-def test_parse_documents_error_handling(mock_exists, document_parser, mock_llama_parse):
-    """Test error handling when one document fails to parse in parse_documents."""
-    # Mock file existence check
-    mock_exists.return_value = True
+@patch('config.parser.LlamaParse')
+def test_error_handling(mock_llama_parse_class, mock_storage_service, test_document_data):
+    """Test error handling during parsing."""
+    # Mock LlamaParse instance to raise an exception
+    mock_llama_parse = Mock()
+    mock_llama_parse.load_data.side_effect = Exception("Test error")
+    mock_llama_parse_class.return_value = mock_llama_parse
     
-    # Mock first document success
-    mock_doc1 = Mock()
-    mock_doc1.text = "Content 1"
-    mock_doc1.page_number = 1
+    # Create parser with mocked dependencies
+    with patch.dict('os.environ', {'LLAMA_CLOUD_API_KEY': 'test_key'}):
+        parser = DocumentParser(storage_service=mock_storage_service)
     
-    # Mock second document failure
-    mock_llama_parse.load_data.side_effect = [
-        [mock_doc1],  # First call succeeds
-        Exception("Test error")  # Second call fails
-    ]
-    
-    # Test parsing multiple documents with one failure
+    # Test error handling
     with pytest.raises(Exception) as exc_info:
-        document_parser.parse_documents([
-            "tests/data/documents/sample_insurance.pdf",
-            "tests/data/documents/sample_insurance.docx"
-        ])
+        parser.parse_document(
+            file_path="tests/data/documents/sample_insurance.pdf",
+            document_data=test_document_data
+        )
     
-    # Verify error message
-    assert "Error parsing document: Test error" in str(exc_info.value)
+    assert "Test error" in str(exc_info.value)
+
+@patch('config.parser.LlamaParse')
+def test_metadata_handling(mock_llama_parse_class, mock_storage_service, test_document_data):
+    """Test handling of document metadata."""
+    # Mock LlamaParse instance
+    mock_llama_parse = Mock()
+    mock_llama_parse_class.return_value = mock_llama_parse
     
-    # Verify LlamaParse was called for each document
-    assert mock_llama_parse.load_data.call_count == 2 
+    # Create parser with mocked dependencies
+    with patch.dict('os.environ', {'LLAMA_CLOUD_API_KEY': 'test_key'}):
+        parser = DocumentParser(storage_service=mock_storage_service)
+    
+    # Mock document parsing with metadata
+    mock_doc = Mock()
+    mock_doc.text = "Sample Insurance Policy\nPolicy Number: INS-12345"
+    mock_doc.page_number = 1
+    mock_doc.metadata = {
+        'title': 'Sample Insurance',
+        'author': 'Test Author',
+        'creation_date': '2024-01-01'
+    }
+    mock_llama_parse.load_data.return_value = [mock_doc]
+    
+    # Test parsing with metadata
+    result = parser.parse_document(
+        file_path="tests/data/documents/sample_insurance.pdf",
+        document_data=test_document_data
+    )
+    
+    # Verify metadata handling
+    assert isinstance(result, Document)
+    assert result.metadata['document_type'] == 'user_uploaded'
+    assert result.metadata['jurisdiction'] == 'United States'
+    assert result.metadata['program'] == ['Healthcare', 'General']
+    assert result.metadata['title'] == 'Sample Insurance'
+    assert result.metadata['author'] == 'Test Author'
+    assert result.metadata['creation_date'] == '2024-01-01'

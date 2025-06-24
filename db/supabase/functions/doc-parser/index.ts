@@ -10,6 +10,82 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization'
 }
 
+// Queue configuration
+const QUEUE_CONFIG = {
+  maxConcurrentRequests: 2,
+  requestIntervalMs: 5000, // 5 seconds between requests
+  maxQueueSize: 100
+}
+
+// Queue for tracking active requests
+let activeRequests = 0
+const requestQueue: Array<{
+  resolve: (value: any) => void,
+  reject: (error: any) => void,
+  operation: () => Promise<any>
+}> = []
+
+async function queueRequest<T>(operation: () => Promise<T>): Promise<T> {
+  if (activeRequests >= QUEUE_CONFIG.maxConcurrentRequests) {
+    // If queue is full, reject immediately
+    if (requestQueue.length >= QUEUE_CONFIG.maxQueueSize) {
+      throw new Error('Request queue is full')
+    }
+    
+    // Add to queue
+    return new Promise((resolve, reject) => {
+      requestQueue.push({ resolve, reject, operation })
+    })
+  }
+  
+  // Execute request
+  activeRequests++
+  try {
+    const result = await operation()
+    return result
+  } finally {
+    activeRequests--
+    processQueue()
+  }
+}
+
+async function processQueue() {
+  // If queue is empty or we're at max concurrent requests, do nothing
+  if (requestQueue.length === 0 || activeRequests >= QUEUE_CONFIG.maxConcurrentRequests) {
+    return
+  }
+  
+  // Process next request
+  const { resolve, reject, operation } = requestQueue.shift()!
+  activeRequests++
+  
+  try {
+    const result = await operation()
+    resolve(result)
+  } catch (error) {
+    reject(error)
+  } finally {
+    activeRequests--
+    // Add delay before processing next request
+    setTimeout(processQueue, QUEUE_CONFIG.requestIntervalMs)
+  }
+}
+
+// Update the LlamaParse upload to use the queue
+async function uploadToLlamaParse(formData: FormData, llamaCloudKey: string): Promise<Response> {
+  return queueRequest(async () => {
+    return retryWithBackoff(
+      () => fetch('https://api.cloud.llamaindex.ai/api/parsing/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${llamaCloudKey}`,
+        },
+        body: formData
+      })
+    )
+  })
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -175,25 +251,22 @@ Deno.serve(async (req) => {
             .eq('id', documentId)
 
           try {
-        const llamaCloudKey = Deno.env.get('LLAMA_CLOUD_API_KEY')
+        const llamaCloudKey = Deno.env.get('LLAMAPARSE_API_KEY')
         
         if (!llamaCloudKey) {
-          throw new Error('LlamaCloud API key not configured')
+          throw new Error('LlamaParse API key not configured')
         }
 
         // Prepare file for LlamaCloud upload
             const formData = new FormData()
         formData.append('file', fileData, filename)
             
-        const uploadResponse = await fetch('https://api.cloud.llamaindex.ai/api/parsing/upload', {
-              method: 'POST',
-              headers: {
-            'Authorization': `Bearer ${llamaCloudKey}`,
-              },
-              body: formData
-            })
+        const uploadResponse = await uploadToLlamaParse(formData, llamaCloudKey)
 
             if (!uploadResponse.ok) {
+          if (uploadResponse.status === 429) {
+            throw new Error('LlamaCloud rate limit exceeded after retries')
+          }
           throw new Error(`LlamaCloud upload failed: ${uploadResponse.status}`)
             }
 
@@ -207,11 +280,13 @@ Deno.serve(async (req) => {
         const maxAttempts = 60 // Wait up to 5 minutes
             
         while (attempts < maxAttempts) {
-          const statusResponse = await fetch(`https://api.cloud.llamaindex.ai/api/parsing/job/${jobId}`, {
+          const statusResponse = await retryWithBackoff(
+            () => fetch(`https://api.cloud.llamaindex.ai/api/parsing/job/${jobId}`, {
                 headers: {
               'Authorization': `Bearer ${llamaCloudKey}`,
                 }
               })
+          )
 
           if (!statusResponse.ok) {
             throw new Error(`Status check failed: ${statusResponse.status}`)
@@ -222,11 +297,13 @@ Deno.serve(async (req) => {
                 
           if (statusResult.status === 'SUCCESS') {
             // Get the result
-            const resultResponse = await fetch(`https://api.cloud.llamaindex.ai/api/parsing/job/${jobId}/result/markdown`, {
+            const resultResponse = await retryWithBackoff(
+              () => fetch(`https://api.cloud.llamaindex.ai/api/parsing/job/${jobId}/result/markdown`, {
               headers: {
                 'Authorization': `Bearer ${llamaCloudKey}`,
               }
             })
+            )
 
             if (!resultResponse.ok) {
               throw new Error(`Result fetch failed: ${resultResponse.status}`)
@@ -305,9 +382,11 @@ Deno.serve(async (req) => {
     const { data: vectorResult, error: vectorError } = await supabase.functions.invoke('vector-processor', {
       body: { 
         documentId: documentId,
-        extractedText: extractedText
+        extractedText: extractedText,
+        documentType: 'user',
+        userId: document.user_id
       }
-      })
+    })
 
       if (vectorError) {
       console.error('❌ Vector processor invocation failed:', vectorError)
@@ -363,4 +442,54 @@ async function updateDocumentError(supabase: any, documentId: string, errorMessa
       updated_at: new Date().toISOString()
     })
     .eq('id', documentId)
+}
+
+async function retryWithBackoff(
+  operation: () => Promise<Response>, 
+  maxRetries = 5,  // Increased from 3 to 5
+  initialDelay = 2000  // Increased from 1000 to 2000
+): Promise<Response> {
+  let retries = 0
+  let delay = initialDelay
+
+  while (retries < maxRetries) {
+    try {
+      const response = await operation()
+      
+      // If not rate limited, return immediately
+      if (response.status !== 429) {
+        return response
+      }
+      
+      // Get retry-after header if available
+      const retryAfter = response.headers.get('retry-after')
+      const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : delay
+      
+      retries++
+      console.log(`🔄 Rate limited (attempt ${retries}/${maxRetries}), waiting ${waitTime}ms`)
+      
+      if (retries === maxRetries) {
+        console.error('❌ Max retries reached, giving up')
+        return response
+      }
+      
+      // Exponential backoff with jitter
+      await new Promise(resolve => setTimeout(resolve, waitTime))
+      delay = Math.min(delay * 2, 32000) // Cap at 32 seconds
+      delay += Math.random() * 1000 // Add jitter
+      
+    } catch (error) {
+      retries++
+      if (retries === maxRetries) {
+        throw error
+      }
+      
+      console.log(`⚠️ Operation failed (attempt ${retries}/${maxRetries}), retrying in ${delay}ms`)
+      await new Promise(resolve => setTimeout(resolve, delay))
+      delay = Math.min(delay * 2, 32000)
+      delay += Math.random() * 1000
+    }
+  }
+
+  throw new Error(`Operation failed after ${maxRetries} retries`)
 } 

@@ -32,6 +32,10 @@ from db.services.conversation_service import get_conversation_service, Conversat
 from db.services.storage_service import get_storage_service, StorageService
 from db.services.document_service import DocumentService
 from db.services.db_pool import get_db_pool
+from db.services.document_processing_service import DocumentProcessingService
+from db.services.queue_service import QueueService
+from db.services.llamaparse_service import LlamaParseService
+from db.services.vector_service import VectorService
 
 # Centralized CORS configuration
 from utils.cors_config import cors_config, create_preflight_response, add_cors_headers
@@ -154,6 +158,52 @@ class WebhookPayload(BaseModel):
 user_service_instance: Optional[UserService] = None
 conversation_service_instance: Optional[ConversationService] = None
 storage_service_instance: Optional[StorageService] = None
+
+# Initialize services
+storage_service: Optional[StorageService] = None
+queue_service: Optional[QueueService] = None
+llamaparse_service: Optional[LlamaParseService] = None
+vector_service: Optional[VectorService] = None
+document_processing_service: Optional[DocumentProcessingService] = None
+
+async def get_services():
+    """Initialize all required services."""
+    global storage_service, queue_service, llamaparse_service, vector_service, document_processing_service
+    
+    if not storage_service:
+        storage_service = await get_storage_service()
+        
+    if not queue_service:
+        pool = await get_db_pool()
+        queue_service = QueueService(pool)
+        
+    if not llamaparse_service:
+        llamaparse_service = LlamaParseService(
+            api_key=config.get("LLAMAPARSE_API_KEY")
+        )
+        
+    if not vector_service:
+        pool = await get_db_pool()
+        vector_service = VectorService(
+            api_key=config.get("OPENAI_API_KEY"),
+            pool=pool
+        )
+        
+    if not document_processing_service:
+        document_processing_service = DocumentProcessingService(
+            storage_service=storage_service,
+            queue_service=queue_service,
+            llamaparse_service=llamaparse_service,
+            vector_service=vector_service
+        )
+        
+    return {
+        "storage": storage_service,
+        "queue": queue_service,
+        "llamaparse": llamaparse_service,
+        "vector": vector_service,
+        "document_processing": document_processing_service
+    }
 
 # Edge Function Orchestration Utilities
 class EdgeFunctionOrchestrator:
@@ -424,268 +474,77 @@ async def get_current_user_info(current_user: UserResponse = Depends(get_current
     return current_user
 
 # 🚀 REFACTORED: Backend-First Document Upload Endpoint
-@app.post("/upload-document-backend", response_model=DocumentUploadResponse)
-async def upload_document_backend(
+@app.post("/upload-document", response_model=DocumentUploadResponse)
+async def upload_document(
     request: Request,
-    current_user: UserResponse = Depends(get_current_user),
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    current_user: UserResponse = Depends(get_current_user)
 ):
     """
-    REFACTORED: Backend-first document upload flow.
+    Upload and process a document using the new backend services.
     
-    ✅ NEW ARCHITECTURE:
-    1. Backend generates signed URL directly from storage
-    2. Backend uploads file to signed URL
-    3. Backend calls edge function to process uploaded file
-    4. Edge function focuses on processing, not storage management
+    This endpoint:
+    1. Validates the file
+    2. Creates document record
+    3. Uploads to storage
+    4. Triggers background processing
+    5. Returns immediately with job ID
     """
-    upload_start_time = time.time()
-    
     try:
-        logger.info(f"🚀 Starting backend-first upload for user {current_user.id}: {file.filename}")
+        # Get services
+        services = await get_services()
         
-        # Read file data with size validation early
+        # Read and validate file
         file_data = await file.read()
-        
-        # Validate file size (50MB limit) - fail fast
-        MAX_FILE_SIZE = 50 * 1024 * 1024
-        if len(file_data) > MAX_FILE_SIZE:
-            logger.warning(f"❌ File too large: {len(file_data)} bytes (max: {MAX_FILE_SIZE})")
-            raise HTTPException(
-                status_code=413,
-                detail={
-                    "error": "File too large",
-                    "message": f"File size is {len(file_data) // (1024*1024)}MB. Maximum allowed is {MAX_FILE_SIZE // (1024*1024)}MB",
-                    "max_size_mb": MAX_FILE_SIZE // (1024*1024),
-                    "actual_size_mb": len(file_data) // (1024*1024)
-                }
-            )
-        
         if len(file_data) == 0:
-            raise HTTPException(
-                status_code=400, 
-                detail={
-                    "error": "Empty file",
-                    "message": "The uploaded file is empty. Please select a valid file."
-                }
-            )
+            raise HTTPException(status_code=400, detail="Empty file")
+            
+        if len(file_data) > 50 * 1024 * 1024:  # 50MB limit
+            raise HTTPException(status_code=413, detail="File too large")
         
-        # Validate file type
-        allowed_types = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
-        if file.content_type not in allowed_types:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "Unsupported file type",
-                    "message": f"File type '{file.content_type}' is not supported. Please upload PDF, DOCX, or TXT files.",
-                    "allowed_types": ["PDF", "DOCX", "TXT"]
-                }
-            )
-        
-        # Get user token for edge function calls
-        auth_header = request.headers.get("authorization")
-        user_token = auth_header.split(" ")[1] if auth_header else None
-        
-        if not user_token:
-            raise HTTPException(
-                status_code=401, 
-                detail={
-                    "error": "Missing authentication",
-                    "message": "User authentication token is required"
-                }
-            )
-        
-        # ✅ STEP 1: Create document record and upload file directly
-        logger.info(f"📄 Step 1: Creating document record and uploading file directly...")
-        
-        # Generate file hash for deduplication
-        file_hash = hashlib.sha256(f"{file.filename}-{len(file_data)}-{current_user.id}-{time.time()}".encode()).hexdigest()
-        
-        # Create storage path
-        storage_path = f"{current_user.id}/{file_hash}/{file.filename}"
-        
-        # Get storage service
-        global storage_service_instance
-        if not storage_service_instance:
-            storage_service_instance = await get_storage_service()
-        
-        # Create document record in database first
-        pool = await get_db_pool()
+        # Generate document ID and file hash
         document_id = str(uuid.uuid4())
+        file_hash = hashlib.sha256(file_data).hexdigest()
         
+        # Create document record
+        pool = await get_db_pool()
         async with pool.get_connection() as conn:
             await conn.execute("""
                 INSERT INTO documents (
-                    id, user_id, original_filename, file_size, content_type, 
-                    file_hash, storage_path, status, progress_percentage,
-                    processed_chunks, failed_chunks, created_at, updated_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+                    id, user_id, original_filename, file_size,
+                    content_type, file_hash, status,
+                    progress_percentage, created_at, updated_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
             """, 
-            document_id, current_user.id, file.filename, len(file_data), file.content_type,
-            file_hash, storage_path, 'uploading', 5, 0, 0
+            document_id, current_user.id, file.filename,
+            len(file_data), file.content_type, file_hash,
+            'uploading', 0
             )
         
-        logger.info(f"✅ Step 1a: Document record created with ID {document_id}")
-        
-        # ✅ STEP 2: Upload file directly to Supabase Storage
-        logger.info(f"📤 Step 2: Uploading file directly to storage...")
-        
-        try:
-            # Upload using storage service
-            upload_response = storage_service_instance.supabase.storage.from_('raw_documents').upload(
-                storage_path,
-                file_data,
-                file_options={
-                    "content-type": file.content_type,
-                    "upsert": "false"  # Don't allow overwrite
-                }
-            )
-            
-            # ✅ FIX: Proper Supabase upload response handling
-            # Supabase upload() returns a response object, not a dict
-            # Success is indicated by no 'error' field in the response
-            upload_successful = True
-            upload_error = None
-            
-            # Check if upload response has an error
-            if hasattr(upload_response, 'get') and upload_response.get('error'):
-                upload_successful = False
-                upload_error = upload_response.get('error', 'Unknown storage error')
-            elif hasattr(upload_response, 'error') and upload_response.error:
-                upload_successful = False
-                upload_error = str(upload_response.error)
-            elif not upload_response:
-                upload_successful = False
-                upload_error = 'No response from storage'
-            
-            if not upload_successful:
-                logger.error(f"❌ File upload failed: {upload_error}")
-                # Update document status to failed
-                async with pool.get_connection() as conn:
-                    await conn.execute("""
-                        UPDATE documents SET status = 'failed', updated_at = NOW()
-                        WHERE id = $1
-                    """, document_id)
-                    
-                raise HTTPException(
-                    status_code=500,
-                        detail={
-                            "error": "File upload failed",
-                            "message": f"Storage error: {upload_error}",
-                            "document_id": document_id
-                        }
-            )
-        
-            logger.info(f"✅ Step 2 complete: File uploaded to {storage_path}")
-            
-        except HTTPException:
-            # Re-raise HTTP exceptions (already handled above)
-            raise
-        except Exception as upload_error:
-            logger.error(f"❌ File upload exception: {upload_error}")
-            # Update document status to failed
-            async with pool.get_connection() as conn:
-                await conn.execute("""
-                    UPDATE documents SET status = 'failed', updated_at = NOW()
-                    WHERE id = $1
-                """, document_id)
-            
-            raise HTTPException(
-                status_code=500,
-                detail={
-                    "error": "File upload failed",
-                    "message": f"Upload error: {str(upload_error)}",
-                    "document_id": document_id
-                }
-            )
-        
-        # Update document status to processing
-        async with pool.get_connection() as conn:
-            await conn.execute("""
-                UPDATE documents SET status = 'processing', progress_percentage = 20, 
-                updated_at = NOW()
-                WHERE id = $1
-            """, document_id)
-        
-        # ✅ STEP 3: Call edge function to process the uploaded file
-        logger.info(f"🔄 Step 3: Triggering document processing...")
-        
-        processing_payload = {
-            "documentId": document_id,
-            "path": storage_path,
-            "filename": file.filename,
-            "contentType": file.content_type,
-            "fileSize": len(file_data),
-            "documentType": "user"  # User uploads go to 'documents' table
-        }
-        
-        processing_success = False
-        processing_error_message = None
-        
-        try:
-            processing_result = await edge_orchestrator.call_edge_function(
-                'doc-parser',  # Use doc-parser directly like user uploads
-                'POST',
-                processing_payload,
-                user_token,
-                current_user.id
-            )
-        
-            # Check if edge function processing actually succeeded
-            if processing_result.get('status') == 'success' or processing_result.get('success'):
-                logger.info(f"✅ Step 3 complete: Document processing triggered successfully")
-                processing_success = True
-            else:
-                processing_error_message = processing_result.get('error', 'Unknown processing error')
-                logger.error(f"❌ Document processing failed: {processing_error_message}")
-                
-        except Exception as processing_error:
-            processing_error_message = f"Processing trigger failed: {str(processing_error)}"
-            logger.error(f"❌ Processing trigger exception: {processing_error}")
-        
-        # Update document status based on processing result
-        if processing_success:
-            final_status = "processing"
-            final_message = f"Document '{file.filename}' uploaded and processing started successfully."
-        else:
-            final_status = "failed"
-            final_message = f"Document '{file.filename}' uploaded but processing failed: {processing_error_message}"
-            
-            # Update document status to failed in database
-            async with pool.get_connection() as conn:
-                await conn.execute("""
-                    UPDATE documents SET status = 'failed', updated_at = NOW()
-                    WHERE id = $1
-                """, document_id)
-        
-        # Determine processing method
-        processing_method = "llamaparse" if file.content_type == "application/pdf" else "direct"
-        
-        processing_time = time.time() - upload_start_time
-        logger.info(f"📊 Upload completed in {processing_time:.2f}s")
-        
-        return DocumentUploadResponse(
-            success=processing_success,
+        # Start processing in background
+        processing_result = await services["document_processing"].process_document(
             document_id=document_id,
+            file_data=file_data,
             filename=file.filename,
-            status=final_status,
-            message=final_message,
-            processing_method=processing_method
+            content_type=file.content_type,
+            user_id=current_user.id
         )
         
-    except HTTPException:
-        # Re-raise HTTP exceptions as-is
-        raise
+        # Return response
+        return DocumentUploadResponse(
+            success=True,
+            document_id=document_id,
+            filename=file.filename,
+            status='processing',
+            message='Document upload started',
+            processing_method='llamaparse'
+        )
+        
     except Exception as e:
-        processing_time = time.time() - upload_start_time
-        logger.error(f"❌ Unexpected error after {processing_time:.2f}s: {e}", exc_info=True)
+        logger.error(f"Document upload error: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail={
-                "error": "Internal server error",
-                "message": "An unexpected error occurred during upload. Please try again.",
-                "processing_time": f"{processing_time:.2f}s"
-            }
+            detail=f"Upload failed: {str(e)}"
         )
 
 # 🎯 NEW: Webhook Handlers for Edge Function Status Updates
@@ -744,200 +603,117 @@ async def upload_regulatory_document(
     request: Request,
     file: UploadFile = File(...),
     document_title: str = Form(...),
-    document_type: str = Form(default="insurance_policy"),
+    document_type: str = Form(default="regulatory"),
     source_url: Optional[str] = Form(None),
     category: str = Form(default="regulatory"),
     metadata: Optional[str] = Form(None),
     current_user: UserResponse = Depends(get_current_user)
 ):
-    """
-    Upload regulatory documents using the same backend-orchestrated pipeline.
-    
-    This ensures regulatory documents get the same LlamaParse processing
-    and vectorization as user documents.
-    """
+    """Upload and process a regulatory document."""
     upload_start_time = time.time()
     
     try:
-        logger.info(f"🏛️ Starting regulatory document upload: {document_title}")
-        
-        # Read file data with validation
+        # Read file data
         file_data = await file.read()
-        
-        # Validate file size (50MB limit)
-        MAX_FILE_SIZE = 50 * 1024 * 1024
-        if len(file_data) > MAX_FILE_SIZE:
-            raise HTTPException(
-                status_code=413,
-                detail=f"File too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)}MB"
-            )
-        
-        if len(file_data) == 0:
-            raise HTTPException(status_code=400, detail="Empty file")
-        
-        # Validate file type
-        allowed_types = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
-        if file.content_type not in allowed_types:
+        if not file_data:
             raise HTTPException(
                 status_code=400,
-                detail=f"Unsupported file type '{file.content_type}'. Please upload PDF, DOCX, or TXT files."
+                detail="Empty file uploaded"
             )
-        
-        # Get user token for edge function calls
-        auth_header = request.headers.get("authorization")
-        user_token = auth_header.split(" ")[1] if auth_header else None
-        
-        if not user_token:
-            raise HTTPException(status_code=401, detail="Missing user token")
-        
-        # ✅ STEP 1: Create regulatory document record and upload file directly
-        logger.info(f"📄 Step 1: Creating regulatory document record and uploading file...")
         
         # Generate file hash for deduplication
-        file_hash = hashlib.sha256(f"{file.filename}-{len(file_data)}-{current_user.id}-{time.time()}".encode()).hexdigest()
+        file_hash = hashlib.sha256(file_data).hexdigest()
         
-        # Create storage path for regulatory documents
-        storage_path = f"regulatory/{current_user.id}/{file_hash}/{file.filename}"
-        
-        # Get storage service
-        global storage_service_instance
-        if not storage_service_instance:
-            storage_service_instance = await get_storage_service()
-        
-        # Create regulatory document record in regulatory_documents table
+        # Check for duplicates
         pool = await get_db_pool()
-        document_id = str(uuid.uuid4())
-        
-        # Parse additional metadata if provided
-        additional_metadata = {}
-        if metadata:
-            try:
-                additional_metadata = json.loads(metadata)
-            except json.JSONDecodeError:
-                logger.warning(f"Invalid metadata JSON provided: {metadata}")
-        
-        regulatory_metadata = {
-            "document_title": document_title,
-            "document_type": document_type,
-            "source_url": source_url,
-            "category": category,
-            "is_regulatory": True,
-            "upload_method": "backend_orchestrated",
-            **additional_metadata
-        }
-        
         async with pool.get_connection() as conn:
-            # Create record in regulatory_documents table (uses document_id as primary key)
-            await conn.execute("""
-                INSERT INTO regulatory_documents (
-                    document_id, raw_document_path, title, jurisdiction, program, 
-                    document_type, source_url, extraction_method, version,
-                    content_hash, priority_score, search_metadata
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-            """, 
-            document_id, storage_path, document_title, additional_metadata.get('jurisdiction', 'federal'), 
-            [additional_metadata.get('program', 'insurance')], document_type, source_url, 
-            'api_upload', 1, file_hash, 1.0, json.dumps({})
-            )
+            existing_doc = await conn.fetchrow("""
+                SELECT id FROM documents 
+                WHERE file_hash = $1 AND document_type = 'regulatory'
+            """, file_hash)
             
-            # Also create in documents table for vectorization compatibility
-            await conn.execute("""
-                INSERT INTO documents (
-                    id, user_id, original_filename, file_size, content_type, 
-                    file_hash, storage_path, document_type, status, metadata,
-                    progress_percentage, processed_chunks, failed_chunks, 
-                    created_at, updated_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
-            """, 
-            document_id, current_user.id, file.filename, len(file_data), file.content_type,
-            file_hash, storage_path, 'regulatory', 'uploading', json.dumps(regulatory_metadata),
-            5, 0, 0
-            )
+            if existing_doc:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Document with same content already exists (ID: {existing_doc['id']})"
+                )
         
-        logger.info(f"✅ Step 1a: Regulatory document record created with ID {document_id}")
+        # ✅ STEP 1: Upload file to storage
+        logger.info(f"🔄 Step 1: Uploading regulatory file {file.filename}...")
         
-        # ✅ STEP 2: Upload file directly to Supabase Storage
-        logger.info(f"📤 Step 2: Uploading regulatory file to storage...")
-        
+        storage_path = None
         try:
-            # Upload using storage service to raw_documents bucket
-            upload_response = storage_service_instance.supabase.storage.from_('raw_documents').upload(
-                storage_path,
+            storage_service = StorageService()
+            storage_path = await storage_service.store_regulatory_file(
                 file_data,
-                file_options={
-                    "content-type": file.content_type,
-                    "upsert": "false"
-                }
+                file.filename,
+                file.content_type
             )
-            
-            # ✅ FIX: Proper Supabase upload response handling
-            # Supabase upload() returns a response object, not a dict
-            # Success is indicated by no 'error' field in the response
-            upload_successful = True
-            upload_error = None
-            
-            # Check if upload response has an error
-            if hasattr(upload_response, 'get') and upload_response.get('error'):
-                upload_successful = False
-                upload_error = upload_response.get('error', 'Unknown storage error')
-            elif hasattr(upload_response, 'error') and upload_response.error:
-                upload_successful = False
-                upload_error = str(upload_response.error)
-            elif not upload_response:
-                upload_successful = False
-                upload_error = 'No response from storage'
-            
-            if not upload_successful:
-                logger.error(f"❌ File upload failed: {upload_error}")
-                # Update document status to failed
-                async with pool.get_connection() as conn:
-                    await conn.execute("""
-                        UPDATE regulatory_documents SET updated_at = NOW()
-                        WHERE document_id = $1
-                    """, document_id)
-                    await conn.execute("""
-                        UPDATE documents SET status = 'failed', updated_at = NOW()
-                        WHERE id = $1
-                    """, document_id)
-                
-            raise HTTPException(
-                status_code=500,
-                    detail=f"Regulatory file upload failed: {upload_error}"
-            )
-        
-            logger.info(f"✅ Step 2 complete: Regulatory file uploaded to {storage_path}")
+            logger.info(f"✅ Step 1 complete: File uploaded to {storage_path}")
             
         except Exception as upload_error:
-            logger.error(f"❌ Regulatory file upload exception: {upload_error}")
-            async with pool.get_connection() as conn:
-                await conn.execute("""
-                    UPDATE regulatory_documents SET updated_at = NOW()
-                    WHERE document_id = $1
-                """, document_id)
-                await conn.execute("""
-                    UPDATE documents SET status = 'failed', updated_at = NOW()
-                    WHERE id = $1
-                """, document_id)
-            
+            logger.error(f"❌ Regulatory file upload failed: {upload_error}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Regulatory file upload failed: {str(upload_error)}"
             )
         
-        # Update document status to processing
-        async with pool.get_connection() as conn:
-            await conn.execute("""
-                UPDATE regulatory_documents SET updated_at = NOW()
-                WHERE document_id = $1
-            """, document_id)
-            await conn.execute("""
-                UPDATE documents SET status = 'processing', progress_percentage = 20, 
-                updated_at = NOW()
-                WHERE id = $1
-            """, document_id)
+        # ✅ STEP 2: Create document record
+        logger.info("🔄 Step 2: Creating document record...")
         
-        # ✅ STEP 3: Call edge function to process the uploaded regulatory file
-        logger.info(f"🔄 Step 3: Triggering regulatory document processing...")
+        try:
+            # Parse metadata if provided
+            parsed_metadata = json.loads(metadata) if metadata else {}
+            
+            # Create document record
+            async with pool.get_connection() as conn:
+                document_id = await conn.fetchval("""
+                    INSERT INTO documents (
+                        storage_path, original_filename, document_type,
+                        jurisdiction, program, source_url, file_hash,
+                        metadata, tags, status, created_at, updated_at
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                    RETURNING id
+                """,
+                    storage_path,  # storage_path
+                    document_title,  # original_filename
+                    document_type,  # document_type
+                    parsed_metadata.get('jurisdiction', 'United States'),  # jurisdiction
+                    parsed_metadata.get('programs', ['Healthcare', 'General']),  # program
+                    source_url,  # source_url
+                    file_hash,  # file_hash
+                    json.dumps({  # metadata
+                        'upload_timestamp': datetime.now().isoformat(),
+                        'upload_method': 'regulatory_upload',
+                        'content_type': file.content_type,
+                        'file_size': len(file_data),
+                        'category': category,
+                        'user_metadata': parsed_metadata
+                    }),
+                    parsed_metadata.get('tags', ['healthcare', 'regulatory']),  # tags
+                    'pending',  # status
+                    datetime.now(),  # created_at
+                    datetime.now()  # updated_at
+                )
+            
+            logger.info(f"✅ Step 2 complete: Document record created with ID {document_id}")
+            
+        except Exception as db_error:
+            logger.error(f"❌ Document record creation failed: {db_error}")
+            # Clean up storage if document creation fails
+            if storage_path:
+                try:
+                    await storage_service.delete_file(storage_path)
+                except Exception as cleanup_error:
+                    logger.error(f"Failed to clean up storage after document creation error: {cleanup_error}")
+            
+            raise HTTPException(
+                status_code=500,
+                detail=f"Document record creation failed: {str(db_error)}"
+            )
+        
+        # ✅ STEP 3: Call doc-parser Edge Function
+        logger.info(f"🔄 Step 3: Triggering document processing...")
         
         processing_payload = {
             "documentId": document_id,
@@ -945,7 +721,7 @@ async def upload_regulatory_document(
             "filename": file.filename,
             "contentType": file.content_type,
             "fileSize": len(file_data),
-            "documentType": "regulatory"  # Regulatory uploads go to 'regulatory_documents' table
+            "documentType": document_type
         }
         
         processing_success = False
@@ -953,51 +729,44 @@ async def upload_regulatory_document(
         
         try:
             processing_result = await edge_orchestrator.call_edge_function(
-                'doc-parser',  # Use doc-parser directly like user uploads
-                    'POST',
-                    processing_payload,
-                    user_token,
+                'doc-parser',
+                'POST',
+                processing_payload,
+                user_token,
                 current_user.id
             )
-        
-            # Check if edge function processing actually succeeded
+            
             if processing_result.get('status') == 'success' or processing_result.get('success'):
-                logger.info(f"✅ Step 3 complete: Regulatory document processing triggered successfully")
+                logger.info(f"✅ Step 3 complete: Document processing triggered successfully")
                 processing_success = True
             else:
                 processing_error_message = processing_result.get('error', 'Unknown processing error')
-                logger.error(f"❌ Regulatory document processing failed: {processing_error_message}")
+                logger.error(f"❌ Document processing failed: {processing_error_message}")
                 
         except Exception as processing_error:
             processing_error_message = f"Processing trigger failed: {str(processing_error)}"
-            logger.error(f"❌ Regulatory processing trigger exception: {processing_error}")
+            logger.error(f"❌ Processing trigger exception: {processing_error}")
         
         # Update document status based on processing result
         if processing_success:
             final_status = "processing"
-            final_message = f"Regulatory document '{document_title}' uploaded and processing started successfully!"
+            final_message = f"Document '{document_title}' uploaded and processing started successfully!"
         else:
             final_status = "failed"
-            final_message = f"Regulatory document '{document_title}' uploaded but processing failed: {processing_error_message}"
+            final_message = f"Document '{document_title}' uploaded but processing failed: {processing_error_message}"
             
             # Update document status to failed in database
             async with pool.get_connection() as conn:
                 await conn.execute("""
-                    UPDATE regulatory_documents SET updated_at = NOW()
-                    WHERE document_id = $1
+                    UPDATE documents 
+                    SET status = 'failed', updated_at = NOW()
+                    WHERE id = $1
                 """, document_id)
-                await conn.execute("""
-                    UPDATE documents SET status = 'failed', updated_at = NOW()
-                WHERE id = $1
-                """, document_id)
-        
-        # Determine processing method
-        processing_method = "llamaparse" if file.content_type == "application/pdf" else "direct"
         
         processing_time = time.time() - upload_start_time
-        logger.info(f"📊 Regulatory upload completed in {processing_time:.2f}s")
+        logger.info(f"📊 Upload completed in {processing_time:.2f}s")
         
-        logger.info(f"✅ Regulatory document uploaded: {document_title}")
+        logger.info(f"✅ Document uploaded: {document_title}")
         
         return DocumentUploadResponse(
             success=processing_success,
@@ -1005,14 +774,14 @@ async def upload_regulatory_document(
             filename=file.filename,
             status=final_status,
             message=final_message,
-            processing_method=processing_method
+            processing_method='doc_parser'
         )
         
     except Exception as e:
-        logger.error(f"❌ Regulatory document upload failed: {str(e)}")
+        logger.error(f"❌ Document upload failed: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Regulatory upload failed: {str(e)}"
+            detail=f"Upload failed: {str(e)}"
         )
 
 # 📄 NEW: Document Management Endpoints
@@ -1075,44 +844,50 @@ async def get_document_status(
     document_id: str,
     current_user: UserResponse = Depends(get_current_user)
 ):
-    """Get specific document status - SIMPLIFIED MVP VERSION."""
+    """Get document processing status."""
     try:
-        # Direct database query - no service dependencies
+        # Get services
+        services = await get_services()
+        
+        # Get document record
         pool = await get_db_pool()
         async with pool.get_connection() as conn:
             doc = await conn.fetchrow("""
-                SELECT 
-                    id, original_filename, status, progress_percentage,
-                    file_size, content_type, created_at, updated_at,
-                    document_type
-                FROM documents
+                SELECT * FROM documents
                 WHERE id = $1 AND user_id = $2
             """, document_id, current_user.id)
             
             if not doc:
                 raise HTTPException(status_code=404, detail="Document not found")
             
-            # Return clean status response
+        # Get latest job status
+        latest_job = await conn.fetchrow("""
+            SELECT * FROM processing_jobs
+            WHERE payload->>'document_id' = $1
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, document_id)
+        
+        # Combine status information
             return {
-                'document_id': str(doc['id']),
-                'filename': doc['original_filename'],
-                'status': doc['status'],
-                'progress_percentage': doc['progress_percentage'] or 0,
-                'file_size': doc['file_size'],
-                'content_type': doc['content_type'],
-                'document_type': doc['document_type'],
-                'created_at': doc['created_at'],
-                'updated_at': doc['updated_at'],
-                'processing_complete': doc['status'] in ['completed', 'ready']
+            "document_id": str(doc["id"]),
+            "filename": doc["original_filename"],
+            "status": doc["status"],
+            "progress_percentage": doc["progress_percentage"],
+            "created_at": doc["created_at"].isoformat(),
+            "updated_at": doc["updated_at"].isoformat(),
+            "job_status": latest_job["status"] if latest_job else None,
+            "job_error": latest_job["error"] if latest_job else None,
+            "processing_complete": doc["status"] in ["completed", "ready"]
             }
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting document status {document_id}: {str(e)}")
+        logger.error(f"Error getting document status: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to get document status: {str(e)}"
+            detail=f"Failed to get status: {str(e)}"
         )
 
 # Root endpoint
@@ -1132,7 +907,7 @@ async def root():
         "endpoints": {
             "health": "/health",
             "docs": "/docs",
-            "upload_user_document": "/upload-document-backend",
+            "upload_user_document": "/upload-document",
             "upload_regulatory_document": "/upload-regulatory-document",
             "list_documents": "/documents",
             "document_status": "/documents/{document_id}/status",

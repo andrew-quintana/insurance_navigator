@@ -1,8 +1,0 @@
-{
-  "timestamp": "2025-06-23T08:18:33.913003",
-  "validation_type": "vector_creation_check",
-  "recent_documents": [],
-  "vector_status": {},
-  "summary": {},
-  "error": "column \"id\" does not exist"
-}

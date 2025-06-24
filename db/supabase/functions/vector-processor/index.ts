@@ -1,506 +1,183 @@
+/// <reference lib="deno.ns" />
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
-interface VectorRequest {
-  documentId: string;
-  extractedText: string;
-}
-
-// Enhanced error types for better handling
-interface ProcessingError {
-  type: 'quota_exceeded' | 'api_error' | 'network_error' | 'validation_error' | 'database_error';
-  message: string;
-  retryable: boolean;
-  details?: any;
-}
-
-// Chunking function
-function chunkText(text: string, chunkSize: number = 1000, overlap: number = 200): string[] {
-  if (text.length <= chunkSize) return [text]
-  
-  const chunks: string[] = []
-  let start = 0
-  
-  while (start < text.length) {
-    let end = start + chunkSize
-    if (end >= text.length) {
-      chunks.push(text.slice(start))
-      break
-    }
-    
-    // Find sentence boundary
-    const sentenceEnd = text.lastIndexOf('.', end)
-    if (sentenceEnd > start) {
-      end = sentenceEnd + 1
-    }
-    
-    chunks.push(text.slice(start, end).trim())
-    start = end - overlap
-  }
-  
-  return chunks.filter(chunk => chunk.length > 0)
-}
-
-// Enhanced error classification
-function classifyError(error: any): ProcessingError {
-  const errorMessage = error.message || error.toString()
-  
-  if (errorMessage.includes('quota') || errorMessage.includes('insufficient_quota') || error.status === 429) {
-    return {
-      type: 'quota_exceeded',
-      message: 'OpenAI API quota exceeded. Please check your billing and usage limits.',
-      retryable: false,
-      details: error
-    }
-  }
-  
-  if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
-    return {
-      type: 'network_error', 
-      message: 'Network connectivity issue with OpenAI API',
-      retryable: true,
-      details: error
-    }
-  }
-  
-  if (error.status >= 400 && error.status < 500) {
-    return {
-      type: 'api_error',
-      message: `OpenAI API error: ${error.status}`,
-      retryable: false,
-      details: error
-    }
-  }
-  
-  return {
-    type: 'validation_error',
-    message: errorMessage,
-    retryable: false,
-    details: error
-  }
+interface ProcessRequest {
+  documentId: string
+  chunkIndices: number[]
 }
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+  'Access-Control-Allow-Methods': 'POST',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 }
 
-Deno.serve(async (req) => {
-  let documentId: string | null = null
-  
-  try {
-    console.log('🚀 vector-processor started')
-    
-    // Handle OPTIONS requests
+async function generateEmbedding(text: string): Promise<number[]> {
+  const response = await fetch('https://api.openai.com/v1/embeddings', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      input: text,
+      model: 'text-embedding-3-small'
+    })
+  })
+
+  if (!response.ok) {
+    throw new Error(`OpenAI API error: ${response.status}`)
+  }
+
+  const result = await response.json()
+  return result.data[0].embedding
+}
+
+serve(async (req) => {
     if (req.method === 'OPTIONS') {
       return new Response('ok', { headers: corsHeaders })
     }
     
-    // Handle GET requests for health checks
-    if (req.method === 'GET') {
-      return new Response(JSON.stringify({
-        status: 'healthy',
-        service: 'vector-processor',
-        timestamp: new Date().toISOString()
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-    
-    // Only handle POST requests for vector processing
-    if (req.method !== 'POST') {
-      return new Response(JSON.stringify({
-        error: 'Method not allowed',
-        allowed_methods: ['POST', 'GET', 'OPTIONS']
-      }), {
-        status: 405,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-    
-    const supabase = createClient(
+  try {
+    console.log('🚀 Starting vector processor...')
+    const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     )
 
-    let requestBody: any
-    try {
-      requestBody = await req.json()
-    } catch (jsonError) {
-      console.error('❌ JSON parsing error:', jsonError)
-      return new Response(JSON.stringify({
-        error: 'Invalid JSON payload',
-        details: 'Request body must be valid JSON'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
+    // Log request details
+    const requestText = await req.text()
+    console.log('📥 Received request:', requestText)
+
+    const { documentId, chunkIndices }: ProcessRequest = JSON.parse(requestText)
+    console.log('📄 Parsed request:', { documentId, chunkIndices })
     
-    console.log('📥 Request received:', { 
-      hasDocumentId: !!requestBody.documentId,
-      textLength: requestBody.extractedText?.length || 0
-    })
-
-    const { documentId: reqDocumentId, extractedText }: VectorRequest = requestBody
-    documentId = reqDocumentId
-
-    // Validation
-    if (!documentId || !extractedText) {
-      console.error('❌ Missing required parameters:', { documentId: !!documentId, extractedText: !!extractedText })
-      return new Response(
-        JSON.stringify({ 
-          error: 'Missing required parameters',
-          details: 'Both documentId and extractedText are required'
-        }),
-        { status: 400 }
-      )
+    if (!documentId || !chunkIndices) {
+      throw new Error('Missing required fields')
     }
 
-    // Get document and user info
-    console.log('📋 Fetching document details...')
-    const { data: document, error: docError } = await supabase
-      .from('documents')
+    // Get processing status
+    const { data: processingStatus, error: statusError } = await supabaseClient
+      .from('document_processing_status')
       .select('*')
-      .eq('id', documentId)
+      .eq('document_id', documentId)
       .single()
 
-    if (docError || !document) {
-      console.error('❌ Document not found:', docError)
-      return new Response(
-        JSON.stringify({ error: 'Document not found' }),
-        { status: 404 }
-      )
-    }
+    if (statusError) throw statusError
+    if (!processingStatus) throw new Error('Processing status not found')
 
-    console.log('✅ Document found:', {
-      filename: document.original_filename,
-      status: document.status,
-      userId: document.user_id
-    })
-
-    // Update status to vectorizing
-    await supabase
-      .from('documents')
-      .update({
-        status: 'vectorizing',
-        progress_percentage: 70
-      })
-      .eq('id', documentId)
-
-    // Chunk the text with size limits for large documents
-    const textLength = extractedText.length
-    let chunkSize = 1000
-    let overlap = 200
-    
-    // For very large documents (>1MB), use larger chunks to reduce processing time
-    if (textLength > 1000000) { // 1MB+
-      chunkSize = 2000
-      overlap = 300
-      console.log('📦 Using larger chunks for large document')
-    }
-    
-    const chunks = chunkText(extractedText, chunkSize, overlap)
-    console.log(`📦 Text chunked into ${chunks.length} pieces (${textLength.toLocaleString()} chars, ~${Math.round(textLength/1024)}KB)`)
-    
-    // Warn about potential timeout for very large documents
-    if (chunks.length > 1500) {
-      console.warn(`⚠️ Large document with ${chunks.length} chunks may hit edge function timeout`)
-      console.warn(`⚠️ Consider using asynchronous processing for documents >2MB`)
-    }
-
-    // Get active encryption key
-    console.log('🔐 Fetching encryption key...')
-    const { data: encryptionKey, error: keyError } = await supabase
-      .from('encryption_keys')
-      .select('id')
-      .eq('key_status', 'active')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-
-    if (keyError) {
-      console.error('❌ Encryption key error:', keyError)
-      await updateDocumentError(supabase, documentId, 'Failed to get encryption key', {
-        type: 'database_error',
-        message: 'Encryption key not found',
-        retryable: false,
-        details: keyError
-      })
-      return new Response(
-        JSON.stringify({ error: 'Failed to get encryption key' }),
-        { status: 400 }
-      )
-    }
-
-    console.log('✅ Encryption key found')
-
-    // Check OpenAI API availability first
-    console.log('🔍 Checking OpenAI API availability...')
-    const openaiAvailable = await checkOpenAIAvailability()
-    
-    if (!openaiAvailable) {
-      console.log('⚠️ OpenAI API not available - implementing graceful degradation')
-      
-             // Graceful degradation: Store text chunks with zero embeddings
-       // This allows the document to be marked as processed and searchable via text
-       // Zero vector indicates no semantic search available, but text search works
-       const zeroEmbedding = JSON.stringify(new Array(1536).fill(0))
-       
-       const textOnlyVectors = chunks.map((chunk, index) => ({
-         user_id: document.user_id,
-         document_id: documentId,
-         document_record_id: documentId,
-         chunk_index: index,
-         content_embedding: zeroEmbedding, // Zero vector placeholder
-         encrypted_chunk_text: chunk,
-         encrypted_chunk_metadata: JSON.stringify({
-           filename: document.original_filename,
-           file_size: document.file_size,
-           content_type: document.content_type,
-           chunk_length: chunk.length,
-           total_chunks: chunks.length,
-           processed_at: new Date().toISOString(),
-           extraction_method: document.content_type === 'application/pdf' ? 'llamaparse' : 'direct',
-           embedding_method: 'none_quota_exceeded',
-           note: 'Processed without embeddings due to OpenAI quota limits - zero vector used as placeholder'
-         }),
-         encryption_key_id: encryptionKey.id
-       }))
-
-      // Insert text-only vectors
-      const { error: insertError } = await supabase
-        .from('document_vectors')
-        .insert(textOnlyVectors)
-
-      if (insertError) {
-        console.error('❌ Error storing text-only vectors:', insertError)
-        await updateDocumentError(supabase, documentId, 'Failed to store document chunks', {
-          type: 'database_error',
-          message: 'Database insertion failed',
-          retryable: true,
-          details: insertError
-        })
-        return new Response(
-          JSON.stringify({ error: 'Failed to store document chunks' }),
-          { status: 400 }
-        )
-      }
-
-      // Mark as completed with warning
-      await supabase
-        .from('documents')
-        .update({
-          status: 'completed',
-          progress_percentage: 100,
-          processed_chunks: chunks.length,
-          total_chunks: chunks.length,
-          error_message: 'Processed without embeddings due to OpenAI quota limits. Text search available.'
-        })
-        .eq('id', documentId)
-
-      console.log('✅ Document processed without embeddings (graceful degradation)')
-      return new Response(JSON.stringify({
-        success: true,
-        chunksProcessed: chunks.length,
-        totalChunks: chunks.length,
-        documentId: documentId,
-        warning: 'Document processed without embeddings due to API quota limits. Text search is available.',
-        embeddingMethod: 'none_quota_exceeded'
-      }))
-    }
-
-    // Process chunks with embeddings (normal flow)
-    console.log('🧠 Processing chunks with embeddings...')
-    // Use larger batch size for large documents to reduce total processing time
-    const batchSize = chunks.length > 1000 ? 10 : 5
-    console.log(`📦 Using batch size: ${batchSize} (${chunks.length} total chunks)`)
-    let processedChunks = 0
-    
-    for (let i = 0; i < chunks.length; i += batchSize) {
-      const batch = chunks.slice(i, i + batchSize)
-      console.log(`📦 Processing batch ${Math.ceil((i + batchSize) / batchSize)} of ${Math.ceil(chunks.length / batchSize)}`)
-      
-      // Generate embeddings for batch
-      const embeddingPromises = batch.map(async (chunk, batchIndex) => {
-        try {
-          console.log(`🧠 Generating embedding for chunk ${i + batchIndex}...`)
-          const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`
-            },
-            body: JSON.stringify({ input: chunk, model: "text-embedding-3-small", dimensions: 1536 })
-          })
-
-          if (!embeddingResponse.ok) {
-            const errorText = await embeddingResponse.text()
-            console.error(`❌ Embedding failed for chunk ${i + batchIndex}:`, {
-              status: embeddingResponse.status,
-              error: errorText
-            })
-            
-            const error = { status: embeddingResponse.status, message: errorText }
-            const classifiedError = classifyError(error)
-            throw classifiedError
-          }
-
-          const embeddingData = await embeddingResponse.json()
-          console.log(`✅ Embedding generated for chunk ${i + batchIndex}`)
-          
-          return {
-            user_id: document.user_id,
-            document_id: documentId,
-            document_record_id: documentId,
-            chunk_index: i + batchIndex,
-            content_embedding: JSON.stringify(embeddingData.data[0].embedding),
-            encrypted_chunk_text: chunk,
-            encrypted_chunk_metadata: JSON.stringify({
-              filename: document.original_filename,
-              file_size: document.file_size,
-              content_type: document.content_type,
-              chunk_length: chunk.length,
-              total_chunks: chunks.length,
-              processed_at: new Date().toISOString(),
-              extraction_method: document.content_type === 'application/pdf' ? 'llamaparse' : 'direct',
-              embedding_method: 'openai'
-            }),
-            encryption_key_id: encryptionKey.id
-          }
-        } catch (error) {
-          console.error(`❌ Failed to process chunk ${i + batchIndex}:`, error)
-          throw error
-        }
-      })
-
+    // Process each chunk
+    console.log(`🔄 Processing chunks: ${chunkIndices.join(', ')}`)
+    for (const chunkIndex of chunkIndices) {
       try {
-        const batchVectors = await Promise.all(embeddingPromises)
+        // Download chunk from storage
+        const chunkPath = `${processingStatus.storage_path}/chunk_${chunkIndex}.txt`
+        const { data: chunkData, error: downloadError } = await supabaseClient
+          .storage
+      .from('documents')
+          .download(chunkPath)
 
-        // Insert batch to database
-        const { error: insertError } = await supabase
-          .from('document_vectors')
-          .insert(batchVectors)
+        if (downloadError) throw downloadError
+        
+        // Convert blob to text
+        const chunkText = await chunkData.text()
+    
+        // Generate embedding
+        console.log(`📊 Generating embedding for chunk ${chunkIndex}`)
+        const embedding = await generateEmbedding(chunkText)
+      
+        // Store vector
+        await supabaseClient.from('document_vectors').insert({
+         document_id: documentId,
+          chunk_index: chunkIndex,
+          embedding,
+          content: chunkText
+        })
 
-        if (insertError) {
-          console.error('❌ Database insertion error:', insertError)
-          throw {
-            type: 'database_error',
-            message: 'Failed to store vectors in database',
-            retryable: true,
-            details: insertError
-          }
-        }
+        // Update processing status
+        const updatedChunks = [...processingStatus.processed_chunks, chunkIndex]
+        await supabaseClient
+          .from('document_processing_status')
+        .update({
+            processed_chunks: updatedChunks,
+            status: updatedChunks.length >= processingStatus.total_chunks ? 'completed' : 'processing'
+          })
+          .eq('document_id', documentId)
 
-        processedChunks += batch.length
-
-        // Update progress
-        const progress = Math.min(70 + Math.round((processedChunks / chunks.length) * 25), 95)
-        await supabase
+        // Update document progress
+        await supabaseClient
           .from('documents')
           .update({
-            progress_percentage: progress,
-            processed_chunks: processedChunks,
-            total_chunks: chunks.length
+            processed_chunks: updatedChunks.length,
+            status: updatedChunks.length >= processingStatus.total_chunks ? 'completed' : 'processing'
           })
           .eq('id', documentId)
 
-        console.log(`✅ Batch processed: ${processedChunks}/${chunks.length} chunks`)
-      } catch (batchError) {
-        console.error(`❌ Batch processing failed:`, batchError)
-        const classifiedError = typeof batchError === 'object' && batchError.type ? batchError : classifyError(batchError)
-        await updateDocumentError(supabase, documentId, `Vector processing failed: ${classifiedError.message}`, classifiedError)
-        return new Response(
-          JSON.stringify({ 
-            error: 'Vector processing failed',
-            details: classifiedError.message,
-            retryable: classifiedError.retryable
-          }),
-          { status: 400 }
-        )
-      }
-    }
+        console.log(`✅ Processed chunk ${chunkIndex}`)
 
-    // ✅ CRITICAL FIX: Mark as completed with proper notifications
-    console.log('🎉 Marking document as completed...')
-    const { error: completeError } = await supabase
-      .from('documents')
-      .update({
-        status: 'completed',
-        progress_percentage: 100,
-        processed_chunks: processedChunks,
-        total_chunks: chunks.length,
-        updated_at: new Date().toISOString(),
-        metadata: {
-          ...document.metadata,
-          vectorization_completed_at: new Date().toISOString(),
-          vector_count: processedChunks,
-          embedding_model: 'text-embedding-3-small',
-          processing_method: 'openai_embeddings'
-        }
-      })
-      .eq('id', documentId)
-
-    if (completeError) {
-      console.error('⚠️ Error marking document as completed:', completeError)
-    } else {
-      console.log('✅ Document marked as completed in database')
-      
-      // Send real-time completion notification
-      try {
-        const { error: notificationError } = await supabase
-          .from('realtime_progress_updates')
-          .insert({
-            user_id: document.user_id,
-            document_id: documentId,
-            payload: {
-              documentId: documentId,
-              status: 'completed',
-              progress: 100,
-              filename: document.original_filename,
-              vector_count: processedChunks,
-              total_chunks: chunks.length,
-              processing_method: 'openai_embeddings',
-              completed_at: new Date().toISOString(),
-              message: `✅ Document processing completed! Generated ${processedChunks} searchable chunks.`
-            }
+      } catch (error) {
+        console.error(`❌ Error processing chunk ${chunkIndex}:`, error)
+        // Mark error in status but continue with other chunks
+        await supabaseClient
+          .from('document_processing_status')
+          .update({ 
+            error: `Error processing chunk ${chunkIndex}: ${error.message}`
           })
-
-        if (notificationError) {
-          console.warn('⚠️ Failed to send completion notification:', notificationError)
-        } else {
-          console.log('✅ Completion notification sent via real-time')
-        }
-      } catch (notificationErr) {
-        console.warn('⚠️ Real-time notification error:', notificationErr)
+          .eq('document_id', documentId)
       }
     }
 
-    console.log('✅ vector-processor completed successfully')
-    return new Response(JSON.stringify({
-      success: true,
-      chunksProcessed: processedChunks,
-      totalChunks: chunks.length,
-      documentId: documentId,
-      embeddingMethod: 'openai',
-      completedAt: new Date().toISOString(),
-      message: `Document vectorization completed with ${processedChunks} chunks`
-    }))
-  } catch (error) {
-    console.error('❌ vector-processor unexpected error:', error)
-    
-    if (documentId) {
-      const classifiedError = classifyError(error)
-      await updateDocumentError(supabase, documentId, `Unexpected error: ${classifiedError.message}`, classifiedError)
+    // Queue next batch if needed
+    const processedCount = processingStatus.processed_chunks.length + chunkIndices.length
+    if (processedCount < processingStatus.total_chunks) {
+      console.log('🔄 Queueing next batch...')
+      const nextBatchSize = 5
+      const processedIndices = new Set([...processingStatus.processed_chunks, ...chunkIndices])
+      const nextStartIndex = Math.max(...chunkIndices) + 1
+      const nextIndices = Array.from(
+        { length: nextBatchSize }, 
+        (_, i) => nextStartIndex + i
+      ).filter(i => i < processingStatus.total_chunks && !processedIndices.has(i))
+
+      if (nextIndices.length > 0) {
+        await supabaseClient.functions.invoke('vector-processor', {
+          body: JSON.stringify({ documentId, chunkIndices: nextIndices })
+        })
+      }
+    } else {
+      console.log('🎉 All chunks processed!')
+      // Clean up chunks from storage
+      const { error: deleteError } = await supabaseClient
+        .storage
+        .from('documents')
+        .remove([`${processingStatus.storage_path}`])
+
+      if (deleteError) {
+        console.warn('⚠️ Failed to clean up chunks:', deleteError)
+      }
     }
     
     return new Response(
       JSON.stringify({ 
-        error: 'Internal server error',
-        details: error.message || 'Unknown error occurred'
+        success: true,
+        processedChunks: chunkIndices.length,
+        message: 'Chunks processed successfully'
       }),
-      { status: 500 }
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    )
+
+  } catch (error) {
+    console.error('❌ Error:', error)
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400
+      }
     )
   }
 })
@@ -557,4 +234,35 @@ async function updateDocumentError(supabase: any, documentId: string, errorMessa
       processing_completed_at: new Date().toISOString()
     })
     .eq('id', documentId)
+}
+
+async function processChunk(request: ChunkProcessingRequest, supabase: SupabaseClient) {
+  const { content, documentId, chunkIndex, isPartial, userId, documentType } = request
+  
+  try {
+    // Generate embeddings for the chunk
+    const embedding = await generateEmbedding(content, `chunk ${chunkIndex}`)
+    
+    // Store the chunk vector with metadata
+    const { error: insertError } = await supabase.from('document_vectors')
+      .insert({
+        user_id: userId,
+        document_id: documentId,
+        chunk_index: chunkIndex,
+        content_embedding: embedding,
+        encrypted_chunk_text: content,
+        is_partial: isPartial,
+        document_source_type: documentType === 'regulatory' ? 'regulatory_document' : 'user_document'
+      })
+
+    if (insertError) {
+      throw new Error(`Database insertion failed: ${insertError.message}`)
+    }
+    
+    return { success: true, chunkIndex }
+    
+  } catch (error) {
+    console.error(`❌ Failed to process chunk ${chunkIndex}:`, error)
+    throw error
+  }
 } 
