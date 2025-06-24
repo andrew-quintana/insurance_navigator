@@ -58,7 +58,7 @@ origins = [
     "https://insurance-navigator-staging.vercel.app",
     "https://insurance-navigator.vercel.app",
     "https://insurance-navigator-hr7oebcu2-andrew-quintanas-projects.vercel.app",
-    "https://insurance-navigator-gdievtrsx-andrew-quintanas-projects.vercel.app"  # New preview URL
+    "https://insurance-navigator-gdievtrsx-andrew-quintanas-projects.vercel.app"
 ]
 
 if os.getenv("ENVIRONMENT") == "development":
@@ -71,6 +71,7 @@ if os.getenv("ENVIRONMENT") == "development":
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https://insurance-navigator.*\.vercel\.app",  # Allow all Vercel preview URLs
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
     allow_headers=[
@@ -90,7 +91,15 @@ app.add_middleware(
 async def preflight_handler(request: Request, rest_of_path: str):
     """Global OPTIONS handler for preflight requests"""
     origin = request.headers.get("Origin")
+    
+    # Log the preflight request details
+    logger.info(f"🔄 Preflight request received for path: {rest_of_path}")
+    logger.info(f"🌐 Origin: {origin}")
+    logger.info(f"📋 Headers: {dict(request.headers)}")
+    
+    # Check if origin is allowed
     if origin and origin in origins:
+        logger.info(f"✅ Origin {origin} is allowed")
         return Response(
             status_code=200,
             headers={
@@ -102,7 +111,32 @@ async def preflight_handler(request: Request, rest_of_path: str):
                 "Vary": "Origin"
             }
         )
-    return Response(status_code=400)
+    
+    # If origin not in allowed list, log it but still handle the request
+    if origin:
+        logger.warning(f"⚠️ Received request from non-allowed origin: {origin}")
+        logger.warning(f"🔒 Allowed origins: {origins}")
+        
+        # In development, be more permissive
+        if os.getenv("ENVIRONMENT") == "development":
+            return Response(
+                status_code=200,
+                headers={
+                    "Access-Control-Allow-Origin": origin,
+                    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+                    "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept, Origin, X-Requested-With, X-CSRF-Token",
+                    "Access-Control-Allow-Credentials": "true",
+                    "Access-Control-Max-Age": "3600",
+                    "Vary": "Origin"
+                }
+            )
+    
+    # If no origin header, it's not a valid CORS request
+    logger.error("❌ Invalid CORS request: No Origin header")
+    return Response(
+        status_code=400,
+        content="Invalid CORS request: Missing Origin header"
+    )
 
 # Health check cache
 _health_cache = {"result": None, "timestamp": 0}
