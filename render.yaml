@@ -3,7 +3,7 @@ services:
     name: insurance-navigator-api
     env: docker
     plan: free
-    dockerfilePath: ./config/docker/Dockerfile
+    dockerfilePath: ./Dockerfile
     region: oregon
     branch: staging
     port: 8000
