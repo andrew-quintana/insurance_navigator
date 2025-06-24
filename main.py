@@ -302,110 +302,41 @@ async def get_document_status(
 @app.post("/upload-document-backend")
 async def upload_document_backend(
     file: UploadFile = File(...),
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    policy_id: str = Form(...),
+    current_user: UserResponse = Depends(get_current_user)
 ):
-    """Upload and process a document."""
-    start_time = time.time()
+    """Handle document upload with detailed logging."""
+    logger.info(f"📄 Upload request received - File: {file.filename}, Size: {file.size if hasattr(file, 'size') else 'unknown'}, User: {current_user.email}")
+    
     try:
-        # Read file data
-        file_data = await file.read()
+        # Validate file size
+        contents = await file.read()
+        file_size = len(contents)
+        await file.seek(0)
         
-        # Generate document ID
-        document_id = str(uuid.uuid4())
+        if file_size > 50 * 1024 * 1024:  # 50MB limit
+            logger.error(f"❌ File too large: {file_size} bytes")
+            raise HTTPException(status_code=413, detail="File too large. Maximum size is 50MB")
+            
+        logger.info(f"✅ File size validated: {file_size} bytes")
         
-        # Get document service
-        doc_service = DocumentService()
+        # Initialize services
+        services = await get_services()
         
-        # Create document record
-        document = await doc_service.create_document(
-            user_id=current_user["id"],
-            filename=file.filename,
-            file_size=len(file_data),
-            content_type=file.content_type or "application/octet-stream",
-            file_hash=hashlib.sha256(file_data).hexdigest(),
-            storage_path=f"documents/{current_user['id']}/{document_id}/{file.filename}",
-            document_type="user_uploaded",
-            metadata={
-                "upload_timestamp": datetime.utcnow().isoformat(),
-                "uploader_email": current_user["email"],
-                "original_filename": file.filename
-            }
+        # Process upload
+        logger.info(f"🔄 Starting document processing for {file.filename}")
+        result = await services["document_processing"].process_document(
+            file=file,
+            user_id=current_user.id,
+            policy_id=policy_id
         )
+        logger.info(f"✅ Document processing completed: {result}")
         
-        # Get storage service
-        storage_service = await get_storage_service()
-        
-        # Upload to storage
-        storage_result = await storage_service.upload_document(
-            file_data=file_data,
-            filename=file.filename,
-            user_id=current_user["id"],
-            document_type="user_uploaded",
-            metadata={
-                "document_id": document["document_id"],
-                "uploader_email": current_user["email"]
-            }
-        )
-        
-        if not storage_result:
-            raise Exception("Failed to upload file to storage")
-        
-        # Start processing
-        processing_service = DocumentProcessingService()
-        process_result = await processing_service.process_document(
-            document_id=document["document_id"],
-            file_data=file_data,
-            filename=file.filename,
-            content_type=file.content_type or "application/octet-stream",
-            user_id=current_user["id"]
-        )
-        
-        # Send WebSocket notification about upload success
-        try:
-            await notify_document_status(
-                user_id=current_user["id"],
-                document_id=document["document_id"],
-                status="uploaded",
-                message="Document uploaded successfully and processing started"
-            )
-        except Exception as ws_error:
-            logger.warning(f"Failed to send WebSocket notification: {ws_error}")
-        
-        return {
-            "status": "success",
-            "document_id": document["document_id"],
-            "filename": file.filename,
-            "storage_path": storage_result["file_path"],
-            "processing_status": process_result["status"] if process_result else "queued",
-            "message": "Document uploaded and processing started"
-        }
+        return result
         
     except Exception as e:
-        logger.error(f"Document upload error: {str(e)}")
-        logger.error(f"Error details: type={type(e).__name__}")
-        import traceback
-        logger.error(traceback.format_exc())
-        
-        # Send WebSocket notification about upload failure
-        try:
-            if 'document_id' in locals():
-                await notify_document_status(
-                    user_id=current_user["id"],
-                    document_id=document_id,
-                    status="failed",
-                    message=f"Upload failed: {str(e)[:100]}"
-                )
-        except Exception as ws_error:
-            logger.warning(f"Failed to send WebSocket notification: {ws_error}")
-        
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={
-                "error": "Internal server error",
-                "message": "An unexpected error occurred during upload. Please try again.",
-                "processing_time": f"{time.time() - start_time:.2f}s"
-            }
-        )
+        logger.error(f"❌ Upload failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 async def notify_document_status(
     user_id: str,
