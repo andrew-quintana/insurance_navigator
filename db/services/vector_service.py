@@ -7,15 +7,19 @@ import json
 import uuid
 from db.services.encryption_service import EncryptionServiceFactory
 from db.services.db_pool import get_db_pool
+from ..config import config
 
 logger = logging.getLogger(__name__)
 
 class VectorService:
-    def __init__(self, api_key: str = None, pool = None):
+    """Service for managing document vectors with encryption support."""
+    
+    def __init__(self):
+        """Initialize the vector service."""
+        self.encryption_service = EncryptionServiceFactory.create_service(config.encryption.provider)
         self.logger = logging.getLogger(__name__)
-        self.encryption_service = EncryptionServiceFactory.create_service()
-        self.api_key = api_key
-        self.pool = pool
+        self.api_key = None
+        self.pool = None
         self.session = None
         self.active_requests = 0
         self.last_request_time = 0

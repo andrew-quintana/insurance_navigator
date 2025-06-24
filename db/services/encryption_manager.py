@@ -1,3 +1,5 @@
+"""Encryption key management service."""
+
 from typing import Optional, Dict, Any
 import uuid
 from datetime import datetime, timedelta

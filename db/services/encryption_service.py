@@ -7,6 +7,8 @@ import base64
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from supabase import create_client, Client
+from ..config import config
 
 class EncryptionService(ABC):
     """Abstract base class for encryption services."""
@@ -73,6 +75,68 @@ class MockEncryptionService(EncryptionService):
             }
         }
 
+class SupabaseEncryptionService(EncryptionService):
+    """Supabase implementation of encryption service."""
+    
+    def __init__(self):
+        self.supabase: Client = create_client(
+            config.supabase.url,
+            config.supabase.service_role_key
+        )
+    
+    async def encrypt(self, data: bytes, key_id: uuid.UUID) -> bytes:
+        """Encrypt data using Supabase's encryption service."""
+        try:
+            response = await self.supabase.rpc(
+                'encrypt_data',
+                {'data': base64.b64encode(data).decode(), 'key_id': str(key_id)}
+            ).execute()
+            
+            if response.data:
+                return base64.b64decode(response.data['encrypted_data'].replace('\n', ''))
+            raise ValueError("No encrypted data returned from Supabase")
+        except Exception as e:
+            raise ValueError(f"Encryption failed: {str(e)}")
+    
+    async def decrypt(self, encrypted_data: bytes, key_id: uuid.UUID) -> bytes:
+        """Decrypt data using Supabase's encryption service."""
+        try:
+            response = await self.supabase.rpc(
+                'decrypt_data',
+                {
+                    'encrypted_data': base64.b64encode(encrypted_data).decode().replace('\n', ''),
+                    'key_id': str(key_id)
+                }
+            ).execute()
+            
+            if response.data:
+                return base64.b64decode(response.data['decrypted_data'].replace('\n', ''))
+            raise ValueError("No decrypted data returned from Supabase")
+        except Exception as e:
+            raise ValueError(f"Decryption failed: {str(e)}")
+    
+    async def generate_key(self) -> Dict[str, Any]:
+        """Generate a new encryption key using Supabase."""
+        try:
+            response = await self.supabase.rpc('generate_encryption_key').execute()
+            
+            if not response.data:
+                raise ValueError("No key data returned from Supabase")
+                
+            return {
+                'id': response.data['key_id'],
+                'key_version': response.data['version'],
+                'key_status': 'active',
+                'created_at': datetime.now().isoformat(),
+                'metadata': {
+                    'provider': 'supabase',
+                    'algorithm': 'aes-256-gcm',
+                    'created_by': 'system'
+                }
+            }
+        except Exception as e:
+            raise ValueError(f"Key generation failed: {str(e)}")
+
 class EncryptionServiceFactory:
     """Factory for creating encryption service instances."""
     
@@ -82,12 +146,14 @@ class EncryptionServiceFactory:
         Create an encryption service instance based on the provider.
         
         Args:
-            provider: The encryption provider to use ('mock' for development)
+            provider: The encryption provider to use ('mock' for development, 'supabase' for production)
         
         Returns:
             An instance of EncryptionService
         """
         if provider == 'mock':
             return MockEncryptionService()
+        elif provider == 'supabase':
+            return SupabaseEncryptionService()
         else:
             raise ValueError(f"Unsupported encryption provider: {provider}") 

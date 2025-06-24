@@ -13,6 +13,7 @@ import uuid
 
 from .db_pool import get_db_pool
 from .encryption_service import EncryptionServiceFactory
+from ..config import config
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ class DocumentService:
     """
     
     def __init__(self):
-        self.encryption_service = EncryptionServiceFactory.create_service('mock')
+        self.encryption_service = EncryptionServiceFactory.create_service(config.encryption.provider)
         self.logger = logging.getLogger(__name__)
         
     async def extract_policy_basics(self, document_id: str, text: str) -> Dict[str, Any]:
