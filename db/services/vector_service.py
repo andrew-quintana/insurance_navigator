@@ -11,9 +11,15 @@ from db.services.db_pool import get_db_pool
 logger = logging.getLogger(__name__)
 
 class VectorService:
-    def __init__(self):
+    def __init__(self, api_key: str = None, pool = None):
         self.logger = logging.getLogger(__name__)
         self.encryption_service = EncryptionServiceFactory.create_service()
+        self.api_key = api_key
+        self.pool = pool
+        self.session = None
+        self.active_requests = 0
+        self.last_request_time = 0
+        self.rate_limit_per_minute = 3500  # OpenAI's rate limit
 
     async def store_document_vectors(
         self,
