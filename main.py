@@ -66,14 +66,42 @@ if os.getenv("ENVIRONMENT") == "development":
         "http://localhost:8000"
     ])
 
+# Add CORS middleware before any other middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "Accept",
+        "Origin",
+        "X-Requested-With",
+        "X-CSRF-Token"
+    ],
+    expose_headers=["Content-Length", "Content-Range"],
     max_age=3600
 )
+
+# Add OPTIONS route handler for explicit preflight handling
+@app.options("/{rest_of_path:path}")
+async def preflight_handler(request: Request, rest_of_path: str):
+    """Global OPTIONS handler for preflight requests"""
+    origin = request.headers.get("Origin")
+    if origin and origin in origins:
+        return Response(
+            status_code=200,
+            headers={
+                "Access-Control-Allow-Origin": origin,
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept, Origin, X-Requested-With, X-CSRF-Token",
+                "Access-Control-Allow-Credentials": "true",
+                "Access-Control-Max-Age": "3600",
+                "Vary": "Origin"
+            }
+        )
+    return Response(status_code=400)
 
 # Health check cache
 _health_cache = {"result": None, "timestamp": 0}
