@@ -437,30 +437,29 @@ async def shutdown_event():
 
 @app.options("/login")
 async def login_preflight(request: Request):
-    """Handle preflight requests for login endpoint with proper CORS headers and logging."""
-    logger.info("👋 Login preflight request received")
+    """Handle preflight requests for login endpoint with proper CORS headers."""
     origin = request.headers.get("Origin")
-    logger.info(f"🌐 Request Origin: {origin}")
-    logger.info(f"📨 Request Headers: {dict(request.headers)}")
     
-    # Log allowed origins for debugging
-    logger.info(f"✅ Allowed Origins: {origins}")
+    # Log the preflight request details
+    logger.info(f"🔄 Login preflight request from origin: {origin}")
+    logger.info(f"📝 Request method: {request.headers.get('Access-Control-Request-Method')}")
+    logger.info(f"📋 Request headers: {request.headers.get('Access-Control-Request-Headers')}")
     
     # Validate origin
-    if origin and origin in origins:
-        logger.info(f"✅ Origin {origin} is allowed")
-        headers = {
-            "Access-Control-Allow-Origin": origin,
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept, Origin, X-Requested-With",
-            "Access-Control-Allow-Credentials": "true",
-            "Access-Control-Max-Age": "3600"
-        }
-        logger.info(f"📤 Responding with headers: {headers}")
-        return Response(status_code=200, headers=headers)
+    if not origin or origin not in origins:
+        logger.warning(f"❌ Invalid origin in preflight request: {origin}")
+        return Response(status_code=400)
     
-    logger.warning(f"❌ Origin {origin} is not allowed")
-    return Response(status_code=400)
+    # Create response with CORS headers
+    response = Response(status_code=200)
+    response.headers["Access-Control-Allow-Origin"] = origin
+    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept, Origin, X-Requested-With"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Max-Age"] = "3600"
+    
+    logger.info("✅ Preflight response sent successfully")
+    return response
 
 @app.post("/login")
 async def login(request: Request, response: Response):
