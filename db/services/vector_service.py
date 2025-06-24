@@ -14,12 +14,12 @@ logger = logging.getLogger(__name__)
 class VectorService:
     """Service for managing document vectors with encryption support."""
     
-    def __init__(self):
+    def __init__(self, api_key: str = None, pool = None):
         """Initialize the vector service."""
         self.encryption_service = EncryptionServiceFactory.create_service(config.encryption.provider)
         self.logger = logging.getLogger(__name__)
-        self.api_key = None
-        self.pool = None
+        self.api_key = api_key
+        self.pool = pool
         self.session = None
         self.active_requests = 0
         self.last_request_time = 0
