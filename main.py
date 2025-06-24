@@ -512,6 +512,33 @@ async def login(request: Request, response: Response):
             detail="An unexpected error occurred"
         )
 
+# Add /me endpoint for session validation
+@app.get("/me")
+async def get_current_user_info(current_user: UserResponse = Depends(get_current_user)):
+    """Get current user information."""
+    try:
+        # Get user service
+        user_service = await get_user_service()
+        
+        # Get fresh user data
+        user_data = await user_service.get_user_by_id(current_user.id)
+        if not user_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+            
+        return user_data
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting user info: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred"
+        )
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
