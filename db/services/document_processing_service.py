@@ -53,7 +53,13 @@ class DocumentProcessingService:
         try:
             # 1. Upload to storage
             storage_path = f"{user_id}/{document_id}/{filename}"
-            await self.storage.upload_file(storage_path, file_data)
+            await self.storage.upload_document(
+                file_data=file_data,
+                filename=filename,
+                user_id=user_id,
+                document_type=document_type,
+                metadata=metadata
+            )
             
             # 2. Queue LlamaParse processing
             parse_job = await self.queue.enqueue_job(
