@@ -55,58 +55,24 @@ app = FastAPI(
 
 # Add CORS middleware with environment-aware configuration
 origins = [
-    "https://insurance-navigator-hr7oebcu2-andrew-quintanas-projects.vercel.app",
+    "https://insurance-navigator-staging.vercel.app",
     "https://insurance-navigator.vercel.app",
-    "https://insurance-navigator-staging.vercel.app"
+    "https://insurance-navigator-hr7oebcu2-andrew-quintanas-projects.vercel.app"
 ]
 
 if os.getenv("ENVIRONMENT") == "development":
     origins.extend([
-        "http://localhost:8080",
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "http://localhost:8000"
     ])
 
-# Add debug logging middleware for CORS
-class CORSDebugMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        logger.info(f"🔍 Incoming request: {request.method} {request.url}")
-        logger.info(f"📨 Headers: {dict(request.headers)}")
-        
-        if request.method == "OPTIONS":
-            logger.info("🔄 CORS Preflight request detected")
-            logger.info(f"🌐 Origin: {request.headers.get('Origin')}")
-            logger.info(f"📝 Request Method: {request.headers.get('Access-Control-Request-Method')}")
-            logger.info(f"📋 Request Headers: {request.headers.get('Access-Control-Request-Headers')}")
-        
-        response = await call_next(request)
-        
-        logger.info(f"📤 Response status: {response.status_code}")
-        logger.info(f"📤 Response headers: {dict(response.headers)}")
-        
-        return response
-
-# Add debug middleware before CORS middleware
-app.add_middleware(CORSDebugMiddleware)
-
-# Update CORS middleware with logging
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],
-    allow_headers=[
-        "Content-Type",
-        "Authorization",
-        "Accept",
-        "Origin",
-        "X-Requested-With",
-        "Access-Control-Request-Method",
-        "Access-Control-Request-Headers",
-        "Access-Control-Allow-Origin",
-        "Access-Control-Allow-Credentials"
-    ],
-    max_age=3600,
-    expose_headers=["Content-Length", "Content-Range"]
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
+    max_age=3600
 )
 
 # Health check cache
@@ -435,46 +401,17 @@ async def shutdown_event():
     """Cleanup on shutdown."""
     logger.info("🛑 Shutting down Insurance Navigator API")
 
-@app.options("/login")
-async def login_preflight(request: Request):
-    """Handle preflight requests for login endpoint with proper CORS headers."""
-    origin = request.headers.get("Origin")
-    
-    # Log the preflight request details
-    logger.info(f"🔄 Login preflight request from origin: {origin}")
-    logger.info(f"📝 Request method: {request.headers.get('Access-Control-Request-Method')}")
-    logger.info(f"📋 Request headers: {request.headers.get('Access-Control-Request-Headers')}")
-    
-    # Validate origin
-    if not origin or origin not in origins:
-        logger.warning(f"❌ Invalid origin in preflight request: {origin}")
-        return Response(status_code=400)
-    
-    # Create response with CORS headers
-    response = Response(status_code=200)
-    response.headers["Access-Control-Allow-Origin"] = origin
-    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept, Origin, X-Requested-With"
-    response.headers["Access-Control-Allow-Credentials"] = "true"
-    response.headers["Access-Control-Max-Age"] = "3600"
-    
-    logger.info("✅ Preflight response sent successfully")
-    return response
-
 @app.post("/login")
 async def login(request: Request, response: Response):
-    """Login endpoint with proper CORS and error handling."""
-    logger.info("🔐 Login request received")
-    logger.info(f"📨 Request Headers: {dict(request.headers)}")
-    
+    """Login endpoint with proper error handling."""
     try:
         # Get request body
         body = await request.json()
         email = body.get("email")
-        logger.info(f"📧 Login attempt for email: {email}")
+        password = body.get("password")
         
-        if not email or "password" not in body:
-            logger.warning("❌ Login failed: Missing email or password")
+        if not email or not password:
+            logger.warning("Login attempt failed: Missing email or password")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email and password are required"
@@ -484,7 +421,7 @@ async def login(request: Request, response: Response):
         user_service = await get_user_service()
         
         # Authenticate user
-        auth_result = await user_service.authenticate_user(email, body["password"])
+        auth_result = await user_service.authenticate_user(email, password)
         if not auth_result:
             logger.warning(f"❌ Authentication failed for user: {email}")
             raise HTTPException(
