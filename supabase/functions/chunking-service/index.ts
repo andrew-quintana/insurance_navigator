@@ -9,7 +9,7 @@ interface ChunkRequest {
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 }
 
@@ -37,7 +37,37 @@ function chunkText(text: string, chunkSize: number = 1500, overlap: number = 100
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { 
+      headers: {
+        ...corsHeaders,
+        'Allow': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+      }
+    })
+  }
+
+  // Handle unsupported methods
+  if (!['GET', 'POST', 'OPTIONS'].includes(req.method)) {
+    return new Response('Method not allowed', { 
+      status: 405,
+      headers: {
+        ...corsHeaders,
+        'Allow': 'GET, POST, OPTIONS',
+        'Content-Type': 'text/plain'
+      }
+    })
+  }
+
+  // Add health check endpoint
+  if (req.method === 'GET') {
+    return new Response(
+      JSON.stringify({ 
+        status: 'healthy',
+        service: 'chunking-service',
+        timestamp: new Date().toISOString()
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
 
   try {

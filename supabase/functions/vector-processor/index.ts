@@ -140,10 +140,28 @@ serve(async (req) => {
     metrics.startTime = performance.now();
     console.log(`🚀 Starting vector processing at ${new Date().toISOString()}`);
 
-  // Handle CORS
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-        return new Response('ok', { headers: corsHeaders });
-    }
+    return new Response('ok', { 
+      headers: {
+        ...corsHeaders,
+        'Allow': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+      }
+    })
+  }
+
+  // Handle unsupported methods
+  if (!['GET', 'POST', 'OPTIONS'].includes(req.method)) {
+    return new Response('Method not allowed', { 
+      status: 405,
+      headers: {
+        ...corsHeaders,
+        'Allow': 'GET, POST, OPTIONS',
+        'Content-Type': 'text/plain'
+      }
+    })
+  }
 
     // Health check
     if (req.method === 'GET') {
