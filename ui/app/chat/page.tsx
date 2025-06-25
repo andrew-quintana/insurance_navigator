@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { SendHorizontal, ArrowLeft, Upload, User, Bot, LogOut, X, FileText, CheckCircle, AlertCircle } from "lucide-react"
 import DocumentUploadModal from "@/components/DocumentUploadModal"
-import { createClient } from '@supabase/supabase-js'
+import { createClient, RealtimeChannel } from '@supabase/supabase-js'
 
 type Message = {
   id: number
@@ -71,14 +71,11 @@ export default function ChatPage() {
       return null
     }
     
-    return createClient(url, key, {
-      realtime: {
-        params: {
-          eventsPerSecond: 2
-        }
-      }
-    })
+    return createClient(url, key)
   }, [])
+
+  // Channel reference to prevent multiple subscriptions
+  const channelRef = useRef<RealtimeChannel | null>(null)
 
   // Check authentication on component mount
   useEffect(() => {
@@ -174,9 +171,16 @@ export default function ChatPage() {
   useEffect(() => {
     if (!supabase || !isAuthenticated || !userInfo?.id) return
 
+    // Clean up existing subscription
+    if (channelRef.current) {
+      console.log('🔄 Cleaning up existing subscription')
+      channelRef.current.unsubscribe()
+      channelRef.current = null
+    }
+
     console.log('🔄 Setting up background processing notifications for user:', userInfo.id)
 
-    // Listen for document processing completion notifications
+    // Create new subscription
     const channel = supabase
       .channel('background-notifications')
       .on('postgres_changes', 
@@ -208,34 +212,23 @@ export default function ChatPage() {
         }
       )
 
-    // Subscribe with retry logic
-    const subscribe = async () => {
-      try {
-        const status = await channel.subscribe()
-        console.log('📡 Background notification subscription status:', status)
-        
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to background notifications')
-        } else {
-          console.warn('⚠️ Background notification subscription failed:', status)
-          // Retry subscription after delay
-          setTimeout(subscribe, 5000)
-        }
-      } catch (error) {
-        console.error('❌ Error subscribing to background notifications:', error)
-        // Retry subscription after delay
-        setTimeout(subscribe, 5000)
-      }
-    }
+    // Subscribe once
+    channel.subscribe((status: string) => {
+      console.log('📡 Background notification subscription status:', status)
+    })
 
-    subscribe()
+    // Store channel reference
+    channelRef.current = channel
 
     // Cleanup function
     return () => {
-      console.log('🔄 Cleaning up background notification subscription')
-      channel.unsubscribe()
+      if (channelRef.current) {
+        console.log('🔄 Cleaning up background notification subscription')
+        channelRef.current.unsubscribe()
+        channelRef.current = null
+      }
     }
-  }, [supabase, isAuthenticated, userInfo?.id, updateActivity])
+  }, [supabase, isAuthenticated, userInfo?.id])
 
   // Auto-scroll to the bottom of messages
   useEffect(() => {
