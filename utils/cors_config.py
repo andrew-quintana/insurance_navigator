@@ -21,7 +21,8 @@ def get_cors_config() -> Dict[str, Any]:
         "https://insurance-navigator-3u3iv7xq0-andrew-quintanas-projects.vercel.app",
         "https://insurance-navigator-ajzpmcvgz-andrew-quintanas-projects.vercel.app",
         "https://insurance-navigator-cwtwocttv-andrew-quintanas-projects.vercel.app",
-        "https://insurance-navigator-kkedlaqxo-andrew-quintanas-projects.vercel.app"
+        "https://insurance-navigator-kkedlaqxo-andrew-quintanas-projects.vercel.app",
+        "https://insurance-navigator-pexzb9r79-andrew-quintanas-projects.vercel.app"  # New preview URL
     ]
     
     # Add any additional origins from environment
@@ -30,7 +31,7 @@ def get_cors_config() -> Dict[str, Any]:
     
     return {
         "allow_origins": allowed_origins,
-        "allow_origin_regex": r"https://insurance-navigator-[a-zA-Z0-9-]+-andrew-quintanas-projects\.vercel\.app",  # Updated regex
+        "allow_origin_regex": r"https://insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app",  # Updated regex to match any length hash
         "allow_credentials": True,
         "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
         "allow_headers": [
