@@ -82,7 +82,7 @@ class StorageService:
             storage_path = f"policy/{user_id}/{file_hash}/{filename}"
             
             # Upload to Supabase storage
-            storage_url = f"{self.supabase_url}/storage/v1/object/documents/{storage_path}"
+            storage_url = f"{self.supabase_url}/storage/v1/object/{self.bucket_name}/{storage_path}"
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     storage_url,
@@ -111,7 +111,7 @@ class StorageService:
                         file_hash, storage_path, status, metadata
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                     RETURNING id
-                """,
+                """, 
                     uuid.UUID(user_id), filename, len(file_content), content_type,
                     file_hash, storage_path, 'processing',
                     json.dumps({
