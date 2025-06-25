@@ -7,3 +7,10 @@ verify_jwt = true
 
 [functions.job-processor]
 verify_jwt = true
+
+[realtime]
+enabled = true
+
+[realtime.tables]
+[realtime.tables.realtime_progress_updates]
+enabled = true
