@@ -207,17 +207,18 @@ class StorageService:
                 """, uuid.UUID(document_id))
                 
         except Exception as e:
-            logger.error(f"Failed to process vectors for document {document_id}: {e}")
-            # Update document status to failed
+            error_msg = str(e)
+            logger.error(f"Failed to process vectors for document {document_id}: {error_msg}")
+            # Update document status to failed and store error in metadata
             pool = await get_db_pool()
             async with pool.get_connection() as conn:
                 await conn.execute("""
                     UPDATE documents 
                     SET status = 'failed',
-                        error_message = $2,
+                        metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('error_message', $2, 'error_timestamp', NOW()::text),
                         updated_at = NOW()
                     WHERE id = $1
-                """, uuid.UUID(document_id), str(e))
+                """, uuid.UUID(document_id), error_msg)
 
     def _chunk_text(self, text: str, chunk_size: int = 1500, overlap: int = 100) -> List[str]:
         """Split text into chunks with overlap."""

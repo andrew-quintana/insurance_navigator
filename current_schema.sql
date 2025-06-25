@@ -1,5 +1,3 @@
-
-
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -88,10 +86,17 @@ CREATE OR REPLACE FUNCTION "public"."auto_create_processing_job"() RETURNS "trig
                     -- Create a parse job
                     INSERT INTO processing_jobs (
                         document_id, job_type, status, priority, 
-                        max_retries, retry_count, created_at, scheduled_at
+                        max_retries, retry_count, created_at, scheduled_at,
+                        payload
                     ) VALUES (
                         NEW.id, 'parse', 'pending', 5,
-                        3, 0, NOW(), NOW() + INTERVAL '5 seconds'
+                        3, 0, NOW(), NOW() + INTERVAL '5 seconds',
+                        jsonb_build_object(
+                            'filename', NEW.original_filename,
+                            'document_type', NEW.document_type,
+                            'user_id', NEW.user_id,
+                            'metadata', NEW.metadata
+                        )
                     );
                     
                     RAISE LOG 'Auto-created processing job for document %', NEW.original_filename;
@@ -797,7 +802,7 @@ COMMENT ON FUNCTION "public"."log_policy_access"("policy_uuid" "uuid", "access_t
 
 
 CREATE OR REPLACE FUNCTION "public"."log_user_action"("user_uuid" "uuid", "action_type" "text", "resource_type" "text", "resource_id" "text" DEFAULT NULL::"text", "action_details" "jsonb" DEFAULT NULL::"jsonb", "client_ip" "inet" DEFAULT NULL::"inet", "client_user_agent" "text" DEFAULT NULL::"text") RETURNS "uuid"
-    LANGUAGE "plpgsql" SECURITY DEFINER
+    LANGUAGE "plpgsql SECURITY DEFINER
     AS $$
 DECLARE
     log_id UUID;
@@ -2106,7 +2111,6 @@ GRANT ALL ON FUNCTION "public"."vector"("public"."vector", integer, boolean) TO 
 GRANT ALL ON FUNCTION "public"."vector"("public"."vector", integer, boolean) TO "anon";
 GRANT ALL ON FUNCTION "public"."vector"("public"."vector", integer, boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."vector"("public"."vector", integer, boolean) TO "service_role";
-
 
 
 

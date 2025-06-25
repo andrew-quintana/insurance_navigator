@@ -1,0 +1,48 @@
+# First deployment build with additional debugging capabilities
+FROM python:3.11-slim as builder
+
+# Create app user in builder stage and install as that user
+RUN useradd --create-home --shell /bin/bash app
+
+# Install system dependencies with additional debugging tools
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    curl \
+    procps \
+    htop \
+    vim \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install as app user
+COPY config/python/requirements-first-deploy.txt /tmp/requirements.txt
+USER app
+RUN pip install --upgrade pip --user && \
+    pip install --no-cache-dir --user -r /tmp/requirements.txt
+
+# Set working directory and copy app code
+WORKDIR /app
+COPY --chown=app:app . .
+
+# Switch to app user
+USER app
+
+# Make sure Python scripts are available in PATH for app user
+ENV PATH=/home/app/.local/bin:$PATH
+ENV PYTHONPATH=/app:$PYTHONPATH
+
+# Environment setup for debugging
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV LOG_LEVEL=DEBUG
+
+# Expose port
+EXPOSE 8000
+ENV PORT=8000
+
+# More lenient health check for first deployment
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Use the app user's local bin path for uvicorn with debug settings
+ 
