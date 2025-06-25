@@ -323,21 +323,50 @@ serve(async (req) => {
     // Send to LlamaParse for processing
     const llamaParseUrl = 'https://api.cloud.llamaindex.ai/api/v1/parsing/upload'
     
+    // Debug log the API key (first/last 4 chars only for security)
+    const keyLength = llamaParseApiKey.length
+    console.log(`API Key length: ${keyLength}`)
+    console.log(`API Key start/end: ${llamaParseApiKey.slice(0,4)}...${llamaParseApiKey.slice(-4)}`)
+    console.log(`API Key whitespace check: [${llamaParseApiKey}]`)
+    
     // Keep it simple - just use FormData
+    console.log('Creating FormData...')
     const formData = new FormData()
+    console.log(`Adding file to FormData (size: ${fileData.length} bytes, type: ${contentType})`)
     formData.append('file', new Blob([fileData], { type: contentType }))
     
     // Add webhook if needed
     if (!/[^\x20-\x7E]/.test(fullWebhookUrl)) {
+      console.log(`Adding webhook URL to FormData: ${fullWebhookUrl.slice(0, 30)}...`)
       formData.append('webhook_url', fullWebhookUrl)
+    } else {
+      console.log('Webhook URL contains invalid characters, skipping')
     }
     
     // Ensure the Authorization header is a valid ByteString
-    const authHeader = `Bearer ${llamaParseApiKey.trim()}`
-    if (/[^\x20-\x7E]/.test(authHeader)) {
+    console.log('Constructing Authorization header...')
+    const trimmedKey = llamaParseApiKey.trim()
+    console.log(`API Key after trim length: ${trimmedKey.length}`)
+    
+    const authHeader = `Bearer ${trimmedKey}`
+    console.log(`Full auth header length: ${authHeader.length}`)
+    
+    // Log any non-ASCII characters in the header
+    const invalidChars = authHeader.split('').map((char, i) => {
+      const code = char.charCodeAt(0)
+      if (code < 0x20 || code > 0x7E) {
+        return `pos ${i}: ${code} [${char}]`
+      }
+      return null
+    }).filter(Boolean)
+    
+    if (invalidChars.length > 0) {
+      console.log('⚠️ Invalid characters found in auth header:')
+      console.log(invalidChars.join(', '))
       throw new Error('Authorization header contains invalid characters')
     }
     
+    console.log('Making request to LlamaParse...')
     // Use minimal headers - let Deno handle Content-Type
     const llamaParseResponse = await fetch(llamaParseUrl, {
       method: 'POST',
@@ -345,13 +374,18 @@ serve(async (req) => {
         'Authorization': authHeader
       },
       body: formData
+    }).catch(error => {
+      console.log('❌ Fetch error:', error.message)
+      console.log('Error stack:', error.stack)
+      throw error
     })
-      
+    
+    console.log(`LlamaParse response status: ${llamaParseResponse.status}`)
     if (!llamaParseResponse.ok) {
       const errorText = await llamaParseResponse.text()
-      throw new Error(`LlamaParse API error: ${llamaParseResponse.status} - ${errorText}`)
-      }
-      
+      console.log('LlamaParse error response:', errorText)
+    }
+
     // Clean up file data
     fileData = null
 
