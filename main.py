@@ -54,7 +54,8 @@ origins = [
     "https://insurance-navigator-staging.vercel.app",
     "https://insurance-navigator.vercel.app",
     "https://insurance-navigator-hr7oebcu2-andrew-quintanas-projects.vercel.app",
-    "https://insurance-navigator-gdievtrsx-andrew-quintanas-projects.vercel.app"
+    "https://insurance-navigator-gdievtrsx-andrew-quintanas-projects.vercel.app",
+    "https://insurance-navigator-3u3iv7xq0-andrew-quintanas-projects.vercel.app"
 ]
 
 if os.getenv("ENVIRONMENT") == "development":
@@ -271,7 +272,7 @@ async def get_document_status(
         status = await doc_service.get_document_status(document_id, str(current_user.id))
         
         if not status:
-            raise HTTPException(status_code=404, detail="Document not found")
+                raise HTTPException(status_code=404, detail="Document not found")
             
         return status
         
@@ -378,8 +379,8 @@ async def startup_event():
     
     try:
         logger.info("🔄 Service initialization starting...")
-        global user_service_instance, conversation_service_instance, storage_service_instance
-        
+    global user_service_instance, conversation_service_instance, storage_service_instance
+    
         # Initialize core services synchronously to ensure they're ready
         user_service_instance = await get_user_service()
         conversation_service_instance = await get_conversation_service()
