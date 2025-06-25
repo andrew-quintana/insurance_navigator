@@ -120,23 +120,6 @@ class StorageService:
                         'uploaded_at': datetime.now().isoformat()
                     })
                 )
-                
-                # Create processing job
-                await conn.execute("""
-                    INSERT INTO processing_jobs (
-                        job_type, status, priority, payload
-                    ) VALUES ($1, $2, $3, $4)
-                """,
-                    'parse',
-                    'pending',
-                    1,  # High priority for initial parse
-                    json.dumps({
-                        'document_id': str(document_id),
-                        'storage_path': storage_path,
-                        'content_type': content_type,
-                        'user_id': user_id
-                    })
-                )
             
             logger.info(f"Uploaded document {filename} for user {user_id}: {storage_path}")
             
