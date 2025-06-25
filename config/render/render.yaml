@@ -11,7 +11,7 @@ services:
     headers:
       - path: /*
         name: Access-Control-Allow-Origin
-        value: https://insurance-navigator-gdievtrsx-andrew-quintanas-projects.vercel.app
+        value: https://insurance-navigator-3u3iv7xq0-andrew-quintanas-projects.vercel.app
       - path: /*
         name: Access-Control-Allow-Methods
         value: "GET, POST, PUT, DELETE, OPTIONS, HEAD"
