@@ -25,7 +25,7 @@ import json
 import time
 from starlette.middleware.base import BaseHTTPMiddleware
 import hashlib
-from utils.cors_config import get_cors_headers, get_cors_headers_with_credentials
+from utils.cors_config import get_cors_config, get_cors_headers
 
 # Database service imports
 from db.services.user_service import get_user_service, UserService
@@ -50,12 +50,11 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Basic CORS middleware for non-credential requests
+# Add CORS middleware with our configuration
+cors_config = get_cors_config()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    **cors_config
 )
 
 # Health check cache
@@ -454,44 +453,42 @@ async def get_current_user_info(current_user: UserResponse = Depends(get_current
 @app.options("/{rest_of_path:path}")
 async def preflight_handler(request: Request, rest_of_path: str):
     """Handle preflight requests explicitly"""
-    origin = request.headers.get("Origin")
-    
-    # For login and other credential-requiring endpoints
-    if rest_of_path in ["login", "upload-document", "user-profile"]:
+    try:
+        origin = request.headers.get("Origin")
         if not origin:
             return Response(status_code=400, content="Origin header is required")
-        return Response(
-            status_code=200,
-            headers=get_cors_headers_with_credentials(origin)
-        )
-    
-    # For all other endpoints
-    return Response(
-        status_code=200,
-        headers=get_cors_headers()
-    )
+            
+        # Return CORS headers for the specific origin
+        headers = get_cors_headers(origin)
+        if not headers:
+            return Response(status_code=400, content="Origin not allowed")
+            
+        return Response(status_code=200, headers=headers)
+    except Exception as e:
+        logger.error(f"Error in preflight handler: {str(e)}")
+        return Response(status_code=500, content="Internal server error")
 
+# Add middleware to ensure CORS headers on all responses
 @app.middleware("http")
 async def add_cors_headers(request: Request, call_next):
     """Add CORS headers to all responses"""
+    response = None
     try:
-        origin = request.headers.get("Origin")
         response = await call_next(request)
         
-        # For login and other credential-requiring endpoints
-        if request.url.path in ["/login", "/upload-document", "/user-profile"]:
-            if origin:
-                for key, value in get_cors_headers_with_credentials(origin).items():
-                    response.headers[key] = value
-        else:
-            # For all other endpoints
-            for key, value in get_cors_headers().items():
+        # Add CORS headers based on origin
+        origin = request.headers.get("Origin")
+        if origin:
+            headers = get_cors_headers(origin)
+            for key, value in headers.items():
                 response.headers[key] = value
         
         return response
     except Exception as e:
         logger.error(f"Error in CORS middleware: {str(e)}")
-        raise
+        if response is None:
+            return Response(status_code=500, content="Internal server error")
+        return response
 
 if __name__ == "__main__":
     import uvicorn

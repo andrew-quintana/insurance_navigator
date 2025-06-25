@@ -13,10 +13,9 @@ interface LoginResponse {
 }
 
 interface ValidationError {
-  type: string
   loc: string[]
   msg: string
-  input?: unknown
+  type: string
 }
 
 interface ErrorResponse {
@@ -65,7 +64,10 @@ export default function LoginPage() {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'Origin': window.location.origin,
         },
+        credentials: 'include',
+        mode: 'cors',
         body: JSON.stringify(formData),
       })
 
@@ -108,10 +110,9 @@ export default function LoginPage() {
       // Clear any existing tokens on network error
       localStorage.removeItem("token")
       localStorage.removeItem("tokenType")
-    } finally {
-      console.log("🏁 Login attempt completed")
-      setIsLoading(false)
     }
+    console.log("🏁 Login attempt completed")
+    setIsLoading(false)
   }
 
   // Helper function to format API errors
