@@ -12,9 +12,9 @@ def get_cors_config() -> Dict[str, Any]:
     allowed_origins = [
         "http://localhost:3000",
         "https://insurance-navigator.vercel.app",
-        "https://insurance-navigator-git-*.vercel.app",
-        "https://*-andrew-quintanas-projects.vercel.app",
-        "https://insurance-navigator-*.vercel.app"  # More permissive pattern for Vercel previews
+        "***REMOVED***",  # Add Render API
+        "https://insurance-navigator-*.vercel.app",  # More permissive pattern for Vercel previews
+        "https://*-andrew-quintanas-projects.vercel.app"  # Handle all user preview URLs
     ]
     
     # Add any additional origins from environment
@@ -23,7 +23,7 @@ def get_cors_config() -> Dict[str, Any]:
     
     return {
         "allow_origins": allowed_origins,
-        "allow_origin_regex": r"https://[a-zA-Z0-9-]+-andrew-quintanas-projects\.vercel\.app",  # Simplified regex
+        "allow_origin_regex": r"https://insurance-navigator-[a-zA-Z0-9-]+-andrew-quintanas-projects\.vercel\.app",  # Updated regex
         "allow_credentials": True,
         "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
         "allow_headers": [
