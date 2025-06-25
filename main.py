@@ -52,13 +52,7 @@ app = FastAPI(
 # Add CORS middleware with environment-aware configuration
 origins = [
     "https://insurance-navigator-staging.vercel.app",
-    "https://insurance-navigator.vercel.app",
-    "https://insurance-navigator-hr7oebcu2-andrew-quintanas-projects.vercel.app",
-    "https://insurance-navigator-gdievtrsx-andrew-quintanas-projects.vercel.app",
-    "https://insurance-navigator-3u3iv7xq0-andrew-quintanas-projects.vercel.app",
-    "https://insurance-navigator-ajzpmcvgz-andrew-quintanas-projects.vercel.app",
-    "https://insurance-navigator-cwtwocttv-andrew-quintanas-projects.vercel.app",
-    "https://insurance-navigator-kkedlaqxo-andrew-quintanas-projects.vercel.app"
+    "https://insurance-navigator.vercel.app"
 ]
 
 if os.getenv("ENVIRONMENT") == "development":
@@ -71,19 +65,10 @@ if os.getenv("ENVIRONMENT") == "development":
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"https://insurance-navigator.*\.vercel\.app",  # Allow all Vercel preview URLs
+    allow_origin_regex=r"https://insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app",  # Allow all Vercel preview URLs
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
-    allow_headers=[
-        "Content-Type",
-        "Authorization",
-        "Accept",
-        "Origin",
-        "X-Requested-With",
-        "X-CSRF-Token"
-    ],
-    expose_headers=["Content-Length", "Content-Range"],
-    max_age=3600
+    allow_headers=["*"]
 )
 
 # Add OPTIONS route handler for explicit preflight handling
