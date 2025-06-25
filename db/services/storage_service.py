@@ -76,11 +76,16 @@ class StorageService:
             content_type = self._get_content_type(filename)
             
             # Upload to Supabase Storage
-            await self.supabase.storage.from_(self.bucket_name).upload(
+            upload_response = await self.supabase.storage.from_(self.bucket_name).upload(
                 file_path,
                 file_data,
                 {"content-type": content_type}
             )
+            
+            # Check upload response
+            if not upload_response or not upload_response.get('path'):
+                logger.error(f"Storage upload failed - response: {upload_response}")
+                raise RuntimeError("Storage upload failed - invalid response")
             
             pool = await get_db_pool()
             
@@ -111,7 +116,7 @@ class StorageService:
                             document_type
                         )
                     )
-                    
+                
                 # Use document service for policy basics extraction
                 if document_type == 'policy':
                     from .document_service import get_document_service
@@ -140,7 +145,7 @@ class StorageService:
         except Exception as e:
             logger.error(f"Failed to upload document {filename} for user {user_id}: {str(e)}")
             raise RuntimeError(f"Upload failed: {str(e)}")
-
+    
     async def _process_document_vectors(
         self,
         document_id: str,
