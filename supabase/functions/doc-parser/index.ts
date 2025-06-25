@@ -222,6 +222,7 @@ serve(async (req) => {
     const { documentId, storagePath } = body
     
     if (!documentId || !storagePath) {
+      console.error('❌ Missing required fields:', { documentId, storagePath })
       throw new Error(`Missing required fields: ${!documentId ? 'documentId' : ''} ${!storagePath ? 'storagePath' : ''}`)
     }
     

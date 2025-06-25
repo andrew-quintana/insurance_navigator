@@ -337,14 +337,26 @@ async def upload_document_backend(
                 },
                 json={
                     'documentId': upload_result['document_id'],
-                    'storagePath': upload_result['file_path']
+                    'storagePath': upload_result['path']
                 }
             ) as response:
+                response_data = await response.json()
                 if response.status != 200:
                     error_text = await response.text()
                     logger.error(f"❌ Doc-parser call failed: {response.status} - {error_text}")
-                    # Don't fail the upload if doc-parser fails
-                    # Just log the error and return success with processing status
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Document upload succeeded but processing failed: {error_text}"
+                    )
+                
+                if not response_data.get('success'):
+                    logger.error(f"❌ Doc-parser returned error: {response_data.get('error')}")
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Document processing failed: {response_data.get('error')}"
+                    )
+                
+                logger.info(f"✅ Doc-parser started processing: {response_data}")
                 
         return {
             "success": True,
