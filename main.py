@@ -323,8 +323,14 @@ async def upload_document_backend(
         if not supabase_url or not supabase_service_key:
             raise HTTPException(status_code=500, detail="Missing Supabase configuration")
             
-        project_ref = supabase_url.split('.')[-2].split('/')[-1]
-        doc_parser_url = f"https://{project_ref}.supabase.co/functions/v1/doc-parser"
+        # Extract project ref from Supabase URL (format: https://[project-ref].supabase.co)
+        try:
+            project_ref = supabase_url.replace('https://', '').split('.')[0]
+            doc_parser_url = f"https://{project_ref}.functions.supabase.co/doc-parser"
+            logger.info(f"🔗 Constructed doc-parser URL: {doc_parser_url}")
+        except Exception as e:
+            logger.error(f"❌ Failed to construct doc-parser URL: {e}")
+            raise HTTPException(status_code=500, detail="Invalid Supabase configuration")
         
         logger.info(f"🔄 Calling doc-parser function for document {upload_result['document_id']}")
         

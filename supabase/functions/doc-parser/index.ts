@@ -252,7 +252,7 @@ serve(async (req) => {
 
     // Get the Edge Function URL for webhook callback
     const projectRef = 'jhrespvvhbnloxrieycf'
-    const webhookUrl = `https://${projectRef}.supabase.co/functions/v1/doc-parser/webhook`
+    const webhookUrl = `https://${projectRef}.functions.supabase.co/doc-parser/webhook`
     console.log('🔗 Generated webhook URL:', webhookUrl)
     console.log('🔑 Checking webhook URL requirements:')
     console.log('  - HTTPS protocol:', webhookUrl.startsWith('https://'))
