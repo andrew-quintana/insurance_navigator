@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "@supabase/supabase-js"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 import { OpenAIEmbeddings } from '../_shared/embeddings.ts'
 
@@ -26,18 +26,16 @@ function logMetrics(stage: string, jobType?: string) {
 interface ProcessingJob {
   id: string;
   document_id: string;
-  job_type: 'parse' | 'embed' | 'complete';
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  job_type: 'parse' | 'chunk' | 'embed' | 'complete' | 'notify';
   payload: any;
-  created_at: string;
+  retry_count: number;
+  priority: number;
 }
 
 interface JobResult {
   success: boolean;
-  data?: any;
   error?: string;
-  nextJob?: Partial<ProcessingJob>;
-  metrics?: any;
+  data?: any;
 }
 
 // Add retry configuration
@@ -96,19 +94,279 @@ function checkMemory(): boolean {
 
 console.log('🔄 Job processor starting...')
 
+// Initialize Supabase client
+const supabaseClient = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+)
+
+// Job execution functions
+async function executeParseJob(supabase: any, job: ProcessingJob): Promise<JobResult> {
+  const { documentId, storagePath } = job.payload
+
+  if (!documentId || !storagePath) {
+    throw new Error('Missing required parameters: documentId, storagePath')
+  }
+
+  // Call doc-parser with required parameters
+  const { data: parserResult, error: parserError } = await supabase.functions.invoke('doc-parser', {
+    body: {
+      jobId: job.id,
+      documentId: documentId,
+      storagePath: storagePath
+    }
+  })
+
+  if (parserError) {
+    throw new Error(`Doc-parser failed: ${parserError.message}`)
+  }
+
+  return {
+    success: true,
+    data: parserResult
+  }
+}
+
+async function executeChunkJob(job: ProcessingJob): Promise<JobResult> {
+  console.log(`📄 Executing chunk job for document ${job.document_id}`)
+  
+  try {
+    const content = job.payload.content
+    if (!content) {
+      throw new Error('No content provided for chunking')
+    }
+
+    // Simple chunking strategy - split by paragraphs
+    const chunks = content
+      .split('\n\n')
+      .filter(chunk => chunk.trim().length > 0)
+      .map(chunk => chunk.trim())
+
+    // Create embedding job for chunks
+    await createNextJob(job.document_id, 'embed', {
+      documentId: job.document_id,
+      chunks,
+      metadata: job.payload.metadata
+    })
+
+    return { success: true, data: { chunks: chunks.length } }
+  } catch (error) {
+    console.error(`❌ Chunk job failed:`, error)
+    return { success: false, error: error.message }
+  }
+}
+
+async function executeEmbedJob(job: ProcessingJob): Promise<JobResult> {
+  console.log(`📄 Executing embed job for document ${job.document_id}`)
+  
+  try {
+    const chunks = job.payload.chunks
+    if (!chunks || !Array.isArray(chunks)) {
+      throw new Error('Invalid chunks data')
+    }
+
+    // Store chunks in document_chunks table
+    const { error: insertError } = await supabaseClient
+      .from('document_chunks')
+      .insert(chunks.map(chunk => ({
+        document_id: job.document_id,
+        content: chunk,
+        metadata: job.payload.metadata
+      })))
+
+    if (insertError) {
+      throw insertError
+    }
+
+    // Create completion job
+    await createNextJob(job.document_id, 'complete', {
+      documentId: job.document_id,
+      totalChunks: chunks.length
+    })
+
+    return { success: true, data: { chunks: chunks.length } }
+  } catch (error) {
+    console.error(`❌ Embed job failed:`, error)
+    return { success: false, error: error.message }
+  }
+}
+
+async function executeCompleteJob(job: ProcessingJob): Promise<JobResult> {
+  console.log(`📄 Executing complete job for document ${job.document_id}`)
+  
+  try {
+    // Update document status
+    const { error: updateError } = await supabaseClient
+      .from('documents')
+      .update({
+        status: 'completed',
+        processed_at: new Date().toISOString(),
+        metadata: {
+          ...job.payload.metadata,
+          total_chunks: job.payload.totalChunks,
+          completed_at: new Date().toISOString()
+        }
+      })
+      .eq('id', job.document_id)
+
+    if (updateError) {
+      throw updateError
+    }
+
+    // Create notification job
+    await createNextJob(job.document_id, 'notify', {
+      documentId: job.document_id,
+      status: 'completed',
+      metadata: job.payload.metadata
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error(`❌ Complete job failed:`, error)
+    return { success: false, error: error.message }
+  }
+}
+
+async function executeNotifyJob(job: ProcessingJob): Promise<JobResult> {
+  console.log(`📄 Executing notify job for document ${job.document_id}`)
+  
+  try {
+    // Get document owner
+    const { data: document, error: docError } = await supabaseClient
+      .from('documents')
+      .select('user_id')
+      .eq('id', job.document_id)
+      .single()
+
+    if (docError || !document) {
+      throw new Error('Failed to get document owner')
+    }
+
+    // Insert notification
+    const { error: notifyError } = await supabaseClient
+      .from('notifications')
+      .insert({
+        user_id: document.user_id,
+        type: 'document_processed',
+        payload: {
+          document_id: job.document_id,
+          status: job.payload.status,
+          metadata: job.payload.metadata
+        }
+      })
+
+    if (notifyError) {
+      throw notifyError
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error(`❌ Notify job failed:`, error)
+    return { success: false, error: error.message }
+  }
+}
+
+async function createNextJob(
+  documentId: string,
+  jobType: ProcessingJob['job_type'],
+  payload: any
+): Promise<void> {
+  const { error } = await supabaseClient
+    .from('processing_jobs')
+    .insert({
+      document_id: documentId,
+      job_type: jobType,
+      status: 'pending',
+      payload,
+      priority: 1,
+      retry_count: 0
+    })
+
+  if (error) {
+    throw new Error(`Failed to create ${jobType} job: ${error.message}`)
+  }
+}
+
+async function processJob(supabase: any, job: ProcessingJob): Promise<JobResult> {
+  try {
+    // Update job status to running
+    const { error: updateError } = await supabase
+      .from('processing_jobs')
+      .update({ 
+        status: 'running',
+        started_at: new Date().toISOString()
+      })
+      .eq('id', job.id)
+
+    if (updateError) {
+      throw new Error(`Failed to update job status: ${updateError.message}`)
+    }
+
+    // Process based on job type
+    let result: JobResult
+    switch (job.job_type) {
+      case 'parse':
+        result = await executeParseJob(supabase, job)
+        break
+      case 'chunk':
+        result = await executeChunkJob(job)
+        break
+      case 'embed':
+        result = await executeEmbedJob(job)
+        break
+      case 'complete':
+        result = await executeCompleteJob(job)
+        break
+      case 'notify':
+        result = await executeNotifyJob(job)
+        break
+      default:
+        throw new Error(`Unsupported job type: ${job.job_type}`)
+    }
+
+    // Update job with result
+    const { error: completeError } = await supabase
+      .from('processing_jobs')
+      .update({
+        status: result.success ? 'completed' : 'failed',
+        result: result.data || null,
+        error_message: result.error || null,
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', job.id)
+
+    if (completeError) {
+      throw new Error(`Failed to update job completion: ${completeError.message}`)
+    }
+
+    return result
+  } catch (error) {
+    console.error('❌ Job processing failed:', error)
+
+    // Update job status to failed
+    await supabase
+      .from('processing_jobs')
+      .update({
+        status: 'failed',
+        error_message: error.message,
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', job.id)
+
+    return {
+      success: false,
+      error: error.message
+    }
+  }
+}
+
 serve(async (req) => {
   metrics.startTime = Date.now()
   metrics.jobStartTime = 0
   
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { 
-      headers: {
-        ...corsHeaders,
-        'Allow': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
-      }
-    })
+    return new Response('ok', { headers: corsHeaders })
   }
 
   // Handle unsupported methods
@@ -147,25 +405,16 @@ serve(async (req) => {
       throw new Error('Memory limit exceeded before processing')
     }
     
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
-
-    // Get next pending job with retries
-    console.log('📥 Fetching pending jobs...')
-    const { data: jobs, error: jobError } = await withRetry(async () => {
-      return await supabaseClient
-        .from('processing_jobs')
-        .select('*')
-        .eq('status', 'pending')
-        .order('priority', { ascending: false })
-        .order('created_at', { ascending: true })
-        .limit(1)
-    })
+    // Get pending jobs
+    const { data: jobs, error: jobError } = await supabaseClient
+      .from('processing_jobs')
+      .select('*')
+      .eq('status', 'pending')
+      .order('priority', { ascending: false })
+      .order('created_at', { ascending: true })
+      .limit(5)
 
     if (jobError) {
-      console.error('❌ Failed to fetch jobs:', jobError)
       throw new Error(`Failed to fetch jobs: ${jobError.message}`)
     }
 
@@ -184,134 +433,20 @@ serve(async (req) => {
       )
     }
 
-    const job = jobs[0] as ProcessingJob
-    metrics.jobStartTime = Date.now()
-    
-    console.log(`📝 Processing job ${job.id} of type ${job.job_type} for document ${job.document_id}`)
-    console.log('📦 Job payload:', job.payload)
-    logMetrics('job-start', job.job_type)
-
-    if (!checkMemory()) {
-      throw new Error('Memory limit exceeded before job processing')
-    }
-
-    // Update job status to processing with retries
-    console.log('🔄 Updating job status to processing...')
-    await withRetry(async () => {
-      await supabaseClient
-        .from('processing_jobs')
-        .update({ 
-          status: 'processing', 
-          started_at: new Date().toISOString(),
-          metadata: {
-            memoryAtStart: Deno.memoryUsage(),
-            retryCount: 0
-          }
-        })
-        .eq('id', job.id)
-    })
-
-    // Process job based on type with retries
-    let result: JobResult
-    switch (job.job_type) {
-      case 'parse':
-        console.log('🔍 Executing parse job...')
-        result = await executeParseJob(supabaseClient, job)
-        break
-      case 'embed':
-        console.log('🧮 Executing embed job...')
-        result = await executeEmbedJob(supabaseClient, job)
-        break
-      case 'complete':
-        console.log('✅ Executing complete job...')
-        result = await executeCompleteJob(supabaseClient, job)
-        break
-      default:
-        throw new Error(`Unknown job type: ${job.job_type}`)
-    }
-
-    if (!checkMemory()) {
-      throw new Error('Memory limit exceeded after job processing')
-    }
-
-    logMetrics('job-complete', job.job_type)
-
-    // Update job status with retries
-    if (result.success) {
-      console.log(`✅ Job ${job.id} completed successfully`)
-      console.log('📦 Result data:', result.data)
-      
-      await withRetry(async () => {
-        await supabaseClient
-          .from('processing_jobs')
-          .update({
-            status: 'completed',
-            completed_at: new Date().toISOString(),
-            result: result.data,
-            metadata: {
-              ...result.metrics,
-              processingTime: Date.now() - metrics.jobStartTime,
-              totalTime: Date.now() - metrics.startTime,
-              memoryAtEnd: Deno.memoryUsage()
-            }
-          })
-          .eq('id', job.id)
-      })
-
-      // Create next job if specified
-      if (result.nextJob) {
-        console.log('🔄 Creating next job:', result.nextJob)
-        await withRetry(async () => {
-          await supabaseClient
-            .from('processing_jobs')
-            .insert({
-              document_id: job.document_id,
-              ...result.nextJob,
-              status: 'pending',
-              created_at: new Date().toISOString(),
-              metadata: {
-                previousJobId: job.id,
-                previousJobType: job.job_type,
-                previousJobTime: Date.now() - metrics.jobStartTime,
-                retryCount: 0
-              }
-            })
-        })
-      }
-    } else {
-      console.error(`❌ Job ${job.id} failed:`, result.error)
-      logMetrics('job-failed', job.job_type)
-      await withRetry(async () => {
-        await supabaseClient
-          .from('processing_jobs')
-          .update({
-            status: 'failed',
-            error: result.error,
-            completed_at: new Date().toISOString(),
-            metadata: {
-              processingTime: Date.now() - metrics.jobStartTime,
-              totalTime: Date.now() - metrics.startTime,
-              memoryAtFailure: Deno.memoryUsage()
-            }
-          })
-          .eq('id', job.id)
-      })
+    // Process jobs sequentially
+    const results = []
+    for (const job of jobs) {
+      const result = await processJob(supabaseClient, job)
+      results.push({ jobId: job.id, result })
     }
 
     return new Response(
-      JSON.stringify({
-        ...result,
-        metrics: {
-          processingTime: Date.now() - metrics.startTime,
-          jobTime: Date.now() - metrics.jobStartTime,
-          memoryUsage: Deno.memoryUsage()
-        }
-      }),
+      JSON.stringify({ success: true, results }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
-    console.error('❌ Fatal error:', error)
+    console.error('❌ Job processor error:', error)
     logMetrics('fatal-error')
     return new Response(
       JSON.stringify({ 
@@ -325,182 +460,4 @@ serve(async (req) => {
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
-})
-
-async function executeParseJob(supabase: any, job: ProcessingJob): Promise<JobResult> {
-  const jobMetrics = {
-    startTime: Date.now(),
-    parseStartTime: 0,
-    parseEndTime: 0
-  }
-  
-  try {
-    console.log(`🔍 Starting parse job for document ${job.document_id}`)
-    console.log('📦 Parse job payload:', job.payload)
-    
-    // Call doc-parser function
-    console.log('📞 Calling doc-parser function...')
-    jobMetrics.parseStartTime = Date.now()
-    
-    const { data: parseResult, error: parseError } = await supabase.functions.invoke('doc-parser', {
-      body: JSON.stringify({
-        documentId: job.document_id,
-        storagePath: job.payload.storage_path
-      })
-    })
-
-    jobMetrics.parseEndTime = Date.now()
-
-    if (parseError) {
-      console.error('❌ Doc-parser error:', parseError)
-      throw new Error(`Parsing failed: ${parseError.message}`)
-    }
-
-    console.log('✅ Doc-parser completed successfully')
-    console.log('📦 Parse result:', parseResult)
-
-    return {
-      success: true,
-      data: parseResult,
-      nextJob: {
-        job_type: 'embed',
-        payload: {
-          extractedText: parseResult.extractedText,
-          documentId: job.document_id,
-          storagePath: job.payload.storage_path
-        }
-      },
-      metrics: {
-        totalTime: Date.now() - jobMetrics.startTime,
-        parseTime: jobMetrics.parseEndTime - jobMetrics.parseStartTime,
-        memory: Deno.memoryUsage()
-      }
-    }
-
-  } catch (error) {
-    console.error(`❌ Parse job failed:`, error)
-    return { 
-      success: false, 
-      error: error.message,
-      metrics: {
-        totalTime: Date.now() - jobMetrics.startTime,
-        parseTime: jobMetrics.parseEndTime - jobMetrics.parseStartTime,
-        memory: Deno.memoryUsage()
-      }
-    }
-  }
-}
-
-async function executeEmbedJob(supabase: any, job: ProcessingJob): Promise<JobResult> {
-  const jobMetrics = {
-    startTime: Date.now(),
-    vectorStartTime: 0,
-    vectorEndTime: 0
-  }
-  
-  try {
-    console.log(`🧮 Starting embed job for document ${job.document_id}`)
-    console.log('📦 Embed job payload:', job.payload)
-    
-    // Call vector-processor function
-    console.log('📞 Calling vector-processor function...')
-    jobMetrics.vectorStartTime = Date.now()
-    
-    const { data: vectorResult, error: vectorError } = await supabase.functions.invoke('vector-processor', {
-      body: JSON.stringify({
-        documentId: job.document_id,
-        extractedText: job.payload.extractedText,
-        storagePath: job.payload.storagePath
-      })
-    })
-
-    jobMetrics.vectorEndTime = Date.now()
-
-    if (vectorError) {
-      console.error('❌ Vector-processor error:', vectorError)
-      throw new Error(`Vector processing failed: ${vectorError.message}`)
-    }
-
-    console.log('✅ Vector-processor completed successfully')
-    console.log('📦 Vector result:', vectorResult)
-
-    return {
-      success: true,
-      data: vectorResult,
-      nextJob: {
-        job_type: 'complete',
-        payload: {
-          vectorCount: vectorResult.vectorCount,
-          documentId: job.document_id
-        }
-      },
-      metrics: {
-        totalTime: Date.now() - jobMetrics.startTime,
-        vectorTime: jobMetrics.vectorEndTime - jobMetrics.vectorStartTime,
-        memory: Deno.memoryUsage()
-      }
-    }
-
-  } catch (error) {
-    console.error(`❌ Embed job failed:`, error)
-    return { 
-      success: false, 
-      error: error.message,
-      metrics: {
-        totalTime: Date.now() - jobMetrics.startTime,
-        vectorTime: jobMetrics.vectorEndTime - jobMetrics.vectorStartTime,
-        memory: Deno.memoryUsage()
-      }
-    }
-  }
-}
-
-async function executeCompleteJob(supabase: any, job: ProcessingJob): Promise<JobResult> {
-  const jobMetrics = {
-    startTime: Date.now()
-  }
-  
-  try {
-    console.log(`✅ Starting complete job for document ${job.document_id}`)
-    console.log('📦 Complete job payload:', job.payload)
-    
-    // Update document status
-    const { error: updateError } = await supabase
-      .from('documents')
-      .update({
-        status: 'completed',
-        updated_at: new Date().toISOString(),
-        metadata: {
-          ...job.payload,
-          completed_at: new Date().toISOString(),
-          processingTime: Date.now() - jobMetrics.startTime,
-          memory: Deno.memoryUsage()
-        }
-      })
-      .eq('id', job.document_id)
-
-    if (updateError) {
-      throw new Error(`Failed to update document: ${updateError.message}`)
-    }
-
-    return {
-      success: true,
-      data: { documentId: job.document_id },
-      metrics: {
-        totalTime: Date.now() - jobMetrics.startTime,
-        memory: Deno.memoryUsage()
-      }
-    }
-
-  } catch (error) {
-    console.error(`❌ Complete job failed:`, error)
-    return { 
-      success: false, 
-      error: error.message,
-      metrics: {
-        totalTime: Date.now() - jobMetrics.startTime,
-        memory: Deno.memoryUsage()
-      }
-    }
-  }
-} 
+}) 
