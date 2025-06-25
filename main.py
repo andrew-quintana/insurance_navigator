@@ -137,9 +137,14 @@ class UserResponse(BaseModel):
     roles: List[str] = []
 
 # Global service instances
-user_service_instance: Optional[UserService] = None
-conversation_service_instance: Optional[ConversationService] = None
-storage_service_instance: Optional[StorageService] = None
+try:
+    global user_service_instance, conversation_service_instance, storage_service_instance
+    user_service_instance = None
+    conversation_service_instance = None
+    storage_service_instance = None
+except Exception as e:
+    logger.error(f"Error initializing global services: {str(e)}")
+    raise
 
 # Initialize services
 storage_service: Optional[StorageService] = None
@@ -322,8 +327,8 @@ async def startup_event():
     
     try:
         logger.info("🔄 Service initialization starting...")
-    global user_service_instance, conversation_service_instance, storage_service_instance
-    
+        global user_service_instance, conversation_service_instance, storage_service_instance
+        
         # Initialize core services synchronously to ensure they're ready
         user_service_instance = await get_user_service()
         conversation_service_instance = await get_conversation_service()
@@ -472,7 +477,6 @@ async def preflight_handler(request: Request, rest_of_path: str):
 @app.middleware("http")
 async def add_cors_headers(request: Request, call_next):
     """Add CORS headers to all responses"""
-    response = None
     try:
         response = await call_next(request)
         
@@ -486,9 +490,7 @@ async def add_cors_headers(request: Request, call_next):
         return response
     except Exception as e:
         logger.error(f"Error in CORS middleware: {str(e)}")
-        if response is None:
-            return Response(status_code=500, content="Internal server error")
-        return response
+        return Response(status_code=500, content="Internal server error")
 
 if __name__ == "__main__":
     import uvicorn
