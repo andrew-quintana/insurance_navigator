@@ -12,10 +12,16 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import uuid
 import json
+import hashlib
+import asyncpg
+import aiohttp
 
 from supabase import create_client, Client
 from .db_pool import get_db_pool
 from ..config import config
+
+import PyPDF2
+from io import BytesIO
 
 logger = logging.getLogger(__name__)
 
@@ -62,194 +68,99 @@ class StorageService:
 
     async def upload_document(
         self,
-        file_data: bytes,
-        filename: str,
         user_id: str,
-        document_type: str = "policy",
-        metadata: Optional[Dict[str, Any]] = None
+        file_content: bytes,
+        filename: str,
+        content_type: str
     ) -> Dict[str, Any]:
-        """Upload a document and process it for vector storage."""
+        """Upload document and trigger processing."""
         try:
-            # TODO: Add duplicate document handling logic after MVP
-            # - Check for existing documents by storage path or file hash
-            # - Return existing document info if found
-            # - Handle "Duplicate" errors from Supabase storage
-            # - Consider user preferences for duplicate handling
+            # Generate file hash to prevent duplicates
+            file_hash = hashlib.sha256(file_content).hexdigest()
             
-            # Calculate file hash and path
-            file_hash = self._calculate_file_hash(file_data)
-            file_path = f"{document_type}/{user_id}/{file_hash}/{filename}"
-            content_type = self._get_content_type(filename)
+            # Create storage path
+            storage_path = f"policy/{user_id}/{file_hash}/{filename}"
             
-            # Upload to Supabase Storage - force upload for MVP
-            try:
-                # Note: upload() returns a Response object that we shouldn't await
-                # The upload is complete when the method returns
-                self.supabase.storage.from_(self.bucket_name).upload(
-                    file_path,
-                    file_data,
-                    {
-                        "content-type": content_type,
-                        "x-upsert": "true"  # Use string "true" instead of boolean True
-                    }
-                )
-                logger.info(f"Successfully uploaded file to storage: {file_path}")
-            except Exception as e:
-                logger.error(f"Storage upload failed for {file_path}: {str(e)}")
-                raise RuntimeError(f"Storage upload failed: {str(e)}")
+            # Upload to Supabase storage
+            storage_url = f"{self.supabase_url}/storage/v1/object/documents/{storage_path}"
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    storage_url,
+                    headers={
+                        'Authorization': f'Bearer {self.supabase_service_key}',
+                        'x-upsert': 'true'
+                    },
+                    data=file_content
+                ) as response:
+                    if response.status not in (200, 201):
+                        error_text = await response.text()
+                        raise Exception(f"Storage upload failed: {response.status} - {error_text}")
+                        
+            logger.info(f"Successfully uploaded file to storage: {storage_path}")
             
+            # Extract basic text for initial processing
+            extracted_text = await self._extract_text(file_content, content_type)
+            logger.info(f"Successfully extracted {len(extracted_text)} characters from {content_type}")
+            
+            # Create document record
             pool = await get_db_pool()
             async with pool.get_connection() as conn:
-                # Insert document record
                 document_id = await conn.fetchval("""
-                    INSERT INTO documents 
-                    (user_id, original_filename, file_size, content_type, file_hash,
-                     storage_path, status, document_type, metadata)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                    INSERT INTO documents (
+                        user_id, original_filename, file_size, content_type,
+                        file_hash, storage_path, status, metadata
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                     RETURNING id
-                """, 
-                uuid.UUID(user_id), filename, len(file_data), content_type,
-                file_hash, file_path, 'processing',
-                document_type, json.dumps(metadata or {}))
+                """,
+                    uuid.UUID(user_id), filename, len(file_content), content_type,
+                    file_hash, storage_path, 'processing',
+                    json.dumps({
+                        'extracted_text_length': len(extracted_text),
+                        'extraction_method': 'basic',
+                        'uploaded_at': datetime.now().isoformat()
+                    })
+                )
             
-            # Extract text content for vector processing
-            try:
-                extracted_text = await self._extract_text_content(file_data, filename)
-                
-                if extracted_text:
-                    # Process vectors in background
-                    asyncio.create_task(
-                        self._process_document_vectors(
-                            str(document_id),
-                            user_id,
-                            extracted_text,
-                            document_type
-                        )
-                    )
-                
-                # Use document service for policy basics extraction
-                if document_type == 'policy':
-                    from .document_service import get_document_service
-                    doc_service = await get_document_service()
-                    asyncio.create_task(
-                        doc_service.extract_policy_basics(str(document_id), extracted_text)
-                    )
-                    
-            except Exception as e:
-                logger.warning(f"Failed to process document {document_id}: {e}")
-                # Don't fail the upload for processing errors
-            
-            logger.info(f"Uploaded document {filename} for user {user_id}: {file_path}")
+            logger.info(f"Uploaded document {filename} for user {user_id}: {storage_path}")
             
             return {
-                'document_id': str(document_id),
-                'file_path': file_path,
+                'document_id': document_id,
+                'file_path': storage_path,
                 'original_filename': filename,
                 'content_type': content_type,
-                'file_size': len(file_data),
-                'uploaded_at': datetime.utcnow().isoformat(),
+                'file_size': len(file_content),
+                'uploaded_at': datetime.now().isoformat(),
                 'status': 'processing',
-                'policy_extraction_status': 'processing' if document_type == 'policy' else 'n/a'
+                'policy_extraction_status': 'processing'
             }
             
         except Exception as e:
-            logger.error(f"Failed to upload document {filename} for user {user_id}: {str(e)}")
-            raise RuntimeError(f"Upload failed: {str(e)}")
-    
-    async def _process_document_vectors(
-        self,
-        document_id: str,
-        user_id: str,
-        text: str,
-        document_type: str
-    ) -> None:
-        """Process document text into vectors."""
+            logger.error(f"Document upload failed: {str(e)}")
+            raise
+            
+    async def _extract_text(self, file_content: bytes, content_type: str) -> str:
+        """Extract text from document using basic extraction."""
         try:
-            # Split into chunks
-            chunks = self._chunk_text(text)
-            
-            # Get embedding service
-            from .encryption_aware_embedding_service import get_encryption_aware_embedding_service
-            embedding_service = await get_encryption_aware_embedding_service()
-            
-            # Process each chunk
-            for i, chunk in enumerate(chunks):
-                try:
-                    # Generate and encrypt vector
-                    vector_data = await embedding_service.process_chunk(chunk)
-                    
-                    # Store vector
-                    pool = await get_db_pool()
-                    async with pool.get_connection() as conn:
-                        await conn.execute("""
-                            INSERT INTO document_vectors (
-                                user_id, document_record_id, document_source_type,
-                                chunk_index, content_embedding, encrypted_chunk_text,
-                                encrypted_chunk_metadata, encryption_key_id
-                            ) VALUES (
-                                $1::uuid, $2::uuid, $3::text,
-                                $4::integer, $5::float[], $6::bytea,
-                                $7::jsonb, $8::text
-                            )
-                        """,
-                        uuid.UUID(user_id), uuid.UUID(document_id), document_type,
-                        i, vector_data['embedding'], vector_data['encrypted_text'],
-                        vector_data['encrypted_metadata'], vector_data['key_id'])
-                        
-                except Exception as e:
-                    logger.error(f"Failed to process chunk {i} for document {document_id}: {e}")
-                    continue
-            
-            # Update document status
-            pool = await get_db_pool()
-            async with pool.get_connection() as conn:
-                await conn.execute("""
-                    UPDATE documents 
-                    SET status = 'completed',
-                        updated_at = NOW()
-                    WHERE id = $1
-                """, uuid.UUID(document_id))
+            if content_type == 'application/pdf':
+                logger.info("Using PyPDF2 for PDF extraction")
+                pdf_file = BytesIO(file_content)
+                pdf_reader = PyPDF2.PdfReader(pdf_file)
+                
+                text = ""
+                for page in pdf_reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n\n"
+                        logger.info(f"Extracted {len(page_text)} characters from PDF page")
+                
+                return text.strip()
+            else:
+                # For other file types, return empty string
+                return ""
                 
         except Exception as e:
-            error_msg = str(e)
-            logger.error(f"Failed to process vectors for document {document_id}: {error_msg}")
-            # Update document status to failed and store error in metadata
-            pool = await get_db_pool()
-            async with pool.get_connection() as conn:
-                await conn.execute("""
-                    UPDATE documents 
-                    SET status = 'failed',
-                        metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('error_message', $2, 'error_timestamp', NOW()::text),
-                        updated_at = NOW()
-                    WHERE id = $1
-                """, uuid.UUID(document_id), error_msg)
-
-    def _chunk_text(self, text: str, chunk_size: int = 1500, overlap: int = 100) -> List[str]:
-        """Split text into chunks with overlap."""
-        chunks = []
-        start = 0
-        
-        while start < len(text):
-            end = start + chunk_size
-            
-            if end < len(text):
-                # Find next sentence boundary
-                next_period = text.find('.', end)
-                if next_period != -1 and next_period - end < 100:
-                    end = next_period + 1
-            
-            chunk = text[start:end].strip()
-            if chunk:
-                chunks.append(chunk)
-            
-            start = end - overlap
-            
-        return chunks
-    
-    def _calculate_file_hash(self, file_data: bytes) -> str:
-        """Calculate SHA256 hash of file data."""
-        import hashlib
-        return hashlib.sha256(file_data).hexdigest()
+            logger.error(f"Text extraction failed: {str(e)}")
+            return ""
 
     async def get_signed_url(
         self, 
@@ -633,11 +544,11 @@ class StorageService:
         try:
             # First, upload to storage (existing functionality)
             upload_result = await self.upload_document(
-                file_data, filename, user_id, document_type, metadata
+                user_id, file_data, filename, self._get_content_type(filename)
             )
             
             # Parse document content
-            content_text = await self._extract_text_content(file_data, filename)
+            content_text = await self._extract_text(file_data, self._get_content_type(filename))
             
             if content_text and content_text.strip():
                 # Generate vectors
@@ -722,11 +633,11 @@ class StorageService:
             
             # Upload using existing method
             upload_result = await self.upload_document(
-                file_data, filename, user_id, document_type, metadata
+                user_id, file_data, filename, self._get_content_type(filename)
             )
             
             # Parse document content
-            content_text = await self._extract_text_content(file_data, filename)
+            content_text = await self._extract_text(file_data, self._get_content_type(filename))
             
             if content_text and content_text.strip():
                 # Generate vectors
@@ -828,132 +739,6 @@ class StorageService:
         except Exception as e:
             logger.error(f"Error searching documents by content: {str(e)}")
             return []
-
-    async def _extract_text_content(self, file_data: bytes, filename: str) -> str:
-        """
-        Extract text content from uploaded file.
-        
-        Args:
-            file_data: Raw file data
-            filename: Original filename
-            
-        Returns:
-            Extracted text content
-        """
-        try:
-            from pathlib import Path
-            import tempfile
-            
-            logger.info(f"Starting text extraction for {filename}")
-            
-            # Check if we have a document parser
-            try:
-                # Try to import document parser from config
-                logger.info("Attempting to use DocumentParser from config")
-                from config.parser import DocumentParser
-                parser = DocumentParser()
-                
-                # Save temporarily to parse
-                with tempfile.NamedTemporaryFile(suffix=Path(filename).suffix) as tmp_file:
-                    tmp_file.write(file_data)
-                    tmp_file.flush()
-                    logger.info(f"Saved temporary file for parsing: {tmp_file.name}")
-                    
-                    documents = parser.parse_document(tmp_file.name)
-                    content = "\n".join([doc.page_content for doc in documents])
-                    logger.info(f"Successfully extracted {len(content)} characters using DocumentParser")
-                    return content
-                    
-            except ImportError as e:
-                logger.info(f"DocumentParser not available ({str(e)}), falling back to basic extraction")
-                # Fallback to basic text extraction for PDFs and text files
-                return await self._basic_text_extraction(file_data, filename)
-                
-        except Exception as e:
-            logger.error(f"Failed to extract text from {filename}: {str(e)}", exc_info=True)
-            return ""
-
-    async def _basic_text_extraction(self, file_data: bytes, filename: str) -> str:
-        """
-        Basic text extraction fallback for common file types.
-        
-        Args:
-            file_data: Raw file data
-            filename: Original filename
-            
-        Returns:
-            Extracted text content
-        """
-        try:
-            file_extension = Path(filename).suffix.lower()
-            logger.info(f"Starting basic text extraction for {filename} (type: {file_extension})")
-            
-            if file_extension == '.txt':
-                # Plain text file
-                content = file_data.decode('utf-8', errors='ignore')
-                logger.info(f"Extracted {len(content)} characters from text file")
-                return content
-            
-            elif file_extension == '.pdf':
-                # Try to extract from PDF using PyPDF2 or similar
-                try:
-                    import PyPDF2
-                    import io
-                    logger.info("Using PyPDF2 for PDF extraction")
-                    
-                    pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_data))
-                    text_parts = []
-                    
-                    for page in pdf_reader.pages:
-                        text = page.extract_text()
-                        text_parts.append(text)
-                        logger.info(f"Extracted {len(text)} characters from PDF page")
-                    
-                    content = "\n".join(text_parts)
-                    logger.info(f"Successfully extracted {len(content)} characters from PDF")
-                    return content
-                    
-                except ImportError:
-                    logger.error("PyPDF2 not available for PDF text extraction")
-                    return ""
-                except Exception as e:
-                    logger.error(f"PDF extraction failed: {str(e)}", exc_info=True)
-                    return ""
-            
-            elif file_extension in ['.doc', '.docx']:
-                # Try to extract from Word documents
-                try:
-                    import docx
-                    import io
-                    logger.info("Using python-docx for Word document extraction")
-                    
-                    doc = docx.Document(io.BytesIO(file_data))
-                    text_parts = []
-                    
-                    for paragraph in doc.paragraphs:
-                        text = paragraph.text
-                        text_parts.append(text)
-                        logger.info(f"Extracted {len(text)} characters from Word paragraph")
-                    
-                    content = "\n".join(text_parts)
-                    logger.info(f"Successfully extracted {len(content)} characters from Word document")
-                    return content
-                    
-                except ImportError:
-                    logger.error("python-docx not available for Word document extraction")
-                    return ""
-                except Exception as e:
-                    logger.error(f"Word document extraction failed: {str(e)}", exc_info=True)
-                    return ""
-            
-            else:
-                # Unsupported file type
-                logger.warning(f"Text extraction not supported for file type: {file_extension}")
-                return ""
-                
-        except Exception as e:
-            logger.error(f"Error in basic text extraction: {str(e)}", exc_info=True)
-            return ""
 
 
 # Global storage service instance
