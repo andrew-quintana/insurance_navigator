@@ -15,9 +15,9 @@ const corsHeaders = {
 // LlamaParse integration function
 async function parseDocumentWithLlamaParse(supabase: any, filePath: string, documentId: string): Promise<string> {
   try {
-    const llamaParseApiKey = Deno.env.get('LLAMA_PARSE_API_KEY');
+    const llamaParseApiKey = Deno.env.get('LLAMA_CLOUD_API_KEY');
     if (!llamaParseApiKey) {
-      throw new Error('LLAMA_PARSE_API_KEY environment variable is required');
+      throw new Error('LLAMA_CLOUD_API_KEY environment variable is required');
     }
 
     console.log(`🔍 Downloading file from storage: ${filePath}`);
