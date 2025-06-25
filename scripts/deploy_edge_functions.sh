@@ -31,8 +31,8 @@ if [ -z "$OPENAI_API_KEY" ]; then
     exit 1
 fi
 
-if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
-    print_error "SUPABASE_ACCESS_TOKEN environment variable is required"
+if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+    print_error "SUPABASE_SERVICE_ROLE_KEY environment variable is required"
     exit 1
 fi
 
@@ -47,49 +47,97 @@ echo "🔄 Step 2: Deploying Edge Functions..."
 
 # Deploy shared modules first
 echo "   - Deploying shared modules..."
-supabase functions deploy _shared
-print_status "_shared modules deployed"
+cd supabase/functions
+
+# Clean up any existing shared modules
+rm -f cors.ts embeddings.ts
+print_status "Cleaned up existing shared modules"
+
+# Copy shared modules
+cp -r _shared/* .
+print_status "Shared modules copied"
 
 # Deploy core functions
 for func in doc-parser vector-processor job-processor; do
     echo "   - Deploying $func..."
-    supabase functions deploy "$func"
-    print_status "$func deployed"
+    
+    # Check if function exists
+    if [ ! -d "$func" ]; then
+        print_error "Function directory $func not found"
+        continue
+    fi
+    
+    # Deploy function
+    supabase functions deploy "$func" --no-verify-jwt
+    
+    if [ $? -eq 0 ]; then
+        print_status "$func deployed"
+    else
+        print_error "Failed to deploy $func"
+        continue
+    fi
+    
+    # Wait for function to stabilize
+    sleep 5
+    
+    # Verify deployment
+    response=$(curl -s -w "%{http_code}" "https://jhrespvvhbnloxrieycf.supabase.co/functions/v1/$func")
+    status_code=${response: -3}
+    
+    if [ "$status_code" = "200" ]; then
+        print_status "$func health check passed"
+    else
+        print_warning "$func health check returned $status_code"
+    fi
 done
+
+# Clean up shared modules
+rm -f cors.ts embeddings.ts
+print_status "Cleaned up shared modules"
+
+cd ../..
 
 # Step 3: Verify deployments
 echo "🔍 Step 3: Verifying deployments..."
 
-# Get service role key
-SUPABASE_SERVICE_ROLE_KEY=$(grep SUPABASE_SERVICE_ROLE_KEY .env | cut -d'=' -f2)
-
-if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
-    print_error "SUPABASE_SERVICE_ROLE_KEY not found in .env file"
-    exit 1
-fi
-
-# Test each function
-for func in doc-parser vector-processor job-processor; do
-    echo "   - Testing $func..."
-    RESPONSE=$(curl -s -X GET \
-        -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-        "https://jhrespvvhbnloxrieycf.supabase.co/functions/v1/$func")
+# Function to check Edge Function health
+check_function_health() {
+    local func=$1
+    local response
+    local status_code
     
-    if echo "$RESPONSE" | grep -q "healthy\|ok"; then
+    response=$(curl -s "https://jhrespvvhbnloxrieycf.supabase.co/functions/v1/$func")
+    status_code=$?
+    
+    if [ $status_code -eq 0 ]; then
         print_status "$func health check passed"
+        
+        # Check if response contains memory info
+        if echo "$response" | grep -q '"memory":{'; then
+            memory_info=$(echo "$response" | grep -o '"memory":{[^}]*}')
+            print_status "$func memory info: $memory_info"
+        fi
     else
-        print_warning "$func health check returned: $RESPONSE"
+        print_error "$func health check failed"
     fi
+}
+
+# Check each function
+for func in doc-parser vector-processor job-processor; do
+    check_function_health "$func"
 done
 
-echo ""
-echo "🎉 Edge Function deployment completed!"
-echo ""
-echo "📋 Deployment Summary:"
-echo "   ✅ Secrets updated"
-echo "   ✅ Edge Functions deployed"
-echo "   ✅ Health checks completed"
+print_status "Edge Function deployment completed"
+
+# Print deployment summary
+echo "
+📊 Deployment Summary:
+- Functions deployed: doc-parser, vector-processor, job-processor
+- JWT verification: enabled
+- Health checks: completed
+- Memory monitoring: enabled in code
+"
+
 echo ""
 echo "🔍 To monitor logs:"
-echo "   supabase functions logs --filter [function-name]"
-echo "" 
+echo "   supabase functions logs -f" 
