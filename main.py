@@ -206,14 +206,9 @@ class UserResponse(BaseModel):
     roles: List[str] = []
 
 # Global service instances
-try:
-    global user_service_instance, conversation_service_instance, storage_service_instance
-    user_service_instance = None
-    conversation_service_instance = None
-    storage_service_instance = None
-except Exception as e:
-    logger.error(f"Error initializing global services: {str(e)}")
-    raise
+user_service_instance = None
+conversation_service_instance = None
+storage_service_instance = None
 
 # Initialize services
 storage_service: Optional[StorageService] = None
@@ -248,10 +243,10 @@ async def get_current_user(request: Request) -> UserResponse:
         return UserResponse(**user_data)
         
     except Exception as e:
-        logger.error(f"Authentication error: {e}")
+        logger.error(f"Token validation error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication failed"
+            detail="Invalid token"
         )
 
 @app.get("/documents/{document_id}/status")
@@ -316,7 +311,7 @@ async def upload_document_backend(
         
         logger.info(f"✅ Document upload completed: {upload_result}")
         
-        # Call doc-parser Edge Function
+        # Call upload-handler Edge Function
         supabase_url = os.getenv('SUPABASE_URL')
         supabase_service_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
         
@@ -326,43 +321,47 @@ async def upload_document_backend(
         # Extract project ref from Supabase URL (format: https://[project-ref].supabase.co)
         try:
             project_ref = supabase_url.replace('https://', '').split('.')[0]
-            doc_parser_url = f"https://{project_ref}.functions.supabase.co/doc-parser"
-            logger.info(f"🔗 Constructed doc-parser URL: {doc_parser_url}")
+            upload_handler_url = f"https://{project_ref}.functions.supabase.co/upload-handler"
+            logger.info(f"🔗 Constructed upload-handler URL: {upload_handler_url}")
         except Exception as e:
-            logger.error(f"❌ Failed to construct doc-parser URL: {e}")
+            logger.error(f"❌ Failed to construct upload-handler URL: {e}")
             raise HTTPException(status_code=500, detail="Invalid Supabase configuration")
         
-        logger.info(f"🔄 Calling doc-parser function for document {upload_result['document_id']}")
+        logger.info(f"🔄 Calling upload-handler function for document {upload_result['document_id']}")
         
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                doc_parser_url,
+                upload_handler_url,
                 headers={
                     'Authorization': f'Bearer {supabase_service_key}',
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-User-ID': str(current_user.id)
                 },
                 json={
-                    'documentId': upload_result['document_id'],
+                    'userId': str(current_user.id),
+                    'filename': file.filename,
+                    'fileSize': file_size,
+                    'contentType': file.content_type or "application/octet-stream",
                     'storagePath': upload_result['path']
                 }
             ) as response:
                 response_data = await response.json()
                 if response.status != 200:
                     error_text = await response.text()
-                    logger.error(f"❌ Doc-parser call failed: {response.status} - {error_text}")
+                    logger.error(f"❌ Upload-handler call failed: {response.status} - {error_text}")
                     raise HTTPException(
                         status_code=500,
                         detail=f"Document upload succeeded but processing failed: {error_text}"
                     )
                 
                 if not response_data.get('success'):
-                    logger.error(f"❌ Doc-parser returned error: {response_data.get('error')}")
+                    logger.error(f"❌ Upload-handler returned error: {response_data.get('error')}")
                     raise HTTPException(
                         status_code=500,
                         detail=f"Document processing failed: {response_data.get('error')}"
                     )
                 
-                logger.info(f"✅ Doc-parser started processing: {response_data}")
+                logger.info(f"✅ Upload-handler started processing: {response_data}")
                 
         return {
             "success": True,

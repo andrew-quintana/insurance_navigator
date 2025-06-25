@@ -2,6 +2,15 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.21.0'
 import { corsHeaders } from '../_shared/cors.ts'
 
+// Add Deno types
+declare const Deno: {
+  env: {
+    get(key: string): string | undefined;
+    toObject(): { [key: string]: string };
+  };
+  memoryUsage(): { heapUsed: number; rss: number; external: number };
+};
+
 // Performance monitoring
 const metrics = {
   startTime: 0,
@@ -21,7 +30,7 @@ function logMetrics(stage: string) {
 - RSS: ${rss}MB
 - File Size: ${metrics.fileSize} bytes
 `)
-    }
+}
 
 console.log('📄 Doc parser starting...')
 
@@ -30,6 +39,14 @@ const supabaseClient = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 )
+
+// Debug environment loading
+console.log('🔑 Environment check:', {
+  hasSupabaseUrl: !!Deno.env.get('SUPABASE_URL'),
+  hasServiceKey: !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+  hasLlamaKey: !!Deno.env.get('LLAMA_CLOUD_API_KEY'),
+  envKeys: Object.keys(Deno.env.toObject()).sort(),
+})
 
 // Add file size limits and streaming configuration
 const CONFIG = {
@@ -78,339 +95,180 @@ async function streamFileDownload(storagePath: string): Promise<Uint8Array | nul
       if (attempt < maxRetries - 1) {
         console.log(`⏳ Waiting ${retryDelays[attempt]}ms before retry...`)
         await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]))
-        } else {
+      } else {
         console.error('❌ All download attempts failed:', err)
         throw err
-  }
-}
+      }
+    }
   }
 
   return null
 }
 
-// Custom fetch implementation for file uploads
-async function uploadFile(url: string, formData: FormData, authToken: string): Promise<Response> {
-  const boundary = '----FormBoundary' + Math.random().toString(36).slice(2);
-  const chunks: Uint8Array[] = [];
-  
-  for (const [key, value] of formData.entries()) {
-    // Add boundary
-    chunks.push(new TextEncoder().encode(`--${boundary}\r\n`));
-    
-    if (value instanceof Blob) {
-      // Handle file data
-      chunks.push(new TextEncoder().encode(
-        `Content-Disposition: form-data; name="${key}"; filename="${value.name || 'file'}"\r\n` +
-        `Content-Type: ${value.type || 'application/octet-stream'}\r\n\r\n`
-      ));
-      chunks.push(new Uint8Array(await value.arrayBuffer()));
-      chunks.push(new TextEncoder().encode('\r\n'));
-    } else {
-      // Handle text fields
-      chunks.push(new TextEncoder().encode(
-        `Content-Disposition: form-data; name="${key}"\r\n\r\n${value}\r\n`
-      ));
-    }
-  }
-  
-  // Add final boundary
-  chunks.push(new TextEncoder().encode(`--${boundary}--\r\n`));
-  
-  // Combine all chunks
-  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-  const body = new Uint8Array(totalLength);
-  let offset = 0;
-  for (const chunk of chunks) {
-    body.set(chunk, offset);
-    offset += chunk.length;
-  }
-  
-  // Make request with proper binary body
-  return await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': authToken,
-      'Content-Type': `multipart/form-data; boundary=${boundary}`
-    },
-    body
-  });
-}
-
-serve(async (req) => {
-  metrics.startTime = Date.now()
-  
-  // Handle CORS preflight
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { 
-      headers: {
-        ...corsHeaders,
-        'Allow': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
-      }
-    })
+    return new Response('ok', { headers: corsHeaders })
   }
-
-  // Handle unsupported methods
-  if (!['GET', 'POST', 'OPTIONS'].includes(req.method)) {
-    return new Response('Method not allowed', { 
-      status: 405,
-      headers: {
-        ...corsHeaders,
-        'Allow': 'GET, POST, OPTIONS',
-        'Content-Type': 'text/plain'
-      }
-    })
-  }
-
-  // Handle webhook callback from LlamaParse
-  if (req.method === 'POST' && req.url.endsWith('/webhook')) {
-    try {
-      console.log('📥 Received webhook from LlamaParse')
-      logMetrics('webhook-start')
-      
-      const webhookData = await req.json()
-      
-      // Extract document ID from the URL query params
-      const url = new URL(req.url)
-      const documentId = url.searchParams.get('documentId')
-      const storagePath = url.searchParams.get('storagePath')
-      
-      if (!documentId || !storagePath) {
-        throw new Error('Missing documentId or storagePath in webhook URL')
-      }
-
-      console.log(`📄 Processing webhook for document ${documentId}`)
-      console.log('📦 Webhook data size:', JSON.stringify(webhookData).length, 'bytes')
-      
-      // Check memory before processing webhook
-      if (!checkMemoryUsage()) {
-        throw new Error('Memory limit exceeded before processing webhook')
-      }
-      
-      // Update document status and content
-      const { error: updateError } = await supabaseClient
-        .from('documents')
-        .update({
-          status: 'completed',
-          content: webhookData.md,
-          metadata: {
-            extractionMethod: 'llamaparse_webhook',
-            textLength: webhookData.md.length,
-            images: webhookData.images || [],
-            completedAt: new Date().toISOString(),
-            processingTime: Date.now() - metrics.startTime,
-            memoryMetrics: Deno.memoryUsage()
-          }
-        })
-        .eq('id', documentId)
-
-      if (updateError) {
-        throw new Error(`Failed to update document: ${updateError.message}`)
-      }
-
-      logMetrics('webhook-complete')
-
-      // Clean up webhook data
-      webhookData.md = null
-      webhookData.images = null
-
-      // Return success response
-      return new Response(
-        JSON.stringify({ 
-          success: true,
-          message: 'Document updated successfully',
-          metrics: {
-            processingTime: Date.now() - metrics.startTime,
-            memoryUsage: Deno.memoryUsage()
-        }
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    } catch (error) {
-      console.error('❌ Webhook processing failed:', error)
-      logMetrics('webhook-error')
-      return new Response(
-        JSON.stringify({ success: false, error: error.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-  }
-
-  // Health check
-  if (req.method === 'GET') {
-    return new Response(
-      JSON.stringify({ 
-        service: 'doc-parser',
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        version: '1.0.0',
-        memory: Deno.memoryUsage(),
-        config: {
-          maxFileSize: CONFIG.MAX_FILE_SIZE,
-          chunkSize: CONFIG.CHUNK_SIZE,
-          memoryLimit: CONFIG.MEMORY_LIMIT
-        }
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-  }
-
+  
   try {
-    // Verify JWT for document upload requests
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw new Error('Missing or invalid authorization header')
+    console.log('🔍 Doc-parser started - method:', req.method)
+    
+    // Handle GET requests for health checks
+    if (req.method === 'GET') {
+      return new Response(JSON.stringify({
+        status: 'healthy',
+        service: 'doc-parser',
+        timestamp: new Date().toISOString()
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
-
-    console.log('📄 Processing request...')
-    logMetrics('request-start')
+    
+    // Only handle POST requests for document processing
+    if (req.method !== 'POST') {
+      return new Response(JSON.stringify({
+        error: 'Method not allowed',
+        allowed_methods: ['POST', 'GET', 'OPTIONS']
+      }), {
+        status: 405,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+    
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseKey)
 
     // Parse request body
-    const body = await req.json()
-    const { documentId, storagePath, filename, contentType = 'application/pdf' } = body
-    
-    if (!documentId || !storagePath) {
-      console.error('❌ Missing required fields:', { documentId, storagePath })
-      throw new Error(`Missing required fields: ${!documentId ? 'documentId' : ''} ${!storagePath ? 'storagePath' : ''}`)
+    let requestData: any
+    try {
+      requestData = await req.json()
+    } catch (jsonError) {
+      console.error('❌ JSON parsing error:', jsonError)
+      return new Response(JSON.stringify({ 
+        error: 'Invalid JSON payload',
+        details: 'Request body must be valid JSON'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
     
-    console.log('📄 Processing document:', { documentId, path: storagePath, filename, contentType })
-
-    // Remove bucket name if present
-    const bucketName = 'documents'  // Changed from 'raw_documents' to match actual bucket
-    const finalPath = storagePath.startsWith(`${bucketName}/`) 
-      ? storagePath.slice(bucketName.length + 1) // +1 for the slash
-      : storagePath
-
-    console.log(`📁 Downloading file from path: ${finalPath}`)
-
-    // Download file with retries
-    let fileData = await streamFileDownload(finalPath)  // Changed to let
-    if (!fileData) {
-      throw new Error('Failed to download file')
-    }
-    metrics.fileSize = fileData.length
-    console.log(`📄 File downloaded, size: ${metrics.fileSize} bytes`)
-    logMetrics('file-download')
-
-    // Check memory before processing
-    if (!checkMemoryUsage()) {
-      throw new Error('Memory limit exceeded after file download')
+    const { jobId, documentId, storagePath } = requestData
+    
+    if (!jobId || !documentId || !storagePath) {
+      return new Response(JSON.stringify({ 
+        error: 'Missing required parameters: jobId, documentId, storagePath'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
 
-    // Get the Edge Function URL for webhook callback
-    const projectRef = 'jhrespvvhbnloxrieycf'
-    const webhookUrl = `https://${projectRef}.functions.supabase.co/doc-parser/webhook`
-    console.log('🔗 Generated webhook URL:', webhookUrl)
-    console.log('🔑 Checking webhook URL requirements:')
-    console.log('  - HTTPS protocol:', webhookUrl.startsWith('https://'))
-    console.log('  - Domain name (not IP):', !webhookUrl.match(/^https?:\/\/\d+\.\d+\.\d+\.\d+/))
-    console.log('  - URL length:', webhookUrl.length, '(must be < 200)')
-    
-    // Add document metadata as query params to webhook URL
-    const webhookParams = new URLSearchParams()
-    webhookParams.append('documentId', documentId)
-    // Don't encode the storage path twice - URLSearchParams will handle encoding
-    webhookParams.append('storagePath', finalPath)
-    const fullWebhookUrl = `${webhookUrl}?${webhookParams.toString()}`
+    console.log('📄 Processing document:', { jobId, documentId, storagePath })
 
-    // Call LlamaParse API with webhook
-    const llamaParseApiKey = Deno.env.get('LLAMA_CLOUD_API_KEY')
-    if (!llamaParseApiKey) {
-      throw new Error('Missing LlamaParse API key')
+    // Get document record from database
+    const { data: documents, error: docError } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('id', documentId)
+      .single()
+
+    if (docError || !documents) {
+      console.error('❌ Document not found:', docError || 'No document record')
+      return new Response(JSON.stringify({ 
+        error: 'Document not found',
+        details: docError?.message || 'No document record exists'
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
 
-    // Send to LlamaParse for processing
-    const llamaParseUrl = 'https://api.cloud.llamaindex.ai/api/v1/parsing/upload'
-    
-    // Debug log the API key (first/last 4 chars only for security)
-    const keyLength = llamaParseApiKey.length
-    console.log(`API Key length: ${keyLength}`)
-    console.log(`API Key start/end: ${llamaParseApiKey.slice(0,4)}...${llamaParseApiKey.slice(-4)}`)
-    console.log(`API Key whitespace check: [${llamaParseApiKey}]`)
-    
-    // Keep it simple - just use FormData
-    console.log('Creating FormData...')
+    // Download file from storage
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from('documents')
+      .download(storagePath)
+
+    if (downloadError || !fileData) {
+      console.error('❌ File download failed:', downloadError || 'No file data')
+      return new Response(JSON.stringify({ 
+        error: 'File download failed',
+        details: downloadError?.message || 'No file data'
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Update document status to processing
+    await supabase
+      .from('documents')
+      .update({
+        status: 'processing',
+        progress_percentage: 30,
+        processing_started_at: new Date().toISOString()
+      })
+      .eq('id', documentId)
+
+    // Process with LlamaParse
+    const llamaCloudKey = Deno.env.get('LLAMA_CLOUD_API_KEY')
+    if (!llamaCloudKey) {
+      throw new Error('LlamaParse API key not configured')
+    }
+
+    // Prepare file for LlamaCloud upload
     const formData = new FormData()
-    console.log(`Adding file to FormData (size: ${fileData.length} bytes, type: ${contentType})`)
-    formData.append('file', new Blob([fileData], { type: contentType }))
-    
-    // Add webhook if needed
-    if (!/[^\x20-\x7E]/.test(fullWebhookUrl)) {
-      console.log(`Adding webhook URL to FormData: ${fullWebhookUrl.slice(0, 30)}...`)
-      formData.append('webhook_url', fullWebhookUrl)
-    } else {
-      console.log('Webhook URL contains invalid characters, skipping')
-    }
-    
-    // Ensure the Authorization header is a valid ByteString
-    console.log('Constructing Authorization header...')
-    const trimmedKey = llamaParseApiKey.trim()
-    console.log(`API Key after trim length: ${trimmedKey.length}`)
-    
-    // Log any non-ASCII characters in the header
-    const headerValue = `Bearer ${trimmedKey}`
-    console.log(`Full auth header length: ${headerValue.length}`)
-    
-    const invalidChars = headerValue.split('').map((char, i) => {
-      const code = char.charCodeAt(0)
-      if (code < 0x20 || code > 0x7E) {
-        return `pos ${i}: ${code} [${char}]`
-      }
-      return null
-    }).filter(Boolean)
-    
-    if (invalidChars.length > 0) {
-      console.log('⚠️ Invalid characters found in auth header:')
-      console.log(invalidChars.join(', '))
-      throw new Error('Authorization header contains invalid characters')
-    }
-    
-    console.log('Making request to LlamaParse...')
-    // Use minimal headers - let Deno handle Content-Type
-    const llamaParseResponse = await fetch(llamaParseUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': headerValue
-      },
-      body: formData
-    }).catch(error => {
-      console.log('❌ Fetch error:', error.message)
-      console.log('Error stack:', error.stack)
-      throw error
-    })
-    
-    console.log(`LlamaParse response status: ${llamaParseResponse.status}`)
-    if (!llamaParseResponse.ok) {
-      const errorText = await llamaParseResponse.text()
-      console.log('LlamaParse error response:', errorText)
+    formData.append('file', fileData, documents.original_filename)
+
+    // Upload to LlamaParse
+    const uploadResponse = await uploadToLlamaParse(formData, llamaCloudKey)
+    if (!uploadResponse.ok) {
+      throw new Error(`LlamaParse upload failed: ${uploadResponse.status}`)
     }
 
-    // Clean up file data
-    fileData = null
+    const uploadResult = await uploadResponse.json()
+    const extractedText = uploadResult.text || ''
 
-    // Return success response
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'Document sent for processing',
-        documentId,
-        storagePath: finalPath,
-        metrics: {
-          processingTime: Date.now() - metrics.startTime,
-          memoryUsage: Deno.memoryUsage(),
-          fileSize: metrics.fileSize
+    if (!extractedText || extractedText.length < 50) {
+      throw new Error('LlamaParse returned insufficient content')
+    }
+
+    // Update document with extracted text
+    await supabase
+      .from('documents')
+      .update({
+        status: 'completed',
+        progress_percentage: 100,
+        processing_completed_at: new Date().toISOString(),
+        structured_contents: {
+          text: extractedText,
+          metadata: uploadResult.metadata || {}
         }
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+      })
+      .eq('id', documentId)
+
+    return new Response(JSON.stringify({
+      success: true,
+      jobId,
+      documentId,
+      extractedText,
+      metadata: uploadResult.metadata || {}
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
 
   } catch (error) {
-    console.error('❌ Document parsing failed:', error)
-    logMetrics('request-error')
-    return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    console.error('❌ Processing error:', error)
+    return new Response(JSON.stringify({ 
+      success: false,
+      error: error.message
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
   }
 }) 
