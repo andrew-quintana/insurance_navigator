@@ -21,9 +21,15 @@ function logMetrics(stage: string) {
 - RSS: ${rss}MB
 - File Size: ${metrics.fileSize} bytes
 `)
-}
+    }
 
 console.log('📄 Doc parser starting...')
+
+// Initialize Supabase client
+const supabaseClient = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+)
 
 // Add file size limits and streaming configuration
 const CONFIG = {
@@ -44,55 +50,42 @@ function checkMemoryUsage(): boolean {
 }
 
 // Add streaming file download
-async function streamFileDownload(supabaseClient: any, storagePath: string): Promise<Uint8Array> {
-  console.log(`📥 Streaming file download: ${storagePath}`)
-  
-  const { data: fileData, error: downloadError } = await supabaseClient.storage
-    .from('raw_documents')
-    .download(storagePath)
+async function streamFileDownload(storagePath: string): Promise<Uint8Array | null> {
+  const maxRetries = 3
+  const retryDelays = [2000, 4000, 8000] // 2s, 4s, 8s delays
 
-  if (downloadError) {
-    throw new Error(`Failed to download file: ${downloadError.message}`)
-  }
-
-  if (!fileData) {
-    throw new Error('No file data received from storage')
-  }
-
-  if (fileData.size > CONFIG.MAX_FILE_SIZE) {
-    throw new Error(`File too large: ${fileData.size} bytes (max ${CONFIG.MAX_FILE_SIZE} bytes)`)
-  }
-
-  // Stream file data in chunks
-  const chunks: Uint8Array[] = []
-  const reader = fileData.stream().getReader()
-  
-  try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      chunks.push(value)
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      console.log(`📥 Attempt ${attempt + 1}/${maxRetries} to download file: ${storagePath}`)
       
-      // Check memory usage after each chunk
-      if (!checkMemoryUsage()) {
-        reader.releaseLock()
-        throw new Error('Memory limit exceeded during file streaming')
+      const { data, error } = await supabaseClient
+        .storage
+        .from('documents')
+        .download(storagePath)
+
+      if (error) {
+        throw error
       }
-    }
-  } finally {
-    reader.releaseLock()
+
+      if (!data) {
+        throw new Error('No data received from storage')
+      }
+
+      return new Uint8Array(await data.arrayBuffer())
+    } catch (err) {
+      console.error(`❌ Download attempt ${attempt + 1} failed:`, err)
+      
+      if (attempt < maxRetries - 1) {
+        console.log(`⏳ Waiting ${retryDelays[attempt]}ms before retry...`)
+        await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]))
+        } else {
+        console.error('❌ All download attempts failed:', err)
+        throw err
+  }
+}
   }
 
-  // Combine chunks efficiently
-  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
-  const result = new Uint8Array(totalLength)
-  let offset = 0
-  for (const chunk of chunks) {
-    result.set(chunk, offset)
-    offset += chunk.length
-  }
-
-  return result
+  return null
 }
 
 serve(async (req) => {
@@ -122,17 +115,11 @@ serve(async (req) => {
 
       console.log(`📄 Processing webhook for document ${documentId}`)
       console.log('📦 Webhook data size:', JSON.stringify(webhookData).length, 'bytes')
-
+      
       // Check memory before processing webhook
       if (!checkMemoryUsage()) {
         throw new Error('Memory limit exceeded before processing webhook')
       }
-
-      // Initialize Supabase client
-      const supabaseClient = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-      )
 
       // Update document status and content
       const { error: updateError } = await supabaseClient
@@ -169,7 +156,7 @@ serve(async (req) => {
           metrics: {
             processingTime: Date.now() - metrics.startTime,
             memoryUsage: Deno.memoryUsage()
-          }
+        }
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -213,19 +200,30 @@ serve(async (req) => {
     logMetrics('request-start')
 
     // Parse request body
-    const { documentId, storagePath } = await req.json()
+    const body = await req.json()
+    const { documentId, storagePath } = body
+    
+    if (!documentId || !storagePath) {
+      throw new Error(`Missing required fields: ${!documentId ? 'documentId' : ''} ${!storagePath ? 'storagePath' : ''}`)
+    }
+    
     console.log(`📄 Processing document ${documentId} from ${storagePath}`)
 
-    // Initialize Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    // Remove bucket name if present
+    const bucketName = 'documents'  // Changed from 'raw_documents' to match actual bucket
+    const finalPath = storagePath.startsWith(`${bucketName}/`) 
+      ? storagePath.slice(bucketName.length + 1) // +1 for the slash
+      : storagePath
 
-    // Stream file download
-    const fileData = await streamFileDownload(supabaseClient, storagePath)
+    console.log(`📁 Downloading file from path: ${finalPath}`)
+
+    // Download file with retries
+    let fileData = await streamFileDownload(finalPath)  // Changed to let
+    if (!fileData) {
+      throw new Error('Failed to download file')
+    }
     metrics.fileSize = fileData.length
-    console.log(`📄 File downloaded, size: ${fileData.length} bytes`)
+    console.log(`📄 File downloaded, size: ${metrics.fileSize} bytes`)
     logMetrics('file-download')
 
     // Check memory before processing
@@ -243,68 +241,55 @@ serve(async (req) => {
     console.log('  - URL length:', webhookUrl.length, '(must be < 200)')
 
     // Add document metadata as query params to webhook URL
-    const webhookParams = new URLSearchParams({
-      documentId,
-      storagePath: encodeURIComponent(storagePath)
-    })
+    const webhookParams = new URLSearchParams()
+    webhookParams.append('documentId', documentId)
+    // Don't encode the storage path twice - URLSearchParams will handle encoding
+    webhookParams.append('storagePath', finalPath)
     const fullWebhookUrl = `${webhookUrl}?${webhookParams.toString()}`
 
     // Call LlamaParse API with webhook
-    console.log('🦙 Calling LlamaParse API with webhook...')
-    const formData = new FormData()
-    formData.append('file', new Blob([fileData], { type: 'application/pdf' }), 'document.pdf')
-    formData.append('webhook_url', fullWebhookUrl)
-    
-    const parseResponse = await fetch('https://api.cloud.llamaindex.ai/api/v1/parsing/upload', {
+    const llamaParseApiKey = Deno.env.get('LLAMA_CLOUD_API_KEY')
+    if (!llamaParseApiKey) {
+      throw new Error('Missing LlamaParse API key')
+    }
+
+    // Send to LlamaParse for processing
+    const llamaParseUrl = 'https://api.llamacloud.ai/v1/parse-document'
+    const llamaParseResponse = await fetch(llamaParseUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('LLAMACLOUD_API_KEY')}`
+        'Authorization': `Bearer ${llamaParseApiKey}`,
+        'Content-Type': 'application/json'
       },
-      body: formData
+      body: JSON.stringify({
+        file: fileData,
+        webhook_url: fullWebhookUrl,
+        options: {
+          output_format: 'markdown',
+          include_images: true
+        }
+      })
     })
+
+    if (!llamaParseResponse.ok) {
+      const errorText = await llamaParseResponse.text()
+      throw new Error(`LlamaParse API error: ${llamaParseResponse.status} - ${errorText}`)
+    }
 
     // Clean up file data
     fileData = null
 
-    if (!parseResponse.ok) {
-      const errorText = await parseResponse.text()
-      throw new Error(`LlamaParse API error: ${parseResponse.status} - ${errorText}`)
-    }
-
-    const parseResult = await parseResponse.json()
-    console.log(`📋 LlamaParse job created: ${parseResult.id}`)
-    logMetrics('llamaparse-upload')
-
-    // Update document status to processing
-    const { error: updateError } = await supabaseClient
-      .from('documents')
-      .update({
-        status: 'processing',
-        metadata: {
-          llamaparse_job_id: parseResult.id,
-          startedAt: new Date().toISOString(),
-          fileSize: metrics.fileSize,
-          processingTime: Date.now() - metrics.startTime,
-          memoryMetrics: Deno.memoryUsage()
-        }
-      })
-      .eq('id', documentId)
-
-    if (updateError) {
-      throw new Error(`Failed to update document status: ${updateError.message}`)
-    }
-
-    logMetrics('request-complete')
-
+    // Return success response
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: true,
-        jobId: parseResult.id,
-        message: 'Document processing started. Results will be sent via webhook.',
+        message: 'Document sent for processing',
+        documentId,
+        storagePath: finalPath,
         metrics: {
           processingTime: Date.now() - metrics.startTime,
-          fileSize: metrics.fileSize,
-          memoryUsage: Deno.memoryUsage()
+          memoryUsage: Deno.memoryUsage(),
+          fileSize: metrics.fileSize
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -314,16 +299,7 @@ serve(async (req) => {
     console.error('❌ Document parsing failed:', error)
     logMetrics('request-error')
     return new Response(
-      JSON.stringify({ 
-        success: false,
-        error: error.message,
-        details: error.stack,
-        metrics: {
-          processingTime: Date.now() - metrics.startTime,
-          fileSize: metrics.fileSize,
-          memoryUsage: Deno.memoryUsage()
-        }
-      }),
+      JSON.stringify({ success: false, error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
