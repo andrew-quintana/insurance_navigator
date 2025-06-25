@@ -75,19 +75,42 @@ class StorageService:
             file_path = f"{document_type}/{user_id}/{file_hash}/{filename}"
             content_type = self._get_content_type(filename)
             
-            # Upload to Supabase Storage
-            upload_response = await self.supabase.storage.from_(self.bucket_name).upload(
-                file_path,
-                file_data,
-                {"content-type": content_type}
-            )
-            
-            # Check upload response
-            if not upload_response or not upload_response.get('path'):
-                logger.error(f"Storage upload failed - response: {upload_response}")
-                raise RuntimeError("Storage upload failed - invalid response")
-            
+            # Check if document already exists
             pool = await get_db_pool()
+            async with pool.get_connection() as conn:
+                existing_doc = await conn.fetchrow("""
+                    SELECT id, original_filename, file_size, content_type, file_hash,
+                           storage_path, status, document_type, metadata, created_at
+                    FROM documents 
+                    WHERE storage_path = $1 OR (file_hash = $2 AND user_id = $3)
+                """, file_path, file_hash, uuid.UUID(user_id))
+                
+                if existing_doc:
+                    # Return existing document info
+                    return {
+                        'document_id': str(existing_doc['id']),
+                        'file_path': existing_doc['storage_path'],
+                        'original_filename': existing_doc['original_filename'],
+                        'content_type': existing_doc['content_type'],
+                        'file_size': existing_doc['file_size'],
+                        'uploaded_at': existing_doc['created_at'].isoformat(),
+                        'status': existing_doc['status'],
+                        'policy_extraction_status': 'completed' if document_type == 'policy' else 'n/a'
+                    }
+            
+            # Upload to Supabase Storage
+            try:
+                upload_response = await self.supabase.storage.from_(self.bucket_name).upload(
+                    file_path,
+                    file_data,
+                    {"content-type": content_type}
+                )
+            except Exception as e:
+                if 'Duplicate' in str(e):
+                    # File exists in storage but not in DB, proceed with DB insertion
+                    logger.info(f"File already exists in storage: {file_path}")
+                else:
+                    raise
             
             async with pool.get_connection() as conn:
                 # Insert document record
@@ -230,7 +253,7 @@ class StorageService:
             start = end - overlap
             
         return chunks
-
+    
     def _calculate_file_hash(self, file_data: bytes) -> str:
         """Calculate SHA256 hash of file data."""
         import hashlib
@@ -392,7 +415,7 @@ class StorageService:
 
     async def document_exists(self, file_path: str) -> bool:
         """
-        Check if a document exists in vector storage.
+        Check if a document exists in both storage and database.
         
         Args:
             file_path: Path to check
@@ -401,15 +424,26 @@ class StorageService:
             True if document exists, False otherwise
         """
         try:
+            # Check Supabase Storage
+            try:
+                storage_exists = await self.supabase.storage.from_(self.bucket_name).list(file_path)
+                storage_exists = len(storage_exists) > 0
+            except Exception as e:
+                logger.warning(f"Failed to check storage existence: {e}")
+                storage_exists = False
+            
+            # Check database
             pool = await get_db_pool()
             async with pool.get_connection() as conn:
-                exists = await conn.fetchval("""
+                db_exists = await conn.fetchval("""
                     SELECT EXISTS(
-                        SELECT 1 FROM policy_content_vectors 
-                        WHERE document_metadata->>'file_path' = $1 AND is_active = true
+                        SELECT 1 FROM documents 
+                        WHERE storage_path = $1
                     )
                 """, file_path)
-                return bool(exists)
+                
+            return bool(storage_exists) or bool(db_exists)
+            
         except Exception as e:
             logger.error(f"Error checking document existence: {str(e)}")
             return False
