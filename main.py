@@ -110,6 +110,11 @@ app.add_middleware(
 # Health check cache
 _health_cache = {"result": None, "timestamp": 0}
 
+@app.head("/health")
+async def health_check_head():
+    """Quick health check for HEAD requests."""
+    return Response(status_code=200)
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint with caching to reduce database load."""
@@ -121,13 +126,17 @@ async def health_check():
     if _health_cache["result"] and (current_time - _health_cache["timestamp"]) < cache_duration:
         return _health_cache["result"]
     
+    # For HEAD requests, return immediately
+    if request.method == "HEAD":
+        return Response(status_code=200)
+    
     # Perform actual health check
     try:
         # Test database connection
         db_pool = await get_db_pool()
         if db_pool:
             try:
-                async with db_pool.get_connection() as conn:  # Changed from acquire() to get_connection()
+                async with db_pool.get_connection() as conn:
                     await conn.execute("SELECT 1")
                 db_status = "healthy"
                 logger.debug("✅ Health check: Database connection successful")
