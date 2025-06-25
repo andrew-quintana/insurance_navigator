@@ -13,7 +13,8 @@ def get_cors_config() -> Dict[str, Any]:
         "http://localhost:3000",
         "https://insurance-navigator.vercel.app",
         "https://insurance-navigator-git-*.vercel.app",
-        "https://*-andrew-quintanas-projects.vercel.app"
+        "https://*-andrew-quintanas-projects.vercel.app",
+        "https://insurance-navigator-*.vercel.app"  # More permissive pattern for Vercel previews
     ]
     
     # Add any additional origins from environment
@@ -22,7 +23,7 @@ def get_cors_config() -> Dict[str, Any]:
     
     return {
         "allow_origins": allowed_origins,
-        "allow_origin_regex": r"https://insurance-navigator-[a-zA-Z0-9-]+-andrew-quintanas-projects\.vercel\.app",
+        "allow_origin_regex": r"https://[a-zA-Z0-9-]+-andrew-quintanas-projects\.vercel\.app",  # Simplified regex
         "allow_credentials": True,
         "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
         "allow_headers": [
@@ -38,7 +39,9 @@ def get_cors_config() -> Dict[str, Any]:
             "User-Agent",
             "If-Modified-Since",
             "Cache-Control",
-            "Range"
+            "Range",
+            "Content-Length",
+            "Content-Range"
         ],
         "expose_headers": ["Content-Length", "Content-Range"],
         "max_age": 7200  # 2 hours
@@ -53,11 +56,23 @@ def get_cors_headers(origin: str | None = None) -> Dict[str, str]:
     
     # Check if origin matches any allowed pattern
     is_allowed = False
-    if origin in config["allow_origins"] or "*" in config["allow_origins"]:
+    
+    # First check exact matches
+    if origin in config["allow_origins"]:
         is_allowed = True
-    elif "allow_origin_regex" in config:
-        pattern = re.compile(config["allow_origin_regex"])
-        is_allowed = bool(pattern.match(origin))
+    else:
+        # Then check wildcards
+        for allowed_origin in config["allow_origins"]:
+            if '*' in allowed_origin:
+                pattern = allowed_origin.replace('*', '.*').replace('.', '\.')
+                if re.match(pattern, origin):
+                    is_allowed = True
+                    break
+        
+        # Finally check regex pattern
+        if not is_allowed and "allow_origin_regex" in config:
+            pattern = re.compile(config["allow_origin_regex"])
+            is_allowed = bool(pattern.match(origin))
     
     if is_allowed:
         return {

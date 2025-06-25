@@ -26,6 +26,7 @@ import time
 from starlette.middleware.base import BaseHTTPMiddleware
 import hashlib
 from utils.cors_config import get_cors_config, get_cors_headers
+import re
 
 # Database service imports
 from db.services.user_service import get_user_service, UserService
@@ -49,6 +50,55 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Debug middleware for CORS
+class CORSDebugMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Log request details
+        logger.info(f"🔍 Request: {request.method} {request.url}")
+        logger.info(f"🌐 Origin: {request.headers.get('origin')}")
+        logger.info(f"📋 Headers: {dict(request.headers)}")
+        
+        # Get CORS config
+        cors_config = get_cors_config()
+        origin = request.headers.get("origin")
+        
+        # Log CORS check
+        if origin:
+            is_allowed = False
+            # Check exact matches
+            if origin in cors_config["allow_origins"]:
+                logger.info(f"✅ Origin allowed (exact match): {origin}")
+                is_allowed = True
+            else:
+                # Check wildcards
+                for allowed_origin in cors_config["allow_origins"]:
+                    if '*' in allowed_origin:
+                        pattern = allowed_origin.replace('*', '.*').replace('.', '\.')
+                        if re.match(pattern, origin):
+                            logger.info(f"✅ Origin allowed (wildcard match): {origin} matches {allowed_origin}")
+                            is_allowed = True
+                            break
+                
+                # Check regex
+                if not is_allowed and "allow_origin_regex" in cors_config:
+                    pattern = re.compile(cors_config["allow_origin_regex"])
+                    if pattern.match(origin):
+                        logger.info(f"✅ Origin allowed (regex match): {origin}")
+                        is_allowed = True
+                    
+            if not is_allowed:
+                logger.warning(f"❌ Origin not allowed: {origin}")
+        
+        response = await call_next(request)
+        
+        # Log response headers
+        logger.info(f"📤 Response headers: {dict(response.headers)}")
+        
+        return response
+
+# Add debug middleware
+app.add_middleware(CORSDebugMiddleware)
 
 # Add CORS middleware with our configuration
 cors_config = get_cors_config()
