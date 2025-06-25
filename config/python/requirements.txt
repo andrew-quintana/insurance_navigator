@@ -76,3 +76,6 @@ notebook>=7.0.0
 
 # New dependencies
 llama-parse>=0.1.1
+
+# Added from the code block
+backoff>=2.2.1

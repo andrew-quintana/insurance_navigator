@@ -15,6 +15,8 @@ import json
 import hashlib
 import asyncpg
 import aiohttp
+import backoff
+from urllib.parse import urljoin
 
 from supabase import create_client, Client
 from .db_pool import get_db_pool
@@ -30,11 +32,14 @@ class StorageService:
 
     def __init__(self):
         """Initialize the storage service with Supabase client."""
-        self.supabase_url = config.supabase.url
+        self.config = config
+        # Ensure URL has protocol
+        self.supabase_url = self._normalize_url(config.supabase.url)
         self.supabase_service_key = config.supabase.service_role_key
         self.bucket_name = config.supabase.storage_bucket or 'documents'
         self.signed_url_expiry = config.supabase.signed_url_expiry or 3600
         self.max_file_size = getattr(config.supabase, 'max_file_size_mb', 10) * 1024 * 1024  # Convert MB to bytes
+        self.anon_key = config.supabase.anon_key
         
         # Initialize Supabase client
         self.supabase: Client = create_client(
@@ -66,6 +71,60 @@ class StorageService:
             logger.error(f"Error ensuring bucket exists: {e}")
             # Don't raise - allow service to work with existing bucket
 
+    def _normalize_url(self, url: str) -> str:
+        """Ensure URL has protocol and is properly formatted."""
+        if not url:
+            raise ValueError("Supabase URL is required")
+        
+        if not url.startswith(('http://', 'https://')):
+            url = f"https://{url}"
+        
+        # Remove trailing slash if present
+        return url.rstrip('/')
+
+    @backoff.on_exception(
+        backoff.expo,
+        (aiohttp.ClientError, TimeoutError),
+        max_tries=3,
+        max_time=30
+    )
+    async def _make_request(
+        self,
+        method: str,
+        endpoint: str,
+        headers: Optional[Dict[str, str]] = None,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """Make HTTP request with retry logic."""
+        if not headers:
+            headers = {}
+        
+        headers.update({
+            'apikey': self.anon_key,
+            'Authorization': f'Bearer {self.anon_key}'
+        })
+
+        full_url = urljoin(self.supabase_url, endpoint)
+        logger.info(f"🔗 Making request to: {full_url}")
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.request(
+                    method,
+                    full_url,
+                    headers=headers,
+                    **kwargs
+                ) as response:
+                    if response.status >= 400:
+                        error_text = await response.text()
+                        logger.error(f"❌ Request failed: {response.status} - {error_text}")
+                        raise aiohttp.ClientError(f"Request failed: {response.status} - {error_text}")
+                    
+                    return await response.json()
+        except aiohttp.ClientError as e:
+            logger.error(f"❌ Connection error: {str(e)}")
+            raise
+
     async def upload_document(
         self,
         user_id: str,
@@ -73,71 +132,33 @@ class StorageService:
         filename: str,
         content_type: str
     ) -> Dict[str, Any]:
-        """Upload document and trigger processing."""
+        """Upload document with retry logic and better error handling."""
+        logger.info(f"📤 Starting document upload: {filename}")
+        
         try:
-            # Generate file hash to prevent duplicates
-            file_hash = hashlib.sha256(file_content).hexdigest()
+            # Construct storage path
+            storage_path = f"policy/{user_id}/{filename}"
             
-            # Create storage path
-            storage_path = f"policy/{user_id}/{file_hash}/{filename}"
+            # Upload to storage
+            upload_result = await self._make_request(
+                'POST',
+                f'/storage/v1/object/{self.bucket_name}/{storage_path}',
+                data=file_content,
+                headers={'Content-Type': content_type}
+            )
             
-            # Upload to Supabase storage
-            storage_url = f"{self.supabase_url}/storage/v1/object/{self.bucket_name}/{storage_path}"
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    storage_url,
-                    headers={
-                        'Authorization': f'Bearer {self.supabase_service_key}',
-                        'x-upsert': 'true'
-                    },
-                    data=file_content
-                ) as response:
-                    if response.status not in (200, 201):
-                        error_text = await response.text()
-                        raise Exception(f"Storage upload failed: {response.status} - {error_text}")
-                        
-            logger.info(f"Successfully uploaded file to storage: {storage_path}")
-            
-            # Extract basic text for initial processing
-            extracted_text = await self._extract_text(file_content, content_type)
-            logger.info(f"Successfully extracted {len(extracted_text)} characters from {content_type}")
-            
-            # Create document record
-            pool = await get_db_pool()
-            async with pool.get_connection() as conn:
-                document_id = await conn.fetchval("""
-                    INSERT INTO documents (
-                        user_id, original_filename, file_size, content_type,
-                        file_hash, storage_path, status, metadata
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                    RETURNING id
-                """, 
-                    uuid.UUID(user_id), filename, len(file_content), content_type,
-                    file_hash, storage_path, 'processing',
-                    json.dumps({
-                        'extracted_text_length': len(extracted_text),
-                        'extraction_method': 'basic',
-                        'uploaded_at': datetime.now().isoformat()
-                    })
-                )
-            
-            logger.info(f"Uploaded document {filename} for user {user_id}: {storage_path}")
-            
+            logger.info(f"✅ Document uploaded successfully: {filename}")
             return {
-                'document_id': str(document_id),  # Convert UUID to string
-                'file_path': storage_path,
-                'original_filename': filename,
-                'content_type': content_type,
-                'file_size': len(file_content),
-                'uploaded_at': datetime.now().isoformat(),
-                'status': 'processing',
-                'policy_extraction_status': 'processing'
+                'path': storage_path,
+                'size': len(file_content),
+                'type': content_type,
+                **upload_result
             }
             
         except Exception as e:
-            logger.error(f"Document upload failed: {str(e)}")
+            logger.error(f"❌ Upload failed for {filename}: {str(e)}")
             raise
-            
+
     async def _extract_text(self, file_content: bytes, content_type: str) -> str:
         """Extract text from document using basic extraction."""
         try:
