@@ -275,16 +275,35 @@ serve(async (req) => {
     // Send to LlamaParse for processing
     const llamaParseUrl = 'https://api.cloud.llamaindex.ai/api/v1/parsing/upload'
     const formData = new FormData()
-    formData.append('file', new Blob([fileData], { type: contentType }), filename || 'document.pdf')
+    
+    // Sanitize filename to only use ASCII characters
+    const sanitizedFilename = (filename || 'document.pdf')
+      .replace(/[^\x20-\x7E]/g, '') // Remove non-ASCII characters
+      .replace(/[^a-zA-Z0-9.-]/g, '_') // Replace special chars with underscore
+    
+    // Use a strictly controlled content type
+    const safeContentType = contentType === 'application/pdf' ? 'application/pdf' : 'application/octet-stream'
+    
+    // Create blob with minimal metadata
+    const blob = new Blob([fileData], { type: safeContentType })
+    
+    // Append file with sanitized name
+    formData.append('file', blob, sanitizedFilename)
+    
+    // Use only required parameters with strict string values
     formData.append('language', 'en')
     formData.append('output_tables_as_HTML', 'true')
-    formData.append('webhook_url', fullWebhookUrl)
     
-    // Minimal headers configuration that works reliably
+    // Only append webhook if URL is valid ASCII
+    if (!/[^\x20-\x7E]/.test(fullWebhookUrl)) {
+      formData.append('webhook_url', fullWebhookUrl)
+    }
+    
+    // Use minimal headers with strict string value
     const llamaParseResponse = await fetch(llamaParseUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${llamaParseApiKey}`
+        'Authorization': 'Bearer ' + llamaParseApiKey.trim()
       },
       body: formData
     })
