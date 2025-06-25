@@ -50,10 +50,16 @@ EXPOSE 8000
 ENV PORT=8000
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
+ENV KEEP_ALIVE=75
+ENV MAX_REQUESTS=1000
+ENV MAX_REQUESTS_JITTER=100
+ENV WORKERS=2
 
-# Optimized health check with shorter intervals
-HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=2 \
+# Optimized health check with longer intervals for free tier
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Use the app user's local bin path for uvicorn
-CMD ["/home/app/.local/bin/uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Use the app user's local bin path for uvicorn with optimized settings
+CMD ["/home/app/.local/bin/uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", \
+     "--workers", "2", "--timeout-keep-alive", "75", "--limit-max-requests", "1000", \
+     "--limit-max-requests-jitter", "100"]

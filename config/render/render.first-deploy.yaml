@@ -1,0 +1,52 @@
+services:
+  - type: web
+    name: insurance-navigator-api
+    env: docker
+    plan: free
+    dockerfilePath: ./config/docker/Dockerfile.first-deploy
+    region: oregon
+    branch: staging
+    port: 8000
+    healthCheckPath: /health
+    # First deployment settings
+    buildCommand: |
+      echo 'Running first deployment build...'
+      python -m pip install --upgrade pip
+      pip install -r config/python/requirements-first-deploy.txt
+    preDeployCommand: |
+      echo 'Running pre-deploy checks...'
+      python -m pytest tests/health/ -v
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ASYNCPG_DISABLE_PREPARED_STATEMENTS
+        value: "1"
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: DEBUG
+      - key: SECURITY_BYPASS_ENABLED
+        value: false
+      - key: API_BASE_URL
+        value: ***REMOVED***
+      # First deployment settings
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
+      - key: UVICORN_WORKERS
+        value: "1"
+      - key: STARTUP_TIMEOUT
+        value: "60"  # Increased timeout for first deploy
+      - key: DEBUG
+        value: "1" 

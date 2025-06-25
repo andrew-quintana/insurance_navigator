@@ -373,6 +373,38 @@ class EncryptionAwareEmbeddingService:
             # Truncate
             return embedding[:target_dimension]
 
+    async def process_chunk(self, chunk_text: str) -> Dict[str, Any]:
+        """Process a single chunk of text into vector with encryption."""
+        try:
+            # Generate embedding
+            embedding = await self._generate_embedding(chunk_text)
+            embedding = await self._normalize_embedding_dimension(embedding)
+            
+            # Get encryption manager
+            encryption_manager = await self._get_encryption_manager()
+            active_key = await encryption_manager.get_active_key()
+            
+            # Encrypt chunk text
+            encrypted_text = await encryption_manager.encrypt_data(chunk_text.encode())
+            
+            # Encrypt metadata
+            metadata = {
+                "chunk_size": len(chunk_text),
+                "processed_at": datetime.utcnow().isoformat()
+            }
+            encrypted_metadata = await encryption_manager.encrypt_data(json.dumps(metadata).encode())
+            
+            return {
+                "embedding": embedding,
+                "encrypted_text": encrypted_text,
+                "encrypted_metadata": encrypted_metadata,
+                "key_id": active_key["id"]
+            }
+            
+        except Exception as e:
+            logger.error(f"Error processing chunk: {str(e)}")
+            raise
+
 
 class MockEncryptionManager:
     """Mock encryption manager for development/testing."""

@@ -1,0 +1,50 @@
+# FIRST DEPLOYMENT REQUIREMENTS
+# Comprehensive list for initial setup - switch to requirements-prod.txt after successful deployment
+
+# Core API Framework
+fastapi==0.110.0
+uvicorn[standard]==0.27.1
+python-multipart==0.0.9
+pydantic==2.6.3
+pydantic-settings>=2.2.0
+
+# Database Essentials
+asyncpg==0.29.0
+SQLAlchemy==2.0.28
+alembic>=1.13.0
+
+# Security Essentials  
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.9
+
+# HTTP Client Essentials
+aiohttp>=3.8.0
+requests>=2.31.0
+httpx>=0.27.0
+
+# Environment & Configuration
+python-dotenv==1.0.1
+PyYAML>=6.0.1
+
+# AI & Document Processing
+langchain>=0.1.0
+supabase>=2.3.0
+anthropic>=0.8.0
+PyPDF2>=3.0.0
+tiktoken>=0.6.0
+tenacity>=8.2.0
+
+# Utilities
+pytz==2024.1
+backoff>=2.2.1
+python-dateutil>=2.8.2
+typing-extensions>=4.9.0
+
+# Testing & Development (included for first deploy validation)
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.1.0
+black>=24.0.0
+isort>=5.13.0
+flake8>=7.0.0 
