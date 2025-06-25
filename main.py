@@ -25,7 +25,7 @@ import json
 import time
 from starlette.middleware.base import BaseHTTPMiddleware
 import hashlib
-from utils.cors_config import cors_config
+from utils.cors_config import get_cors_headers, get_cors_headers_with_credentials
 
 # Database service imports
 from db.services.user_service import get_user_service, UserService
@@ -50,10 +50,12 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Add CORS middleware with updated configuration
+# Basic CORS middleware for non-credential requests
 app.add_middleware(
     CORSMiddleware,
-    **cors_config.get_fastapi_cors_middleware_config()
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Health check cache
@@ -193,7 +195,7 @@ async def get_document_status(
         status = await doc_service.get_document_status(document_id, str(current_user.id))
         
         if not status:
-            raise HTTPException(status_code=404, detail="Document not found")
+                raise HTTPException(status_code=404, detail="Document not found")
             
         return status
         
@@ -321,8 +323,8 @@ async def startup_event():
     
     try:
         logger.info("🔄 Service initialization starting...")
-        global user_service_instance, conversation_service_instance, storage_service_instance
-        
+    global user_service_instance, conversation_service_instance, storage_service_instance
+    
         # Initialize core services synchronously to ensure they're ready
         user_service_instance = await get_user_service()
         conversation_service_instance = await get_conversation_service()
@@ -451,20 +453,45 @@ async def get_current_user_info(current_user: UserResponse = Depends(get_current
 # Add OPTIONS route handler for explicit preflight handling
 @app.options("/{rest_of_path:path}")
 async def preflight_handler(request: Request, rest_of_path: str):
-    """Global OPTIONS handler for preflight requests"""
+    """Handle preflight requests explicitly"""
     origin = request.headers.get("Origin")
     
-    # Log the preflight request details
-    logger.info(f"🔄 Preflight request received for path: {rest_of_path}")
-    logger.info(f"🌐 Origin: {origin}")
+    # For login and other credential-requiring endpoints
+    if rest_of_path in ["login", "upload-document", "user-profile"]:
+        if not origin:
+            return Response(status_code=400, content="Origin header is required")
+        return Response(
+            status_code=200,
+            headers=get_cors_headers_with_credentials(origin)
+        )
     
-    # Get CORS headers for the specific origin
-    cors_headers = cors_config.get_headers_for_origin(origin)
-    
+    # For all other endpoints
     return Response(
         status_code=200,
-        headers=cors_headers
+        headers=get_cors_headers()
     )
+
+@app.middleware("http")
+async def add_cors_headers(request: Request, call_next):
+    """Add CORS headers to all responses"""
+    try:
+        origin = request.headers.get("Origin")
+        response = await call_next(request)
+        
+        # For login and other credential-requiring endpoints
+        if request.url.path in ["/login", "/upload-document", "/user-profile"]:
+            if origin:
+                for key, value in get_cors_headers_with_credentials(origin).items():
+                    response.headers[key] = value
+        else:
+            # For all other endpoints
+            for key, value in get_cors_headers().items():
+                response.headers[key] = value
+        
+        return response
+    except Exception as e:
+        logger.error(f"Error in CORS middleware: {str(e)}")
+        raise
 
 if __name__ == "__main__":
     import uvicorn
