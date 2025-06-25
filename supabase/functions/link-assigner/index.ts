@@ -1,5 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
 interface LinkRequest {
@@ -26,9 +26,39 @@ interface LinkResult {
 }
 
 serve(async (req: Request) => {
-  // Handle CORS
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { 
+      headers: {
+        ...corsHeaders,
+        'Allow': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+      }
+    })
+  }
+
+  // Handle unsupported methods
+  if (!['GET', 'POST', 'OPTIONS'].includes(req.method)) {
+    return new Response('Method not allowed', { 
+      status: 405,
+      headers: {
+        ...corsHeaders,
+        'Allow': 'GET, POST, OPTIONS',
+        'Content-Type': 'text/plain'
+      }
+    })
+  }
+
+  // Add health check endpoint
+  if (req.method === 'GET') {
+    return new Response(
+      JSON.stringify({ 
+        status: 'healthy',
+        service: 'link-assigner',
+        timestamp: new Date().toISOString()
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
 
   try {
