@@ -146,6 +146,7 @@ authentication:
     access_token_expire_minutes: 1440
 cors:
   allowed_origins:
+    - "*"  # Temporary for testing
     - "https://insurance-navigator.vercel.app"
     - "https://insurance-navigator-*.vercel.app"
     - "https://insurance-navigator-*-andrew-quintanas-projects.vercel.app"
