@@ -8,7 +8,7 @@ BEGIN
         job_type,
         status,
         priority,
-        metadata,
+        payload,
         scheduled_at
     ) VALUES (
         NEW.id,
@@ -16,9 +16,10 @@ BEGIN
         'pending',
         1,
         jsonb_build_object(
-            'document_type', NEW.document_type,
+            'document_id', NEW.id,
             'storage_path', NEW.storage_path,
             'content_type', NEW.content_type,
+            'document_type', NEW.document_type,
             'created_at', NEW.created_at
         ),
         NOW()
