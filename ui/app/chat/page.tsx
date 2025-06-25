@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { SendHorizontal, ArrowLeft, Upload, User, Bot, LogOut, X, FileText, CheckCircle, AlertCircle } from "lucide-react"
 import DocumentUploadModal from "@/components/DocumentUploadModal"
-import { createClient, RealtimeChannel } from '@supabase/supabase-js'
+import { RealtimeChannel } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase-client'
 
 type Message = {
   id: number
@@ -60,19 +61,6 @@ export default function ChatPage() {
   const lastActivityTime = useRef<number>(Date.now())
   const isCheckingAuthRef = useRef(false)
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
-
-  // Initialize Supabase client for background processing notifications
-  const supabase = React.useMemo(() => {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    
-    if (!url || !key) {
-      console.warn('Missing Supabase environment variables for background notifications')
-      return null
-    }
-    
-    return createClient(url, key)
-  }, [])
 
   // Channel reference to prevent multiple subscriptions
   const channelRef = useRef<RealtimeChannel | null>(null)
