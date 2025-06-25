@@ -156,14 +156,33 @@ class StorageService:
                         logger.error(f"❌ Upload failed: {response.status} - {error_text}")
                         raise Exception(f"Upload failed: {response.status} - {error_text}")
                     
-                    result = await response.json()
+                    storage_result = await response.json()
+            
+            # Create document record in database
+            pool = await get_db_pool()
+            async with pool.acquire() as conn:
+                document_id = await conn.fetchval("""
+                    INSERT INTO documents (
+                        user_id, original_filename, file_size, content_type,
+                        storage_path, status, metadata
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    RETURNING id
+                """, 
+                    uuid.UUID(user_id), filename, len(file_content), content_type,
+                    storage_path, 'processing',
+                    json.dumps({
+                        'uploaded_at': datetime.now().isoformat(),
+                        'storage_id': storage_result.get('Id')
+                    })
+                )
             
             logger.info(f"✅ Document uploaded successfully: {filename}")
             return {
+                'document_id': str(document_id),  # This is what the Edge Function needs
                 'path': storage_path,
                 'size': len(file_content),
                 'type': content_type,
-                **result
+                'storage_id': storage_result.get('Id')
             }
             
         except Exception as e:
