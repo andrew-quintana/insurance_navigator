@@ -180,50 +180,67 @@ export default function ChatPage() {
 
     console.log('🔄 Setting up background processing notifications for user:', userInfo.id)
 
-    // Create new subscription
-    const channel = supabase
-      .channel('background-notifications')
-      .on('postgres_changes', 
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'realtime_progress_updates',
-          filter: `user_id=eq.${userInfo.id}`
-        }, 
-        (payload: any) => {
-          console.log('📡 Background notification received:', payload.new)
-          
-          const notification = payload.new
-          const notificationPayload = notification.payload || {}
-          
-          // Only handle completion notifications
-          if (notificationPayload.type === 'complete' && notificationPayload.status === 'completed') {
-            const details = notificationPayload.details || {}
+    // Create new subscription with retry logic
+    const setupChannel = () => {
+      const channel = supabase
+        .channel(`realtime_progress_updates:user_id=eq.${userInfo.id}`)
+        .on('postgres_changes', 
+          { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'realtime_progress_updates',
+            filter: `user_id=eq.${userInfo.id}`
+          }, 
+          (payload: any) => {
+            console.log('📡 Background notification received:', payload.new)
             
-            const completionMessage: Message = {
-              id: Date.now(),
-              sender: "bot",
-              text: `🎉 **Background Processing Complete!**\n\nYour document "${details.filename || 'unknown'}" has been successfully processed!\n\n**Processing Results:**\n• ${details.processedChunks || 0} text sections analyzed\n• Document is now searchable and ready for questions\n• You can now ask me specific questions about this document\n\n**Ready to help!** What would you like to know about your uploaded document?`
+            const notification = payload.new
+            const notificationPayload = notification.payload || {}
+            
+            // Only handle completion notifications
+            if (notificationPayload.type === 'complete' && notificationPayload.status === 'completed') {
+              const details = notificationPayload.details || {}
+              
+              const completionMessage: Message = {
+                id: Date.now(),
+                sender: "bot",
+                text: `🎉 **Background Processing Complete!**\n\nYour document "${details.filename || 'unknown'}" has been successfully processed!\n\n**Processing Results:**\n• ${details.processedChunks || 0} text sections analyzed\n• Document is now searchable and ready for questions\n• You can now ask me specific questions about this document\n\n**Ready to help!** What would you like to know about your uploaded document?`
+              }
+              
+              setMessages(prev => [...prev, completionMessage])
+              updateActivity()
             }
-            
-            setMessages(prev => [...prev, completionMessage])
-            updateActivity()
           }
-        }
-      )
+        )
 
-    // Subscribe once
-    channel.subscribe((status: string) => {
+      // Subscribe with error handling and reconnection
+      channel.subscribe(async (status: string) => {
         console.log('📡 Background notification subscription status:', status)
-    })
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to realtime updates')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Channel error occurred')
+          
+          // Attempt to reconnect after delay
+          setTimeout(() => {
+            console.log('🔄 Attempting to reconnect...')
+            setupChannel()
+          }, 5000)
+        }
+      })
 
-    // Store channel reference
-    channelRef.current = channel
+      // Store channel reference
+      channelRef.current = channel
+    }
+
+    // Initial setup
+    setupChannel()
 
     // Cleanup function
     return () => {
       if (channelRef.current) {
-      console.log('🔄 Cleaning up background notification subscription')
+        console.log('🔄 Cleaning up background notification subscription')
         channelRef.current.unsubscribe()
         channelRef.current = null
       }
