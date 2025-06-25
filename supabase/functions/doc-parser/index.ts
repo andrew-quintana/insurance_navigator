@@ -88,6 +88,13 @@ async function streamFileDownload(storagePath: string): Promise<Uint8Array | nul
   return null
 }
 
+// Create a custom HttpClient for LlamaParse API calls
+const customHttpClient = Deno.createHttpClient({
+  http1: true, // Force HTTP/1.1
+  poolMaxIdlePerHost: 1,
+  poolIdleTimeout: 500,
+});
+
 serve(async (req) => {
   metrics.startTime = Date.now()
   
@@ -299,13 +306,14 @@ serve(async (req) => {
       formData.append('webhook_url', fullWebhookUrl)
     }
     
-    // Use minimal headers with strict string value
+    // Use minimal headers with strict string value and custom client
     const llamaParseResponse = await fetch(llamaParseUrl, {
       method: 'POST',
       headers: {
         'Authorization': 'Bearer ' + llamaParseApiKey.trim()
       },
-      body: formData
+      body: formData,
+      client: customHttpClient
     })
       
     if (!llamaParseResponse.ok) {
