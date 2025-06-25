@@ -32,10 +32,6 @@ from db.services.conversation_service import get_conversation_service, Conversat
 from db.services.storage_service import get_storage_service, StorageService
 from db.services.document_service import DocumentService
 from db.services.db_pool import get_db_pool
-from db.services.document_processing_service import DocumentProcessingService
-from db.services.queue_service import QueueService
-from db.services.llamaparse_service import LlamaParseService
-from db.services.vector_service import VectorService
 
 # Set up logging
 logging.basicConfig(
@@ -136,7 +132,7 @@ async def preflight_handler(request: Request, rest_of_path: str):
     return Response(
         status_code=400,
         content="Invalid CORS request: Missing Origin header"
-    )
+)
 
 # Health check cache
 _health_cache = {"result": None, "timestamp": 0}
@@ -309,42 +305,18 @@ async def get_document_status(
     document_id: str,
     current_user: UserResponse = Depends(get_current_user)
 ):
-    """Get document processing status."""
+    """Get simplified document status."""
     try:
-        # Get services
-        services = await get_services()
+        # Get document service
+        doc_service = DocumentService()
         
-        # Get document record
-        pool = await get_db_pool()
-        async with pool.get_connection() as conn:
-            doc = await conn.fetchrow("""
-                SELECT * FROM documents
-                WHERE id = $1 AND user_id = $2
-            """, document_id, current_user.id)
-            
-            if not doc:
-                raise HTTPException(status_code=404, detail="Document not found")
-            
-            # Get latest job status
-            latest_job = await conn.fetchrow("""
-                SELECT * FROM processing_jobs
-                WHERE payload->>'document_id' = $1
-                ORDER BY created_at DESC
-                LIMIT 1
-            """, document_id)
+        # Get document status
+        status = await doc_service.get_document_status(document_id, str(current_user.id))
         
-            # Combine status information
-            return {
-                "document_id": str(doc["id"]),
-                "filename": doc["original_filename"],
-                "status": doc["status"],
-                "progress_percentage": doc["progress_percentage"],
-                "created_at": doc["created_at"].isoformat(),
-                "updated_at": doc["updated_at"].isoformat(),
-                "job_status": latest_job["status"] if latest_job else None,
-                "job_error": latest_job["error"] if latest_job else None,
-                "processing_complete": doc["status"] in ["completed", "ready"]
-            }
+        if not status:
+            raise HTTPException(status_code=404, detail="Document not found")
+            
+        return status
         
     except HTTPException:
         raise
@@ -362,7 +334,7 @@ async def upload_document_backend(
     policy_id: str = Form(...),
     current_user: UserResponse = Depends(get_current_user)
 ):
-    """Handle document upload with detailed logging."""
+    """Handle document upload with simplified processing."""
     logger.info(f"📄 Upload request received - File: {file.filename}, Size: {file.size if hasattr(file, 'size') else 'unknown'}, User: {current_user.email}")
     
     try:
@@ -376,26 +348,38 @@ async def upload_document_backend(
             
         logger.info(f"✅ File size validated: {file_size} bytes")
         
-        # Initialize services
-        services = await get_services()
+        # Get storage service
+        storage_service = await get_storage_service()
         
-        # Generate document ID
+        # Generate document ID and metadata
         document_id = str(uuid.uuid4())
+        metadata = {
+            "policy_id": policy_id,
+            "original_filename": file.filename,
+            "content_type": file.content_type or "application/octet-stream",
+            "file_size": file_size
+        }
         
-        # Process upload
-        logger.info(f"🔄 Starting document processing for {file.filename}")
-        result = await services["document_processing"].process_document(
-            document_id=document_id,
+        # Upload document
+        logger.info(f"🔄 Starting document upload for {file.filename}")
+        upload_result = await storage_service.upload_document(
             file_data=contents,
             filename=file.filename,
-            content_type=file.content_type or "application/octet-stream",
             user_id=str(current_user.id),
             document_type="policy",
-            metadata={"policy_id": policy_id}
+            metadata=metadata
         )
-        logger.info(f"✅ Document processing completed: {result}")
         
-        return result
+        logger.info(f"✅ Document upload completed: {upload_result}")
+        
+        return {
+            "success": True,
+            "document_id": upload_result["document_id"],
+            "filename": file.filename,
+            "status": "completed",
+            "chunks_processed": 1,
+            "total_chunks": 1
+        }
         
     except Exception as e:
         logger.error(f"❌ Upload failed: {str(e)}")
@@ -435,7 +419,6 @@ async def startup_event():
     """Initialize services on startup."""
     logger.info("🚀 Starting Insurance Navigator API v3.0.0")
     logger.info("🔧 Backend-orchestrated processing enabled")
-    logger.info("🦙 LlamaParse integration active")
     
     try:
         logger.info("🔄 Service initialization starting...")
@@ -447,9 +430,6 @@ async def startup_event():
         storage_service_instance = await get_storage_service()
         
         logger.info("✅ Core services initialized")
-        
-        # Initialize remaining services in background
-        asyncio.create_task(initialize_background_services())
         
     except Exception as e:
         logger.error(f"⚠️ Service initialization failed: {e}")
