@@ -132,36 +132,38 @@ class StorageService:
         filename: str,
         content_type: str
     ) -> Dict[str, Any]:
-        """Upload document with retry logic and better error handling."""
+        """Basic document upload for MVP."""
         logger.info(f"📤 Starting document upload: {filename}")
         
         try:
-            # File size validation
-            file_size = len(file_content)
-            if file_size > 6 * 1024 * 1024:  # 6MB
-                logger.warning(f"⚠️ Large file detected ({file_size/1024/1024:.1f}MB). Consider using resumable uploads for files >6MB")
-            
-            # Construct storage path with user isolation
+            # Simple storage path with user isolation
             storage_path = f"policy/{user_id}/{filename}"
             
-            # Upload to storage with proper headers
-            upload_result = await self._make_request(
-                'POST',
-                f'/storage/v1/object/{self.bucket_name}/{storage_path}',
-                data=file_content,
-                headers={
-                    'Content-Type': content_type,
-                    'x-upsert': 'false',  # Prevent accidental overwrites
-                    'Cache-Control': 'max-age=3600'
-                }
-            )
+            # Basic upload with minimal headers
+            async with aiohttp.ClientSession() as session:
+                storage_url = f"{self.supabase_url}/storage/v1/object/{self.bucket_name}/{storage_path}"
+                
+                async with session.post(
+                    storage_url,
+                    headers={
+                        'Authorization': f'Bearer {self.supabase_service_key}',
+                        'Content-Type': content_type
+                    },
+                    data=file_content
+                ) as response:
+                    if response.status >= 400:
+                        error_text = await response.text()
+                        logger.error(f"❌ Upload failed: {response.status} - {error_text}")
+                        raise Exception(f"Upload failed: {response.status} - {error_text}")
+                    
+                    result = await response.json()
             
             logger.info(f"✅ Document uploaded successfully: {filename}")
             return {
                 'path': storage_path,
-                'size': file_size,
+                'size': len(file_content),
                 'type': content_type,
-                **upload_result
+                **result
             }
             
         except Exception as e:
