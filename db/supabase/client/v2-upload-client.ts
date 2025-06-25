@@ -74,6 +74,9 @@ export class V2UploadClient {
       throw new Error('Authentication required');
     }
 
+    // Generate file hash
+    const fileHash = await this.generateFileHash(file);
+
     const response = await fetch(`${this.baseUrl}/upload-handler`, {
       method: 'POST',
       headers: {
@@ -83,7 +86,8 @@ export class V2UploadClient {
       body: JSON.stringify({
         filename: file.name,
         contentType: file.type,
-        fileSize: file.size
+        fileSize: file.size,
+        fileHash
       })
     });
 
@@ -385,6 +389,17 @@ export class V2UploadClient {
       errorMessage: details.errorMessage,
       lastUpdated: payload.timestamp || new Date().toISOString()
     };
+  }
+
+  /**
+   * Generate a file hash for deduplication
+   */
+  private async generateFileHash(file: File): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(`${file.name}-${file.size}-${Date.now()}`);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
 }
 

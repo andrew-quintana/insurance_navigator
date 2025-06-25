@@ -1,9 +1,20 @@
+// @deno-types="npm:@types/node"
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+// @deno-types="npm:@supabase/supabase-js"
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { corsHeaders } from '../_shared/cors.ts'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+// Configuration
+const CONFIG = {
+  UPLOAD_BUCKET: 'raw_documents',
+  STORAGE_BUCKET: 'documents',
+  MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB
+  ALLOWED_MIME_TYPES: [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain'
+  ]
 }
 
 interface UploadRequest {
@@ -31,296 +42,204 @@ interface DocumentRecord {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    console.log('🚀 Upload handler started - method:', req.method)
-    console.log('📋 Headers received:', JSON.stringify(Object.fromEntries(req.headers.entries())))
-    
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    // Initialize Supabase client with service role key for full access
+    const supabaseClient: SupabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
 
-    // Get authenticated user - now expects service role key + X-User-ID
-    const authHeader = req.headers.get('Authorization')
-    console.log('🔍 Auth header present:', !!authHeader)
+    // Parse request
+    const requestData = await req.json()
     
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('❌ Missing or invalid authorization header format')
-      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+    // Handle both backend and frontend upload requests
+    let userId: string
+    let uploadData: {
+      filename: string
+      contentType: string
+      fileSize: number
+      fileHash?: string
     }
-    
-    const token = authHeader.replace('Bearer ', '')
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    
-    console.log('🔍 Auth Debug - Token length:', token.length)
-    console.log('🔍 Auth Debug - Service key length:', serviceKey.length)
-    console.log('🔍 Auth Debug - Tokens match:', token === serviceKey)
-    
-    // Verify service role key
-    if (token !== serviceKey) {
-      console.log('❌ Auth Debug - Invalid service role key')
-      return new Response(JSON.stringify({ 
-        error: 'Unauthorized',
-        debug: 'Invalid service role key'
+
+    // Backend request format
+    if (requestData.userId && requestData.filename) {
+      userId = requestData.userId
+      uploadData = {
+        filename: requestData.filename,
+        contentType: requestData.contentType,
+        fileSize: requestData.fileSize,
+        fileHash: requestData.fileHash
+      }
+    }
+    // Frontend request format
+    else if (requestData.filename && requestData.contentType) {
+      // Get user ID from auth token
+      const authHeader = req.headers.get('authorization')
+      if (!authHeader) {
+        throw new Error('Missing authorization header')
+      }
+
+      const token = authHeader.replace('Bearer ', '')
+      const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token)
+      
+      if (authError || !user) {
+        throw new Error('Authentication failed')
+      }
+
+      userId = user.id
+      uploadData = {
+        filename: requestData.filename,
+        contentType: requestData.contentType,
+        fileSize: requestData.fileSize,
+        fileHash: requestData.fileHash
+      }
+    } else {
+      throw new Error('Invalid request format')
+    }
+
+    // Generate file hash if not provided
+    if (!uploadData.fileHash) {
+      const encoder = new TextEncoder()
+      const data = encoder.encode(`${uploadData.filename}-${uploadData.fileSize}-${userId}-${Date.now()}`)
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+      const hashArray = Array.from(new Uint8Array(hashBuffer))
+      uploadData.fileHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+    }
+
+    // Validate file size
+    if (uploadData.fileSize > CONFIG.MAX_FILE_SIZE) {
+      return new Response(JSON.stringify({
+        error: 'File too large',
+        details: `Maximum file size is ${CONFIG.MAX_FILE_SIZE / 1024 / 1024}MB`
       }), {
-        status: 401,
+        status: 413,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
-    
-    // Get user ID from header
-    const userId = req.headers.get('X-User-ID')
-    console.log('🔍 Auth Debug - X-User-ID header:', userId)
-    
-    if (!userId) {
-      console.log('❌ Auth Debug - Missing X-User-ID header')
-      return new Response(JSON.stringify({ 
-        error: 'Unauthorized',
-        debug: 'Missing X-User-ID header'
+
+    // Validate content type
+    if (!CONFIG.ALLOWED_MIME_TYPES.includes(uploadData.contentType)) {
+      return new Response(JSON.stringify({
+        error: 'Invalid file type',
+        details: `Allowed file types: ${CONFIG.ALLOWED_MIME_TYPES.join(', ')}`
       }), {
-        status: 401,
+        status: 415,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    console.log('✅ Authentication successful for userId:', userId)
+    // Generate storage paths
+    const uploadPath = `${userId}/${uploadData.fileHash}/${uploadData.filename}`
+    const finalPath = `${userId}/${uploadData.fileHash}/processed_${uploadData.filename}`
 
-    if (req.method === 'POST') {
-      return await handleUpload(req, supabase, userId)
-    } else if (req.method === 'GET') {
-      return await handleUploadStatus(req, supabase, userId)
-    } else if (req.method === 'PUT') {
-      return await handleChunkUpload(req, supabase, userId)
-    } else if (req.method === 'PATCH') {
-      return await handleUploadComplete(req, supabase, userId)
+    console.log('📤 Creating upload URL:', {
+      bucket: CONFIG.UPLOAD_BUCKET,
+      path: uploadPath,
+      contentType: uploadData.contentType
+    })
+
+    // Create signed upload URL
+    const { data: uploadUrl, error: urlError } = await supabaseClient.storage
+      .from(CONFIG.UPLOAD_BUCKET)
+      .createSignedUploadUrl(uploadPath)
+
+    if (urlError) {
+      console.error('❌ Failed to create upload URL:', urlError)
+      throw new Error(`Failed to create upload URL: ${urlError.message}`)
     }
 
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
+    // Create document record
+    const { data: document, error: docError } = await supabaseClient
+      .from('documents')
+      .insert({
+        user_id: userId,
+        original_filename: uploadData.filename,
+        file_size: uploadData.fileSize,
+        content_type: uploadData.contentType,
+        file_hash: uploadData.fileHash,
+        storage_path: finalPath,
+        status: 'pending',
+        metadata: {
+          upload_started_at: new Date().toISOString(),
+          raw_storage_path: uploadPath,
+          raw_storage_bucket: CONFIG.UPLOAD_BUCKET,
+          final_storage_bucket: CONFIG.STORAGE_BUCKET
+        }
+      })
+      .select()
+      .single()
+
+    if (docError) {
+      console.error('❌ Failed to create document record:', docError)
+      throw new Error(`Failed to create document record: ${docError.message}`)
+    }
+
+    // Create processing job
+    const { error: jobError } = await supabaseClient
+      .from('processing_jobs')
+      .insert({
+        document_id: document.id,
+        job_type: 'document_processing',
+        status: 'pending',
+        priority: 1,
+        payload: {
+          documentId: document.id,
+          rawStoragePath: uploadPath,
+          rawStorageBucket: CONFIG.UPLOAD_BUCKET,
+          finalStoragePath: finalPath,
+          finalStorageBucket: CONFIG.STORAGE_BUCKET,
+          contentType: uploadData.contentType,
+          filename: uploadData.filename
+        }
+      })
+
+    if (jobError) {
+      console.error('❌ Failed to create processing job:', jobError)
+      
+      // Update document status to failed
+      await supabaseClient
+        .from('documents')
+        .update({
+          status: 'failed',
+          error_message: `Failed to create processing job: ${jobError.message}`,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', document.id)
+      
+      throw new Error(`Failed to create processing job: ${jobError.message}`)
+    }
+
+    console.log('✅ Upload handler setup complete:', {
+      documentId: document.id,
+      uploadPath,
+      finalPath
+    })
+
+    return new Response(JSON.stringify({
+      success: true,
+      uploadUrl: uploadUrl.signedUrl,
+      documentId: document.id,
+      storagePath: uploadPath
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
   } catch (error) {
-    console.error('Upload handler error:', error)
-    return new Response(JSON.stringify({ 
+    console.error('❌ Unexpected error:', error)
+    return new Response(JSON.stringify({
       error: 'Internal server error',
-      details: error.message 
+      details: error instanceof Error ? error.message : 'Unknown error occurred'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 })
-
-async function handleUpload(req: Request, supabase: any, userId: string) {
-  const uploadData: UploadRequest = await req.json()
-  
-  // Validate file size (50MB limit)
-  if (uploadData.fileSize > 52428800) {
-    return new Response(JSON.stringify({ 
-      error: 'File too large',
-      maxSize: '50MB'
-    }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
-  }
-
-  // Validate file type
-  const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
-  if (!allowedTypes.includes(uploadData.contentType)) {
-    return new Response(JSON.stringify({ 
-      error: 'File type not supported',
-      allowedTypes: ['PDF', 'DOCX', 'TXT']
-    }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
-  }
-
-  // Generate file hash for deduplication
-  const fileHash = await generateFileHash(uploadData.filename, uploadData.fileSize, userId)
-  
-  // Check for existing file with same hash
-  const { data: existingDoc, error: checkError } = await supabase
-    .from('documents')
-    .select('id, status, original_filename')
-    .eq('file_hash', fileHash)
-    .eq('user_id', userId)
-    .single()
-
-  if (existingDoc && existingDoc.status === 'completed') {
-    return new Response(JSON.stringify({ 
-      error: 'File already uploaded',
-      documentId: existingDoc.id,
-      filename: existingDoc.original_filename
-    }), {
-      status: 409,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
-  }
-
-  // Calculate chunks for large files (>5MB)
-  const chunkSize = 5242880 // 5MB chunks
-  const totalChunks = uploadData.fileSize > chunkSize ? Math.ceil(uploadData.fileSize / chunkSize) : 1
-  
-  // Create document record
-  const documentRecord = {
-    user_id: userId,
-    original_filename: uploadData.filename,
-    file_size: uploadData.fileSize,
-    content_type: uploadData.contentType,
-    file_hash: fileHash,
-    status: 'pending',
-    document_type: 'user_uploaded',
-    storage_path: `${userId}/${fileHash}/${uploadData.filename}`,
-    metadata: {
-      upload_started_at: new Date().toISOString(),
-      total_chunks: totalChunks
-    },
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  }
-
-  const { data: document, error: insertError } = await supabase
-    .from('documents')
-    .insert(documentRecord)
-    .select()
-    .single()
-
-  if (insertError) {
-    console.error('Error creating document record:', insertError)
-    return new Response(JSON.stringify({ 
-      error: 'Failed to create document record',
-      details: insertError.message
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
-  }
-
-  // Create initial processing job
-  const processingJob = {
-    document_id: document.id,
-    job_type: 'parse',
-    status: 'pending',
-    priority: 1,
-    retry_count: 0,
-    max_retries: 3,
-    payload: {
-      documentId: document.id,
-      userId: userId,
-      filename: uploadData.filename,
-      contentType: uploadData.contentType,
-      storagePath: document.storage_path
-    },
-    scheduled_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  }
-
-  const { error: jobError } = await supabase
-    .from('processing_jobs')
-    .insert(processingJob)
-
-  if (jobError) {
-    console.error('Error creating processing job:', jobError)
-    return new Response(JSON.stringify({ 
-      error: 'Failed to create processing job',
-      details: jobError.message 
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
-  }
-
-  // Generate presigned URL for upload
-  const { data: uploadUrl, error: urlError } = await supabase.storage
-    .from('documents')
-    .createSignedUploadUrl(document.storage_path)
-
-  console.log('🔍 Upload URL Debug:', {
-    uploadUrl,
-    urlError,
-    signedURL: uploadUrl?.signedURL,
-    hasSignedURL: !!uploadUrl?.signedURL
-  })
-
-  if (urlError) {
-    console.error('Error generating upload URL:', urlError)
-    return new Response(JSON.stringify({ 
-      error: 'Failed to generate upload URL',
-      details: urlError.message 
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
-  }
-
-  // ✅ CRITICAL FIX: Ensure uploadUrl has signedURL property
-  if (!uploadUrl || !uploadUrl.signedURL) {
-    console.error('❌ Upload URL generation failed - no signedURL returned:', uploadUrl)
-    return new Response(JSON.stringify({ 
-      error: 'Failed to generate upload URL',
-      details: 'Signed URL not generated properly' 
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
-  }
-
-  console.log('✅ Upload URL generated successfully, length:', uploadUrl.signedURL.length)
-
-  // Update document status to uploading
-  await supabase
-    .from('documents')
-    .update({ 
-      status: 'uploading',
-      processing_started_at: new Date().toISOString()
-    })
-    .eq('id', document.id)
-
-  // Send initial progress update
-  await sendProgressUpdate(supabase, userId, {
-    documentId: document.id,
-    status: 'uploading',
-    progress: 5,
-    metadata: { 
-      step: 'upload_initialized',
-      filename: uploadData.filename,
-      fileSize: uploadData.fileSize
-    }
-  })
-
-  // ✅ CRITICAL FIX: Build response object with explicit logging
-  const responseObj = {
-    documentId: document.id,
-    uploadUrl: uploadUrl.signedURL,
-    path: document.storage_path,
-    totalChunks: totalChunks,
-    chunkSize: chunkSize,
-    expiresIn: 3600,
-    message: 'Upload initialized successfully'
-  }
-
-  console.log('📤 Final response object keys:', Object.keys(responseObj))
-  console.log('📤 Response documentId:', responseObj.documentId)
-  console.log('📤 Response uploadUrl length:', responseObj.uploadUrl?.length || 'MISSING')
-  console.log('📤 Response path:', responseObj.path)
-
-  return new Response(JSON.stringify(responseObj), {
-    status: 200,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-  })
-}
 
 async function handleUploadStatus(req: Request, supabase: any, userId: string) {
   const url = new URL(req.url)
