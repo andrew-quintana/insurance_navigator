@@ -17,7 +17,8 @@ ARG CACHEBUST=1
 COPY config/python/requirements-prod.txt /tmp/requirements.txt
 USER app
 RUN pip install --upgrade pip --user && \
-    pip install --no-cache-dir --user -r /tmp/requirements.txt
+    pip install --no-cache-dir --user -r /tmp/requirements.txt && \
+    pip install --no-cache-dir sentence-transformers==2.2.2 llama-parse==0.1.1
 
 # Final stage - smaller image
 FROM python:3.11-slim

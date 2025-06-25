@@ -144,3 +144,20 @@ authentication:
   jwt:
     algorithm: HS256
     access_token_expire_minutes: 1440
+cors:
+  allowed_origins:
+    - "https://insurance-navigator.vercel.app"
+    - "https://insurance-navigator-*.vercel.app"
+    - "https://insurance-navigator-*-andrew-quintanas-projects.vercel.app"
+    - "http://localhost:3000"
+  allowed_methods:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+    - "OPTIONS"
+  allowed_headers:
+    - "Authorization"
+    - "Content-Type"
+  allow_credentials: true
+  max_age: 3600
