@@ -110,13 +110,23 @@ app.add_middleware(
 # Health check cache
 _health_cache = {"result": None, "timestamp": 0}
 
+@app.head("/")
+async def root_head():
+    """Root endpoint for HEAD requests."""
+    return Response(status_code=200)
+
+@app.get("/")
+async def root():
+    """Root endpoint."""
+    return {"message": "Insurance Navigator API v3.0.0"}
+
 @app.head("/health")
 async def health_check_head():
     """Quick health check for HEAD requests."""
     return Response(status_code=200)
 
 @app.get("/health")
-async def health_check():
+async def health_check(request: Request):
     """Health check endpoint with caching to reduce database load."""
     global _health_cache
     current_time = time.time()
