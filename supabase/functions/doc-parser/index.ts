@@ -219,14 +219,14 @@ serve(async (req) => {
 
     // Parse request body
     const body = await req.json()
-    const { documentId, storagePath } = body
+    const { documentId, storagePath, filename, contentType = 'application/pdf' } = body
     
     if (!documentId || !storagePath) {
       console.error('❌ Missing required fields:', { documentId, storagePath })
       throw new Error(`Missing required fields: ${!documentId ? 'documentId' : ''} ${!storagePath ? 'storagePath' : ''}`)
     }
     
-    console.log(`📄 Processing document ${documentId} from ${storagePath}`)
+    console.log('📄 Processing document:', { documentId, path: storagePath, filename, contentType })
 
     // Remove bucket name if present
     const bucketName = 'documents'  // Changed from 'raw_documents' to match actual bucket
@@ -273,21 +273,20 @@ serve(async (req) => {
     }
 
     // Send to LlamaParse for processing
-    const llamaParseUrl = 'https://api.llamacloud.ai/v1/parse-document'
+    const llamaParseUrl = 'https://api.cloud.llamaindex.ai/api/v1/parsing/upload'
+    const formData = new FormData()
+    formData.append('file', new Blob([fileData], { type: contentType }), filename || 'document.pdf')
+    formData.append('language', 'en')
+    formData.append('output_tables_as_HTML', 'true')
+    formData.append('webhook_url', fullWebhookUrl)
+    
+    // Minimal headers configuration that works reliably
     const llamaParseResponse = await fetch(llamaParseUrl, {
       method: 'POST',
-        headers: {
-        'Authorization': `Bearer ${llamaParseApiKey}`,
-          'Content-Type': 'application/json'
+      headers: {
+        'Authorization': `Bearer ${llamaParseApiKey}`
       },
-      body: JSON.stringify({
-        file: fileData,
-        webhook_url: fullWebhookUrl,
-        options: {
-          output_format: 'markdown',
-          include_images: true
-        }
-      })
+      body: formData
     })
       
     if (!llamaParseResponse.ok) {
