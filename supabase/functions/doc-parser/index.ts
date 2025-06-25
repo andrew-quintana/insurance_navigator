@@ -324,36 +324,23 @@ serve(async (req) => {
     const llamaParseUrl = 'https://api.cloud.llamaindex.ai/api/v1/parsing/upload'
     const formData = new FormData()
     
-    // Sanitize filename to only use ASCII characters
-    const sanitizedFilename = (filename || 'document.pdf')
-      .replace(/[^\x20-\x7E]/g, '') // Remove non-ASCII characters
-      .replace(/[^a-zA-Z0-9.-]/g, '_') // Replace special chars with underscore
+    // Keep it simple - just append the file with correct content type
+    formData.append('file', new Blob([fileData], { type: contentType }))
     
-    // Use a strictly controlled content type
-    const safeContentType = contentType === 'application/pdf' ? 'application/pdf' : 'application/octet-stream'
-    
-    // Create blob with minimal metadata
-    const blob = new Blob([fileData], { type: safeContentType })
-    Object.defineProperty(blob, 'name', { value: sanitizedFilename })
-    
-    // Append file with sanitized name
-    formData.append('file', blob)
-    
-    // Use only required parameters with strict string values
-    formData.append('language', 'en')
-    formData.append('output_tables_as_HTML', 'true')
-    
-    // Only append webhook if URL is valid ASCII
+    // Add webhook if needed
     if (!/[^\x20-\x7E]/.test(fullWebhookUrl)) {
       formData.append('webhook_url', fullWebhookUrl)
     }
     
-    // Use custom upload function with minimal headers
-    const llamaParseResponse = await uploadFile(
-      llamaParseUrl,
-      formData,
-      'Bearer ' + llamaParseApiKey.trim()
-    )
+    // Use minimal headers matching the official example
+    const llamaParseResponse = await fetch(llamaParseUrl, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'Authorization': `Bearer ${llamaParseApiKey}`
+      },
+      body: formData
+    })
       
     if (!llamaParseResponse.ok) {
       const errorText = await llamaParseResponse.text()
