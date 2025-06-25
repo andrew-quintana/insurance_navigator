@@ -25,6 +25,7 @@ import json
 import time
 from starlette.middleware.base import BaseHTTPMiddleware
 import hashlib
+from utils.cors_config import cors_config
 
 # Database service imports
 from db.services.user_service import get_user_service, UserService
@@ -49,93 +50,10 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Add CORS middleware with environment-aware configuration
-origins = [
-    "https://insurance-navigator-staging.vercel.app",
-    "https://insurance-navigator.vercel.app",
-    "https://insurance-navigator-hr7oebcu2-andrew-quintanas-projects.vercel.app",
-    "https://insurance-navigator-gdievtrsx-andrew-quintanas-projects.vercel.app",
-    "https://insurance-navigator-3u3iv7xq0-andrew-quintanas-projects.vercel.app",
-    "https://insurance-navigator-ajzpmcvgz-andrew-quintanas-projects.vercel.app",
-    "https://insurance-navigator-cwtwocttv-andrew-quintanas-projects.vercel.app",
-    "https://insurance-navigator-kkedlaqxo-andrew-quintanas-projects.vercel.app"
-]
-
-if os.getenv("ENVIRONMENT") == "development":
-    origins.extend([
-        "http://localhost:3000",
-        "http://localhost:8000"
-    ])
-
-# Add CORS middleware before any other middleware
+# Add CORS middleware with updated configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_origin_regex=r"https://insurance-navigator.*\.vercel\.app",  # Allow all Vercel preview URLs
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
-    allow_headers=[
-        "Content-Type",
-        "Authorization",
-        "Accept",
-        "Origin",
-        "X-Requested-With",
-        "X-CSRF-Token"
-    ],
-    expose_headers=["Content-Length", "Content-Range"],
-    max_age=3600
-)
-
-# Add OPTIONS route handler for explicit preflight handling
-@app.options("/{rest_of_path:path}")
-async def preflight_handler(request: Request, rest_of_path: str):
-    """Global OPTIONS handler for preflight requests"""
-    origin = request.headers.get("Origin")
-    
-    # Log the preflight request details
-    logger.info(f"🔄 Preflight request received for path: {rest_of_path}")
-    logger.info(f"🌐 Origin: {origin}")
-    logger.info(f"📋 Headers: {dict(request.headers)}")
-    
-    # Check if origin is allowed
-    if origin and origin in origins:
-        logger.info(f"✅ Origin {origin} is allowed")
-        return Response(
-            status_code=200,
-            headers={
-                "Access-Control-Allow-Origin": origin,
-                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
-                "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept, Origin, X-Requested-With, X-CSRF-Token",
-                "Access-Control-Allow-Credentials": "true",
-                "Access-Control-Max-Age": "3600",
-                "Vary": "Origin"
-            }
-        )
-    
-    # If origin not in allowed list, log it but still handle the request
-    if origin:
-        logger.warning(f"⚠️ Received request from non-allowed origin: {origin}")
-        logger.warning(f"🔒 Allowed origins: {origins}")
-        
-        # In development, be more permissive
-        if os.getenv("ENVIRONMENT") == "development":
-            return Response(
-                status_code=200,
-                headers={
-                    "Access-Control-Allow-Origin": origin,
-                    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD",
-                    "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept, Origin, X-Requested-With, X-CSRF-Token",
-                    "Access-Control-Allow-Credentials": "true",
-                    "Access-Control-Max-Age": "3600",
-                    "Vary": "Origin"
-                }
-            )
-    
-    # If no origin header, it's not a valid CORS request
-    logger.error("❌ Invalid CORS request: No Origin header")
-    return Response(
-        status_code=400,
-        content="Invalid CORS request: Missing Origin header"
+    **cors_config.get_fastapi_cors_middleware_config()
 )
 
 # Health check cache
@@ -529,6 +447,24 @@ async def get_current_user_info(current_user: UserResponse = Depends(get_current
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred"
         )
+
+# Add OPTIONS route handler for explicit preflight handling
+@app.options("/{rest_of_path:path}")
+async def preflight_handler(request: Request, rest_of_path: str):
+    """Global OPTIONS handler for preflight requests"""
+    origin = request.headers.get("Origin")
+    
+    # Log the preflight request details
+    logger.info(f"🔄 Preflight request received for path: {rest_of_path}")
+    logger.info(f"🌐 Origin: {origin}")
+    
+    # Get CORS headers for the specific origin
+    cors_headers = cors_config.get_headers_for_origin(origin)
+    
+    return Response(
+        status_code=200,
+        headers=cors_headers
+    )
 
 if __name__ == "__main__":
     import uvicorn
