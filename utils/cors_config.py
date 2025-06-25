@@ -14,7 +14,14 @@ def get_cors_config() -> Dict[str, Any]:
         "https://insurance-navigator.vercel.app",
         "***REMOVED***",  # Add Render API
         "https://insurance-navigator-*.vercel.app",  # More permissive pattern for Vercel previews
-        "https://*-andrew-quintanas-projects.vercel.app"  # Handle all user preview URLs
+        "https://*-andrew-quintanas-projects.vercel.app",  # Handle all user preview URLs
+        # Specific preview URLs
+        "https://insurance-navigator-hr7oebcu2-andrew-quintanas-projects.vercel.app",
+        "https://insurance-navigator-gdievtrsx-andrew-quintanas-projects.vercel.app",
+        "https://insurance-navigator-3u3iv7xq0-andrew-quintanas-projects.vercel.app",
+        "https://insurance-navigator-ajzpmcvgz-andrew-quintanas-projects.vercel.app",
+        "https://insurance-navigator-cwtwocttv-andrew-quintanas-projects.vercel.app",
+        "https://insurance-navigator-kkedlaqxo-andrew-quintanas-projects.vercel.app"
     ]
     
     # Add any additional origins from environment
