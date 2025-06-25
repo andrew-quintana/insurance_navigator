@@ -121,15 +121,32 @@ export default function DocumentUploadServerless({
     console.log('🔍 Debug - Upload starting:', {
       fileName: fileStatus.file.name,
       fileSize: fileStatus.file.size,
+      fileType: fileStatus.file.type,
       apiBaseUrl,
       hasToken: !!token
     })
     
+    // Validate file before upload
+    const validation = validateFile(fileStatus.file)
+    if (validation) {
+      throw new Error(validation)
+    }
+    
     const formData = new FormData()
     formData.append('file', fileStatus.file)
-    formData.append('policy_id', fileStatus.file.name.replace(/\.[^/.]+$/, ""))
     
-    console.log('📤 Debug - Sending request to:', `${apiBaseUrl}/upload-document-backend`)
+    // Use a more reliable policy ID format
+    const timestamp = new Date().getTime()
+    const safeFileName = fileStatus.file.name
+      .replace(/\.[^/.]+$/, "") // Remove extension
+      .replace(/[^a-zA-Z0-9-_]/g, '_') // Replace unsafe chars
+    const policyId = `${safeFileName}_${timestamp}`
+    formData.append('policy_id', policyId)
+    
+    console.log('📤 Debug - Preparing upload:', {
+      policyId,
+      endpoint: `${apiBaseUrl}/upload-document-backend`
+    })
     
     try {
       const uploadResponse = await fetch(`${apiBaseUrl}/upload-document-backend`, {
@@ -142,15 +159,24 @@ export default function DocumentUploadServerless({
 
       console.log('📥 Debug - Response received:', {
         status: uploadResponse.status,
-        ok: uploadResponse.ok
+        ok: uploadResponse.ok,
+        statusText: uploadResponse.statusText,
+        headers: Object.fromEntries(uploadResponse.headers.entries())
       })
 
       if (!uploadResponse.ok) {
         const errorText = await uploadResponse.text()
-        throw new Error(`Upload failed: ${uploadResponse.status} - ${errorText}`)
+        console.error('❌ Upload failed:', {
+          status: uploadResponse.status,
+          statusText: uploadResponse.statusText,
+          error: errorText
+        })
+        throw new Error(`Upload failed (${uploadResponse.status}): ${errorText}`)
       }
 
       const result = await uploadResponse.json()
+      console.log('✅ Upload successful:', result)
+      
       return {
         success: true,
         document_id: result.document_id || result.id || 'unknown',
@@ -160,9 +186,14 @@ export default function DocumentUploadServerless({
         text_length: result.text_length || 0,
         message: result.message || 'Document processed successfully!'
       }
-    } catch (err) {
-      console.error('❌ Debug - Upload error:', err)
-      throw err
+    } catch (err: any) {
+      console.error('❌ Upload error:', {
+        name: err.name,
+        message: err.message,
+        stack: err.stack,
+        cause: err.cause
+      })
+      throw new Error(`Upload failed: ${err.message}`)
     }
   }
 

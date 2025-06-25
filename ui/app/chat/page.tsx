@@ -214,7 +214,7 @@ export default function ChatPage() {
 
     // Subscribe once
     channel.subscribe((status: string) => {
-      console.log('📡 Background notification subscription status:', status)
+        console.log('📡 Background notification subscription status:', status)
     })
 
     // Store channel reference
@@ -223,7 +223,7 @@ export default function ChatPage() {
     // Cleanup function
     return () => {
       if (channelRef.current) {
-        console.log('🔄 Cleaning up background notification subscription')
+      console.log('🔄 Cleaning up background notification subscription')
         channelRef.current.unsubscribe()
         channelRef.current = null
       }

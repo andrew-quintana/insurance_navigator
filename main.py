@@ -52,7 +52,13 @@ app = FastAPI(
 # Add CORS middleware with environment-aware configuration
 origins = [
     "https://insurance-navigator-staging.vercel.app",
-    "https://insurance-navigator.vercel.app"
+    "https://insurance-navigator.vercel.app",
+    "https://insurance-navigator-hr7oebcu2-andrew-quintanas-projects.vercel.app",
+    "https://insurance-navigator-gdievtrsx-andrew-quintanas-projects.vercel.app",
+    "https://insurance-navigator-3u3iv7xq0-andrew-quintanas-projects.vercel.app",
+    "https://insurance-navigator-ajzpmcvgz-andrew-quintanas-projects.vercel.app",
+    "https://insurance-navigator-cwtwocttv-andrew-quintanas-projects.vercel.app",
+    "https://insurance-navigator-kkedlaqxo-andrew-quintanas-projects.vercel.app"
 ]
 
 if os.getenv("ENVIRONMENT") == "development":
@@ -65,10 +71,19 @@ if os.getenv("ENVIRONMENT") == "development":
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"https://insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app",  # Allow all Vercel preview URLs
+    allow_origin_regex=r"https://insurance-navigator.*\.vercel\.app",  # Allow all Vercel preview URLs
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
-    allow_headers=["*"]
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "Accept",
+        "Origin",
+        "X-Requested-With",
+        "X-CSRF-Token"
+    ],
+    expose_headers=["Content-Length", "Content-Range"],
+    max_age=3600
 )
 
 # Add OPTIONS route handler for explicit preflight handling
@@ -260,7 +275,7 @@ async def get_document_status(
         status = await doc_service.get_document_status(document_id, str(current_user.id))
         
         if not status:
-                raise HTTPException(status_code=404, detail="Document not found")
+            raise HTTPException(status_code=404, detail="Document not found")
             
         return status
         
@@ -309,20 +324,51 @@ async def upload_document_backend(
         # Upload document
         logger.info(f"🔄 Starting document upload for {file.filename}")
         upload_result = await storage_service.upload_document(
-            user_id=str(current_user.id),
-            file_content=contents,
+            file_data=contents,
             filename=file.filename,
-            content_type=file.content_type or "application/octet-stream"
+            user_id=str(current_user.id),
+            document_type="policy",
+            metadata=metadata
         )
         
         logger.info(f"✅ Document upload completed: {upload_result}")
         
+        # Call doc-parser Edge Function
+        supabase_url = os.getenv('SUPABASE_URL')
+        supabase_service_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+        
+        if not supabase_url or not supabase_service_key:
+            raise HTTPException(status_code=500, detail="Missing Supabase configuration")
+            
+        project_ref = supabase_url.split('.')[-2].split('/')[-1]
+        doc_parser_url = f"https://{project_ref}.supabase.co/functions/v1/doc-parser"
+        
+        logger.info(f"🔄 Calling doc-parser function for document {document_id}")
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                doc_parser_url,
+                headers={
+                    'Authorization': f'Bearer {supabase_service_key}',
+                    'Content-Type': 'application/json'
+                },
+                json={
+                    'documentId': upload_result['document_id'],
+                    'storagePath': upload_result['file_path']
+                }
+            ) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    logger.error(f"❌ Doc-parser call failed: {response.status} - {error_text}")
+                    # Don't fail the upload if doc-parser fails
+                    # Just log the error and return success with processing status
+                
         return {
             "success": True,
             "document_id": upload_result["document_id"],
             "filename": file.filename,
-            "status": "completed",
-            "chunks_processed": 1,
+            "status": "processing",
+            "chunks_processed": 0,
             "total_chunks": 1
         }
         
@@ -362,13 +408,12 @@ async def notify_document_status(
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup."""
-    global user_service_instance, conversation_service_instance, storage_service_instance
-    
     logger.info("🚀 Starting Insurance Navigator API v3.0.0")
     logger.info("🔧 Backend-orchestrated processing enabled")
     
     try:
         logger.info("🔄 Service initialization starting...")
+        global user_service_instance, conversation_service_instance, storage_service_instance
         
         # Initialize core services synchronously to ensure they're ready
         user_service_instance = await get_user_service()

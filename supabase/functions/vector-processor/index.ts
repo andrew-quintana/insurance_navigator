@@ -134,16 +134,27 @@ class TextChunker {
     }
 }
 
+console.log('🧮 Vector processor starting...')
+
 serve(async (req) => {
     metrics.startTime = performance.now();
     console.log(`🚀 Starting vector processing at ${new Date().toISOString()}`);
 
-    // Handle CORS
-    if (req.method === 'OPTIONS') {
+  // Handle CORS
+  if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders });
     }
 
-    try {
+    // Health check
+    if (req.method === 'GET') {
+        return new Response(
+            JSON.stringify({ status: 'healthy', timestamp: new Date().toISOString() }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+  }
+
+  try {
+        console.log('🧮 Processing request...')
         // Parse request body
         const rawBody = await req.text();
         console.log('📦 Raw request body:', rawBody);
@@ -159,10 +170,10 @@ serve(async (req) => {
 
         const { documentId, extractedText, metadata = {} } = requestData;
 
-        if (!documentId || !extractedText) {
+    if (!documentId || !extractedText) {
             console.error('❌ Missing required parameters:', { documentId, hasExtractedText: !!extractedText });
             throw new Error('Missing required parameters: documentId and extractedText');
-        }
+    }
 
         console.log(`📄 Processing document ${documentId} - Text length: ${extractedText.length} chars`);
 
