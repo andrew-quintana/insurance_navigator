@@ -206,6 +206,38 @@ async function handleUpload(req: Request, supabase: any, userId: string) {
     })
   }
 
+  // Create initial processing job
+  const { error: jobError } = await supabase
+    .from('processing_jobs')
+    .insert({
+      document_id: document.id,
+      job_type: 'parse',
+      payload: {
+        storagePath: documentRecord.storage_path,
+        contentType: uploadData.contentType
+      },
+      status: 'pending',
+      priority: 1,
+      retry_count: 0
+    })
+
+  if (jobError) {
+    console.error('Error creating processing job:', jobError)
+    // Update document status to error
+    await supabase
+      .from('documents')
+      .update({ status: 'error', error_message: 'Failed to create processing job' })
+      .eq('id', document.id)
+
+    return new Response(JSON.stringify({
+      error: 'Failed to create processing job',
+      details: jobError.message
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  }
+
   // Generate presigned URL for upload
   const { data: uploadUrl, error: urlError } = await supabase.storage
     .from('documents')

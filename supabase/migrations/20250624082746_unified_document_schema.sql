@@ -15,7 +15,7 @@ BEGIN
 END $$;
 
 -- =============================================================================
--- STEP 1: MIGRATE REGULATORY DOCUMENTS TO DOCUMENTS TABLE
+-- STEP 1: ADD REGULATORY DOCUMENT FIELDS
 -- =============================================================================
 
 -- Add new fields to documents table
@@ -28,63 +28,14 @@ ADD COLUMN IF NOT EXISTS expiration_date DATE,
 ADD COLUMN IF NOT EXISTS source_url TEXT,
 ADD COLUMN IF NOT EXISTS tags TEXT[];
 
--- Migrate data from regulatory_documents to documents
-INSERT INTO documents (
-    id,
-    original_filename,
-    file_size,
-    content_type,
-    file_hash,
-    storage_path,
-    document_type,
-    jurisdiction,
-    program,
-    effective_date,
-    expiration_date,
-    source_url,
-    created_at,
-    updated_at
-)
-SELECT
-    document_id,
-    raw_document_path,
-    0, -- file_size not available
-    'application/pdf', -- assuming PDF
-    '', -- file_hash not available
-    raw_document_path,
-    'regulatory',
-    jurisdiction,
-    program,
-    effective_date,
-    expiration_date,
-    source_url,
-    created_at,
-    updated_at
-FROM regulatory_documents
-ON CONFLICT (id) DO NOTHING;
-
 -- =============================================================================
--- STEP 2: CLEANUP UNUSED TABLES AND COLUMNS
--- =============================================================================
-
--- Drop unused tables
-DROP TABLE IF EXISTS regulatory_documents CASCADE;
-DROP TABLE IF EXISTS realtime_progress_updates CASCADE;
-DROP TABLE IF EXISTS processing_jobs CASCADE;
-
--- Remove unused columns from documents
-ALTER TABLE documents
-DROP COLUMN IF EXISTS mime_type,
-DROP COLUMN IF EXISTS storage_provider,
-DROP COLUMN IF EXISTS content_extracted,
-DROP COLUMN IF EXISTS policy_basics,
-DROP COLUMN IF EXISTS file_path;
-
--- =============================================================================
--- STEP 3: ADD CONSTRAINTS AND INDEXES
+-- STEP 2: ADD CONSTRAINTS AND INDEXES
 -- =============================================================================
 
 -- Add document type constraint
+ALTER TABLE documents
+DROP CONSTRAINT IF EXISTS valid_document_type;
+
 ALTER TABLE documents
 ADD CONSTRAINT valid_document_type 
 CHECK (document_type IN ('user_uploaded', 'regulatory', 'policy', 'medical_record', 'claim'));

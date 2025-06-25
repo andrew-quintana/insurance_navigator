@@ -1,3 +1,5 @@
+
+
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -15,6 +17,12 @@ CREATE EXTENSION IF NOT EXISTS "pg_cron" WITH SCHEMA "pg_catalog";
 
 
 
+
+
+CREATE SCHEMA IF NOT EXISTS "encryption_functions";
+
+
+ALTER SCHEMA "encryption_functions" OWNER TO "postgres";
 
 
 COMMENT ON SCHEMA "public" IS 'standard public schema';
@@ -77,110 +85,133 @@ CREATE EXTENSION IF NOT EXISTS "vector" WITH SCHEMA "public";
 
 
 
-CREATE OR REPLACE FUNCTION "public"."auto_create_processing_job"() RETURNS "trigger"
-    LANGUAGE "plpgsql"
-    AS $$
-            BEGIN
-                -- Only create job for newly uploaded documents
-                IF NEW.status = 'pending' AND (OLD IS NULL OR OLD.status != 'pending') THEN
-                    -- Create a parse job
-                    INSERT INTO processing_jobs (
-                        document_id, job_type, status, priority, 
-                        max_retries, retry_count, created_at, scheduled_at,
-                        payload
-                    ) VALUES (
-                        NEW.id, 'parse', 'pending', 5,
-                        3, 0, NOW(), NOW() + INTERVAL '5 seconds',
-                        jsonb_build_object(
-                            'filename', NEW.original_filename,
-                            'document_type', NEW.document_type,
-                            'user_id', NEW.user_id,
-                            'metadata', NEW.metadata
-                        )
-                    );
-                    
-                    RAISE LOG 'Auto-created processing job for document %', NEW.original_filename;
-                END IF;
-                
-                RETURN NEW;
-            END;
-            $$;
-
-
-ALTER FUNCTION "public"."auto_create_processing_job"() OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."backfill_stuck_documents"() RETURNS TABLE("document_id" "uuid", "filename" "text", "jobs_created" integer)
-    LANGUAGE "plpgsql"
+CREATE OR REPLACE FUNCTION "encryption_functions"."decrypt_data"("encrypted_data" "text", "key_id" "uuid") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
 DECLARE
-    doc_record RECORD;
-    job_count INTEGER;
+    key_record record;
+    decrypted_data text;
+    key_data text;
 BEGIN
-    -- Find documents that are stuck (uploaded but no processing jobs)
-    FOR doc_record IN 
-        SELECT d.id, d.original_filename, d.file_path, d.user_id, d.status, d.processing_status
-        FROM user_documents d
-        LEFT JOIN processing_jobs pj ON d.id = pj.document_id
-        WHERE d.status IN ('pending', 'uploaded') 
-          AND d.processing_status IN ('pending', 'uploaded')
-          AND pj.id IS NULL -- No existing jobs
-          AND d.created_at > NOW() - INTERVAL '7 days' -- Only recent documents
-    LOOP
-        -- Create a parse job for this stuck document
-        INSERT INTO processing_jobs (
-            id,
-            document_id,
-            job_type,
-            payload,
-            status,
-            priority,
-            max_retries,
-            retry_count,
-            created_at,
-            scheduled_at
-        ) VALUES (
-            gen_random_uuid(),
-            doc_record.id,
-            'parse',
-            jsonb_build_object(
-                'filename', doc_record.original_filename,
-                'file_path', doc_record.file_path,
-                'user_id', doc_record.user_id
-            ),
-            'pending',
-            1, -- priority
-            3, -- max_retries
-            0, -- retry_count
-            NOW(),
-            NOW() + INTERVAL '10 seconds' -- process in 10 seconds
-        );
-        
-        job_count := 1;
-        
-        -- Update document status
-        UPDATE user_documents 
-        SET 
-            processing_status = 'processing',
-            updated_at = NOW()
-        WHERE id = doc_record.id;
-        
-        -- Return info about processed document
-        document_id := doc_record.id;
-        filename := doc_record.original_filename;
-        jobs_created := job_count;
-        
-        RETURN NEXT;
-        
-        RAISE LOG 'Backfilled processing job for stuck document %: %', doc_record.id, doc_record.original_filename;
-    END LOOP;
+    -- Get the encryption key
+    SELECT * INTO key_record
+    FROM encryption_keys
+    WHERE id = key_id AND key_status IN ('active', 'rotated');
     
-    RETURN;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Invalid or inactive encryption key';
+    END IF;
+    
+    -- Get key data from metadata
+    key_data := key_record.metadata->>'key_data';
+    IF key_data IS NULL THEN
+        RAISE EXCEPTION 'Key data not found in metadata';
+    END IF;
+    
+    -- Decrypt the data using pgcrypto
+    decrypted_data = pgp_sym_decrypt(
+        decode(encrypted_data, 'base64')::bytea,
+        decode(key_data, 'base64')::text
+    );
+    
+    RETURN jsonb_build_object(
+        'decrypted_data', decrypted_data,
+        'key_id', key_id,
+        'key_version', key_record.key_version
+    );
 END;
 $$;
 
 
-ALTER FUNCTION "public"."backfill_stuck_documents"() OWNER TO "postgres";
+ALTER FUNCTION "encryption_functions"."decrypt_data"("encrypted_data" "text", "key_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "encryption_functions"."encrypt_data"("data" "text", "key_id" "uuid") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    key_record record;
+    encrypted_data bytea;
+    key_data text;
+BEGIN
+    -- Get the encryption key
+    SELECT * INTO key_record
+    FROM encryption_keys
+    WHERE id = key_id AND key_status IN ('active', 'rotated');
+    
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Invalid or inactive encryption key';
+    END IF;
+    
+    -- Get key data from metadata
+    key_data := key_record.metadata->>'key_data';
+    IF key_data IS NULL THEN
+        RAISE EXCEPTION 'Key data not found in metadata';
+    END IF;
+    
+    -- Encrypt the data using pgcrypto
+    encrypted_data = pgp_sym_encrypt(
+        data,
+        decode(key_data, 'base64')::text,
+        'compress-algo=2, cipher-algo=aes256'
+    );
+    
+    RETURN jsonb_build_object(
+        'encrypted_data', encode(encrypted_data, 'base64'),
+        'key_id', key_id,
+        'key_version', key_record.key_version
+    );
+END;
+$$;
+
+
+ALTER FUNCTION "encryption_functions"."encrypt_data"("data" "text", "key_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "encryption_functions"."generate_encryption_key"() RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    new_key_id uuid;
+    new_key_version int;
+    new_key_data text;
+BEGIN
+    -- Generate a new key
+    new_key_id := gen_random_uuid();
+    new_key_data := encode(gen_random_bytes(32), 'base64');
+    
+    -- Get the next key version
+    SELECT COALESCE(MAX(key_version), 0) + 1
+    INTO new_key_version
+    FROM encryption_keys;
+    
+    -- Insert the new key
+    INSERT INTO encryption_keys (
+        id,
+        key_version,
+        key_status,
+        metadata
+    ) VALUES (
+        new_key_id,
+        new_key_version,
+        'active',
+        jsonb_build_object(
+            'key_data', new_key_data,
+            'algorithm', 'aes-256-gcm',
+            'created_by', 'system',
+            'created_at', now()
+        )
+    );
+    
+    RETURN jsonb_build_object(
+        'key_id', new_key_id,
+        'version', new_key_version
+    );
+END;
+$$;
+
+
+ALTER FUNCTION "encryption_functions"."generate_encryption_key"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."can_access_policy"("policy_uuid" "uuid") RETURNS boolean
@@ -221,112 +252,6 @@ ALTER FUNCTION "public"."can_access_policy"("policy_uuid" "uuid") OWNER TO "post
 
 COMMENT ON FUNCTION "public"."can_access_policy"("policy_uuid" "uuid") IS 'Securely check if the current user can access a specific policy record. Uses SECURITY INVOKER and fixed search path.';
 
-
-
-CREATE OR REPLACE FUNCTION "public"."check_job_processing_health"() RETURNS TABLE("status" "text", "stuck_jobs_count" integer, "failed_jobs_count" integer, "processing_time_avg" numeric, "recommendation" "text")
-    LANGUAGE "plpgsql"
-    AS $$
-BEGIN
-    RETURN QUERY
-    WITH job_stats AS (
-        SELECT 
-            COUNT(*) FILTER (WHERE status = 'pending' AND created_at < NOW() - INTERVAL '10 minutes') as stuck_pending,
-            COUNT(*) FILTER (WHERE status = 'running' AND started_at < NOW() - INTERVAL '30 minutes') as stuck_running,
-            COUNT(*) FILTER (WHERE status = 'failed' AND updated_at > NOW() - INTERVAL '1 hour') as recent_failed,
-            AVG(EXTRACT(EPOCH FROM (completed_at - started_at))) FILTER (WHERE status = 'completed' AND completed_at > NOW() - INTERVAL '1 hour') as avg_processing_time
-        FROM processing_jobs
-    )
-    SELECT 
-        CASE 
-            WHEN stuck_pending + stuck_running = 0 AND recent_failed <= 2 THEN 'healthy'
-            WHEN stuck_pending + stuck_running <= 3 AND recent_failed <= 5 THEN 'warning'
-            ELSE 'critical'
-        END as status,
-        (stuck_pending + stuck_running)::INTEGER as stuck_jobs_count,
-        recent_failed::INTEGER as failed_jobs_count,
-        COALESCE(avg_processing_time, 0)::NUMERIC as processing_time_avg,
-        CASE 
-            WHEN stuck_pending > 5 THEN 'Multiple jobs stuck in pending - check cron jobs'
-            WHEN stuck_running > 3 THEN 'Multiple jobs stuck running - check edge functions'
-            WHEN recent_failed > 10 THEN 'High failure rate - check error logs'
-            WHEN avg_processing_time > 300 THEN 'Slow processing - optimize edge functions'
-            ELSE 'System operating normally'
-        END as recommendation
-    FROM job_stats;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."check_job_processing_health"() OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."check_queue_health"() RETURNS TABLE("status" "text", "details" "jsonb")
-    LANGUAGE "plpgsql"
-    AS $$
-DECLARE
-    health_record RECORD;
-BEGIN
-    SELECT * INTO health_record FROM queue_health;
-    
-    -- Return overall health status
-    RETURN QUERY
-    SELECT
-        CASE 
-            WHEN health_record.stuck_jobs > 0 THEN 'WARNING'
-            WHEN health_record.failed_jobs > health_record.completed_jobs THEN 'DEGRADED'
-            WHEN health_record.pending_jobs = 0 AND health_record.running_jobs = 0 THEN 'IDLE'
-            ELSE 'HEALTHY'
-        END,
-        jsonb_build_object(
-            'pending_jobs', health_record.pending_jobs,
-            'running_jobs', health_record.running_jobs,
-            'failed_jobs', health_record.failed_jobs,
-            'completed_jobs', health_record.completed_jobs,
-            'stuck_jobs', health_record.stuck_jobs,
-            'avg_completion_time_sec', health_record.avg_completion_time_sec,
-            'uploading_docs', health_record.uploading_docs,
-            'processing_docs', health_record.processing_docs,
-            'completed_docs', health_record.completed_docs,
-            'failed_docs', health_record.failed_docs,
-            'checked_at', health_record.checked_at
-        );
-END;
-$$;
-
-
-ALTER FUNCTION "public"."check_queue_health"() OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."cleanup_old_jobs"() RETURNS integer
-    LANGUAGE "plpgsql"
-    AS $$
-DECLARE
-    deleted_count INTEGER;
-BEGIN
-    DELETE FROM processing_jobs 
-    WHERE status IN ('completed', 'failed') 
-      AND updated_at < NOW() - INTERVAL '7 days';
-    
-    GET DIAGNOSTICS deleted_count = ROW_COUNT;
-    RETURN deleted_count;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."cleanup_old_jobs"() OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."cleanup_realtime_progress_updates"() RETURNS "void"
-    LANGUAGE "plpgsql"
-    AS $$
-BEGIN
-    DELETE FROM realtime_progress_updates 
-    WHERE created_at < NOW() - INTERVAL '24 hours';
-END;
-$$;
-
-
-ALTER FUNCTION "public"."cleanup_realtime_progress_updates"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."clear_user_context"() RETURNS "void"
@@ -371,6 +296,37 @@ $$;
 
 
 ALTER FUNCTION "public"."complete_processing_job"("job_id_param" "uuid", "job_result" "jsonb") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."create_document_processing_job"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+    INSERT INTO processing_jobs (
+        job_type,
+        status,
+        priority,
+        payload,
+        scheduled_at
+    ) VALUES (
+        'parse',
+        'pending',
+        1,
+        jsonb_build_object(
+            'document_id', NEW.id,
+            'document_type', NEW.document_type,
+            'storage_path', NEW.storage_path,
+            'content_type', NEW.content_type,
+            'created_at', NEW.created_at
+        ),
+        NOW()
+    );
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."create_document_processing_job"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."create_processing_job"("doc_id" "uuid", "job_type_param" "text", "job_payload" "jsonb" DEFAULT '{}'::"jsonb", "priority_param" integer DEFAULT 0, "max_retries_param" integer DEFAULT 3, "schedule_delay_seconds" integer DEFAULT 0) RETURNS "uuid"
@@ -590,56 +546,6 @@ $$;
 ALTER FUNCTION "public"."get_policy_facts"("document_uuid" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."handle_job_completion"() RETURNS "trigger"
-    LANGUAGE "plpgsql"
-    AS $$
-DECLARE
-    doc_record documents%ROWTYPE;
-BEGIN
-    -- Only handle completed jobs
-    IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
-        -- Get document info
-        SELECT * INTO doc_record FROM documents WHERE id = NEW.document_id;
-        
-        -- Handle different job types
-        CASE NEW.job_type
-            WHEN 'parse' THEN
-                -- Create embed job after successful parse
-                INSERT INTO processing_jobs (
-                    id, document_id, job_type, status, priority, 
-                    max_retries, retry_count, created_at
-                ) VALUES (
-                    gen_random_uuid(), NEW.document_id, 'embed', 'pending',
-                    1, 3, 0, NOW()
-                );
-                
-                -- Update document progress
-                UPDATE documents 
-                SET progress_percentage = 50
-                WHERE id = NEW.document_id;
-                
-            WHEN 'embed' THEN
-                -- Mark document as completed after successful embed
-                UPDATE documents 
-                SET 
-                    status = 'completed',
-                    progress_percentage = 100,
-                    updated_at = NOW()
-                WHERE id = NEW.document_id;
-        END CASE;
-        
-        RAISE LOG 'Processed job completion: % type % for document %', 
-            NEW.id, NEW.job_type, doc_record.original_filename;
-    END IF;
-    
-    RETURN NEW;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."handle_job_completion"() OWNER TO "postgres";
-
-
 CREATE OR REPLACE FUNCTION "public"."handle_job_failure"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -802,7 +708,7 @@ COMMENT ON FUNCTION "public"."log_policy_access"("policy_uuid" "uuid", "access_t
 
 
 CREATE OR REPLACE FUNCTION "public"."log_user_action"("user_uuid" "uuid", "action_type" "text", "resource_type" "text", "resource_id" "text" DEFAULT NULL::"text", "action_details" "jsonb" DEFAULT NULL::"jsonb", "client_ip" "inet" DEFAULT NULL::"inet", "client_user_agent" "text" DEFAULT NULL::"text") RETURNS "uuid"
-    LANGUAGE "plpgsql SECURITY DEFINER
+    LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
 DECLARE
     log_id UUID;
@@ -823,70 +729,37 @@ $$;
 ALTER FUNCTION "public"."log_user_action"("user_uuid" "uuid", "action_type" "text", "resource_type" "text", "resource_id" "text", "action_details" "jsonb", "client_ip" "inet", "client_user_agent" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."monitor_processing_queue"() RETURNS "void"
+CREATE OR REPLACE FUNCTION "public"."notify_job_completion"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
-DECLARE
-    stuck_job RECORD;
-    failed_job RECORD;
 BEGIN
-    -- Check for stuck jobs (running for too long)
-    FOR stuck_job IN 
-        SELECT 
-            pj.id as job_id,
-            pj.document_id,
-            pj.job_type,
-            pj.created_at,
-            d.original_filename
-        FROM processing_jobs pj
-        JOIN documents d ON d.id = pj.document_id
-        WHERE pj.status = 'running'
-          AND pj.created_at < NOW() - INTERVAL '30 minutes'
-    LOOP
-        -- Mark stuck jobs as failed
-        UPDATE processing_jobs 
-        SET 
-            status = 'failed',
-            error_message = 'Job stuck in running state for over 30 minutes',
-            updated_at = NOW()
-        WHERE id = stuck_job.job_id;
-        
-        RAISE LOG 'Marked stuck job as failed: % for document %', stuck_job.job_id, stuck_job.original_filename;
-    END LOOP;
-
-    -- Retry failed jobs that haven't exceeded max retries
-    FOR failed_job IN 
-        SELECT 
-            pj.id as job_id,
-            pj.document_id,
-            pj.job_type,
-            pj.retry_count,
-            pj.max_retries,
-            d.original_filename
-        FROM processing_jobs pj
-        JOIN documents d ON d.id = pj.document_id
-        WHERE pj.status = 'failed'
-          AND pj.retry_count < pj.max_retries
-          AND pj.created_at > NOW() - INTERVAL '24 hours'
-    LOOP
-        -- Reset failed job to pending
-        UPDATE processing_jobs 
-        SET 
-            status = 'pending',
-            retry_count = retry_count + 1,
-            updated_at = NOW(),
-            error_message = NULL
-        WHERE id = failed_job.job_id;
-        
-        RAISE LOG 'Retrying failed job: % for document % (attempt %/%)', 
-            failed_job.job_id, failed_job.original_filename, 
-            failed_job.retry_count + 1, failed_job.max_retries;
-    END LOOP;
+    IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
+        -- Insert notification into realtime_progress table
+        INSERT INTO realtime_progress (
+            user_id,
+            document_id,
+            notification_type,
+            payload,
+            created_at
+        ) VALUES (
+            (SELECT user_id FROM documents WHERE id = NEW.document_id),
+            NEW.document_id,
+            'job_completion',
+            jsonb_build_object(
+                'job_type', NEW.job_type,
+                'status', NEW.status,
+                'completed_at', NEW.completed_at,
+                'metadata', NEW.metadata
+            ),
+            NOW()
+        );
+    END IF;
+    RETURN NEW;
 END;
 $$;
 
 
-ALTER FUNCTION "public"."monitor_processing_queue"() OWNER TO "postgres";
+ALTER FUNCTION "public"."notify_job_completion"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."schedule_next_job_safely"("prev_job_id" "uuid", "doc_id" "uuid", "next_job_type" "text", "next_payload" "jsonb" DEFAULT '{}'::"jsonb", "required_data_keys" "text"[] DEFAULT ARRAY[]::"text"[]) RETURNS "uuid"
@@ -1014,62 +887,17 @@ $$;
 ALTER FUNCTION "public"."start_processing_job"("job_id_param" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."trigger_document_processing"() RETURNS "trigger"
+CREATE OR REPLACE FUNCTION "public"."update_document_processing_status_updated_at"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
 BEGIN
-    -- Only create a job if the document is newly uploaded or status changed to uploaded
-    IF (TG_OP = 'INSERT' AND NEW.status IN ('pending', 'uploaded')) OR 
-       (TG_OP = 'UPDATE' AND OLD.status != NEW.status AND NEW.status IN ('pending', 'uploaded')) THEN
-        
-        -- Create a parse job for the document
-        INSERT INTO processing_jobs (
-            id,
-            document_id,
-            job_type,
-            payload,
-            status,
-            priority,
-            max_retries,
-            retry_count,
-            created_at,
-            scheduled_at
-        ) VALUES (
-            gen_random_uuid(),
-            NEW.id,
-            'parse',
-            jsonb_build_object(
-                'filename', NEW.original_filename,
-                'file_path', NEW.file_path,
-                'user_id', NEW.user_id,
-                'storage_provider', NEW.storage_provider,
-                'bucket_name', NEW.bucket_name
-            ),
-            'pending',
-            1, -- priority
-            3, -- max_retries
-            0, -- retry_count
-            NOW(),
-            NOW() + INTERVAL '5 seconds' -- process in 5 seconds
-        );
-        
-        -- Log the job creation
-        RAISE LOG 'Created processing job for document %: %', NEW.id, NEW.original_filename;
-        
-        -- Update document status to processing
-        UPDATE user_documents 
-        SET 
-            processing_status = 'processing',
-            updated_at = NOW()
-        WHERE id = NEW.id;
-    END IF;
-    
+    NEW.updated_at = NOW();
     RETURN NEW;
 END;
 $$;
 
 
-ALTER FUNCTION "public"."trigger_document_processing"() OWNER TO "postgres";
+ALTER FUNCTION "public"."update_document_processing_status_updated_at"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."update_document_progress"("doc_id" "uuid", "new_status" "text" DEFAULT NULL::"text", "progress_pct" integer DEFAULT NULL::integer, "chunks_processed" integer DEFAULT NULL::integer, "chunks_failed" integer DEFAULT NULL::integer, "error_msg" "text" DEFAULT NULL::"text") RETURNS boolean
@@ -1287,38 +1115,36 @@ CREATE TABLE IF NOT EXISTS "public"."cron_job_logs" (
 ALTER TABLE "public"."cron_job_logs" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."document_processing_status" (
+    "document_id" "uuid" NOT NULL,
+    "total_chunks" integer NOT NULL,
+    "processed_chunks" integer[] DEFAULT '{}'::integer[],
+    "status" "text" NOT NULL,
+    "chunk_size" integer NOT NULL,
+    "overlap" integer NOT NULL,
+    "storage_path" "text" NOT NULL,
+    "error" "text",
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."document_processing_status" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."document_vectors" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "user_id" "uuid",
-    "document_id" "uuid",
+    "document_record_id" "uuid" NOT NULL,
     "chunk_index" integer NOT NULL,
-    "content_embedding" "public"."vector"(1536) NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"(),
-    "is_active" boolean DEFAULT true,
-    "encrypted_chunk_text" "text",
-    "encrypted_chunk_metadata" "text",
-    "encryption_key_id" "uuid",
-    "document_record_id" "uuid",
-    "regulatory_document_id" "uuid",
-    "document_source_type" "text" DEFAULT 'user_document'::"text" NOT NULL,
-    CONSTRAINT "document_vectors_document_source_type_check" CHECK (("document_source_type" = ANY (ARRAY['user_document'::"text", 'regulatory_document'::"text"]))),
-    CONSTRAINT "user_or_regulatory_document_check" CHECK (((("user_id" IS NOT NULL) AND ("document_id" IS NOT NULL) AND ("regulatory_document_id" IS NULL) AND ("document_source_type" = 'user_document'::"text")) OR (("user_id" IS NULL) AND ("document_id" IS NULL) AND ("regulatory_document_id" IS NOT NULL) AND ("document_source_type" = 'regulatory_document'::"text"))))
+    "chunk_text" "text" NOT NULL,
+    "embedding" "public"."vector"(1536),
+    "metadata" "jsonb" DEFAULT '{}'::"jsonb",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
 
 ALTER TABLE "public"."document_vectors" OWNER TO "postgres";
-
-
-COMMENT ON TABLE "public"."document_vectors" IS 'Vector storage for user-uploaded documents with encryption support.';
-
-
-
-COMMENT ON COLUMN "public"."document_vectors"."content_embedding" IS 'Vector embedding of the document chunk for semantic search';
-
-
-
-COMMENT ON COLUMN "public"."document_vectors"."encryption_key_id" IS 'Reference to encryption key used for encrypting sensitive content and metadata.';
-
 
 
 CREATE TABLE IF NOT EXISTS "public"."documents" (
@@ -1326,45 +1152,29 @@ CREATE TABLE IF NOT EXISTS "public"."documents" (
     "user_id" "uuid" NOT NULL,
     "original_filename" "text" NOT NULL,
     "file_size" bigint,
-    "bucket_name" character varying(255) DEFAULT 'raw_documents'::character varying,
-    "upload_status" character varying(50) DEFAULT 'pending'::character varying,
-    "processing_status" character varying(50) DEFAULT 'pending'::character varying,
     "metadata" "jsonb",
     "status" character varying(50) DEFAULT 'pending'::character varying,
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
     "document_type" character varying(50) DEFAULT 'policy'::character varying,
-    "content_summary" "text",
     "is_active" boolean DEFAULT true,
     "content_type" character varying(255),
     "file_hash" character varying(255),
-    "progress_percentage" integer DEFAULT 0,
-    "total_chunks" integer,
-    "processed_chunks" integer DEFAULT 0,
-    "failed_chunks" integer DEFAULT 0,
-    "storage_backend" character varying(50) DEFAULT 'supabase'::character varying,
     "storage_path" "text",
-    "processing_progress" integer DEFAULT 0,
-    "processing_stage" "text" DEFAULT 'pending'::"text",
     "jurisdiction" "text",
     "program" "text"[],
     "effective_date" "date",
     "expiration_date" "date",
     "source_url" "text",
     "tags" "text"[],
+    "processing_status" "text" DEFAULT 'pending'::"text",
+    "processing_error" "text",
+    "processed_at" timestamp with time zone,
     CONSTRAINT "valid_document_type" CHECK ((("document_type")::"text" = ANY ((ARRAY['user_uploaded'::character varying, 'regulatory'::character varying, 'policy'::character varying, 'medical_record'::character varying, 'claim'::character varying])::"text"[])))
 );
 
 
 ALTER TABLE "public"."documents" OWNER TO "postgres";
-
-
-COMMENT ON COLUMN "public"."documents"."processing_progress" IS 'Progress percentage (0-100) for async document processing';
-
-
-
-COMMENT ON COLUMN "public"."documents"."processing_stage" IS 'Current processing stage for detailed status tracking';
-
 
 
 CREATE TABLE IF NOT EXISTS "public"."encryption_keys" (
@@ -1425,6 +1235,49 @@ ALTER SEQUENCE "public"."migration_progress_id_seq" OWNED BY "public"."migration
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."processing_jobs" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "job_type" "text" NOT NULL,
+    "status" "text" NOT NULL,
+    "priority" integer DEFAULT 0,
+    "payload" "jsonb" NOT NULL,
+    "result" "jsonb",
+    "error_message" "text",
+    "retry_count" integer DEFAULT 0,
+    "max_retries" integer DEFAULT 3,
+    "scheduled_at" timestamp with time zone DEFAULT "now"(),
+    "started_at" timestamp with time zone,
+    "completed_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "processing_stage" "text",
+    "rate_limit_key" "text",
+    "rate_limit_window" interval,
+    "rate_limit_count" integer,
+    "parent_job_id" "uuid",
+    "child_jobs_completed" integer DEFAULT 0,
+    "document_id" "uuid",
+    CONSTRAINT "processing_jobs_status_check" CHECK (("status" = ANY (ARRAY['pending'::"text", 'running'::"text", 'completed'::"text", 'failed'::"text", 'retrying'::"text"])))
+);
+
+
+ALTER TABLE "public"."processing_jobs" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."realtime_progress" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "session_id" "text" NOT NULL,
+    "operation_type" "text" NOT NULL,
+    "progress_data" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."realtime_progress" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."roles" (
     "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
     "name" "text" NOT NULL,
@@ -1434,6 +1287,15 @@ CREATE TABLE IF NOT EXISTS "public"."roles" (
 
 
 ALTER TABLE "public"."roles" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."schema_migrations" (
+    "version" "text" NOT NULL,
+    "applied_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."schema_migrations" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."user_roles" (
@@ -1483,6 +1345,21 @@ ALTER TABLE ONLY "public"."cron_job_logs"
 
 
 
+ALTER TABLE ONLY "public"."document_processing_status"
+    ADD CONSTRAINT "document_processing_status_pkey" PRIMARY KEY ("document_id");
+
+
+
+ALTER TABLE ONLY "public"."document_vectors"
+    ADD CONSTRAINT "document_vectors_document_record_id_chunk_index_key" UNIQUE ("document_record_id", "chunk_index");
+
+
+
+ALTER TABLE ONLY "public"."document_vectors"
+    ADD CONSTRAINT "document_vectors_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."encryption_keys"
     ADD CONSTRAINT "encryption_keys_pkey" PRIMARY KEY ("id");
 
@@ -1503,6 +1380,16 @@ ALTER TABLE ONLY "public"."migration_progress"
 
 
 
+ALTER TABLE ONLY "public"."processing_jobs"
+    ADD CONSTRAINT "processing_jobs_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."realtime_progress"
+    ADD CONSTRAINT "realtime_progress_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."roles"
     ADD CONSTRAINT "roles_name_key" UNIQUE ("name");
 
@@ -1513,8 +1400,8 @@ ALTER TABLE ONLY "public"."roles"
 
 
 
-ALTER TABLE ONLY "public"."document_vectors"
-    ADD CONSTRAINT "user_document_vectors_pkey" PRIMARY KEY ("id");
+ALTER TABLE ONLY "public"."schema_migrations"
+    ADD CONSTRAINT "schema_migrations_pkey" PRIMARY KEY ("version");
 
 
 
@@ -1570,31 +1457,15 @@ CREATE INDEX "idx_cron_job_logs_job_name" ON "public"."cron_job_logs" USING "btr
 
 
 
-CREATE INDEX "idx_document_vectors_document_id" ON "public"."document_vectors" USING "btree" ("document_id");
+CREATE INDEX "idx_doc_processing_status" ON "public"."document_processing_status" USING "btree" ("status");
 
 
 
-CREATE INDEX "idx_document_vectors_regulatory_doc" ON "public"."document_vectors" USING "btree" ("regulatory_document_id") WHERE ("regulatory_document_id" IS NOT NULL);
-
-
-
-CREATE INDEX "idx_document_vectors_regulatory_search" ON "public"."document_vectors" USING "btree" ("regulatory_document_id", "document_source_type", "is_active") WHERE ("document_source_type" = 'regulatory_document'::"text");
-
-
-
-CREATE INDEX "idx_document_vectors_source_type" ON "public"."document_vectors" USING "btree" ("document_source_type");
-
-
-
-CREATE INDEX "idx_document_vectors_user_id" ON "public"."document_vectors" USING "btree" ("user_id");
+CREATE INDEX "idx_document_vectors_embedding" ON "public"."document_vectors" USING "ivfflat" ("embedding" "public"."vector_cosine_ops") WITH ("lists"='100');
 
 
 
 CREATE INDEX "idx_documents_active_recent" ON "public"."documents" USING "btree" ("updated_at" DESC) WHERE ("is_active" = true);
-
-
-
-CREATE INDEX "idx_documents_bucket_name" ON "public"."documents" USING "btree" ("bucket_name");
 
 
 
@@ -1610,11 +1481,7 @@ CREATE INDEX "idx_documents_jurisdiction" ON "public"."documents" USING "btree" 
 
 
 
-CREATE INDEX "idx_documents_progress" ON "public"."documents" USING "btree" ("progress_percentage", "status");
-
-
-
-CREATE INDEX "idx_documents_storage_backend" ON "public"."documents" USING "btree" ("storage_backend");
+CREATE INDEX "idx_documents_processing_status" ON "public"."documents" USING "btree" ("processing_status");
 
 
 
@@ -1638,31 +1505,39 @@ CREATE INDEX "idx_messages_metadata_gin" ON "public"."messages" USING "gin" ("me
 
 
 
+CREATE INDEX "idx_processing_jobs_document_id" ON "public"."processing_jobs" USING "btree" ("document_id");
+
+
+
+CREATE INDEX "idx_processing_jobs_parent" ON "public"."processing_jobs" USING "btree" ("parent_job_id") WHERE ("parent_job_id" IS NOT NULL);
+
+
+
+CREATE INDEX "idx_processing_jobs_rate_limit" ON "public"."processing_jobs" USING "btree" ("rate_limit_key", "created_at") WHERE ("status" = 'completed'::"text");
+
+
+
+CREATE INDEX "idx_processing_jobs_scheduled" ON "public"."processing_jobs" USING "btree" ("scheduled_at") WHERE ("status" = 'pending'::"text");
+
+
+
+CREATE INDEX "idx_processing_jobs_status" ON "public"."processing_jobs" USING "btree" ("status");
+
+
+
+CREATE INDEX "idx_processing_jobs_type" ON "public"."processing_jobs" USING "btree" ("job_type");
+
+
+
+CREATE INDEX "idx_realtime_progress_created" ON "public"."realtime_progress" USING "btree" ("created_at");
+
+
+
+CREATE INDEX "idx_realtime_progress_user_session" ON "public"."realtime_progress" USING "btree" ("user_id", "session_id");
+
+
+
 CREATE INDEX "idx_roles_name" ON "public"."roles" USING "btree" ("name");
-
-
-
-CREATE INDEX "idx_user_document_vectors_active" ON "public"."document_vectors" USING "btree" ("is_active") WHERE ("is_active" = true);
-
-
-
-CREATE INDEX "idx_user_document_vectors_document_id" ON "public"."document_vectors" USING "btree" ("document_id");
-
-
-
-CREATE INDEX "idx_user_document_vectors_document_record" ON "public"."document_vectors" USING "btree" ("document_record_id");
-
-
-
-CREATE INDEX "idx_user_document_vectors_embedding" ON "public"."document_vectors" USING "ivfflat" ("content_embedding" "public"."vector_cosine_ops");
-
-
-
-CREATE INDEX "idx_user_document_vectors_encryption_key" ON "public"."document_vectors" USING "btree" ("encryption_key_id");
-
-
-
-CREATE INDEX "idx_user_document_vectors_user_id" ON "public"."document_vectors" USING "btree" ("user_id");
 
 
 
@@ -1694,7 +1569,15 @@ CREATE INDEX "idx_users_email" ON "public"."users" USING "btree" ("email");
 
 
 
-CREATE OR REPLACE TRIGGER "auto_job_creation_trigger" AFTER INSERT OR UPDATE ON "public"."documents" FOR EACH ROW EXECUTE FUNCTION "public"."auto_create_processing_job"();
+CREATE OR REPLACE TRIGGER "trigger_document_processing" AFTER INSERT OR UPDATE ON "public"."documents" FOR EACH ROW EXECUTE FUNCTION "public"."create_document_processing_job"();
+
+
+
+CREATE OR REPLACE TRIGGER "trigger_job_completion" AFTER UPDATE ON "public"."processing_jobs" FOR EACH ROW EXECUTE FUNCTION "public"."notify_job_completion"();
+
+
+
+CREATE OR REPLACE TRIGGER "trigger_update_doc_processing_status_timestamp" BEFORE UPDATE ON "public"."document_processing_status" FOR EACH ROW EXECUTE FUNCTION "public"."update_document_processing_status_updated_at"();
 
 
 
@@ -1703,13 +1586,33 @@ ALTER TABLE ONLY "public"."audit_logs"
 
 
 
+ALTER TABLE ONLY "public"."document_processing_status"
+    ADD CONSTRAINT "document_processing_status_document_id_fkey" FOREIGN KEY ("document_id") REFERENCES "public"."documents"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."document_vectors"
+    ADD CONSTRAINT "document_vectors_document_record_id_fkey" FOREIGN KEY ("document_record_id") REFERENCES "public"."documents"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."messages"
     ADD CONSTRAINT "messages_conversation_id_fkey" FOREIGN KEY ("conversation_id") REFERENCES "public"."conversations"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."document_vectors"
-    ADD CONSTRAINT "user_document_vectors_encryption_key_id_fkey" FOREIGN KEY ("encryption_key_id") REFERENCES "public"."encryption_keys"("id");
+ALTER TABLE ONLY "public"."processing_jobs"
+    ADD CONSTRAINT "processing_jobs_document_id_fkey" FOREIGN KEY ("document_id") REFERENCES "public"."documents"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."processing_jobs"
+    ADD CONSTRAINT "processing_jobs_parent_job_id_fkey" FOREIGN KEY ("parent_job_id") REFERENCES "public"."processing_jobs"("id");
+
+
+
+ALTER TABLE ONLY "public"."realtime_progress"
+    ADD CONSTRAINT "realtime_progress_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id");
 
 
 
@@ -1725,6 +1628,16 @@ ALTER TABLE ONLY "public"."user_roles"
 
 ALTER TABLE ONLY "public"."user_roles"
     ADD CONSTRAINT "user_roles_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id");
+
+
+
+CREATE POLICY "Service role can manage all jobs" ON "public"."processing_jobs" TO "service_role" USING (true) WITH CHECK (true);
+
+
+
+CREATE POLICY "Users can view jobs for their documents" ON "public"."processing_jobs" FOR SELECT USING ((EXISTS ( SELECT 1
+   FROM "public"."documents"
+  WHERE (("documents"."id" = "processing_jobs"."document_id") AND ("documents"."user_id" = "auth"."uid"())))));
 
 
 
@@ -1753,10 +1666,7 @@ CREATE POLICY "conversations_user_access" ON "public"."conversations" TO "authen
 ALTER TABLE "public"."document_vectors" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "document_vectors_user_access" ON "public"."document_vectors" TO "authenticated" USING ((("user_id" = "auth"."uid"()) OR (EXISTS ( SELECT 1
-   FROM "public"."users"
-  WHERE (("users"."id" = "auth"."uid"()) AND (("users"."user_role")::"text" = ANY ((ARRAY['admin'::character varying, 'provider'::character varying])::"text"[])))))));
-
+ALTER TABLE "public"."documents" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."encryption_keys" ENABLE ROW LEVEL SECURITY;
@@ -1764,6 +1674,9 @@ ALTER TABLE "public"."encryption_keys" ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "encryption_keys_admin_only" ON "public"."encryption_keys" USING ("public"."is_admin"());
 
+
+
+ALTER TABLE "public"."processing_jobs" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."roles" ENABLE ROW LEVEL SECURITY;
@@ -1774,13 +1687,6 @@ CREATE POLICY "roles_admin_access" ON "public"."roles" USING ("public"."is_admin
 
 
 CREATE POLICY "roles_read_access" ON "public"."roles" FOR SELECT USING (("auth"."uid"() IS NOT NULL));
-
-
-
-CREATE POLICY "user_document_vectors_proper_access" ON "public"."document_vectors" USING ((("user_id" = "auth"."uid"()) OR (EXISTS ( SELECT 1
-   FROM ("public"."user_roles" "ur"
-     JOIN "public"."roles" "r" ON (("r"."id" = "ur"."role_id")))
-  WHERE (("ur"."user_id" = "auth"."uid"()) AND ("r"."name" = 'admin'::"text"))))));
 
 
 
@@ -1835,6 +1741,10 @@ ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."documents";
 
 
 
+
+
+
+GRANT USAGE ON SCHEMA "encryption_functions" TO "authenticated";
 
 
 
@@ -2135,12 +2045,15 @@ GRANT ALL ON FUNCTION "public"."vector"("public"."vector", integer, boolean) TO 
 
 
 
+GRANT ALL ON FUNCTION "encryption_functions"."decrypt_data"("encrypted_data" "text", "key_id" "uuid") TO "authenticated";
 
 
 
+GRANT ALL ON FUNCTION "encryption_functions"."encrypt_data"("data" "text", "key_id" "uuid") TO "authenticated";
 
 
 
+GRANT ALL ON FUNCTION "encryption_functions"."generate_encryption_key"() TO "authenticated";
 
 
 
@@ -2302,15 +2215,13 @@ GRANT ALL ON FUNCTION "public"."vector"("public"."vector", integer, boolean) TO 
 
 
 
-GRANT ALL ON FUNCTION "public"."auto_create_processing_job"() TO "anon";
-GRANT ALL ON FUNCTION "public"."auto_create_processing_job"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."auto_create_processing_job"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."backfill_stuck_documents"() TO "anon";
-GRANT ALL ON FUNCTION "public"."backfill_stuck_documents"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."backfill_stuck_documents"() TO "service_role";
+
+
+
+
 
 
 
@@ -2332,30 +2243,6 @@ REVOKE ALL ON FUNCTION "public"."can_access_policy"("policy_uuid" "uuid") FROM P
 GRANT ALL ON FUNCTION "public"."can_access_policy"("policy_uuid" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."can_access_policy"("policy_uuid" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."can_access_policy"("policy_uuid" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."check_job_processing_health"() TO "anon";
-GRANT ALL ON FUNCTION "public"."check_job_processing_health"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."check_job_processing_health"() TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."check_queue_health"() TO "anon";
-GRANT ALL ON FUNCTION "public"."check_queue_health"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."check_queue_health"() TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."cleanup_old_jobs"() TO "anon";
-GRANT ALL ON FUNCTION "public"."cleanup_old_jobs"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."cleanup_old_jobs"() TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."cleanup_realtime_progress_updates"() TO "anon";
-GRANT ALL ON FUNCTION "public"."cleanup_realtime_progress_updates"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."cleanup_realtime_progress_updates"() TO "service_role";
 
 
 
@@ -2389,6 +2276,12 @@ GRANT ALL ON FUNCTION "public"."cosine_distance"("public"."vector", "public"."ve
 GRANT ALL ON FUNCTION "public"."cosine_distance"("public"."vector", "public"."vector") TO "anon";
 GRANT ALL ON FUNCTION "public"."cosine_distance"("public"."vector", "public"."vector") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."cosine_distance"("public"."vector", "public"."vector") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."create_document_processing_job"() TO "anon";
+GRANT ALL ON FUNCTION "public"."create_document_processing_job"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."create_document_processing_job"() TO "service_role";
 
 
 
@@ -2552,12 +2445,6 @@ GRANT ALL ON FUNCTION "public"."hamming_distance"(bit, bit) TO "postgres";
 GRANT ALL ON FUNCTION "public"."hamming_distance"(bit, bit) TO "anon";
 GRANT ALL ON FUNCTION "public"."hamming_distance"(bit, bit) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."hamming_distance"(bit, bit) TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."handle_job_completion"() TO "anon";
-GRANT ALL ON FUNCTION "public"."handle_job_completion"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."handle_job_completion"() TO "service_role";
 
 
 
@@ -2748,9 +2635,9 @@ GRANT ALL ON FUNCTION "public"."log_user_action"("user_uuid" "uuid", "action_typ
 
 
 
-GRANT ALL ON FUNCTION "public"."monitor_processing_queue"() TO "anon";
-GRANT ALL ON FUNCTION "public"."monitor_processing_queue"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."monitor_processing_queue"() TO "service_role";
+GRANT ALL ON FUNCTION "public"."notify_job_completion"() TO "anon";
+GRANT ALL ON FUNCTION "public"."notify_job_completion"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."notify_job_completion"() TO "service_role";
 
 
 
@@ -2862,9 +2749,9 @@ GRANT ALL ON FUNCTION "public"."subvector"("public"."vector", integer, integer) 
 
 
 
-GRANT ALL ON FUNCTION "public"."trigger_document_processing"() TO "anon";
-GRANT ALL ON FUNCTION "public"."trigger_document_processing"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."trigger_document_processing"() TO "service_role";
+GRANT ALL ON FUNCTION "public"."update_document_processing_status_updated_at"() TO "anon";
+GRANT ALL ON FUNCTION "public"."update_document_processing_status_updated_at"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_document_processing_status_updated_at"() TO "service_role";
 
 
 
@@ -3111,6 +2998,12 @@ GRANT ALL ON TABLE "public"."cron_job_logs" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."document_processing_status" TO "anon";
+GRANT ALL ON TABLE "public"."document_processing_status" TO "authenticated";
+GRANT ALL ON TABLE "public"."document_processing_status" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."document_vectors" TO "anon";
 GRANT ALL ON TABLE "public"."document_vectors" TO "authenticated";
 GRANT ALL ON TABLE "public"."document_vectors" TO "service_role";
@@ -3147,9 +3040,27 @@ GRANT ALL ON SEQUENCE "public"."migration_progress_id_seq" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."processing_jobs" TO "anon";
+GRANT ALL ON TABLE "public"."processing_jobs" TO "authenticated";
+GRANT ALL ON TABLE "public"."processing_jobs" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."realtime_progress" TO "anon";
+GRANT ALL ON TABLE "public"."realtime_progress" TO "authenticated";
+GRANT ALL ON TABLE "public"."realtime_progress" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."roles" TO "anon";
 GRANT ALL ON TABLE "public"."roles" TO "authenticated";
 GRANT ALL ON TABLE "public"."roles" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."schema_migrations" TO "anon";
+GRANT ALL ON TABLE "public"."schema_migrations" TO "authenticated";
+GRANT ALL ON TABLE "public"."schema_migrations" TO "service_role";
 
 
 

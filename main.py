@@ -413,8 +413,8 @@ async def startup_event():
     
     try:
         logger.info("🔄 Service initialization starting...")
-        global user_service_instance, conversation_service_instance, storage_service_instance
-        
+    global user_service_instance, conversation_service_instance, storage_service_instance
+    
         # Initialize core services synchronously to ensure they're ready
         user_service_instance = await get_user_service()
         conversation_service_instance = await get_conversation_service()

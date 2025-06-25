@@ -1,5 +1,7 @@
+// @deno-types="npm:@types/node"
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.21.0'
+// @deno-types="npm:@supabase/supabase-js"
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
 // Add Deno types
@@ -9,6 +11,7 @@ declare const Deno: {
     toObject(): { [key: string]: string };
   };
   memoryUsage(): { heapUsed: number; rss: number; external: number };
+  serve: (handler: (req: Request) => Promise<Response>) => void;
 };
 
 // Performance monitoring
@@ -34,25 +37,14 @@ function logMetrics(stage: string) {
 
 console.log('📄 Doc parser starting...')
 
-// Initialize Supabase client
-const supabaseClient = createClient(
-  Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-)
-
-// Debug environment loading
-console.log('🔑 Environment check:', {
-  hasSupabaseUrl: !!Deno.env.get('SUPABASE_URL'),
-  hasServiceKey: !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
-  hasLlamaKey: !!Deno.env.get('LLAMA_CLOUD_API_KEY'),
-  envKeys: Object.keys(Deno.env.toObject()).sort(),
-})
-
-// Add file size limits and streaming configuration
+// Configuration
 const CONFIG = {
+  UPLOAD_BUCKET: 'raw_documents',
+  STORAGE_BUCKET: 'documents',
   MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB
-  CHUNK_SIZE: 1024 * 1024, // 1MB chunks for streaming
-  MEMORY_LIMIT: 512 * 1024 * 1024 // 512MB soft limit
+  LLAMA_PARSE_API_URL: 'https://api.cloud.llamaindex.ai/api/v1/parsing/upload',
+  MAX_RETRIES: 3,
+  RETRY_DELAY_MS: 1000
 }
 
 // Add memory check function
@@ -95,7 +87,7 @@ async function streamFileDownload(storagePath: string): Promise<Uint8Array | nul
       if (attempt < maxRetries - 1) {
         console.log(`⏳ Waiting ${retryDelays[attempt]}ms before retry...`)
         await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]))
-      } else {
+        } else {
         console.error('❌ All download attempts failed:', err)
         throw err
       }
@@ -105,167 +97,264 @@ async function streamFileDownload(storagePath: string): Promise<Uint8Array | nul
   return null
 }
 
-Deno.serve(async (req) => {
+// Add retry mechanism for LlamaParse uploads
+async function uploadToLlamaParse(formData: FormData, llamaCloudKey: string): Promise<Response> {
+  const maxRetries = 3
+  const retryDelays = [2000, 4000, 8000] // 2s, 4s, 8s
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      console.log(`📤 LlamaParse upload attempt ${attempt + 1}/${maxRetries}`)
+      
+      const response = await fetch('https://api.cloud.llamaindex.ai/api/parsing/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${llamaCloudKey}`,
+          'Accept': 'application/json'
+        },
+        body: formData
+      })
+
+      // If not rate limited, return immediately
+      if (response.status !== 429) {
+        return response
+      }
+
+      // Get retry-after header if available
+      const retryAfter = response.headers.get('retry-after')
+      const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : retryDelays[attempt]
+
+      console.log(`🔄 Rate limited (attempt ${attempt + 1}/${maxRetries}), waiting ${waitTime}ms`)
+
+      if (attempt < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, waitTime))
+      } else {
+        return response
+      }
+    } catch (error) {
+      console.error(`❌ LlamaParse upload attempt ${attempt + 1} failed:`, error)
+
+      if (attempt < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]))
+      } else {
+        throw error
+      }
+    }
+  }
+
+  throw new Error('Upload failed after all retries')
+}
+
+serve(async (req) => {
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
-  
+
   try {
-    console.log('🔍 Doc-parser started - method:', req.method)
-    
-    // Handle GET requests for health checks
-    if (req.method === 'GET') {
-      return new Response(JSON.stringify({
-        status: 'healthy',
-        service: 'doc-parser',
-        timestamp: new Date().toISOString()
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-    
-    // Only handle POST requests for document processing
-    if (req.method !== 'POST') {
-      return new Response(JSON.stringify({
-        error: 'Method not allowed',
-        allowed_methods: ['POST', 'GET', 'OPTIONS']
-      }), {
-        status: 405,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-    
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    // Initialize Supabase client with service role key for full access
+    const supabaseClient: SupabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
 
-    // Parse request body
-    let requestData: any
-    try {
-      requestData = await req.json()
-    } catch (jsonError) {
-      console.error('❌ JSON parsing error:', jsonError)
-      return new Response(JSON.stringify({ 
-        error: 'Invalid JSON payload',
-        details: 'Request body must be valid JSON'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
+    // Parse request
+    const { jobId } = await req.json()
     
-    const { jobId, documentId, storagePath } = requestData
-    
-    if (!jobId || !documentId || !storagePath) {
-      return new Response(JSON.stringify({ 
-        error: 'Missing required parameters: jobId, documentId, storagePath'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+    if (!jobId) {
+      throw new Error('Missing required parameter: jobId')
     }
 
-    console.log('📄 Processing document:', { jobId, documentId, storagePath })
-
-    // Get document record from database
-    const { data: documents, error: docError } = await supabase
-      .from('documents')
+    // Get job details
+    const { data: job, error: jobError } = await supabaseClient
+      .from('processing_jobs')
       .select('*')
-      .eq('id', documentId)
+      .eq('id', jobId)
       .single()
 
-    if (docError || !documents) {
-      console.error('❌ Document not found:', docError || 'No document record')
-      return new Response(JSON.stringify({ 
-        error: 'Document not found',
-        details: docError?.message || 'No document record exists'
-      }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+    if (jobError || !job) {
+      throw new Error(`Failed to fetch job details: ${jobError?.message || 'Job not found'}`)
     }
 
-    // Download file from storage
-    const { data: fileData, error: downloadError } = await supabase.storage
-      .from('documents')
-      .download(storagePath)
+    const {
+      rawStoragePath,
+      rawStorageBucket,
+      finalStoragePath,
+      finalStorageBucket,
+      contentType,
+      documentId
+    } = job.payload
 
-    if (downloadError || !fileData) {
-      console.error('❌ File download failed:', downloadError || 'No file data')
-      return new Response(JSON.stringify({ 
-        error: 'File download failed',
-        details: downloadError?.message || 'No file data'
-      }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+    if (!rawStoragePath || !rawStorageBucket || !finalStoragePath || !finalStorageBucket || !contentType || !documentId) {
+      throw new Error('Invalid job payload: missing required fields')
     }
 
-    // Update document status to processing
-    await supabase
+    // Start job
+    await supabaseClient
+      .from('processing_jobs')
+      .update({
+        status: 'processing',
+        started_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', jobId)
+
+    // Update document status
+    await supabaseClient
       .from('documents')
       .update({
         status: 'processing',
-        progress_percentage: 30,
-        processing_started_at: new Date().toISOString()
+        updated_at: new Date().toISOString()
       })
       .eq('id', documentId)
 
-    // Process with LlamaParse
-    const llamaCloudKey = Deno.env.get('LLAMA_CLOUD_API_KEY')
-    if (!llamaCloudKey) {
-      throw new Error('LlamaParse API key not configured')
+    // Get file from storage
+    const { data: fileData, error: fileError } = await supabaseClient.storage
+      .from(rawStorageBucket)
+      .download(rawStoragePath)
+
+    if (fileError || !fileData) {
+      throw new Error(`Failed to download file: ${fileError?.message || 'File not found'}`)
     }
 
-    // Prepare file for LlamaCloud upload
+    // Create FormData for LlamaParse API
     const formData = new FormData()
-    formData.append('file', fileData, documents.original_filename)
+    formData.append('file', fileData, rawStoragePath)
 
-    // Upload to LlamaParse
-    const uploadResponse = await uploadToLlamaParse(formData, llamaCloudKey)
-    if (!uploadResponse.ok) {
-      throw new Error(`LlamaParse upload failed: ${uploadResponse.status}`)
+    // Call LlamaParse API
+    let parseResponse = null
+    let retryCount = 0
+    let lastError = null
+
+    while (retryCount < CONFIG.MAX_RETRIES) {
+      try {
+        parseResponse = await fetch(CONFIG.LLAMA_PARSE_API_URL, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get('LLAMA_CLOUD_API_KEY')}`
+          },
+          body: formData
+        })
+
+        if (parseResponse.ok) {
+          break
+        }
+
+        lastError = await parseResponse.text()
+        throw new Error(`LlamaParse API error: ${lastError}`)
+      } catch (error) {
+        lastError = error
+        retryCount++
+        if (retryCount < CONFIG.MAX_RETRIES) {
+          await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY_MS * retryCount))
+          continue
+        }
+        throw error
+      }
     }
 
-    const uploadResult = await uploadResponse.json()
-    const extractedText = uploadResult.text || ''
-
-    if (!extractedText || extractedText.length < 50) {
-      throw new Error('LlamaParse returned insufficient content')
+    if (!parseResponse?.ok) {
+      throw new Error(`Failed to parse document after ${CONFIG.MAX_RETRIES} retries: ${lastError}`)
     }
 
-    // Update document with extracted text
-    await supabase
+    const parsedData = await parseResponse.json()
+
+    // Upload processed file to final storage
+    const { error: uploadError } = await supabaseClient.storage
+      .from(finalStorageBucket)
+      .upload(finalStoragePath, fileData, {
+        contentType,
+        upsert: true
+      })
+
+    if (uploadError) {
+      throw new Error(`Failed to upload processed file: ${uploadError.message}`)
+    }
+
+    // Complete job
+    await supabaseClient
+      .from('processing_jobs')
+      .update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        result: {
+          parsedData,
+          finalStoragePath,
+          finalStorageBucket
+        }
+      })
+      .eq('id', jobId)
+
+    // Update document status
+    await supabaseClient
       .from('documents')
       .update({
         status: 'completed',
-        progress_percentage: 100,
-        processing_completed_at: new Date().toISOString(),
-        structured_contents: {
-          text: extractedText,
-          metadata: uploadResult.metadata || {}
-        }
+        metadata: {
+          ...job.metadata,
+          parsed_data: parsedData,
+          processing_completed_at: new Date().toISOString()
+        },
+        updated_at: new Date().toISOString()
       })
       .eq('id', documentId)
+
+    console.log('✅ Document processing complete:', {
+      jobId,
+      documentId,
+      finalStoragePath
+    })
 
     return new Response(JSON.stringify({
       success: true,
       jobId,
       documentId,
-      extractedText,
-      metadata: uploadResult.metadata || {}
+      finalStoragePath
     }), {
-      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
   } catch (error) {
-    console.error('❌ Processing error:', error)
-    return new Response(JSON.stringify({ 
-      success: false,
-      error: error.message
+    console.error('❌ Document processing failed:', error)
+
+    // Update job status
+    if (req.body) {
+      const { jobId } = await req.json()
+      if (jobId) {
+        await supabaseClient
+          .from('processing_jobs')
+          .update({
+            status: 'failed',
+            error_message: error instanceof Error ? error.message : 'Unknown error occurred',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', jobId)
+
+        // Get document ID from job
+        const { data: job } = await supabaseClient
+          .from('processing_jobs')
+          .select('payload')
+          .eq('id', jobId)
+          .single()
+
+        if (job?.payload?.documentId) {
+          await supabaseClient
+            .from('documents')
+            .update({
+              status: 'failed',
+              error_message: error instanceof Error ? error.message : 'Unknown error occurred',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', job.payload.documentId)
+        }
+      }
+    }
+
+    return new Response(JSON.stringify({
+      error: 'Document processing failed',
+      details: error instanceof Error ? error.message : 'Unknown error occurred'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

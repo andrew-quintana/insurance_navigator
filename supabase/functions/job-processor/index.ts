@@ -88,13 +88,13 @@ function checkMemory(): boolean {
   if (used > MEMORY_CONFIG.WARNING_THRESHOLD) {
     console.warn(`⚠️ High memory usage: ${Math.round(used / 1024 / 1024)}MB used`)
   }
-  
+
   return true
 }
 
 console.log('🔄 Job processor starting...')
 
-// Initialize Supabase client
+    // Initialize Supabase client
 const supabaseClient = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -106,7 +106,7 @@ async function executeParseJob(supabase: any, job: ProcessingJob): Promise<JobRe
 
   if (!documentId || !storagePath) {
     throw new Error('Missing required parameters: documentId, storagePath')
-  }
+    }
 
   // Call doc-parser with required parameters
   const { data: parserResult, error: parserError } = await supabase.functions.invoke('doc-parser', {
@@ -119,7 +119,7 @@ async function executeParseJob(supabase: any, job: ProcessingJob): Promise<JobRe
 
   if (parserError) {
     throw new Error(`Doc-parser failed: ${parserError.message}`)
-  }
+    }
 
   return {
     success: true,
@@ -154,7 +154,7 @@ async function executeChunkJob(job: ProcessingJob): Promise<JobResult> {
     console.error(`❌ Chunk job failed:`, error)
     return { success: false, error: error.message }
   }
-}
+  }
 
 async function executeEmbedJob(job: ProcessingJob): Promise<JobResult> {
   console.log(`📄 Executing embed job for document ${job.document_id}`)
@@ -189,7 +189,7 @@ async function executeEmbedJob(job: ProcessingJob): Promise<JobResult> {
     console.error(`❌ Embed job failed:`, error)
     return { success: false, error: error.message }
   }
-}
+    }
 
 async function executeCompleteJob(job: ProcessingJob): Promise<JobResult> {
   console.log(`📄 Executing complete job for document ${job.document_id}`)
@@ -342,7 +342,7 @@ async function processJob(supabase: any, job: ProcessingJob): Promise<JobResult>
     return result
   } catch (error) {
     console.error('❌ Job processing failed:', error)
-
+    
     // Update job status to failed
     await supabase
       .from('processing_jobs')
@@ -377,9 +377,9 @@ serve(async (req) => {
         ...corsHeaders,
         'Allow': 'GET, POST, OPTIONS',
         'Content-Type': 'text/plain'
-      }
+        }
     })
-  }
+    }
 
   // Health check
   if (req.method === 'GET') {
@@ -427,7 +427,7 @@ serve(async (req) => {
           metrics: {
             processingTime: Date.now() - metrics.startTime,
             memoryUsage: Deno.memoryUsage()
-          }
+  }
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
