@@ -411,10 +411,11 @@ async def startup_event():
     logger.info("🚀 Starting Insurance Navigator API v3.0.0")
     logger.info("🔧 Backend-orchestrated processing enabled")
     
-    try:
-        logger.info("🔄 Service initialization starting...")
     global user_service_instance, conversation_service_instance, storage_service_instance
     
+    try:
+        logger.info("🔄 Service initialization starting...")
+        
         # Initialize core services synchronously to ensure they're ready
         user_service_instance = await get_user_service()
         conversation_service_instance = await get_conversation_service()
