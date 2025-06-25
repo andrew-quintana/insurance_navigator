@@ -61,4 +61,4 @@ services:
         value: "120"
       # Add CORS environment variable
       - key: ALLOWED_ORIGINS
-        value: "https://insurance-navigator.vercel.app,https://insurance-navigator-git-*.vercel.app,https://*-andrew-quintanas-projects.vercel.app"
+        value: "https://insurance-navigator.vercel.app,https://insurance-navigator-*.vercel.app,https://*-andrew-quintanas-projects.vercel.app,http://localhost:3000"
