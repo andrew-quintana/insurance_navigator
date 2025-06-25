@@ -8,33 +8,11 @@ services:
     branch: staging
     port: 8000
     healthCheckPath: /health
-    headers:
-      - path: /*
-        name: Access-Control-Allow-Origin
-        value: "*"
-      - path: /*
-        name: Access-Control-Allow-Methods
-        value: "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-      - path: /*
-        name: Access-Control-Allow-Headers
-        value: "Content-Type, Authorization, Accept, Origin, X-Requested-With, x-client-info, apikey, x-user-id"
-      - path: /*
-        name: Access-Control-Expose-Headers
-        value: "Content-Length, Content-Range"
-      - path: /*
-        name: Access-Control-Max-Age
-        value: "7200"
-      - path: /*
-        name: Access-Control-Allow-Credentials
-        value: "true"
-      - path: /*
-        name: Vary
-        value: "Origin"
     # Render optimizations for cold starts and timeouts
     buildCommand: "echo 'Using Docker build - no additional build command needed'"
     preDeployCommand: "echo 'Pre-deploy optimization complete'"
-    startCommand: "uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2 --timeout-keep-alive 75 --timeout 120"
-    healthCheckTimeout: 120
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2 --timeout-keep-alive 75 --timeout 300"
+    healthCheckTimeout: 300
     numReplicas: 1
     envVars:
       - key: SUPABASE_URL
@@ -67,15 +45,18 @@ services:
       - key: UVICORN_WORKERS
         value: "2"
       - key: STARTUP_TIMEOUT
-        value: "120"
+        value: "300"
       - key: KEEP_ALIVE
         value: "75"
       - key: MAX_REQUESTS
         value: "1000"
       - key: MAX_REQUESTS_JITTER
         value: "100"
-      # Add proxy timeouts
+      # Increased proxy timeouts
       - key: RENDER_PROXY_TIMEOUT
-        value: "120"
+        value: "300"
       - key: RENDER_PROXY_CONNECT_TIMEOUT
-        value: "60"
+        value: "120"
+      # Add CORS environment variable
+      - key: ALLOWED_ORIGINS
+        value: "https://insurance-navigator.vercel.app,https://insurance-navigator-git-*.vercel.app,https://*-andrew-quintanas-projects.vercel.app"
