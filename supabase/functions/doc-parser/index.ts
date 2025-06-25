@@ -88,12 +88,35 @@ async function streamFileDownload(storagePath: string): Promise<Uint8Array | nul
   return null
 }
 
-// Create a custom HttpClient for LlamaParse API calls
-const customHttpClient = Deno.createHttpClient({
-  http1: true, // Force HTTP/1.1
-  poolMaxIdlePerHost: 1,
-  poolIdleTimeout: 500,
-});
+// Custom fetch implementation for file uploads
+async function uploadFile(url: string, formData: FormData, authToken: string): Promise<Response> {
+  const boundary = '----WebKitFormBoundary' + Math.random().toString(36).slice(2);
+  
+  // Convert FormData to raw multipart/form-data
+  let body = '';
+  for (const [key, value] of formData.entries()) {
+    body += `--${boundary}\r\n`;
+    if (value instanceof Blob) {
+      body += `Content-Disposition: form-data; name="${key}"; filename="${value.name || 'file'}"\r\n`;
+      body += `Content-Type: ${value.type || 'application/octet-stream'}\r\n\r\n`;
+      body += new TextDecoder().decode(await value.arrayBuffer());
+    } else {
+      body += `Content-Disposition: form-data; name="${key}"\r\n\r\n${value}`;
+    }
+    body += '\r\n';
+  }
+  body += `--${boundary}--\r\n`;
+
+  // Make request with minimal headers
+  return await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': authToken,
+      'Content-Type': `multipart/form-data; boundary=${boundary}`
+    },
+    body
+  });
+}
 
 serve(async (req) => {
   metrics.startTime = Date.now()
@@ -293,9 +316,10 @@ serve(async (req) => {
     
     // Create blob with minimal metadata
     const blob = new Blob([fileData], { type: safeContentType })
+    Object.defineProperty(blob, 'name', { value: sanitizedFilename })
     
     // Append file with sanitized name
-    formData.append('file', blob, sanitizedFilename)
+    formData.append('file', blob)
     
     // Use only required parameters with strict string values
     formData.append('language', 'en')
@@ -306,15 +330,12 @@ serve(async (req) => {
       formData.append('webhook_url', fullWebhookUrl)
     }
     
-    // Use minimal headers with strict string value and custom client
-    const llamaParseResponse = await fetch(llamaParseUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + llamaParseApiKey.trim()
-      },
-      body: formData,
-      client: customHttpClient
-    })
+    // Use custom upload function with minimal headers
+    const llamaParseResponse = await uploadFile(
+      llamaParseUrl,
+      formData,
+      'Bearer ' + llamaParseApiKey.trim()
+    )
       
     if (!llamaParseResponse.ok) {
       const errorText = await llamaParseResponse.text()
