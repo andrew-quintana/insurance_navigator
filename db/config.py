@@ -1,8 +1,13 @@
 """Configuration module for the application."""
 import os
+import logging
 from typing import Optional
 from dataclasses import dataclass
 from dotenv import load_dotenv
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @dataclass
 class SupabaseConfig:
@@ -18,11 +23,20 @@ class SupabaseConfig:
         # Load test environment if TEST_MODE is set
         if os.getenv('TEST_MODE') == 'true':
             load_dotenv('.env.test')
+            logger.info("🧪 Loaded test environment configuration")
         else:
             load_dotenv()
+            logger.info("🌐 Loading production environment configuration")
+
+        # Log Supabase configuration status
+        supabase_url = os.getenv('SUPABASE_URL', '')
+        logger.info(f"📡 Supabase URL configured: {'✅' if supabase_url else '❌'}")
+        logger.info(f"🔑 Supabase Anon Key configured: {'✅' if os.getenv('SUPABASE_ANON_KEY') else '❌'}")
+        logger.info(f"👑 Supabase Service Role Key configured: {'✅' if os.getenv('SUPABASE_SERVICE_ROLE_KEY') else '❌'}")
+        logger.info(f"🪣 Storage Bucket: {os.getenv('SUPABASE_STORAGE_BUCKET', 'policies')}")
 
         return cls(
-            url=os.getenv('SUPABASE_URL', ''),
+            url=supabase_url,
             anon_key=os.getenv('SUPABASE_ANON_KEY', ''),
             service_role_key=os.getenv('SUPABASE_SERVICE_ROLE_KEY', ''),
             storage_bucket=os.getenv('SUPABASE_STORAGE_BUCKET', 'policies'),
