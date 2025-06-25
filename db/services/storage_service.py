@@ -85,7 +85,10 @@ class StorageService:
             upload_response = await self.supabase.storage.from_(self.bucket_name).upload(
                 file_path,
                 file_data,
-                {"content-type": content_type, "upsert": True}  # Use upsert to overwrite any existing file
+                {
+                    "content-type": content_type,
+                    "x-upsert": "true"  # Use string "true" instead of boolean True
+                }
             )
             
             pool = await get_db_pool()
