@@ -139,7 +139,7 @@ class StorageService:
             # Simple storage path with user isolation
             storage_path = f"policy/{user_id}/{filename}"
             
-            # Basic upload with minimal headers
+            # Basic upload with minimal headers - allow overwrites
             async with aiohttp.ClientSession() as session:
                 storage_url = f"{self.supabase_url}/storage/v1/object/{self.bucket_name}/{storage_path}"
                 
@@ -147,7 +147,8 @@ class StorageService:
                     storage_url,
                     headers={
                         'Authorization': f'Bearer {self.supabase_service_key}',
-                        'Content-Type': content_type
+                        'Content-Type': content_type,
+                        'x-upsert': 'true'  # Allow overwriting existing files
                     },
                     data=file_content
                 ) as response:
@@ -178,7 +179,7 @@ class StorageService:
             
             logger.info(f"✅ Document uploaded successfully: {filename}")
             return {
-                'document_id': str(document_id),  # This is what the Edge Function needs
+                'document_id': str(document_id),
                 'path': storage_path,
                 'size': len(file_content),
                 'type': content_type,
