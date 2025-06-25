@@ -139,6 +139,29 @@ class StorageService:
             # Simple storage path with user isolation
             storage_path = f"policy/{user_id}/{filename}"
             
+            # Check if document already exists
+            pool = await get_db_pool()
+            async with pool.acquire() as conn:
+                existing_doc = await conn.fetchrow("""
+                    SELECT id, storage_path, status
+                    FROM documents
+                    WHERE user_id = $1 AND original_filename = $2
+                    AND status = 'completed'
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                """, uuid.UUID(user_id), filename)
+                
+                if existing_doc:
+                    logger.info(f"📝 Document already exists: {filename}")
+                    return {
+                        'document_id': str(existing_doc['id']),
+                        'path': existing_doc['storage_path'],
+                        'size': len(file_content),
+                        'type': content_type,
+                        'status': 'completed',
+                        'message': 'Document already exists'
+                    }
+            
             # Basic upload with minimal headers - allow overwrites
             async with aiohttp.ClientSession() as session:
                 storage_url = f"{self.supabase_url}/storage/v1/object/{self.bucket_name}/{storage_path}"

@@ -171,6 +171,21 @@ export default function DocumentUploadServerless({
           statusText: uploadResponse.statusText,
           error: errorText
         })
+        
+        // Handle duplicate file case
+        if (uploadResponse.status === 409) {
+          const errorData = JSON.parse(errorText)
+          return {
+            success: true,
+            document_id: errorData.documentId,
+            filename: errorData.filename,
+            chunks_processed: 1,
+            total_chunks: 1,
+            text_length: 0,
+            message: 'Document already exists and will be used'
+          }
+        }
+        
         throw new Error(`Upload failed (${uploadResponse.status}): ${errorText}`)
       }
 
