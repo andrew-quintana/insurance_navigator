@@ -186,7 +186,11 @@ class StorageService:
                                 user_id, document_record_id, document_source_type,
                                 chunk_index, content_embedding, encrypted_chunk_text,
                                 encrypted_chunk_metadata, encryption_key_id
-                            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                            ) VALUES (
+                                $1::uuid, $2::uuid, $3::text,
+                                $4::integer, $5::float[], $6::bytea,
+                                $7::jsonb, $8::text
+                            )
                         """,
                         uuid.UUID(user_id), uuid.UUID(document_id), document_type,
                         i, vector_data['embedding'], vector_data['encrypted_text'],
