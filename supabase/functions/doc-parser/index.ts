@@ -348,11 +348,11 @@ serve(async (req) => {
     const trimmedKey = llamaParseApiKey.trim()
     console.log(`API Key after trim length: ${trimmedKey.length}`)
     
-    const authHeader = `Bearer ${trimmedKey}`
-    console.log(`Full auth header length: ${authHeader.length}`)
-    
     // Log any non-ASCII characters in the header
-    const invalidChars = authHeader.split('').map((char, i) => {
+    const headerValue = `Bearer ${trimmedKey}`
+    console.log(`Full auth header length: ${headerValue.length}`)
+    
+    const invalidChars = headerValue.split('').map((char, i) => {
       const code = char.charCodeAt(0)
       if (code < 0x20 || code > 0x7E) {
         return `pos ${i}: ${code} [${char}]`
@@ -371,7 +371,7 @@ serve(async (req) => {
     const llamaParseResponse = await fetch(llamaParseUrl, {
       method: 'POST',
       headers: {
-        'Authorization': authHeader
+        'Authorization': headerValue
       },
       body: formData
     }).catch(error => {
