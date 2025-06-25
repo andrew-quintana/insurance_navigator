@@ -24,10 +24,10 @@ interface DocumentRecord {
   file_hash: string;
   storage_path?: string;
   status: string;
-  progress_percentage: number;
-  total_chunks?: number;
-  processed_chunks: number;
-  failed_chunks: number;
+  document_type: string;
+  metadata: any;
+  created_at: string;
+  updated_at: string;
 }
 
 serve(async (req) => {
@@ -180,11 +180,12 @@ async function handleUpload(req: Request, supabase: any, userId: string) {
     content_type: uploadData.contentType,
     file_hash: fileHash,
     status: 'pending',
-    progress_percentage: 0,
-    total_chunks: totalChunks,
-    processed_chunks: 0,
-    failed_chunks: 0,
+    document_type: 'user_uploaded',
     storage_path: `${userId}/${fileHash}/${uploadData.filename}`,
+    metadata: {
+      upload_started_at: new Date().toISOString(),
+      total_chunks: totalChunks
+    },
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   }
@@ -207,31 +208,34 @@ async function handleUpload(req: Request, supabase: any, userId: string) {
   }
 
   // Create initial processing job
+  const processingJob = {
+    document_id: document.id,
+    job_type: 'parse',
+    status: 'pending',
+    priority: 1,
+    retry_count: 0,
+    max_retries: 3,
+    payload: {
+      documentId: document.id,
+      userId: userId,
+      filename: uploadData.filename,
+      contentType: uploadData.contentType,
+      storagePath: document.storage_path
+    },
+    scheduled_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+
   const { error: jobError } = await supabase
     .from('processing_jobs')
-    .insert({
-      document_id: document.id,
-      job_type: 'parse',
-      payload: {
-        storagePath: documentRecord.storage_path,
-        contentType: uploadData.contentType
-      },
-      status: 'pending',
-      priority: 1,
-      retry_count: 0
-    })
+    .insert(processingJob)
 
   if (jobError) {
     console.error('Error creating processing job:', jobError)
-    // Update document status to error
-    await supabase
-      .from('documents')
-      .update({ status: 'error', error_message: 'Failed to create processing job' })
-      .eq('id', document.id)
-
-    return new Response(JSON.stringify({
+    return new Response(JSON.stringify({ 
       error: 'Failed to create processing job',
-      details: jobError.message
+      details: jobError.message 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -360,18 +364,10 @@ async function handleUploadStatus(req: Request, supabase: any, userId: string) {
 }
 
 async function handleChunkUpload(req: Request, supabase: any, userId: string) {
-  const url = new URL(req.url)
-  const documentId = url.searchParams.get('documentId')
-  const chunkIndex = parseInt(url.searchParams.get('chunkIndex') || '0')
-  
-  if (!documentId) {
-    return new Response(JSON.stringify({ error: 'Document ID required' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
-  }
+  const chunkData = await req.json()
+  const { documentId, chunkIndex, totalChunks } = chunkData
 
-  // Get document record
+  // Get current document
   const { data: document, error: docError } = await supabase
     .from('documents')
     .select('*')
@@ -380,41 +376,56 @@ async function handleChunkUpload(req: Request, supabase: any, userId: string) {
     .single()
 
   if (docError || !document) {
-    return new Response(JSON.stringify({ error: 'Document not found' }), {
+    return new Response(JSON.stringify({ 
+      error: 'Document not found',
+      details: docError?.message || 'No document found'
+    }), {
       status: 404,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 
-  // Update chunk progress
-  const processedChunks = document.processed_chunks + 1
-  const progressPercentage = Math.round((processedChunks / document.total_chunks) * 100)
-  
-  const updateData: any = {
-    processed_chunks: processedChunks,
-    progress_percentage: progressPercentage,
-    updated_at: new Date().toISOString()
+  // Update document metadata with chunk progress
+  const currentMetadata = document.metadata || {}
+  const processedChunks = new Set(currentMetadata.processed_chunks || [])
+  processedChunks.add(chunkIndex)
+
+  const updatedMetadata = {
+    ...currentMetadata,
+    processed_chunks: Array.from(processedChunks),
+    total_chunks: totalChunks,
+    last_chunk_processed: new Date().toISOString()
   }
 
-  // Check if upload is complete
-  if (processedChunks >= document.total_chunks) {
-    updateData.status = 'processing'
-    updateData.processing_completed_at = new Date().toISOString()
-  }
+  // Calculate progress percentage
+  const progress = Math.floor((processedChunks.size / totalChunks) * 100)
 
-  await supabase
+  // Update document
+  const { error: updateError } = await supabase
     .from('documents')
-    .update(updateData)
+    .update({
+      metadata: updatedMetadata,
+      status: progress === 100 ? 'uploaded' : 'uploading',
+      updated_at: new Date().toISOString()
+    })
     .eq('id', documentId)
+    .eq('user_id', userId)
+
+  if (updateError) {
+    return new Response(JSON.stringify({ 
+      error: 'Failed to update document',
+      details: updateError.message
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  }
 
   return new Response(JSON.stringify({
-    documentId: documentId,
-    chunkIndex: chunkIndex,
-    processedChunks: processedChunks,
-    totalChunks: document.total_chunks,
-    progress: progressPercentage,
-    status: updateData.status || document.status,
-    isComplete: processedChunks >= document.total_chunks
+    success: true,
+    progress,
+    chunksProcessed: processedChunks.size,
+    totalChunks
   }), {
     status: 200,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -430,175 +441,93 @@ async function generateFileHash(filename: string, fileSize: number, userId: stri
 }
 
 async function handleUploadComplete(req: Request, supabase: any, userId: string) {
-  const { documentId, path } = await req.json()
-  
-  if (!documentId || !path) {
+  const { documentId } = await req.json()
+
+  // Get document record
+  const { data: document, error: docError } = await supabase
+    .from('documents')
+    .select('*')
+    .eq('id', documentId)
+    .eq('user_id', userId)
+    .single()
+
+  if (docError || !document) {
     return new Response(JSON.stringify({ 
-      error: 'Document ID and storage path required' 
+      error: 'Document not found',
+      details: docError?.message || 'No document found'
     }), {
-      status: 400,
+      status: 404,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 
-  try {
-    // Get document details
-    const { data: document, error: docError } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('id', documentId)
-      .eq('user_id', userId)
-      .single()
-
-    if (docError || !document) {
-      return new Response(JSON.stringify({ error: 'Document not found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-
-    // Update document status to processing
-    await supabase
-      .from('documents')
-      .update({ 
-        status: 'processing',
-        progress_percentage: 20,
+  // Update document status
+  const { error: updateError } = await supabase
+    .from('documents')
+    .update({
+      status: 'processing',
+      metadata: {
+        ...document.metadata,
         upload_completed_at: new Date().toISOString()
-      })
-      .eq('id', documentId)
-
-    // Send progress update
-    await sendProgressUpdate(supabase, userId, {
-      documentId: documentId,
-      status: 'processing',
-      progress: 20,
-      metadata: { 
-        step: 'upload_complete',
-        storage_path: path
-      }
+      },
+      updated_at: new Date().toISOString()
     })
+    .eq('id', documentId)
+    .eq('user_id', userId)
 
-    // Check if we should use LlamaParse for this document type
-    const needsLlamaParse = shouldUseLlamaParse(document.content_type)
-    
-    if (needsLlamaParse) {
-      console.log(`🦙 Starting LlamaParse processing: ${document.original_filename}`)
-      
-      try {
-        // Get document details
-        const { data: document, error: docError } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('id', documentId)
-          .single()
-
-        if (docError || !document) {
-          throw new Error(`Failed to get document details: ${docError?.message || 'Document not found'}`)
-        }
-
-        // Create processing job
-        const { data: job, error: jobError } = await supabase
-          .from('processing_jobs')
-          .insert({
-            document_id: documentId,
-            job_type: 'parse',
-            status: 'pending',
-            payload: {
-              storagePath: document.storage_path,
-              contentType: document.content_type,
-              processingMethod: 'llamaparse'
-            },
-            priority: 1,
-            retry_count: 0,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .select()
-          .single()
-
-        if (jobError) {
-          throw new Error(`Failed to create processing job: ${jobError.message}`)
-        }
-
-        // Update document status to parsing with LlamaParse
-        await supabase
-          .from('documents')
-          .update({
-            status: 'parsing',
-            progress_percentage: 30,
-            metadata: {
-              ...document.metadata,
-              processing_method: 'llamaparse',
-              parsing_started_at: new Date().toISOString(),
-              jobId: job.id
-            }
-          })
-          .eq('id', documentId)
-
-        // Send progress update
-        await sendProgressUpdate(supabase, userId, {
-          documentId: documentId,
-          status: 'parsing',
-          progress: 30,
-          metadata: { 
-            step: 'llamaparse_started',
-            processing_method: 'llamaparse',
-            jobId: job.id
-          }
-        })
-
-        // Actually trigger doc-parser edge function with LlamaParse
-        console.log(`🔗 Invoking doc-parser with LlamaParse for document: ${documentId} with job: ${job.id}`)
-        const { data, error } = await supabase.functions.invoke('doc-parser', {
-          body: { 
-            jobId: job.id,
-            documentId: documentId,
-            storagePath: document.storage_path
-          }
-        })
-
-        if (error) {
-          console.error(`❌ doc-parser (LlamaParse) invocation failed:`, error)
-          throw new Error(`doc-parser LlamaParse failed: ${error.message}`)
-        }
-
-        console.log(`✅ doc-parser (LlamaParse) invoked successfully for document: ${documentId}`)
-
-      } catch (llamaParseError) {
-        console.error('❌ LlamaParse processing failed:', llamaParseError)
-        
-        // Fall back to direct processing
-        console.log('📝 Falling back to direct text processing')
-        await triggerDirectProcessing(supabase, documentId, userId)
-      }
-    } else {
-      // Skip LlamaParse for simple text files
-      console.log(`📝 Skipping LlamaParse for ${document.content_type}, processing directly`)
-      await triggerDirectProcessing(supabase, documentId, userId)
-    }
-
-    return new Response(JSON.stringify({
-      success: true,
-      documentId: documentId,
-      status: 'processing',
-      message: needsLlamaParse ? 
-        'Upload complete, processing with LlamaParse' : 
-        'Upload complete, processing directly'
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
-
-  } catch (error) {
-    console.error('Upload completion error:', error)
+  if (updateError) {
     return new Response(JSON.stringify({ 
-      error: 'Failed to complete upload',
-      details: error.message 
+      error: 'Failed to update document status',
+      details: updateError.message
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
+
+  // Create processing job
+  const processingJob = {
+    document_id: documentId,
+    job_type: 'parse',
+    status: 'pending',
+    priority: 1,
+    retry_count: 0,
+    max_retries: 3,
+    payload: {
+      documentId: documentId,
+      userId: userId,
+      filename: document.original_filename,
+      contentType: document.content_type,
+      storagePath: document.storage_path
+    },
+    scheduled_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+
+  const { error: jobError } = await supabase
+    .from('processing_jobs')
+    .insert(processingJob)
+
+  if (jobError) {
+    return new Response(JSON.stringify({ 
+      error: 'Failed to create processing job',
+      details: jobError.message
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  }
+
+  return new Response(JSON.stringify({
+    success: true,
+    documentId: documentId,
+    status: 'processing',
+    message: 'Document upload completed, processing started'
+  }), {
+    status: 200,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  })
 }
 
 function shouldUseLlamaParse(contentType: string): boolean {
