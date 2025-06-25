@@ -55,7 +55,10 @@ origins = [
     "https://insurance-navigator.vercel.app",
     "https://insurance-navigator-hr7oebcu2-andrew-quintanas-projects.vercel.app",
     "https://insurance-navigator-gdievtrsx-andrew-quintanas-projects.vercel.app",
-    "https://insurance-navigator-3u3iv7xq0-andrew-quintanas-projects.vercel.app"
+    "https://insurance-navigator-3u3iv7xq0-andrew-quintanas-projects.vercel.app",
+    "https://insurance-navigator-ajzpmcvgz-andrew-quintanas-projects.vercel.app",
+    "https://insurance-navigator-cwtwocttv-andrew-quintanas-projects.vercel.app",
+    "https://insurance-navigator-kkedlaqxo-andrew-quintanas-projects.vercel.app"
 ]
 
 if os.getenv("ENVIRONMENT") == "development":
@@ -374,13 +377,14 @@ async def notify_document_status(
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup."""
+    global user_service_instance, conversation_service_instance, storage_service_instance
+    
     logger.info("🚀 Starting Insurance Navigator API v3.0.0")
     logger.info("🔧 Backend-orchestrated processing enabled")
     
     try:
         logger.info("🔄 Service initialization starting...")
-    global user_service_instance, conversation_service_instance, storage_service_instance
-    
+        
         # Initialize core services synchronously to ensure they're ready
         user_service_instance = await get_user_service()
         conversation_service_instance = await get_conversation_service()
