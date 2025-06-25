@@ -124,7 +124,7 @@ class StorageService:
             logger.info(f"Uploaded document {filename} for user {user_id}: {storage_path}")
             
             return {
-                'document_id': document_id,
+                'document_id': str(document_id),  # Convert UUID to string
                 'file_path': storage_path,
                 'original_filename': filename,
                 'content_type': content_type,
