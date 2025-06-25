@@ -141,7 +141,7 @@ class StorageService:
             
             # Check if document already exists
             pool = await get_db_pool()
-            async with pool.acquire() as conn:
+            async with pool.get_connection() as conn:
                 existing_doc = await conn.fetchrow("""
                     SELECT id, storage_path, status
                     FROM documents
@@ -184,7 +184,7 @@ class StorageService:
             
             # Create document record in database
             pool = await get_db_pool()
-            async with pool.acquire() as conn:
+            async with pool.get_connection() as conn:
                 document_id = await conn.fetchval("""
                     INSERT INTO documents (
                         user_id, original_filename, file_size, content_type,
