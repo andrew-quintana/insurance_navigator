@@ -11,10 +11,12 @@ services:
     # Render optimizations for cold starts and timeouts
     buildCommand: "echo 'Using Docker build - no additional build command needed'"
     preDeployCommand: "echo 'Pre-deploy optimization complete'"
-    startCommand: "uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2 --timeout-keep-alive 75 --timeout 300"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1 --timeout-keep-alive 75 --timeout 300 --no-access-log"
     healthCheckTimeout: 300
     numReplicas: 1
     envVars:
+      - key: PORT
+        value: "8000"
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_ANON_KEY
@@ -43,7 +45,7 @@ services:
       - key: PYTHONDONTWRITEBYTECODE
         value: "1"
       - key: UVICORN_WORKERS
-        value: "2"
+        value: "1"
       - key: STARTUP_TIMEOUT
         value: "300"
       - key: KEEP_ALIVE
