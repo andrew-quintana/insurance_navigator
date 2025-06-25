@@ -3,6 +3,7 @@ Centralized CORS Configuration for FastAPI
 """
 from typing import Dict, Any
 import os
+import re
 
 def get_cors_config() -> Dict[str, Any]:
     """Get CORS configuration for FastAPI middleware."""
@@ -11,7 +12,8 @@ def get_cors_config() -> Dict[str, Any]:
     allowed_origins = [
         "http://localhost:3000",
         "https://insurance-navigator.vercel.app",
-        "https://insurance-navigator-7ehumqaks-andrew-quintanas-projects.vercel.app"
+        "https://insurance-navigator-git-*.vercel.app",
+        "https://*-andrew-quintanas-projects.vercel.app"
     ]
     
     # Add any additional origins from environment
@@ -20,8 +22,9 @@ def get_cors_config() -> Dict[str, Any]:
     
     return {
         "allow_origins": allowed_origins,
+        "allow_origin_regex": r"https://insurance-navigator-[a-zA-Z0-9-]+-andrew-quintanas-projects\.vercel\.app",
         "allow_credentials": True,
-        "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+        "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
         "allow_headers": [
             "Content-Type",
             "Accept",
@@ -30,7 +33,12 @@ def get_cors_config() -> Dict[str, Any]:
             "X-Requested-With",
             "x-client-info",
             "apikey",
-            "x-user-id"
+            "x-user-id",
+            "DNT",
+            "User-Agent",
+            "If-Modified-Since",
+            "Cache-Control",
+            "Range"
         ],
         "expose_headers": ["Content-Length", "Content-Range"],
         "max_age": 7200  # 2 hours
@@ -43,8 +51,15 @@ def get_cors_headers(origin: str | None = None) -> Dict[str, str]:
         
     config = get_cors_config()
     
-    # Check if origin is allowed
+    # Check if origin matches any allowed pattern
+    is_allowed = False
     if origin in config["allow_origins"] or "*" in config["allow_origins"]:
+        is_allowed = True
+    elif "allow_origin_regex" in config:
+        pattern = re.compile(config["allow_origin_regex"])
+        is_allowed = bool(pattern.match(origin))
+    
+    if is_allowed:
         return {
             "Access-Control-Allow-Origin": origin,
             "Access-Control-Allow-Credentials": "true",
