@@ -11,19 +11,19 @@ services:
     headers:
       - path: /*
         name: Access-Control-Allow-Origin
-        value: https://insurance-navigator-3u3iv7xq0-andrew-quintanas-projects.vercel.app
+        value: "*"
       - path: /*
         name: Access-Control-Allow-Methods
-        value: "GET, POST, PUT, DELETE, OPTIONS, HEAD"
+        value: "GET, POST, PUT, DELETE, OPTIONS, PATCH"
       - path: /*
         name: Access-Control-Allow-Headers
-        value: "Content-Type, Authorization, Accept, Origin, X-Requested-With, X-CSRF-Token"
+        value: "Content-Type, Authorization, Accept, Origin, X-Requested-With, x-client-info, apikey, x-user-id"
       - path: /*
         name: Access-Control-Expose-Headers
         value: "Content-Length, Content-Range"
       - path: /*
         name: Access-Control-Max-Age
-        value: "3600"
+        value: "7200"
       - path: /*
         name: Access-Control-Allow-Credentials
         value: "true"
