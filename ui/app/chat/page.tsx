@@ -71,7 +71,13 @@ export default function ChatPage() {
       return null
     }
     
-    return createClient(url, key)
+    return createClient(url, key, {
+      realtime: {
+        params: {
+          eventsPerSecond: 2
+        }
+      }
+    })
   }, [])
 
   // Check authentication on component mount
@@ -191,56 +197,43 @@ export default function ChatPage() {
             const details = notificationPayload.details || {}
             
             const completionMessage: Message = {
-              id: Date.now(), // Use timestamp for unique ID
+              id: Date.now(),
               sender: "bot",
               text: `🎉 **Background Processing Complete!**\n\nYour document "${details.filename || 'unknown'}" has been successfully processed!\n\n**Processing Results:**\n• ${details.processedChunks || 0} text sections analyzed\n• Document is now searchable and ready for questions\n• You can now ask me specific questions about this document\n\n**Ready to help!** What would you like to know about your uploaded document?`
             }
             
             setMessages(prev => [...prev, completionMessage])
-            updateActivity() // Reset session timer
+            updateActivity()
           }
         }
       )
-      .on('postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public', 
-          table: 'documents',
-          filter: `user_id=eq.${userInfo.id}`
-        },
-        (payload: any) => {
-          console.log('📡 Document update received:', payload.new)
-          
-          const document = payload.new
-          
-          // Only handle completion status updates
-          if (document.status === 'completed' && document.processed_chunks > 0) {
-            const completionMessage: Message = {
-              id: Date.now() + 1, // Ensure unique ID
-              sender: "bot", 
-              text: `✅ **Document Processing Complete!**\n\nYour document "${document.original_filename}" has been successfully processed!\n\n**Processing Results:**\n• ${document.processed_chunks} text sections processed\n• ${document.total_chunks} total sections identified\n• File size: ${(document.file_size / 1024).toFixed(1)} KB\n\nThe document is now fully searchable and I can answer questions about its contents. What would you like to know?`
-            }
-            
-            setMessages(prev => [...prev, completionMessage])
-            updateActivity() // Reset session timer
-          }
-        }
-      )
-      .subscribe((status) => {
+
+    // Subscribe with retry logic
+    const subscribe = async () => {
+      try {
+        const status = await channel.subscribe()
         console.log('📡 Background notification subscription status:', status)
         
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Background processing notifications active!')
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.log('✅ Successfully subscribed to background notifications')
+        } else {
           console.warn('⚠️ Background notification subscription failed:', status)
+          // Retry subscription after delay
+          setTimeout(subscribe, 5000)
         }
-      })
+      } catch (error) {
+        console.error('❌ Error subscribing to background notifications:', error)
+        // Retry subscription after delay
+        setTimeout(subscribe, 5000)
+      }
+    }
 
+    subscribe()
+
+    // Cleanup function
     return () => {
       console.log('🔄 Cleaning up background notification subscription')
-      if (supabase) {
-        supabase.removeChannel(channel)
-      }
+      channel.unsubscribe()
     }
   }, [supabase, isAuthenticated, userInfo?.id, updateActivity])
 
