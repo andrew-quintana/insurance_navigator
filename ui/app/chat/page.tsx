@@ -167,85 +167,56 @@ export default function ChatPage() {
     setSessionWarning("") // Clear any session warnings
   }
 
-  // Set up background processing notifications
+  // Set up document status polling
   useEffect(() => {
-    if (!supabase || !isAuthenticated || !userInfo?.id) return
+    if (!isAuthenticated || !userInfo?.id) return
 
-    // Clean up existing subscription
-    if (channelRef.current) {
-      console.log('🔄 Cleaning up existing subscription')
-      channelRef.current.unsubscribe()
-      channelRef.current = null
-    }
+    let pollInterval: NodeJS.Timeout | null = null
 
-    console.log('🔄 Setting up background processing notifications for user:', userInfo.id)
-
-    // Create new subscription with retry logic
-    const setupChannel = () => {
-      const channel = supabase
-        .channel(`realtime_progress_updates:user_id=eq.${userInfo.id}`)
-        .on('postgres_changes', 
-          { 
-            event: 'INSERT', 
-            schema: 'public', 
-            table: 'realtime_progress_updates',
-            filter: `user_id=eq.${userInfo.id}`
-          }, 
-          (payload: any) => {
-            console.log('📡 Background notification received:', payload.new)
-            
-            const notification = payload.new
-            const notificationPayload = notification.payload || {}
-            
-            // Only handle completion notifications
-            if (notificationPayload.type === 'complete' && notificationPayload.status === 'completed') {
-              const details = notificationPayload.details || {}
-              
-              const completionMessage: Message = {
-                id: Date.now(),
-                sender: "bot",
-                text: `🎉 **Background Processing Complete!**\n\nYour document "${details.filename || 'unknown'}" has been successfully processed!\n\n**Processing Results:**\n• ${details.processedChunks || 0} text sections analyzed\n• Document is now searchable and ready for questions\n• You can now ask me specific questions about this document\n\n**Ready to help!** What would you like to know about your uploaded document?`
-              }
-              
-              setMessages(prev => [...prev, completionMessage])
-              updateActivity()
-            }
-          }
-        )
-
-      // Subscribe with error handling and reconnection
-      channel.subscribe(async (status: string) => {
-        console.log('📡 Background notification subscription status:', status)
+    const checkDocumentStatus = async () => {
+      try {
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+        const token = localStorage.getItem("token")
         
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to realtime updates')
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Channel error occurred')
+        if (!token) return
+
+        const response = await fetch(`${apiBaseUrl}/document-status/${userInfo.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
           
-          // Attempt to reconnect after delay
-          setTimeout(() => {
-            console.log('🔄 Attempting to reconnect...')
-            setupChannel()
-          }, 5000)
+          // Handle any completed documents
+          data.completed_documents?.forEach((doc: any) => {
+            const completionMessage: Message = {
+              id: Date.now(),
+              sender: "bot",
+              text: `🎉 **Document Processing Complete!**\n\nYour document "${doc.filename || 'unknown'}" has been successfully processed and is ready for questions!\n\n**Ready to help!** What would you like to know about your document?`
+            }
+            
+            setMessages(prev => [...prev, completionMessage])
+            updateActivity()
+          })
         }
-      })
-
-      // Store channel reference
-      channelRef.current = channel
-    }
-
-    // Initial setup
-    setupChannel()
-
-    // Cleanup function
-    return () => {
-      if (channelRef.current) {
-        console.log('🔄 Cleaning up background notification subscription')
-        channelRef.current.unsubscribe()
-        channelRef.current = null
+      } catch (error) {
+        console.error('Error checking document status:', error)
       }
     }
-  }, [supabase, isAuthenticated, userInfo?.id])
+
+    // Start polling every 10 seconds
+    pollInterval = setInterval(checkDocumentStatus, 10000)
+
+    // Cleanup
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval)
+      }
+    }
+  }, [isAuthenticated, userInfo?.id])
 
   // Auto-scroll to the bottom of messages
   useEffect(() => {
