@@ -251,7 +251,7 @@ Deno.serve(async (req) => {
             .eq('id', documentId)
 
           try {
-        const llamaCloudKey = Deno.env.get('LLAMAPARSE_API_KEY')
+        const llamaCloudKey = Deno.env.get('LLAMA_CLOUD_API_KEY')
         
         if (!llamaCloudKey) {
           throw new Error('LlamaParse API key not configured')
