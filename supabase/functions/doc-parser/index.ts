@@ -332,11 +332,17 @@ serve(async (req) => {
       formData.append('webhook_url', fullWebhookUrl)
     }
     
+    // Ensure the Authorization header is a valid ByteString
+    const authHeader = `Bearer ${llamaParseApiKey.trim()}`
+    if (/[^\x20-\x7E]/.test(authHeader)) {
+      throw new Error('Authorization header contains invalid characters')
+    }
+    
     // Use minimal headers - let Deno handle Content-Type
     const llamaParseResponse = await fetch(llamaParseUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${llamaParseApiKey}`
+        'Authorization': authHeader
       },
       body: formData
     })
