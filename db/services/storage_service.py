@@ -82,14 +82,21 @@ class StorageService:
             content_type = self._get_content_type(filename)
             
             # Upload to Supabase Storage - force upload for MVP
-            upload_response = await self.supabase.storage.from_(self.bucket_name).upload(
-                file_path,
-                file_data,
-                {
-                    "content-type": content_type,
-                    "x-upsert": "true"  # Use string "true" instead of boolean True
-                }
-            )
+            try:
+                # Note: upload() returns a Response object that we shouldn't await
+                # The upload is complete when the method returns
+                self.supabase.storage.from_(self.bucket_name).upload(
+                    file_path,
+                    file_data,
+                    {
+                        "content-type": content_type,
+                        "x-upsert": "true"  # Use string "true" instead of boolean True
+                    }
+                )
+                logger.info(f"Successfully uploaded file to storage: {file_path}")
+            except Exception as e:
+                logger.error(f"Storage upload failed for {file_path}: {str(e)}")
+                raise RuntimeError(f"Storage upload failed: {str(e)}")
             
             pool = await get_db_pool()
             async with pool.get_connection() as conn:
