@@ -320,11 +320,10 @@ async def upload_document_backend(
         # Upload document
         logger.info(f"🔄 Starting document upload for {file.filename}")
         upload_result = await storage_service.upload_document(
-            file_data=contents,
-            filename=file.filename,
             user_id=str(current_user.id),
-            document_type="policy",
-            metadata=metadata
+            file_content=contents,
+            filename=file.filename,
+            content_type=file.content_type or "application/octet-stream"
         )
         
         logger.info(f"✅ Document upload completed: {upload_result}")
