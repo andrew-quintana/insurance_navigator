@@ -312,23 +312,13 @@ async def upload_document_backend(
         # Get storage service
         storage_service = await get_storage_service()
         
-        # Generate document ID and metadata
-        document_id = str(uuid.uuid4())
-        metadata = {
-            "policy_id": policy_id,
-            "original_filename": file.filename,
-            "content_type": file.content_type or "application/octet-stream",
-            "file_size": file_size
-        }
-        
         # Upload document
         logger.info(f"🔄 Starting document upload for {file.filename}")
         upload_result = await storage_service.upload_document(
-            file_data=contents,
-            filename=file.filename,
             user_id=str(current_user.id),
-            document_type="policy",
-            metadata=metadata
+            file_content=contents,
+            filename=file.filename,
+            content_type=file.content_type or "application/octet-stream"
         )
         
         logger.info(f"✅ Document upload completed: {upload_result}")
@@ -343,7 +333,7 @@ async def upload_document_backend(
         project_ref = supabase_url.split('.')[-2].split('/')[-1]
         doc_parser_url = f"https://{project_ref}.supabase.co/functions/v1/doc-parser"
         
-        logger.info(f"🔄 Calling doc-parser function for document {document_id}")
+        logger.info(f"🔄 Calling doc-parser function for document {upload_result['document_id']}")
         
         async with aiohttp.ClientSession() as session:
             async with session.post(
