@@ -120,7 +120,7 @@ serve(async (req) => {
       if (!checkMemoryUsage()) {
         throw new Error('Memory limit exceeded before processing webhook')
       }
-
+      
       // Update document status and content
       const { error: updateError } = await supabaseClient
         .from('documents')
@@ -239,7 +239,7 @@ serve(async (req) => {
     console.log('  - HTTPS protocol:', webhookUrl.startsWith('https://'))
     console.log('  - Domain name (not IP):', !webhookUrl.match(/^https?:\/\/\d+\.\d+\.\d+\.\d+/))
     console.log('  - URL length:', webhookUrl.length, '(must be < 200)')
-
+    
     // Add document metadata as query params to webhook URL
     const webhookParams = new URLSearchParams()
     webhookParams.append('documentId', documentId)
@@ -257,9 +257,9 @@ serve(async (req) => {
     const llamaParseUrl = 'https://api.llamacloud.ai/v1/parse-document'
     const llamaParseResponse = await fetch(llamaParseUrl, {
       method: 'POST',
-      headers: {
+        headers: {
         'Authorization': `Bearer ${llamaParseApiKey}`,
-        'Content-Type': 'application/json'
+          'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         file: fileData,
@@ -270,12 +270,12 @@ serve(async (req) => {
         }
       })
     })
-
+      
     if (!llamaParseResponse.ok) {
       const errorText = await llamaParseResponse.text()
       throw new Error(`LlamaParse API error: ${llamaParseResponse.status} - ${errorText}`)
-    }
-
+      }
+      
     // Clean up file data
     fileData = null
 
