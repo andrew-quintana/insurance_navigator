@@ -323,62 +323,22 @@ serve(async (req) => {
     // Send to LlamaParse for processing
     const llamaParseUrl = 'https://api.cloud.llamaindex.ai/api/v1/parsing/upload'
     
-    // Create a simple boundary string
-    const boundary = '----boundary' + Date.now();
+    // Keep it simple - just use FormData
+    const formData = new FormData()
+    formData.append('file', new Blob([fileData], { type: contentType }))
     
-    // Manually construct the multipart body
-    const bodyParts = [];
-    
-    // Add file part
-    bodyParts.push(
-      `--${boundary}\r\n` +
-      `Content-Disposition: form-data; name="file"; filename="document.pdf"\r\n` +
-      `Content-Type: ${contentType}\r\n\r\n`
-    );
-    bodyParts.push(fileData);
-    bodyParts.push('\r\n');
-    
-    // Add webhook part if needed
+    // Add webhook if needed
     if (!/[^\x20-\x7E]/.test(fullWebhookUrl)) {
-      bodyParts.push(
-        `--${boundary}\r\n` +
-        `Content-Disposition: form-data; name="webhook_url"\r\n\r\n` +
-        `${fullWebhookUrl}\r\n`
-      );
+      formData.append('webhook_url', fullWebhookUrl)
     }
     
-    // Add final boundary
-    bodyParts.push(`--${boundary}--\r\n`);
-    
-    // Convert text parts to Uint8Array
-    const textEncoder = new TextEncoder();
-    const requestBody = new Uint8Array(
-      bodyParts.reduce((acc, part) => 
-        acc + (part instanceof Uint8Array ? part.length : textEncoder.encode(part).length), 
-        0
-      )
-    );
-    
-    // Combine all parts
-    let offset = 0;
-    for (const part of bodyParts) {
-      if (part instanceof Uint8Array) {
-        requestBody.set(part, offset);
-        offset += part.length;
-      } else {
-        requestBody.set(textEncoder.encode(part), offset);
-        offset += textEncoder.encode(part).length;
-      }
-    }
-    
-    // Make request with minimal headers
+    // Use minimal headers - let Deno handle Content-Type
     const llamaParseResponse = await fetch(llamaParseUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${llamaParseApiKey}`,
-        'Content-Type': `multipart/form-data; boundary=${boundary}`
+        'Authorization': `Bearer ${llamaParseApiKey}`
       },
-      body: requestBody
+      body: formData
     })
       
     if (!llamaParseResponse.ok) {
