@@ -220,49 +220,6 @@ storage_service_instance: Optional[StorageService] = None
 
 # Initialize services
 storage_service: Optional[StorageService] = None
-queue_service: Optional[QueueService] = None
-llamaparse_service: Optional[LlamaParseService] = None
-vector_service: Optional[VectorService] = None
-document_processing_service: Optional[DocumentProcessingService] = None
-
-async def get_services():
-    """Initialize all required services."""
-    global storage_service, queue_service, llamaparse_service, vector_service, document_processing_service
-    
-    if not storage_service:
-        storage_service = await get_storage_service()
-        
-    if not queue_service:
-        pool = await get_db_pool()
-        queue_service = QueueService(pool)
-        
-    if not llamaparse_service:
-        llamaparse_service = LlamaParseService(
-            api_key=os.getenv("LLAMAPARSE_API_KEY")
-        )
-        
-    if not vector_service:
-        pool = await get_db_pool()
-        vector_service = VectorService(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            pool=pool
-        )
-        
-    if not document_processing_service:
-        document_processing_service = DocumentProcessingService(
-            storage_service=storage_service,
-            queue_service=queue_service,
-            llamaparse_service=llamaparse_service,
-            vector_service=vector_service
-        )
-        
-    return {
-        "storage": storage_service,
-        "queue": queue_service,
-        "llamaparse": llamaparse_service,
-        "vector": vector_service,
-        "document_processing": document_processing_service
-    }
 
 # Authentication utilities
 async def get_current_user(request: Request) -> UserResponse:
