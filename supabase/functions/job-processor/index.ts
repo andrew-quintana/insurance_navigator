@@ -26,12 +26,15 @@ serve(async (req) => {
   }
 
   try {
+    console.log('🔄 Job processor started')
+    
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
     // Get next pending job
+    console.log('📥 Fetching pending jobs...')
     const { data: jobs, error: jobError } = await supabaseClient
       .from('processing_jobs')
       .select('*')
@@ -41,10 +44,12 @@ serve(async (req) => {
       .limit(1)
 
     if (jobError) {
+      console.error('❌ Failed to fetch jobs:', jobError)
       throw new Error(`Failed to fetch jobs: ${jobError.message}`)
     }
 
     if (!jobs || jobs.length === 0) {
+      console.log('ℹ️ No pending jobs found')
       return new Response(
         JSON.stringify({ message: 'No pending jobs' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -52,9 +57,11 @@ serve(async (req) => {
     }
 
     const job = jobs[0] as ProcessingJob
-    console.log(`📝 Processing job ${job.id} of type ${job.job_type}`)
+    console.log(`📝 Processing job ${job.id} of type ${job.job_type} for document ${job.document_id}`)
+    console.log('📦 Job payload:', job.payload)
 
     // Update job status to processing
+    console.log('🔄 Updating job status to processing...')
     await supabaseClient
       .from('processing_jobs')
       .update({ status: 'processing', started_at: new Date().toISOString() })
@@ -64,12 +71,15 @@ serve(async (req) => {
     let result: JobResult
     switch (job.job_type) {
       case 'parse':
+        console.log('🔍 Executing parse job...')
         result = await executeParseJob(supabaseClient, job)
         break
       case 'embed':
+        console.log('🧮 Executing embed job...')
         result = await executeEmbedJob(supabaseClient, job)
         break
       case 'complete':
+        console.log('✅ Executing complete job...')
         result = await executeCompleteJob(supabaseClient, job)
         break
       default:
@@ -78,6 +88,9 @@ serve(async (req) => {
 
     // Update job status
     if (result.success) {
+      console.log(`✅ Job ${job.id} completed successfully`)
+      console.log('📦 Result data:', result.data)
+      
       await supabaseClient
         .from('processing_jobs')
         .update({
@@ -89,6 +102,7 @@ serve(async (req) => {
 
       // Create next job if specified
       if (result.nextJob) {
+        console.log('🔄 Creating next job:', result.nextJob)
         await supabaseClient
           .from('processing_jobs')
           .insert({
@@ -99,6 +113,7 @@ serve(async (req) => {
           })
       }
     } else {
+      console.error(`❌ Job ${job.id} failed:`, result.error)
       await supabaseClient
         .from('processing_jobs')
         .update({
@@ -115,7 +130,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error:', error)
+    console.error('❌ Fatal error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -125,23 +140,35 @@ serve(async (req) => {
 
 async function executeParseJob(supabase: any, job: ProcessingJob): Promise<JobResult> {
   try {
+    console.log(`🔍 Starting parse job for document ${job.document_id}`)
+    console.log('📦 Parse job payload:', job.payload)
+    
     // Call doc-parser function
+    console.log('📞 Calling doc-parser function...')
     const { data: parseResult, error: parseError } = await supabase.functions.invoke('doc-parser', {
-      body: {
+      body: JSON.stringify({
         documentId: job.document_id,
         storagePath: job.payload.storage_path
-      }
+      })
     })
 
-    if (parseError) throw new Error(`Parsing failed: ${parseError.message}`)
+    if (parseError) {
+      console.error('❌ Doc-parser error:', parseError)
+      throw new Error(`Parsing failed: ${parseError.message}`)
+    }
+
+    console.log('✅ Doc-parser completed successfully')
+    console.log('📦 Parse result:', parseResult)
 
     return {
       success: true,
       data: parseResult,
       nextJob: {
-        type: 'embed',
+        job_type: 'embed',
         payload: {
-          extractedText: parseResult.extractedText
+          extractedText: parseResult.extractedText,
+          documentId: job.document_id,
+          storagePath: job.payload.storage_path
         }
       }
     }
@@ -154,70 +181,35 @@ async function executeParseJob(supabase: any, job: ProcessingJob): Promise<JobRe
 
 async function executeEmbedJob(supabase: any, job: ProcessingJob): Promise<JobResult> {
   try {
-    // Initialize OpenAI embeddings
-    const embeddings = new OpenAIEmbeddings(Deno.env.get('OPENAI_API_KEY') ?? '')
+    console.log(`🧮 Starting embed job for document ${job.document_id}`)
+    console.log('📦 Embed job payload:', job.payload)
+    
+    // Call vector-processor function
+    console.log('📞 Calling vector-processor function...')
+    const { data: vectorResult, error: vectorError } = await supabase.functions.invoke('vector-processor', {
+      body: JSON.stringify({
+        documentId: job.document_id,
+        extractedText: job.payload.extractedText,
+        storagePath: job.payload.storagePath
+      })
+    })
 
-    // Get document record
-    const { data: document, error: docError } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('id', job.document_id)
-      .single()
-
-    if (docError || !document) {
-      throw new Error(`Document not found: ${docError?.message || 'Unknown error'}`)
+    if (vectorError) {
+      console.error('❌ Vector-processor error:', vectorError)
+      throw new Error(`Vector processing failed: ${vectorError.message}`)
     }
 
-    // Create text chunks
-    const chunkSize = 1000
-    const chunkOverlap = 200
-    const chunks: string[] = []
-
-    let start = 0
-    const text = job.payload.extractedText
-    while (start < text.length) {
-      const end = start + chunkSize
-      const chunk = text.slice(start, end)
-      chunks.push(chunk)
-      start = end - chunkOverlap
-      if (start >= text.length) break
-    }
-
-    console.log(`Created ${chunks.length} chunks for document ${job.document_id}`)
-
-    // Generate embeddings for all chunks
-    const embeddingsList = await embeddings.embedBatch(chunks)
-
-    // Store vectors
-    for (let i = 0; i < chunks.length; i++) {
-      const { error: insertError } = await supabase
-        .from('document_vectors')
-        .insert({
-          document_id: job.document_id,
-          chunk_index: i,
-          content_embedding: embeddingsList[i],
-          chunk_text: chunks[i],
-          chunk_metadata: {
-            total_chunks: chunks.length,
-            chunk_length: chunks[i].length,
-            processed_at: new Date().toISOString(),
-            extraction_method: document.content_type === 'application/pdf' ? 'llamaparse' : 'direct',
-            embedding_method: 'openai'
-          }
-        })
-
-      if (insertError) {
-        console.error(`Failed to store vector ${i}:`, insertError)
-      }
-    }
+    console.log('✅ Vector-processor completed successfully')
+    console.log('📦 Vector result:', vectorResult)
 
     return {
       success: true,
-      data: { vectorCount: chunks.length },
+      data: vectorResult,
       nextJob: {
-        type: 'complete',
+        job_type: 'complete',
         payload: {
-          vectorCount: chunks.length
+          vectorCount: vectorResult.vectorCount,
+          documentId: job.document_id
         }
       }
     }
@@ -230,6 +222,9 @@ async function executeEmbedJob(supabase: any, job: ProcessingJob): Promise<JobRe
 
 async function executeCompleteJob(supabase: any, job: ProcessingJob): Promise<JobResult> {
   try {
+    console.log(`✅ Starting complete job for document ${job.document_id}`)
+    console.log('📦 Complete job payload:', job.payload)
+    
     // Update document status
     const { error: updateError } = await supabase
       .from('documents')
@@ -243,7 +238,12 @@ async function executeCompleteJob(supabase: any, job: ProcessingJob): Promise<Jo
       })
       .eq('id', job.document_id)
 
-    if (updateError) throw new Error(`Status update failed: ${updateError.message}`)
+    if (updateError) {
+      console.error('❌ Status update error:', updateError)
+      throw new Error(`Status update failed: ${updateError.message}`)
+    }
+
+    console.log('✅ Document status updated successfully')
 
     return {
       success: true,

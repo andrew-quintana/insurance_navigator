@@ -1,6 +1,6 @@
 /// <reference lib="deno.ns" />
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 import { OpenAIEmbeddings } from '../_shared/embeddings.ts'
 
@@ -30,7 +30,7 @@ const metrics: ProcessingMetrics = {
 interface VectorRequest {
     documentId: string;
     extractedText: string;
-    metadata?: {
+  metadata?: {
         title?: string;
         content_type?: string;
         extraction_method?: string;
@@ -84,8 +84,8 @@ class TextChunker {
                     if (nextSpace !== -1 && nextSpace < 50) {
                         end += nextSpace;
                         console.log(`📝 Extended chunk ${chunkIndex} to word boundary: +${nextSpace} chars`);
-                    }
-                }
+  }
+}
             }
 
             // Create chunk
@@ -144,9 +144,23 @@ serve(async (req) => {
     }
 
     try {
-        const { documentId, extractedText, metadata = {} } = await req.json() as VectorRequest;
+        // Parse request body
+        const rawBody = await req.text();
+        console.log('📦 Raw request body:', rawBody);
+        
+        let requestData: VectorRequest;
+        try {
+            // Try parsing as JSON string first
+            requestData = JSON.parse(rawBody);
+        } catch (parseError) {
+            console.error('❌ Failed to parse request body as JSON:', parseError);
+            throw new Error(`Invalid request body: ${parseError.message}`);
+        }
+
+        const { documentId, extractedText, metadata = {} } = requestData;
 
         if (!documentId || !extractedText) {
+            console.error('❌ Missing required parameters:', { documentId, hasExtractedText: !!extractedText });
             throw new Error('Missing required parameters: documentId and extractedText');
         }
 
@@ -158,22 +172,22 @@ serve(async (req) => {
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         );
 
-        // Get document record
-        const { data: document, error: docError } = await supabaseClient
-            .from('documents')
-            .select('*')
-            .eq('id', documentId)
+    // Get document record
+    const { data: document, error: docError } = await supabaseClient
+      .from('documents')
+      .select('*')
+      .eq('id', documentId)
             .single();
 
-        if (docError || !document) {
+    if (docError || !document) {
             throw new Error(`Document not found: ${docError?.message || 'Unknown error'}`);
-        }
+    }
 
         // Create text chunks
         const chunker = new TextChunker();
         const chunks = chunker.createChunks(extractedText);
 
-        // Initialize OpenAI embeddings
+    // Initialize OpenAI embeddings
         const embeddings = new OpenAIEmbeddings(Deno.env.get('OPENAI_API_KEY') ?? '');
 
         // Process chunks in batches to avoid rate limits
@@ -215,8 +229,8 @@ serve(async (req) => {
                     chunk_text: chunk.text,
                     chunk_metadata: {
                         ...chunk.metadata,
-                        ...metadata,
-                        processed_at: new Date().toISOString(),
+          ...metadata,
+          processed_at: new Date().toISOString(),
                         embedding_method: 'openai',
                         processing_stats: {
                             chunk_processing_time_ms: embeddingTime / batch.length,
@@ -226,7 +240,7 @@ serve(async (req) => {
                 }));
 
                 const { error: insertError } = await supabaseClient
-                    .from('document_vectors')
+          .from('document_vectors')
                     .insert(vectorInserts);
 
                 if (insertError) {
@@ -248,11 +262,11 @@ serve(async (req) => {
 - Storage time: ${(batchTime - embeddingTime).toFixed(2)}ms
                 `);
 
-            } catch (error) {
+      } catch (error) {
                 console.error(`❌ Error processing batch ${i / batchSize + 1}:`, error);
                 throw error;
-            }
-        }
+      }
+    }
 
         metrics.totalTime = performance.now() - metrics.startTime;
 
@@ -265,25 +279,25 @@ serve(async (req) => {
 - Processing rate: ${(metrics.totalCharsProcessed / metrics.totalTime * 1000).toFixed(2)} chars/second
         `);
 
-        return new Response(
-            JSON.stringify({
-                success: true,
+    return new Response(
+      JSON.stringify({
+        success: true,
                 document_id: documentId,
                 chunks_processed: chunks.length,
                 results: results,
                 processing_metrics: metrics
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
 
-    } catch (error) {
+  } catch (error) {
         console.error('Error:', error);
-        return new Response(
-            JSON.stringify({ 
+    return new Response(
+      JSON.stringify({
                 error: error.message,
                 processing_metrics: metrics 
-            }),
+      }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
-    }
+  }
 }); 
