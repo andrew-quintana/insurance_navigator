@@ -90,24 +90,42 @@ async function streamFileDownload(storagePath: string): Promise<Uint8Array | nul
 
 // Custom fetch implementation for file uploads
 async function uploadFile(url: string, formData: FormData, authToken: string): Promise<Response> {
-  const boundary = '----WebKitFormBoundary' + Math.random().toString(36).slice(2);
+  const boundary = '----FormBoundary' + Math.random().toString(36).slice(2);
+  const chunks: Uint8Array[] = [];
   
-  // Convert FormData to raw multipart/form-data
-  let body = '';
   for (const [key, value] of formData.entries()) {
-    body += `--${boundary}\r\n`;
+    // Add boundary
+    chunks.push(new TextEncoder().encode(`--${boundary}\r\n`));
+    
     if (value instanceof Blob) {
-      body += `Content-Disposition: form-data; name="${key}"; filename="${value.name || 'file'}"\r\n`;
-      body += `Content-Type: ${value.type || 'application/octet-stream'}\r\n\r\n`;
-      body += new TextDecoder().decode(await value.arrayBuffer());
+      // Handle file data
+      chunks.push(new TextEncoder().encode(
+        `Content-Disposition: form-data; name="${key}"; filename="${value.name || 'file'}"\r\n` +
+        `Content-Type: ${value.type || 'application/octet-stream'}\r\n\r\n`
+      ));
+      chunks.push(new Uint8Array(await value.arrayBuffer()));
+      chunks.push(new TextEncoder().encode('\r\n'));
     } else {
-      body += `Content-Disposition: form-data; name="${key}"\r\n\r\n${value}`;
+      // Handle text fields
+      chunks.push(new TextEncoder().encode(
+        `Content-Disposition: form-data; name="${key}"\r\n\r\n${value}\r\n`
+      ));
     }
-    body += '\r\n';
   }
-  body += `--${boundary}--\r\n`;
-
-  // Make request with minimal headers
+  
+  // Add final boundary
+  chunks.push(new TextEncoder().encode(`--${boundary}--\r\n`));
+  
+  // Combine all chunks
+  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+  const body = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.length;
+  }
+  
+  // Make request with proper binary body
   return await fetch(url, {
     method: 'POST',
     headers: {
