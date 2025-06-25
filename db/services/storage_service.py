@@ -136,21 +136,30 @@ class StorageService:
         logger.info(f"📤 Starting document upload: {filename}")
         
         try:
-            # Construct storage path
+            # File size validation
+            file_size = len(file_content)
+            if file_size > 6 * 1024 * 1024:  # 6MB
+                logger.warning(f"⚠️ Large file detected ({file_size/1024/1024:.1f}MB). Consider using resumable uploads for files >6MB")
+            
+            # Construct storage path with user isolation
             storage_path = f"policy/{user_id}/{filename}"
             
-            # Upload to storage
+            # Upload to storage with proper headers
             upload_result = await self._make_request(
                 'POST',
                 f'/storage/v1/object/{self.bucket_name}/{storage_path}',
                 data=file_content,
-                headers={'Content-Type': content_type}
+                headers={
+                    'Content-Type': content_type,
+                    'x-upsert': 'false',  # Prevent accidental overwrites
+                    'Cache-Control': 'max-age=3600'
+                }
             )
             
             logger.info(f"✅ Document uploaded successfully: {filename}")
             return {
                 'path': storage_path,
-                'size': len(file_content),
+                'size': file_size,
                 'type': content_type,
                 **upload_result
             }
