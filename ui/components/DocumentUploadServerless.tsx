@@ -116,13 +116,14 @@ export default function DocumentUploadServerless({
   // Upload single file
   const uploadFile = async (fileStatus: FileUploadStatus): Promise<UploadResponse> => {
     const token = localStorage.getItem("token")
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://jhrespvvhbnloxrieycf.supabase.co'
+    const uploadEndpoint = `${supabaseUrl}/functions/v1/upload-handler`
     
     console.log('🔍 Debug - Upload starting:', {
       fileName: fileStatus.file.name,
       fileSize: fileStatus.file.size,
       fileType: fileStatus.file.type,
-      apiBaseUrl,
+      uploadEndpoint,
       hasToken: !!token
     })
     
@@ -141,15 +142,21 @@ export default function DocumentUploadServerless({
       .replace(/\.[^/.]+$/, "") // Remove extension
       .replace(/[^a-zA-Z0-9-_]/g, '_') // Replace unsafe chars
     const policyId = `${safeFileName}_${timestamp}`
-    formData.append('policy_id', policyId)
+    
+    // Add metadata as JSON string
+    const metadata = {
+      policy_id: policyId,
+      upload_started_at: new Date().toISOString()
+    }
+    formData.append('metadata', JSON.stringify(metadata))
     
     console.log('📤 Debug - Preparing upload:', {
-      policyId,
-      endpoint: `${apiBaseUrl}/upload-document-backend`
+      metadata,
+      endpoint: uploadEndpoint
     })
     
     try {
-      const uploadResponse = await fetch(`${apiBaseUrl}/upload-document-backend`, {
+      const uploadResponse = await fetch(uploadEndpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
