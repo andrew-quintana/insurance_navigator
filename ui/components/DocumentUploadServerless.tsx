@@ -160,6 +160,7 @@ export default function DocumentUploadServerless({
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
         },
         body: formData,
       })
