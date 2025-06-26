@@ -8,7 +8,7 @@ import { corsHeaders } from '../_shared/cors.ts'
 const CONFIG = {
   UPLOAD_BUCKET: 'raw_documents',
   STORAGE_BUCKET: 'documents',
-  MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB
+  MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
   ALLOWED_MIME_TYPES: [
     'application/pdf',
     'application/msword',
@@ -16,6 +16,14 @@ const CONFIG = {
     'text/plain'
   ]
 }
+
+// Log configuration on startup
+console.log('📝 Upload handler configuration:', {
+  uploadBucket: CONFIG.UPLOAD_BUCKET,
+  storageBucket: CONFIG.STORAGE_BUCKET,
+  maxFileSize: CONFIG.MAX_FILE_SIZE,
+  allowedMimeTypes: CONFIG.ALLOWED_MIME_TYPES
+})
 
 interface UploadRequest {
   filename: string;
@@ -82,9 +90,9 @@ serve(async (req) => {
       const authHeader = req.headers.get('authorization')
       if (!authHeader) {
         throw new Error('Missing authorization header')
-      }
-
-      const token = authHeader.replace('Bearer ', '')
+    }
+    
+    const token = authHeader.replace('Bearer ', '')
       const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token)
       
       if (authError || !user) {
@@ -113,7 +121,7 @@ serve(async (req) => {
 
     // Validate file size
     if (uploadData.fileSize > CONFIG.MAX_FILE_SIZE) {
-      return new Response(JSON.stringify({
+      return new Response(JSON.stringify({ 
         error: 'File too large',
         details: `Maximum file size is ${CONFIG.MAX_FILE_SIZE / 1024 / 1024}MB`
       }), {
@@ -121,10 +129,10 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
-
+    
     // Validate content type
     if (!CONFIG.ALLOWED_MIME_TYPES.includes(uploadData.contentType)) {
-      return new Response(JSON.stringify({
+      return new Response(JSON.stringify({ 
         error: 'Invalid file type',
         details: `Allowed file types: ${CONFIG.ALLOWED_MIME_TYPES.join(', ')}`
       }), {
@@ -144,26 +152,50 @@ serve(async (req) => {
     })
 
     // Create signed upload URL
+    console.log('🔍 Creating signed upload URL:', {
+      bucket: CONFIG.UPLOAD_BUCKET,
+      path: uploadPath,
+      contentType: uploadData.contentType,
+      timestamp: new Date().toISOString()
+    })
+
     const { data: uploadUrl, error: urlError } = await supabaseClient.storage
       .from(CONFIG.UPLOAD_BUCKET)
       .createSignedUploadUrl(uploadPath)
 
     if (urlError) {
-      console.error('❌ Failed to create upload URL:', urlError)
+      console.error('❌ Failed to create upload URL:', {
+        error: urlError,
+        bucket: CONFIG.UPLOAD_BUCKET,
+        path: uploadPath,
+        errorCode: urlError.code,
+        errorMessage: urlError.message,
+        timestamp: new Date().toISOString()
+      })
       throw new Error(`Failed to create upload URL: ${urlError.message}`)
     }
 
     // Create document record
+    console.log('📄 Creating document record:', {
+      userId,
+      filename: uploadData.filename,
+      fileSize: uploadData.fileSize,
+      contentType: uploadData.contentType,
+      uploadPath,
+      finalPath,
+      timestamp: new Date().toISOString()
+    })
+
     const { data: document, error: docError } = await supabaseClient
-      .from('documents')
+    .from('documents')
       .insert({
-        user_id: userId,
-        original_filename: uploadData.filename,
-        file_size: uploadData.fileSize,
-        content_type: uploadData.contentType,
+    user_id: userId,
+    original_filename: uploadData.filename,
+    file_size: uploadData.fileSize,
+    content_type: uploadData.contentType,
         file_hash: uploadData.fileHash,
         storage_path: finalPath,
-        status: 'pending',
+    status: 'pending',
         metadata: {
           upload_started_at: new Date().toISOString(),
           raw_storage_path: uploadPath,
@@ -171,47 +203,113 @@ serve(async (req) => {
           final_storage_bucket: CONFIG.STORAGE_BUCKET
         }
       })
-      .select()
-      .single()
+    .select()
+    .single()
 
     if (docError) {
       console.error('❌ Failed to create document record:', docError)
       throw new Error(`Failed to create document record: ${docError.message}`)
-    }
+  }
 
-    // Create processing job
-    const { error: jobError } = await supabaseClient
-      .from('processing_jobs')
-      .insert({
-        document_id: document.id,
-        job_type: 'document_processing',
-        status: 'pending',
-        priority: 1,
-        payload: {
-          documentId: document.id,
-          rawStoragePath: uploadPath,
-          rawStorageBucket: CONFIG.UPLOAD_BUCKET,
-          finalStoragePath: finalPath,
-          finalStorageBucket: CONFIG.STORAGE_BUCKET,
-          contentType: uploadData.contentType,
-          filename: uploadData.filename
-        }
-      })
+  // Create initial processing job
+    const { data: job, error: jobError } = await supabaseClient
+    .from('processing_jobs')
+    .insert({
+      document_id: document.id,
+      job_type: 'parse',
+      payload: {
+          document_id: document.id,
+          raw_storage_path: uploadPath,
+          raw_storage_bucket: CONFIG.UPLOAD_BUCKET,
+          final_storage_path: finalPath,
+          final_storage_bucket: CONFIG.STORAGE_BUCKET,
+          content_type: uploadData.contentType
+      },
+      status: 'pending',
+      priority: 1,
+      retry_count: 0
+    })
+    .select()
+    .single()
 
-    if (jobError) {
+  if (jobError) {
       console.error('❌ Failed to create processing job:', jobError)
       
       // Update document status to failed
       await supabaseClient
-        .from('documents')
+      .from('documents')
         .update({
           status: 'failed',
           error_message: `Failed to create processing job: ${jobError.message}`,
           updated_at: new Date().toISOString()
         })
-        .eq('id', document.id)
-      
+      .eq('id', document.id)
+
       throw new Error(`Failed to create processing job: ${jobError.message}`)
+    }
+
+    // Invoke job processor to start processing immediately
+    console.log('🔄 Triggering job processor for immediate processing:', {
+      jobId: job.id,
+      documentId: document.id
+    })
+    
+    const { data: processorData, error: processorError } = await supabaseClient.functions.invoke('job-processor', {
+      method: 'POST',
+      body: { 
+        jobId: job.id
+      },
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    })
+
+    if (processorError) {
+      console.warn('⚠️ Failed to trigger job processor:', {
+        error: processorError,
+        jobId: job.id,
+        documentId: document.id,
+        timestamp: new Date().toISOString()
+      })
+
+      // Update document status to reflect processing issue
+      await supabaseClient
+        .from('documents')
+        .update({
+          status: 'processing_queued',
+          metadata: {
+            ...document.metadata,
+            processor_trigger_error: processorError.message,
+            processor_trigger_time: new Date().toISOString()
+          }
+        })
+        .eq('id', document.id)
+
+      // Non-critical error - the cron job will pick it up
+      console.log('ℹ️ Document queued for processing:', {
+        documentId: document.id,
+        jobId: job.id,
+        status: 'processing_queued'
+      })
+    } else {
+      console.log('✅ Job processor triggered successfully:', {
+        documentId: document.id,
+        jobId: job.id,
+        processorResponse: processorData
+      })
+
+      // Update document status
+      await supabaseClient
+        .from('documents')
+        .update({
+          status: 'processing',
+          metadata: {
+            ...document.metadata,
+            processor_trigger_time: new Date().toISOString()
+          }
+        })
+        .eq('id', document.id)
     }
 
     console.log('✅ Upload handler setup complete:', {
@@ -220,18 +318,19 @@ serve(async (req) => {
       finalPath
     })
 
-    return new Response(JSON.stringify({
+    return new Response(JSON.stringify({ 
       success: true,
       uploadUrl: uploadUrl.signedUrl,
       documentId: document.id,
-      storagePath: uploadPath
+      storagePath: uploadPath,
+      status: processorError ? 'queued' : 'processing'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
   } catch (error) {
     console.error('❌ Unexpected error:', error)
-    return new Response(JSON.stringify({
+    return new Response(JSON.stringify({ 
       error: 'Internal server error',
       details: error instanceof Error ? error.message : 'Unknown error occurred'
     }), {
@@ -308,7 +407,7 @@ async function handleChunkUpload(req: Request, supabase: any, userId: string) {
   const currentMetadata = document.metadata || {}
   const processedChunks = new Set(currentMetadata.processed_chunks || [])
   processedChunks.add(chunkIndex)
-
+  
   const updatedMetadata = {
     ...currentMetadata,
     processed_chunks: Array.from(processedChunks),
@@ -360,93 +459,74 @@ async function generateFileHash(filename: string, fileSize: number, userId: stri
 }
 
 async function handleUploadComplete(req: Request, supabase: any, userId: string) {
-  const { documentId } = await req.json()
-
-  // Get document record
-  const { data: document, error: docError } = await supabase
-    .from('documents')
-    .select('*')
-    .eq('id', documentId)
-    .eq('user_id', userId)
-    .single()
-
-  if (docError || !document) {
+  const { documentId, path } = await req.json()
+  
+  if (!documentId || !path) {
     return new Response(JSON.stringify({ 
-      error: 'Document not found',
-      details: docError?.message || 'No document found'
+      error: 'Document ID and storage path required' 
     }), {
-      status: 404,
+      status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 
-  // Update document status
-  const { error: updateError } = await supabase
-    .from('documents')
-    .update({
-      status: 'processing',
-      metadata: {
-        ...document.metadata,
+  try {
+    // Get document details
+    const { data: document, error: docError } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('id', documentId)
+      .eq('user_id', userId)
+      .single()
+
+    if (docError || !document) {
+      return new Response(JSON.stringify({ error: 'Document not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Update document status to processing
+    await supabase
+      .from('documents')
+      .update({ 
+        status: 'processing',
+        progress_percentage: 20,
         upload_completed_at: new Date().toISOString()
-      },
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', documentId)
-    .eq('user_id', userId)
+      })
+      .eq('id', documentId)
 
-  if (updateError) {
-    return new Response(JSON.stringify({ 
-      error: 'Failed to update document status',
-      details: updateError.message
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
-  }
-
-  // Create processing job
-  const processingJob = {
-    document_id: documentId,
-    job_type: 'parse',
-    status: 'pending',
-    priority: 1,
-    retry_count: 0,
-    max_retries: 3,
-    payload: {
+    // Send progress update
+    await sendProgressUpdate(supabase, userId, {
       documentId: documentId,
-      userId: userId,
-      filename: document.original_filename,
-      contentType: document.content_type,
-      storagePath: document.storage_path
-    },
-    scheduled_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  }
+      status: 'processing',
+      progress: 20,
+      metadata: { 
+        step: 'upload_complete',
+        storage_path: path
+      }
+    })
 
-  const { error: jobError } = await supabase
-    .from('processing_jobs')
-    .insert(processingJob)
+    return new Response(JSON.stringify({
+      success: true,
+      documentId: documentId,
+      status: 'processing',
+      message: 'Upload complete, processing started'
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
 
-  if (jobError) {
+  } catch (error) {
+    console.error('Upload completion error:', error)
     return new Response(JSON.stringify({ 
-      error: 'Failed to create processing job',
-      details: jobError.message
+      error: 'Failed to complete upload',
+      details: error.message 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
-
-  return new Response(JSON.stringify({
-    success: true,
-    documentId: documentId,
-    status: 'processing',
-    message: 'Document upload completed, processing started'
-  }), {
-    status: 200,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-  })
 }
 
 function shouldUseLlamaParse(contentType: string): boolean {
@@ -479,29 +559,6 @@ async function triggerDirectProcessing(supabase: any, documentId: string, userId
       throw new Error(`Failed to get document details: ${docError?.message || 'Document not found'}`)
     }
 
-    // Create processing job
-    const { data: job, error: jobError } = await supabase
-      .from('processing_jobs')
-      .insert({
-        document_id: documentId,
-        job_type: 'parse',
-        status: 'pending',
-        payload: {
-          storagePath: document.storage_path,
-          contentType: document.content_type
-        },
-        priority: 1,
-        retry_count: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single()
-
-    if (jobError) {
-      throw new Error(`Failed to create processing job: ${jobError.message}`)
-    }
-
     // Update status to parsing
     await supabase
       .from('documents')
@@ -519,16 +576,14 @@ async function triggerDirectProcessing(supabase: any, documentId: string, userId
       progress: 30,
       metadata: { 
         step: 'direct_processing_started',
-        processing_method: 'native',
-        jobId: job.id
+        processing_method: 'native'
       }
     })
 
     // Actually trigger doc-parser edge function
-    console.log(`🔗 Invoking doc-parser for document: ${documentId} with job: ${job.id}`)
+    console.log(`🔗 Invoking doc-parser for document: ${documentId}`)
     const { data, error } = await supabase.functions.invoke('doc-parser', {
       body: { 
-        jobId: job.id,
         documentId: documentId,
         storagePath: document.storage_path
       }

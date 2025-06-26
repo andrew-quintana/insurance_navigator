@@ -41,21 +41,119 @@ console.log('📄 Doc parser starting...')
 const CONFIG = {
   UPLOAD_BUCKET: 'raw_documents',
   STORAGE_BUCKET: 'documents',
-  MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB
+  MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
   LLAMA_PARSE_API_URL: 'https://api.cloud.llamaindex.ai/api/v1/parsing/upload',
   MAX_RETRIES: 3,
-  RETRY_DELAY_MS: 1000
+  RETRY_DELAY_MS: 1000,
+  MEMORY_LIMIT: 100 * 1024 * 1024 // 100MB
 }
+
+// Log configuration on startup
+console.log('📝 Doc parser configuration:', {
+  uploadBucket: CONFIG.UPLOAD_BUCKET,
+  storageBucket: CONFIG.STORAGE_BUCKET,
+  maxFileSize: CONFIG.MAX_FILE_SIZE,
+  maxRetries: CONFIG.MAX_RETRIES
+})
 
 // Add memory check function
 function checkMemoryUsage(): boolean {
   const memory = Deno.memoryUsage()
-  const usedMemory = memory.heapUsed + memory.external
-  if (usedMemory > CONFIG.MEMORY_LIMIT) {
-    console.warn(`⚠️ High memory usage: ${Math.round(usedMemory / 1024 / 1024)}MB`)
+  const used = memory.heapUsed + memory.external
+  
+  if (used > CONFIG.MEMORY_LIMIT) {
+    console.error(`❌ Memory limit exceeded: ${Math.round(used / 1024 / 1024)}MB used`)
     return false
   }
+  
+  if (used > CONFIG.MEMORY_LIMIT * 0.8) {
+    console.warn(`⚠️ High memory usage: ${Math.round(used / 1024 / 1024)}MB used`)
+  }
+
   return true
+}
+
+// Get file from storage with retries
+async function downloadFileWithRetries(supabase: SupabaseClient, bucket: string, path: string): Promise<Blob | null> {
+  let lastError: Error | null = null
+  
+  console.log('🔍 Starting file download:', {
+    bucket,
+    path,
+    configBucket: CONFIG.UPLOAD_BUCKET,
+    timestamp: new Date().toISOString()
+  })
+  
+  // Verify bucket exists
+  const { data: buckets, error: bucketError } = await supabase.storage.listBuckets()
+  if (bucketError) {
+    console.error('❌ Failed to list buckets:', bucketError)
+  } else {
+    console.log('📦 Available buckets:', buckets.map(b => b.name))
+  }
+  
+  for (let attempt = 0; attempt < CONFIG.MAX_RETRIES; attempt++) {
+    try {
+      console.log(`📥 Download attempt ${attempt + 1}/${CONFIG.MAX_RETRIES}:`, {
+        bucket,
+        path,
+        timestamp: new Date().toISOString()
+      })
+
+      const { data: fileData, error: fileError } = await supabase.storage
+        .from(bucket)
+        .download(path)
+
+      if (fileError) {
+        console.error(`❌ Download attempt ${attempt + 1} failed:`, {
+          error: fileError,
+          bucket,
+          path,
+          errorCode: fileError.code,
+          errorMessage: fileError.message,
+          timestamp: new Date().toISOString()
+        })
+        lastError = new Error(fileError.message)
+        if (attempt < CONFIG.MAX_RETRIES - 1) {
+          await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY_MS * Math.pow(2, attempt)))
+          continue
+        }
+        throw fileError
+      }
+
+      if (!fileData) {
+        console.error('❌ No data received from storage:', {
+          bucket,
+          path,
+          timestamp: new Date().toISOString()
+        })
+        throw new Error('No data received from storage')
+      }
+
+      console.log('✅ File downloaded successfully:', {
+        bucket,
+        path,
+        size: fileData.size,
+        timestamp: new Date().toISOString()
+      })
+
+      return fileData
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+      console.error(`❌ Download attempt ${attempt + 1} caught error:`, {
+        error: lastError.message,
+        bucket,
+        path,
+        timestamp: new Date().toISOString()
+      })
+      if (attempt < CONFIG.MAX_RETRIES - 1) {
+        await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY_MS * Math.pow(2, attempt)))
+        continue
+      }
+    }
+  }
+
+  throw new Error(`Failed to download file after ${CONFIG.MAX_RETRIES} attempts: ${lastError?.message || 'Unknown error'}`)
 }
 
 // Add streaming file download
@@ -67,7 +165,7 @@ async function streamFileDownload(storagePath: string): Promise<Uint8Array | nul
     try {
       console.log(`📥 Attempt ${attempt + 1}/${maxRetries} to download file: ${storagePath}`)
       
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .storage
         .from('documents')
         .download(storagePath)
@@ -119,7 +217,7 @@ async function uploadToLlamaParse(formData: FormData, llamaCloudKey: string): Pr
       if (response.status !== 429) {
         return response
       }
-
+      
       // Get retry-after header if available
       const retryAfter = response.headers.get('retry-after')
       const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : retryDelays[attempt]
@@ -145,6 +243,12 @@ async function uploadToLlamaParse(formData: FormData, llamaCloudKey: string): Pr
   throw new Error('Upload failed after all retries')
 }
 
+// Initialize Supabase client
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+)
+
 serve(async (req) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
@@ -152,47 +256,30 @@ serve(async (req) => {
   }
 
   try {
-    // Initialize Supabase client with service role key for full access
-    const supabaseClient: SupabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
-
     // Parse request
-    const { jobId } = await req.json()
+    const { jobId, payload } = await req.json()
     
-    if (!jobId) {
-      throw new Error('Missing required parameter: jobId')
-    }
-
-    // Get job details
-    const { data: job, error: jobError } = await supabaseClient
-      .from('processing_jobs')
-      .select('*')
-      .eq('id', jobId)
-      .single()
-
-    if (jobError || !job) {
-      throw new Error(`Failed to fetch job details: ${jobError?.message || 'Job not found'}`)
+    if (!jobId || !payload) {
+      throw new Error('Missing required parameters: jobId and payload')
     }
 
     const {
-      rawStoragePath,
-      rawStorageBucket,
-      finalStoragePath,
-      finalStorageBucket,
-      contentType,
-      documentId
-    } = job.payload
+      document_id,
+      raw_storage_path,
+      raw_storage_bucket,
+      final_storage_path,
+      final_storage_bucket,
+      content_type
+    } = payload
 
-    if (!rawStoragePath || !rawStorageBucket || !finalStoragePath || !finalStorageBucket || !contentType || !documentId) {
+    if (!document_id || !raw_storage_path || !raw_storage_bucket || !final_storage_path || !final_storage_bucket || !content_type) {
       throw new Error('Invalid job payload: missing required fields')
     }
 
     // Start job
-    await supabaseClient
+    await supabase
       .from('processing_jobs')
-      .update({
+      .update({ 
         status: 'processing',
         started_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -200,31 +287,33 @@ serve(async (req) => {
       .eq('id', jobId)
 
     // Update document status
-    await supabaseClient
+    await supabase
       .from('documents')
-      .update({
+      .update({ 
         status: 'processing',
         updated_at: new Date().toISOString()
       })
-      .eq('id', documentId)
+      .eq('id', document_id)
 
-    // Get file from storage
-    const { data: fileData, error: fileError } = await supabaseClient.storage
-      .from(rawStorageBucket)
-      .download(rawStoragePath)
-
-    if (fileError || !fileData) {
-      throw new Error(`Failed to download file: ${fileError?.message || 'File not found'}`)
+    // Get file from storage with retries
+    console.log('📥 Downloading file from storage:', {
+      bucket: raw_storage_bucket,
+      path: raw_storage_path
+    })
+    
+    const fileData = await downloadFileWithRetries(supabase, raw_storage_bucket, raw_storage_path)
+    if (!fileData) {
+      throw new Error('Failed to download file: No data received')
     }
 
     // Create FormData for LlamaParse API
     const formData = new FormData()
-    formData.append('file', fileData, rawStoragePath)
+    formData.append('file', fileData, raw_storage_path)
 
     // Call LlamaParse API
-    let parseResponse = null
+    let parseResponse: Response | null = null
     let retryCount = 0
-    let lastError = null
+    let lastError: string | Error | null = null
 
     while (retryCount < CONFIG.MAX_RETRIES) {
       try {
@@ -261,10 +350,10 @@ serve(async (req) => {
     const parsedData = await parseResponse.json()
 
     // Upload processed file to final storage
-    const { error: uploadError } = await supabaseClient.storage
-      .from(finalStorageBucket)
-      .upload(finalStoragePath, fileData, {
-        contentType,
+    const { error: uploadError } = await supabase.storage
+      .from(final_storage_bucket)
+      .upload(final_storage_path, fileData, {
+        contentType: content_type,
         upsert: true
       })
 
@@ -273,7 +362,7 @@ serve(async (req) => {
     }
 
     // Complete job
-    await supabaseClient
+    await supabase
       .from('processing_jobs')
       .update({
         status: 'completed',
@@ -281,82 +370,96 @@ serve(async (req) => {
         updated_at: new Date().toISOString(),
         result: {
           parsedData,
-          finalStoragePath,
-          finalStorageBucket
+          final_storage_path,
+          final_storage_bucket
         }
       })
       .eq('id', jobId)
-
+    
     // Update document status
-    await supabaseClient
+    await supabase
       .from('documents')
-      .update({
+      .update({ 
         status: 'completed',
         metadata: {
-          ...job.metadata,
+          ...payload,
           parsed_data: parsedData,
           processing_completed_at: new Date().toISOString()
         },
         updated_at: new Date().toISOString()
       })
-      .eq('id', documentId)
-
+      .eq('id', document_id)
+    
     console.log('✅ Document processing complete:', {
       jobId,
-      documentId,
-      finalStoragePath
+      document_id,
+      final_storage_path
     })
 
     return new Response(JSON.stringify({
       success: true,
       jobId,
-      documentId,
-      finalStoragePath
+      document_id,
+      final_storage_path
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
   } catch (error) {
     console.error('❌ Document processing failed:', error)
-
-    // Update job status
-    if (req.body) {
-      const { jobId } = await req.json()
-      if (jobId) {
-        await supabaseClient
+    
+    // Get jobId and documentId from the error context
+    let errorJobId: string | undefined
+    let errorDocumentId: string | undefined
+    
+    try {
+      // Try to parse the error message for jobId
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      if (errorMessage.includes('jobId:')) {
+        errorJobId = errorMessage.split('jobId:')[1].trim().split(' ')[0]
+      }
+      
+      // Update job status if we have the jobId
+      if (errorJobId) {
+        await supabase
           .from('processing_jobs')
           .update({
             status: 'failed',
             error_message: error instanceof Error ? error.message : 'Unknown error occurred',
             updated_at: new Date().toISOString()
           })
-          .eq('id', jobId)
+          .eq('id', errorJobId)
 
         // Get document ID from job
-        const { data: job } = await supabaseClient
+        const { data: job } = await supabase
           .from('processing_jobs')
           .select('payload')
-          .eq('id', jobId)
+          .eq('id', errorJobId)
           .single()
 
-        if (job?.payload?.documentId) {
-          await supabaseClient
+        if (job?.payload?.document_id) {
+          errorDocumentId = job.payload.document_id
+          await supabase
             .from('documents')
-            .update({
+            .update({ 
               status: 'failed',
               error_message: error instanceof Error ? error.message : 'Unknown error occurred',
               updated_at: new Date().toISOString()
             })
-            .eq('id', job.payload.documentId)
+            .eq('id', errorDocumentId)
         }
       }
+    } catch (updateError) {
+      console.error('❌ Failed to update error status:', updateError)
     }
-
-    return new Response(JSON.stringify({
-      error: 'Document processing failed',
-      details: error instanceof Error ? error.message : 'Unknown error occurred'
-    }), {
-      status: 500,
+        
+        return new Response(JSON.stringify({
+          success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      jobId: errorJobId,
+      document_id: errorDocumentId
+        }), { 
+          status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }

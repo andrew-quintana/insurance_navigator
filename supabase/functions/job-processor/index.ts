@@ -1,5 +1,7 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+// @deno-types="https://deno.land/x/types/deno.d.ts"
+
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.21.0'
 import { corsHeaders } from '../_shared/cors.ts'
 import { OpenAIEmbeddings } from '../_shared/embeddings.ts'
 
@@ -41,15 +43,15 @@ interface JobResult {
 // Add retry configuration
 const RETRY_CONFIG = {
   MAX_RETRIES: 3,
-  INITIAL_DELAY: 1000, // 1 second
-  MAX_DELAY: 8000, // 8 seconds
-  BACKOFF_FACTOR: 2
+  INITIAL_DELAY: 1000,
+  BACKOFF_FACTOR: 2,
+  MAX_DELAY: 10000
 }
 
 // Add memory management
 const MEMORY_CONFIG = {
-  LIMIT: 512 * 1024 * 1024, // 512MB
-  WARNING_THRESHOLD: 384 * 1024 * 1024 // 384MB
+  LIMIT: 100 * 1024 * 1024, // 100MB
+  WARNING_THRESHOLD: 80 * 1024 * 1024 // 80MB
 }
 
 // Add retry helper
@@ -94,32 +96,77 @@ function checkMemory(): boolean {
 
 console.log('🔄 Job processor starting...')
 
-    // Initialize Supabase client
-const supabaseClient = createClient(
+// Initialize Supabase client
+const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 )
 
 // Job execution functions
-async function executeParseJob(supabase: any, job: ProcessingJob): Promise<JobResult> {
-  const { documentId, storagePath } = job.payload
+async function executeParseJob(job: ProcessingJob): Promise<JobResult> {
+  const { document_id, raw_storage_path, raw_storage_bucket, final_storage_path, final_storage_bucket, content_type } = job.payload
 
-  if (!documentId || !storagePath) {
-    throw new Error('Missing required parameters: documentId, storagePath')
-    }
+  if (!document_id || !raw_storage_path || !raw_storage_bucket || !final_storage_path || !final_storage_bucket || !content_type) {
+    throw new Error('Missing required parameters in payload')
+  }
+
+  console.log('🔄 Executing parse job:', {
+    jobId: job.id,
+    documentId: document_id,
+    rawPath: raw_storage_path,
+    timestamp: new Date().toISOString()
+  })
 
   // Call doc-parser with required parameters
   const { data: parserResult, error: parserError } = await supabase.functions.invoke('doc-parser', {
     body: {
       jobId: job.id,
-      documentId: documentId,
-      storagePath: storagePath
+      payload: {
+        document_id,
+        raw_storage_path,
+        raw_storage_bucket,
+        final_storage_path,
+        final_storage_bucket,
+        content_type
+      }
+    },
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
     }
   })
 
   if (parserError) {
-    throw new Error(`Doc-parser failed: ${parserError.message}`)
+    console.error('❌ Doc-parser error:', {
+      error: parserError,
+      jobId: job.id,
+      documentId: document_id,
+      timestamp: new Date().toISOString()
+    })
+
+    // Check if it's a non-2xx response with error details
+    if (parserError.message && typeof parserError.message === 'string') {
+      try {
+        const errorDetails = JSON.parse(parserError.message)
+        if (errorDetails.error) {
+          throw new Error(`Doc-parser failed: ${errorDetails.error}`)
+        }
+      } catch (e) {
+        // If we can't parse the error, just use the original message
+      }
     }
+    throw new Error(`Doc-parser failed: ${parserError.message}`)
+  }
+
+  if (!parserResult) {
+    throw new Error('Doc-parser returned no result')
+  }
+
+  console.log('✅ Doc-parser completed successfully:', {
+    jobId: job.id,
+    documentId: document_id,
+    timestamp: new Date().toISOString()
+  })
 
   return {
     success: true,
@@ -144,7 +191,7 @@ async function executeChunkJob(job: ProcessingJob): Promise<JobResult> {
 
     // Create embedding job for chunks
     await createNextJob(job.document_id, 'embed', {
-      documentId: job.document_id,
+      document_id: job.document_id,
       chunks,
       metadata: job.payload.metadata
     })
@@ -154,7 +201,7 @@ async function executeChunkJob(job: ProcessingJob): Promise<JobResult> {
     console.error(`❌ Chunk job failed:`, error)
     return { success: false, error: error.message }
   }
-  }
+}
 
 async function executeEmbedJob(job: ProcessingJob): Promise<JobResult> {
   console.log(`📄 Executing embed job for document ${job.document_id}`)
@@ -166,7 +213,7 @@ async function executeEmbedJob(job: ProcessingJob): Promise<JobResult> {
     }
 
     // Store chunks in document_chunks table
-    const { error: insertError } = await supabaseClient
+    const { error: insertError } = await supabase
       .from('document_chunks')
       .insert(chunks.map(chunk => ({
         document_id: job.document_id,
@@ -178,32 +225,24 @@ async function executeEmbedJob(job: ProcessingJob): Promise<JobResult> {
       throw insertError
     }
 
-    // Create completion job
-    await createNextJob(job.document_id, 'complete', {
-      documentId: job.document_id,
-      totalChunks: chunks.length
-    })
-
     return { success: true, data: { chunks: chunks.length } }
   } catch (error) {
     console.error(`❌ Embed job failed:`, error)
     return { success: false, error: error.message }
   }
-    }
+}
 
 async function executeCompleteJob(job: ProcessingJob): Promise<JobResult> {
   console.log(`📄 Executing complete job for document ${job.document_id}`)
   
   try {
     // Update document status
-    const { error: updateError } = await supabaseClient
+    const { error: updateError } = await supabase
       .from('documents')
       .update({
         status: 'completed',
-        processed_at: new Date().toISOString(),
         metadata: {
           ...job.payload.metadata,
-          total_chunks: job.payload.totalChunks,
           completed_at: new Date().toISOString()
         }
       })
@@ -215,7 +254,7 @@ async function executeCompleteJob(job: ProcessingJob): Promise<JobResult> {
 
     // Create notification job
     await createNextJob(job.document_id, 'notify', {
-      documentId: job.document_id,
+      document_id: job.document_id,
       status: 'completed',
       metadata: job.payload.metadata
     })
@@ -232,7 +271,7 @@ async function executeNotifyJob(job: ProcessingJob): Promise<JobResult> {
   
   try {
     // Get document owner
-    const { data: document, error: docError } = await supabaseClient
+    const { data: document, error: docError } = await supabase
       .from('documents')
       .select('user_id')
       .eq('id', job.document_id)
@@ -243,7 +282,7 @@ async function executeNotifyJob(job: ProcessingJob): Promise<JobResult> {
     }
 
     // Insert notification
-    const { error: notifyError } = await supabaseClient
+    const { error: notifyError } = await supabase
       .from('notifications')
       .insert({
         user_id: document.user_id,
@@ -271,7 +310,7 @@ async function createNextJob(
   jobType: ProcessingJob['job_type'],
   payload: any
 ): Promise<void> {
-  const { error } = await supabaseClient
+  const { error } = await supabase
     .from('processing_jobs')
     .insert({
       document_id: documentId,
@@ -287,7 +326,7 @@ async function createNextJob(
   }
 }
 
-async function processJob(supabase: any, job: ProcessingJob): Promise<JobResult> {
+async function processJob(job: ProcessingJob): Promise<JobResult> {
   try {
     // Update job status to running
     const { error: updateError } = await supabase
@@ -306,7 +345,7 @@ async function processJob(supabase: any, job: ProcessingJob): Promise<JobResult>
     let result: JobResult
     switch (job.job_type) {
       case 'parse':
-        result = await executeParseJob(supabase, job)
+        result = await executeParseJob(job)
         break
       case 'chunk':
         result = await executeChunkJob(job)
@@ -360,104 +399,120 @@ async function processJob(supabase: any, job: ProcessingJob): Promise<JobResult>
   }
 }
 
+// Add result type
+interface JobProcessingResult {
+  jobId: string;
+  result?: JobResult;
+  error?: string;
+}
+
 serve(async (req) => {
-  metrics.startTime = Date.now()
-  metrics.jobStartTime = 0
-  
-  // Handle CORS preflight
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
-  // Handle unsupported methods
-  if (!['GET', 'POST', 'OPTIONS'].includes(req.method)) {
-    return new Response('Method not allowed', { 
-      status: 405,
-      headers: {
-        ...corsHeaders,
-        'Allow': 'GET, POST, OPTIONS',
-        'Content-Type': 'text/plain'
-        }
-    })
-    }
-
-  // Health check
-  if (req.method === 'GET') {
-    return new Response(
-      JSON.stringify({ 
-        status: 'healthy', 
-        timestamp: new Date().toISOString(),
-        memory: Deno.memoryUsage(),
-        config: {
-          retries: RETRY_CONFIG,
-          memory: MEMORY_CONFIG
-        }
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-  }
-
   try {
+    metrics.startTime = Date.now()
     console.log('🔄 Processing request...')
     logMetrics('request-start')
-    
-    if (!checkMemory()) {
-      throw new Error('Memory limit exceeded before processing')
+
+    // Parse request
+    let requestData
+    try {
+      const text = await req.text()
+      console.log('📄 Raw request body:', text)
+      
+      try {
+        requestData = text ? JSON.parse(text) : {}
+      } catch (parseError) {
+        console.error('❌ Failed to parse request body:', parseError)
+        return new Response(JSON.stringify({ 
+          error: 'Invalid JSON in request body',
+          details: parseError instanceof Error ? parseError.message : 'Failed to parse JSON',
+          receivedBody: text
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+    } catch (readError) {
+      console.error('❌ Failed to read request body:', readError)
+      return new Response(JSON.stringify({ 
+        error: 'Failed to read request body',
+        details: readError instanceof Error ? readError.message : 'Unknown error reading request body'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
-    
-    // Get pending jobs
-    const { data: jobs, error: jobError } = await supabaseClient
+
+    console.log('📄 Parsed request data:', requestData)
+
+    // Validate required fields
+    if (!requestData.jobId) {
+      console.error('❌ Missing jobId in request:', requestData)
+      return new Response(JSON.stringify({ 
+        error: 'Missing required parameter: jobId',
+        details: 'The jobId parameter is required for job processing',
+        receivedData: requestData
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Get job details
+    console.log('🔍 Fetching job details:', { jobId: requestData.jobId })
+    const { data: job, error: jobError } = await supabase
       .from('processing_jobs')
       .select('*')
-      .eq('status', 'pending')
-      .order('priority', { ascending: false })
-      .order('created_at', { ascending: true })
-      .limit(5)
+      .eq('id', requestData.jobId)
+      .single()
 
-    if (jobError) {
-      throw new Error(`Failed to fetch jobs: ${jobError.message}`)
+    if (jobError || !job) {
+      console.error('❌ Failed to fetch job:', jobError)
+      return new Response(JSON.stringify({ 
+        error: 'Failed to fetch job',
+        details: jobError?.message || 'Job not found'
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
 
-    if (!jobs || jobs.length === 0) {
-      console.log('ℹ️ No pending jobs found')
-      logMetrics('no-jobs')
-      return new Response(
-        JSON.stringify({ 
-          message: 'No pending jobs',
-          metrics: {
-            processingTime: Date.now() - metrics.startTime,
-            memoryUsage: Deno.memoryUsage()
-  }
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
+    // Process job
+    console.log('🔄 Processing job:', { 
+      jobId: job.id, 
+      documentId: job.document_id,
+      jobType: job.job_type
+    })
+    
+    const result = await processJob(job)
 
-    // Process jobs sequentially
-    const results = []
-    for (const job of jobs) {
-      const result = await processJob(supabaseClient, job)
-      results.push({ jobId: job.id, result })
-    }
+    console.log('✅ Job processing complete:', {
+      jobId: job.id,
+      success: result.success,
+      error: result.error
+    })
 
-    return new Response(
-      JSON.stringify({ success: true, results }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return new Response(JSON.stringify({ 
+      success: true,
+      jobId: job.id,
+      result
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
 
   } catch (error) {
-    console.error('❌ Job processor error:', error)
-    logMetrics('fatal-error')
-    return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        metrics: {
-          processingTime: Date.now() - metrics.startTime,
-          jobTime: metrics.jobStartTime ? Date.now() - metrics.jobStartTime : 0,
-          memoryUsage: Deno.memoryUsage()
-        }
-      }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    console.error('❌ Job processing failed:', error)
+    
+    return new Response(JSON.stringify({ 
+      error: 'Job processing failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
   }
 }) 
