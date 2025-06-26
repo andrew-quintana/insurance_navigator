@@ -11,18 +11,22 @@ def get_cors_config() -> Dict[str, Any]:
     # Base allowed origins - include both production and preview URLs
     allowed_origins = [
             "http://localhost:3000",
-            "https://insurance-navigator.vercel.app",
-        "https://insurance-navigator-api.onrender.com",  # Add Render API
-        "https://insurance-navigator-*.vercel.app",  # More permissive pattern for Vercel previews
-        "https://*-andrew-quintanas-projects.vercel.app",  # Handle all user preview URLs
-        # Specific preview URLs
-        "https://insurance-navigator-hr7oebcu2-andrew-quintanas-projects.vercel.app",
-        "https://insurance-navigator-gdievtrsx-andrew-quintanas-projects.vercel.app",
-        "https://insurance-navigator-3u3iv7xq0-andrew-quintanas-projects.vercel.app",
-        "https://insurance-navigator-ajzpmcvgz-andrew-quintanas-projects.vercel.app",
-        "https://insurance-navigator-cwtwocttv-andrew-quintanas-projects.vercel.app",
-        "https://insurance-navigator-kkedlaqxo-andrew-quintanas-projects.vercel.app",
-        "https://insurance-navigator-pexzb9r79-andrew-quintanas-projects.vercel.app"  # New preview URL
+            "https://insurance-navigator.vercel.app",  # Production Vercel URL
+            "https://insurance-navigator-api.onrender.com",  # Add Render API
+            "https://insurance-navigator-*.vercel.app",  # More permissive pattern for Vercel previews
+            "https://*-andrew-quintanas-projects.vercel.app",  # Handle all user preview URLs
+            # Specific preview URLs
+            "https://insurance-navigator-hr7oebcu2-andrew-quintanas-projects.vercel.app",
+            "https://insurance-navigator-gdievtrsx-andrew-quintanas-projects.vercel.app",
+            "https://insurance-navigator-3u3iv7xq0-andrew-quintanas-projects.vercel.app",
+            "https://insurance-navigator-ajzpmcvgz-andrew-quintanas-projects.vercel.app",
+            "https://insurance-navigator-cwtwocttv-andrew-quintanas-projects.vercel.app",
+            "https://insurance-navigator-kkedlaqxo-andrew-quintanas-projects.vercel.app",
+            "https://insurance-navigator-pexzb9r79-andrew-quintanas-projects.vercel.app",  # New preview URL
+            "https://insurance-navigator.vercel.app",  # Add production URL again to ensure it's included
+            "https://insurance-navigator-e3j4jn4xj-andrew-quintanas-projects.vercel.app",  # Add the specific preview URL that's failing
+            "https://insurance-navigator-k2ui23iaj-andrew-quintanas-projects.vercel.app",  # Add another preview URL from logs
+            "https://insurance-navigator-ajzpmcvgz-andrew-quintanas-projects.vercel.app"  # Add another preview URL from logs
     ]
     
     # Add any additional origins from environment
