@@ -30,33 +30,33 @@ const ALLOWED_TYPES = [
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-// Validate authentication token
-async function validateAuth(req: Request): Promise<string> {
-  const authHeader = req.headers.get('authorization')
-  
-  if (!authHeader) {
-    throw new Error('Missing authorization header')
-  }
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-  const token = authHeader.replace('Bearer ', '')
-  
+// Validate authentication token and get user ID
+async function getUserId(token: string): Promise<string> {
   try {
-    // Check if it's a service role token
-    const decodedToken = JSON.parse(atob(token.split('.')[1]))
-    if (decodedToken.role === 'service_role') {
-      return '3e2d9e16-b722-4a05-9fc2-f8e4eb5e4cbe' // Use test user ID
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error('Missing environment variables')
     }
 
-    // If not service role, verify as regular JWT
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    )
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey)
     
+    // Get user data
     const { data: { user }, error } = await supabaseClient.auth.getUser(token)
     if (error || !user) {
       throw new Error('Invalid token')
     }
+
+    // Validate user ID format
+    if (!user.id || !UUID_REGEX.test(user.id)) {
+      console.error('Invalid user ID format:', user.id)
+      throw new Error('Invalid user ID format')
+    }
+
     return user.id
   } catch (error) {
     console.error('Auth error:', error)
@@ -80,7 +80,10 @@ serve(async (req) => {
       throw new Error('No authorization header')
     }
 
-    // Initialize Supabase client
+    // Get user ID with validation
+    const userId = await getUserId(token);
+
+    // Initialize Supabase admin client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     if (!supabaseUrl || !supabaseServiceRoleKey) {
@@ -88,13 +91,6 @@ serve(async (req) => {
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
-
-    // Get user ID from token
-    const decodedToken = JSON.parse(atob(token.split('.')[1]))
-    const userId = decodedToken.sub || (decodedToken.role === 'service_role' ? '3e2d9e16-b722-4a05-9fc2-f8e4eb5e4cbe' : null)
-    if (!userId) {
-      throw new Error('No user ID found in token')
-    }
 
     // Parse request body as FormData with error handling
     let formData: FormData;
