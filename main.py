@@ -38,7 +38,7 @@ from db.services.db_pool import get_db_pool
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(levelname)s:%(name)s:%(message)s'
 )
 logger = logging.getLogger(__name__)
 
@@ -54,21 +54,14 @@ app = FastAPI(
 # Debug middleware for CORS
 class CORSDebugMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        # Log request details
-        logger.info(f"🔍 Request: {request.method} {request.url}")
-        logger.info(f"🌐 Origin: {request.headers.get('origin')}")
-        logger.info(f"📋 Headers: {dict(request.headers)}")
-        
-        # Get CORS config
-        cors_config = get_cors_config()
+        # Only log CORS issues
         origin = request.headers.get("origin")
-        
-        # Log CORS check
         if origin:
+            cors_config = get_cors_config()
             is_allowed = False
+            
             # Check exact matches
             if origin in cors_config["allow_origins"]:
-                logger.info(f"✅ Origin allowed (exact match): {origin}")
                 is_allowed = True
             else:
                 # Check wildcards
@@ -76,7 +69,6 @@ class CORSDebugMiddleware(BaseHTTPMiddleware):
                     if '*' in allowed_origin:
                         pattern = allowed_origin.replace('*', '.*').replace('.', '\.')
                         if re.match(pattern, origin):
-                            logger.info(f"✅ Origin allowed (wildcard match): {origin} matches {allowed_origin}")
                             is_allowed = True
                             break
                 
@@ -84,28 +76,35 @@ class CORSDebugMiddleware(BaseHTTPMiddleware):
                 if not is_allowed and "allow_origin_regex" in cors_config:
                     pattern = re.compile(cors_config["allow_origin_regex"])
                     if pattern.match(origin):
-                        logger.info(f"✅ Origin allowed (regex match): {origin}")
                         is_allowed = True
-                    
+            
             if not is_allowed:
-                logger.warning(f"❌ Origin not allowed: {origin}")
+                logger.warning(f"❌ CORS: Origin not allowed: {origin}")
         
         response = await call_next(request)
-        
-        # Log response headers
-        logger.info(f"📤 Response headers: {dict(response.headers)}")
-        
         return response
 
-# Add debug middleware
-app.add_middleware(CORSDebugMiddleware)
-
-# Add CORS middleware with our configuration
-cors_config = get_cors_config()
-app.add_middleware(
-    CORSMiddleware,
-    **cors_config
-)
+# Add request logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log all requests for debugging."""
+    start_time = time.time()
+    
+    # Only log the path and method
+    logger.info(f"➡️ {request.method} {request.url.path}")
+    
+    try:
+        response = await call_next(request)
+        process_time = time.time() - start_time
+        
+        # Only log errors or slow responses
+        if response.status_code >= 400 or process_time > 1.0:
+            logger.info(f"⬅️ {request.method} {request.url.path} - Status: {response.status_code} - Time: {process_time:.2f}s")
+        
+        return response
+    except Exception as e:
+        logger.error(f"❌ Request failed: {str(e)}")
+        raise
 
 # Health check cache
 _health_cache = {"result": None, "timestamp": 0}
@@ -149,27 +148,18 @@ async def health_check(request: Request):
                 async with db_pool.get_connection() as conn:
                     await conn.execute("SELECT 1")
                 db_status = "healthy"
-                logger.debug("✅ Health check: Database connection successful")
             except Exception as e:
                 db_status = f"error: {str(e)[:50]}"
-                logger.warning(f"⚠️ Health check: Database connection error: {e}")
+                logger.warning(f"⚠️ Database connection error: {e}")
         else:
             db_status = "unavailable"
-            logger.warning("⚠️ Health check: Database pool unavailable")
+            logger.warning("⚠️ Database pool unavailable")
 
         result = {
             "status": "healthy" if db_status == "healthy" else "degraded",
             "timestamp": datetime.utcnow().isoformat(),
             "database": db_status,
-            "version": "3.0.0",
-            "services": {
-                "database": db_status,
-                "user_service": "available",
-                "conversation_service": "available",
-                "storage_service": "available",
-                "agent_orchestrator": "available"
-            },
-            "cached": False
+            "version": "3.0.0"
         }
         
         # Cache the result
@@ -177,24 +167,12 @@ async def health_check(request: Request):
         _health_cache["timestamp"] = current_time
         
         return result
-        
     except Exception as e:
-        logger.error(f"Health check error: {str(e)}")
-        error_result = {
-            "status": "unhealthy",
-            "timestamp": datetime.utcnow().isoformat(),
-            "database": f"error: {str(e)[:50]}",
-            "version": "3.0.0",
-            "services": {
-                "database": "error",
-                "user_service": "unknown",
-                "conversation_service": "unknown",
-                "storage_service": "unknown",
-                "agent_orchestrator": "unknown"
-            },
-            "cached": False
-        }
-        return error_result
+        logger.error(f"Health check failed: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "message": str(e)}
+        )
 
 # Pydantic models
 class UserResponse(BaseModel):
@@ -435,28 +413,6 @@ async def initialize_background_services():
         logger.info("🔄 Background service initialization complete")
     except Exception as e:
         logger.error(f"⚠️ Background service initialization failed: {e}")
-
-# Add request logging middleware
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    """Log all requests for debugging."""
-    start_time = time.time()
-    
-    # Log request details
-    logger.info(f"➡️ {request.method} {request.url.path}")
-    logger.info(f"Headers: {dict(request.headers)}")
-    
-    try:
-        response = await call_next(request)
-        
-        # Log response details
-        process_time = time.time() - start_time
-        logger.info(f"⬅️ {request.method} {request.url.path} - Status: {response.status_code} - Time: {process_time:.2f}s")
-        
-        return response
-    except Exception as e:
-        logger.error(f"❌ Request failed: {str(e)}")
-        raise
 
 # Shutdown event
 @app.on_event("shutdown")
