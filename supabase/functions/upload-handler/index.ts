@@ -36,7 +36,17 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9
 // Validate authentication token and get user ID
 async function getUserId(token: string): Promise<string> {
   try {
-    // Initialize Supabase client
+    // First try to get user ID from token payload
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    console.log('Token payload:', payload);
+
+    // Check for user_id in payload
+    if (payload.user_id && UUID_REGEX.test(payload.user_id)) {
+      console.log('Using user_id from token payload:', payload.user_id);
+      return payload.user_id;
+    }
+
+    // If no valid user_id in payload, verify with Supabase Auth
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
     if (!supabaseUrl || !supabaseAnonKey) {
@@ -44,20 +54,20 @@ async function getUserId(token: string): Promise<string> {
     }
 
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey)
-    
-    // Get user data
     const { data: { user }, error } = await supabaseClient.auth.getUser(token)
+    
     if (error || !user) {
+      console.error('Auth verification failed:', error);
       throw new Error('Invalid token')
     }
 
-    // Validate user ID format
     if (!user.id || !UUID_REGEX.test(user.id)) {
-      console.error('Invalid user ID format:', user.id)
+      console.error('Invalid user ID format:', user.id);
       throw new Error('Invalid user ID format')
     }
 
-    return user.id
+    console.log('Using user ID from auth verification:', user.id);
+    return user.id;
   } catch (error) {
     console.error('Auth error:', error)
     throw new Error('Authentication failed')
@@ -82,6 +92,7 @@ serve(async (req) => {
 
     // Get user ID with validation
     const userId = await getUserId(token);
+    console.log('Validated user ID:', userId);
 
     // Initialize Supabase admin client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
