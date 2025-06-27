@@ -51,21 +51,32 @@ class UserService:
             async with pool.get_connection() as conn:
                 # Check if user already exists
                 existing_user = await conn.fetchrow(
-                    "SELECT id FROM users WHERE email = $1",
+                    "SELECT id FROM auth.users WHERE email = $1",
                     email
                 )
                 
                 if existing_user:
                     raise ValueError("User with this email already exists")
                 
-                # Insert new user
+                # Insert new user into auth.users
                 user_row = await conn.fetchrow(
                     """
-                    INSERT INTO users (id, email, hashed_password, full_name, metadata)
-                    VALUES ($1, $2, $3, $4, $5)
-                    RETURNING id, email, full_name, created_at, is_active
+                    INSERT INTO auth.users (id, email, encrypted_password)
+                    VALUES ($1, $2, $3)
+                    RETURNING id, email
                     """,
-                    user_id, email, hashed_password, full_name, json.dumps(metadata or {})
+                    user_id, email, hashed_password
+                )
+                
+                # Update user profile
+                profile_row = await conn.fetchrow(
+                    """
+                    UPDATE public.user_profiles 
+                    SET full_name = $2, metadata = $3
+                    WHERE user_id = $1
+                    RETURNING id, full_name, created_at
+                    """,
+                    user_id, full_name, json.dumps(metadata or {})
                 )
                 
                 # Assign default user role
@@ -76,9 +87,8 @@ class UserService:
                 return {
                     "id": str(user_row["id"]),
                     "email": user_row["email"],
-                    "full_name": user_row["full_name"],
-                    "created_at": user_row["created_at"],
-                    "is_active": user_row["is_active"]
+                    "full_name": profile_row["full_name"],
+                    "created_at": profile_row["created_at"]
                 }
                 
         except Exception as e:
@@ -94,9 +104,10 @@ class UserService:
                 # Get user with password hash
                 user_row = await conn.fetchrow(
                     """
-                    SELECT id, email, hashed_password, full_name, is_active, last_login
-                    FROM users 
-                    WHERE email = $1 AND is_active = true
+                    SELECT u.id, u.email, u.encrypted_password, p.full_name, p.last_login
+                    FROM auth.users u
+                    JOIN public.user_profiles p ON p.user_id = u.id
+                    WHERE u.email = $1 AND u.confirmed_at IS NOT NULL
                     """,
                     email
                 )
@@ -106,13 +117,13 @@ class UserService:
                     return None
                 
                 # Verify password
-                if not self.pwd_context.verify(password, user_row["hashed_password"]):
+                if not self.pwd_context.verify(password, user_row["encrypted_password"]):
                     logger.warning(f"Authentication failed - invalid password: {email}")
                     return None
                 
                 # Update last login time
                 await conn.execute(
-                    "UPDATE users SET last_login = NOW() WHERE id = $1",
+                    "UPDATE public.user_profiles SET last_login = NOW() WHERE user_id = $1",
                     user_row["id"]
                 )
                 
@@ -125,7 +136,6 @@ class UserService:
                     "id": str(user_row["id"]),
                     "email": user_row["email"],
                     "full_name": user_row["full_name"],
-                    "is_active": user_row["is_active"],
                     "last_login": user_row["last_login"],
                     "roles": user_roles
                 }
@@ -151,9 +161,11 @@ class UserService:
             async with pool.get_connection() as conn:
                 user_row = await conn.fetchrow(
                     """
-                    SELECT id, email, full_name, is_active, created_at, updated_at, last_login, metadata
-                    FROM users 
-                    WHERE email = $1
+                    SELECT u.id, u.email, p.full_name, p.created_at, p.updated_at, 
+                           p.last_login, p.metadata
+                    FROM auth.users u
+                    JOIN public.user_profiles p ON p.user_id = u.id
+                    WHERE u.email = $1 AND u.confirmed_at IS NOT NULL
                     """,
                     email
                 )
@@ -168,7 +180,6 @@ class UserService:
                     "id": str(user_row["id"]),
                     "email": user_row["email"],
                     "full_name": user_row["full_name"],
-                    "is_active": user_row["is_active"],
                     "created_at": user_row["created_at"],
                     "updated_at": user_row["updated_at"],
                     "last_login": user_row["last_login"],
@@ -188,9 +199,11 @@ class UserService:
             async with pool.get_connection() as conn:
                 user_row = await conn.fetchrow(
                     """
-                    SELECT id, email, full_name, is_active, created_at, updated_at, last_login, metadata
-                    FROM users 
-                    WHERE id = $1
+                    SELECT u.id, u.email, p.full_name, p.created_at, p.updated_at, 
+                           p.last_login, p.metadata
+                    FROM auth.users u
+                    JOIN public.user_profiles p ON p.user_id = u.id
+                    WHERE u.id = $1 AND u.confirmed_at IS NOT NULL
                     """,
                     uuid.UUID(user_id)
                 )
@@ -205,7 +218,6 @@ class UserService:
                     "id": str(user_row["id"]),
                     "email": user_row["email"],
                     "full_name": user_row["full_name"],
-                    "is_active": user_row["is_active"],
                     "created_at": user_row["created_at"],
                     "updated_at": user_row["updated_at"],
                     "last_login": user_row["last_login"],
@@ -227,7 +239,7 @@ class UserService:
             pool = await get_db_pool()
             
             # Prepare update fields
-            allowed_fields = ['full_name', 'metadata', 'is_active']
+            allowed_fields = ['full_name', 'metadata']
             update_fields = {k: v for k, v in updates.items() if k in allowed_fields}
             
             if not update_fields:
@@ -248,37 +260,29 @@ class UserService:
             values.append(datetime.utcnow())
             param_count += 1
             
-            # Add user_id for WHERE clause
+            # Add user_id to values
             values.append(uuid.UUID(user_id))
             
-            query = f"""
-                UPDATE users 
-                SET {', '.join(set_clauses)}
-                WHERE id = ${param_count}
-                RETURNING id, email, full_name, is_active, created_at, updated_at, last_login, metadata
-            """
-            
             async with pool.get_connection() as conn:
-                user_row = await conn.fetchrow(query, *values)
+                # Update user profile
+                updated_row = await conn.fetchrow(
+                    f"""
+                    UPDATE public.user_profiles
+                    SET {', '.join(set_clauses)}
+                    WHERE user_id = ${param_count}
+                    RETURNING id, full_name, updated_at, metadata
+                    """,
+                    *values
+                )
                 
-                if not user_row:
+                if not updated_row:
                     return None
                 
-                # Get user roles
-                user_roles = await self._get_user_roles(conn, user_row["id"])
-                
-                logger.info(f"Updated user: {user_id}")
-                
                 return {
-                    "id": str(user_row["id"]),
-                    "email": user_row["email"],
-                    "full_name": user_row["full_name"],
-                    "is_active": user_row["is_active"],
-                    "created_at": user_row["created_at"],
-                    "updated_at": user_row["updated_at"],
-                    "last_login": user_row["last_login"],
-                    "metadata": json.loads(user_row["metadata"]) if user_row["metadata"] else {},
-                    "roles": user_roles
+                    "id": str(updated_row["id"]),
+                    "full_name": updated_row["full_name"],
+                    "updated_at": updated_row["updated_at"],
+                    "metadata": json.loads(updated_row["metadata"]) if updated_row["metadata"] else {}
                 }
                 
         except Exception as e:

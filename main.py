@@ -183,6 +183,20 @@ class UserResponse(BaseModel):
     is_active: bool = True
     roles: List[str] = []
 
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    full_name: str
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user: Optional[Dict[str, Any]] = None
+
 # Global service instances
 user_service_instance = None
 conversation_service_instance = None
@@ -534,6 +548,48 @@ async def add_cors_headers(request: Request, call_next):
     except Exception as e:
         logger.error(f"Error in CORS middleware: {str(e)}")
         return Response(status_code=500, content="Internal server error")
+
+@app.post("/register", response_model=Token)
+async def register(request: RegisterRequest):
+    """Register a new user with database persistence."""
+    try:
+        # Get user service
+        user_service = await get_user_service()
+        
+        # Create user in database
+        user_data = await user_service.create_user(
+            email=request.email,
+            password=request.password,
+            full_name=request.full_name
+        )
+        
+        # Authenticate user to get token
+        auth_result = await user_service.authenticate_user(request.email, request.password)
+        if not auth_result:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="User created but authentication failed"
+            )
+        
+        logger.info(f"✅ User registered successfully: {request.email}")
+        return {
+            "access_token": auth_result["access_token"],
+            "token_type": "bearer",
+            "user": auth_result["user"]
+        }
+        
+    except ValueError as e:
+        logger.warning(f"Registration failed for {request.email}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"❌ Registration error for {request.email}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Registration failed"
+        )
 
 if __name__ == "__main__":
     import uvicorn
