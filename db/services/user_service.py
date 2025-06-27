@@ -32,6 +32,12 @@ class UserService:
     
     def __init__(self):
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        self.pool = None
+    
+    async def _ensure_pool(self):
+        """Ensure database pool is initialized."""
+        if not self.pool:
+            self.pool = await get_db_pool()
     
     async def create_user(
         self, 
@@ -43,13 +49,13 @@ class UserService:
     ) -> Dict[str, Any]:
         """Create a new user in the database."""
         try:
+            await self._ensure_pool()
+            
             # Hash password
             hashed_password = self.pwd_context.hash(password)
             user_id = uuid.uuid4()
             
-            pool = await get_db_pool()
-            
-            async with pool.acquire() as conn:
+            async with self.pool.get_connection() as conn:
                 async with conn.transaction():
                     # Check if user already exists
                     existing_user = await conn.fetchrow(
@@ -117,9 +123,9 @@ class UserService:
     async def authenticate_user(self, email: str, password: str) -> Optional[Dict[str, Any]]:
         """Authenticate user with email and password and return JWT token and user data."""
         try:
-            pool = await get_db_pool()
+            await self._ensure_pool()
             
-            async with pool.acquire() as conn:
+            async with self.pool.get_connection() as conn:
                 # Get user with password hash
                 user_row = await conn.fetchrow(
                     """
@@ -179,9 +185,9 @@ class UserService:
     async def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Get user by email address."""
         try:
-            pool = await get_db_pool()
+            await self._ensure_pool()
             
-            async with pool.acquire() as conn:
+            async with self.pool.get_connection() as conn:
                 user_row = await conn.fetchrow(
                     """
                     SELECT 
@@ -221,9 +227,9 @@ class UserService:
     async def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Get user by ID."""
         try:
-            pool = await get_db_pool()
+            await self._ensure_pool()
             
-            async with pool.acquire() as conn:
+            async with self.pool.get_connection() as conn:
                 user_row = await conn.fetchrow(
                     """
                     SELECT 
@@ -267,7 +273,7 @@ class UserService:
     ) -> Optional[Dict[str, Any]]:
         """Update user information."""
         try:
-            pool = await get_db_pool()
+            await self._ensure_pool()
             
             # Prepare update fields
             allowed_fields = ['full_name', 'metadata']
@@ -294,7 +300,7 @@ class UserService:
             # Add user_id to values
             values.append(uuid.UUID(user_id))
             
-            async with pool.get_connection() as conn:
+            async with self.pool.get_connection() as conn:
                 # Update user profile
                 updated_row = await conn.fetchrow(
                     f"""
@@ -323,9 +329,9 @@ class UserService:
     async def assign_role(self, user_id: str, role_name: str) -> bool:
         """Assign a role to a user."""
         try:
-            pool = await get_db_pool()
+            await self._ensure_pool()
             
-            async with pool.get_connection() as conn:
+            async with self.pool.get_connection() as conn:
                 # Get role ID
                 role_row = await conn.fetchrow(
                     "SELECT id FROM roles WHERE name = $1",
@@ -355,9 +361,9 @@ class UserService:
     async def remove_role(self, user_id: str, role_name: str) -> bool:
         """Remove a role from a user."""
         try:
-            pool = await get_db_pool()
+            await self._ensure_pool()
             
-            async with pool.get_connection() as conn:
+            async with self.pool.get_connection() as conn:
                 # Get role ID
                 role_row = await conn.fetchrow(
                     "SELECT id FROM roles WHERE name = $1",
