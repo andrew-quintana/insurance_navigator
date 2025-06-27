@@ -48,48 +48,80 @@ class UserService:
             
             pool = await get_db_pool()
             
-            async with pool.get_connection() as conn:
-                # Check if user already exists
-                existing_user = await conn.fetchrow(
-                    "SELECT id FROM auth.users WHERE email = $1",
-                    email
-                )
-                
-                if existing_user:
-                    raise ValueError("User with this email already exists")
-                
-                # Insert new user into auth.users
-                user_row = await conn.fetchrow(
-                    """
-                    INSERT INTO auth.users (id, email, encrypted_password)
-                    VALUES ($1, $2, $3)
-                    RETURNING id, email
-                    """,
-                    user_id, email, hashed_password
-                )
-                
-                # Update user profile
-                profile_row = await conn.fetchrow(
-                    """
-                    UPDATE public.user_profiles 
-                    SET full_name = $2, metadata = $3
-                    WHERE user_id = $1
-                    RETURNING id, full_name, created_at
-                    """,
-                    user_id, full_name, json.dumps(metadata or {})
-                )
-                
-                # Assign default user role
-                await self._assign_default_role(conn, user_id)
-                
-                logger.info(f"Created user: {email} with ID: {user_id}")
-                
-                return {
-                    "id": str(user_row["id"]),
-                    "email": user_row["email"],
-                    "full_name": profile_row["full_name"],
-                    "created_at": profile_row["created_at"]
-                }
+            async with pool.acquire() as conn:
+                async with conn.transaction():
+                    # Check if user already exists
+                    existing_user = await conn.fetchrow(
+                        "SELECT id FROM auth.users WHERE email = $1",
+                        email
+                    )
+                    
+                    if existing_user:
+                        raise ValueError("User with this email already exists")
+                    
+                    # Insert new user into auth.users
+                    await conn.execute(
+                        """
+                        INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, confirmed_at)
+                        VALUES ($1, $2, $3, NOW(), NOW())
+                        """,
+                        user_id, email, hashed_password
+                    )
+                    
+                    # Create user profile
+                    await conn.execute(
+                        """
+                        INSERT INTO public.user_profiles (user_id, full_name, metadata)
+                        VALUES ($1, $2, $3)
+                        """,
+                        user_id, full_name, json.dumps(metadata or {})
+                    )
+                    
+                    # Get default role ID
+                    role_row = await conn.fetchrow(
+                        "SELECT id FROM public.roles WHERE name = 'user'"
+                    )
+                    
+                    if role_row:
+                        # Assign default role
+                        await conn.execute(
+                            """
+                            INSERT INTO public.user_roles (user_id, role_id)
+                            VALUES ($1, $2)
+                            ON CONFLICT (user_id, role_id) DO NOTHING
+                            """,
+                            user_id, role_row['id']
+                        )
+                    
+                    # Get complete user data
+                    user_data = await conn.fetchrow(
+                        """
+                        SELECT 
+                            u.id,
+                            u.email,
+                            p.full_name,
+                            p.created_at,
+                            p.metadata,
+                            array_agg(r.name) as roles
+                        FROM auth.users u
+                        JOIN public.user_profiles p ON p.user_id = u.id
+                        LEFT JOIN public.user_roles ur ON ur.user_id = u.id
+                        LEFT JOIN public.roles r ON r.id = ur.role_id
+                        WHERE u.id = $1
+                        GROUP BY u.id, u.email, p.full_name, p.created_at, p.metadata
+                        """,
+                        user_id
+                    )
+                    
+                    logger.info(f"Created user: {email} with ID: {user_id}")
+                    
+                    return {
+                        "id": str(user_data["id"]),
+                        "email": user_data["email"],
+                        "full_name": user_data["full_name"],
+                        "created_at": user_data["created_at"],
+                        "roles": user_data["roles"] or []
+                    }
                 
         except Exception as e:
             logger.error(f"Failed to create user {email}: {str(e)}")
@@ -100,14 +132,23 @@ class UserService:
         try:
             pool = await get_db_pool()
             
-            async with pool.get_connection() as conn:
+            async with pool.acquire() as conn:
                 # Get user with password hash
                 user_row = await conn.fetchrow(
                     """
-                    SELECT u.id, u.email, u.encrypted_password, p.full_name, p.last_login
+                    SELECT 
+                        u.id,
+                        u.email,
+                        u.encrypted_password,
+                        p.full_name,
+                        p.last_login,
+                        array_agg(r.name) as roles
                     FROM auth.users u
                     JOIN public.user_profiles p ON p.user_id = u.id
-                    WHERE u.email = $1 AND u.confirmed_at IS NOT NULL
+                    LEFT JOIN public.user_roles ur ON ur.user_id = u.id
+                    LEFT JOIN public.roles r ON r.id = ur.role_id
+                    WHERE u.email = $1
+                    GROUP BY u.id, u.email, u.encrypted_password, p.full_name, p.last_login
                     """,
                     email
                 )
@@ -127,23 +168,19 @@ class UserService:
                     user_row["id"]
                 )
                 
-                # Get user roles
-                user_roles = await self._get_user_roles(conn, user_row["id"])
-                
-                logger.info(f"User authenticated successfully: {email}")
-                
                 user_data = {
                     "id": str(user_row["id"]),
                     "email": user_row["email"],
                     "full_name": user_row["full_name"],
                     "last_login": user_row["last_login"],
-                    "roles": user_roles
+                    "roles": user_row["roles"] or []
                 }
                 
                 # Create JWT token
                 access_token = self.create_access_token(user_data)
                 
-                # Return both token and user data
+                logger.info(f"User authenticated successfully: {email}")
+                
                 return {
                     "access_token": access_token,
                     "user": user_data
