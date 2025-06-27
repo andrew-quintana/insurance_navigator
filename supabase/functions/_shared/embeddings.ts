@@ -9,12 +9,22 @@ export class OpenAIEmbeddings {
 
     constructor(apiKey: string) {
         this.apiKey = apiKey;
-        this.model = 'text-embedding-3-small';
-        this.dimensions = 1536;
+        this.model = 'text-embedding-ada-002';
+        this.dimensions = 1536; // Used only for zero vectors when errors occur
     }
 
     async embedText(text: string): Promise<number[]> {
         try {
+            // Clean and validate text before sending to OpenAI
+            const cleanedText = text.trim()
+                .replace(/[^\x20-\x7E\n]/g, '') // Keep only printable ASCII chars and newlines
+                .replace(/\s+/g, ' ') // Normalize whitespace
+                .slice(0, 8000); // OpenAI has a token limit, roughly 8000 chars
+
+            if (!cleanedText || cleanedText.length < 10) {
+                throw new Error('Text is too short or empty after cleaning');
+            }
+
             const response = await fetch('https://api.openai.com/v1/embeddings', {
                 method: 'POST',
                 headers: {
@@ -22,9 +32,8 @@ export class OpenAIEmbeddings {
                     'Authorization': `Bearer ${this.apiKey}`
                 },
                 body: JSON.stringify({
-                    input: text,
-                    model: this.model,
-                    dimensions: this.dimensions
+                    input: cleanedText,
+                    model: this.model
                 })
             });
 
@@ -32,7 +41,8 @@ export class OpenAIEmbeddings {
                 if (response.status === 429) {
                     throw new Error('OpenAI rate limit exceeded');
                 }
-                throw new Error(`OpenAI API error: ${response.status}`);
+                const errorBody = await response.text();
+                throw new Error(`OpenAI API error: ${response.status} - ${errorBody}`);
             }
 
             const result = await response.json();

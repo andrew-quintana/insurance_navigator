@@ -1,4 +1,5 @@
 /// <reference lib="deno.ns" />
+// @deno-types="https://deno.land/x/types/deno.ns.d.ts"
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
@@ -30,7 +31,7 @@ const metrics: ProcessingMetrics = {
 interface VectorRequest {
     documentId: string;
     extractedText: string;
-  metadata?: {
+    metadata?: {
         title?: string;
         content_type?: string;
         extraction_method?: string;
@@ -46,6 +47,7 @@ interface TextChunk {
         chunk_length: number;
         start_char: number;
         end_char: number;
+        vector_length?: number;
     };
 }
 
@@ -84,8 +86,8 @@ class TextChunker {
                     if (nextSpace !== -1 && nextSpace < 50) {
                         end += nextSpace;
                         console.log(`📝 Extended chunk ${chunkIndex} to word boundary: +${nextSpace} chars`);
-  }
-}
+                    }
+                }
             }
 
             // Create chunk
@@ -140,193 +142,172 @@ serve(async (req) => {
     metrics.startTime = performance.now();
     console.log(`🚀 Starting vector processing at ${new Date().toISOString()}`);
 
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { 
-      headers: {
-        ...corsHeaders,
-        'Allow': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
-      }
-    })
-  }
-
-  // Handle unsupported methods
-  if (!['GET', 'POST', 'OPTIONS'].includes(req.method)) {
-    return new Response('Method not allowed', { 
-      status: 405,
-      headers: {
-        ...corsHeaders,
-        'Allow': 'GET, POST, OPTIONS',
-        'Content-Type': 'text/plain'
-      }
-    })
-  }
-
-    // Health check
-    if (req.method === 'GET') {
-        return new Response(
-            JSON.stringify({ status: 'healthy', timestamp: new Date().toISOString() }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-  }
-
-  try {
-        console.log('🧮 Processing request...')
-        // Parse request body
-        const rawBody = await req.text();
-        console.log('📦 Raw request body:', rawBody);
-        
-        let requestData: VectorRequest;
-        try {
-            // Try parsing as JSON string first
-            requestData = JSON.parse(rawBody);
-        } catch (parseError) {
-            console.error('❌ Failed to parse request body as JSON:', parseError);
-            throw new Error(`Invalid request body: ${parseError.message}`);
+    try {
+        // Handle CORS preflight
+        if (req.method === 'OPTIONS') {
+            return new Response('ok', { 
+                headers: {
+                    ...corsHeaders,
+                    'Allow': 'GET, POST, OPTIONS',
+                    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+                }
+            })
         }
+
+        // Handle unsupported methods
+        if (!['GET', 'POST', 'OPTIONS'].includes(req.method)) {
+            return new Response('Method not allowed', { 
+                status: 405,
+                headers: {
+                    ...corsHeaders,
+                    'Allow': 'GET, POST, OPTIONS',
+                    'Content-Type': 'text/plain'
+                }
+            })
+        }
+
+        // Health check
+        if (req.method === 'GET') {
+            return new Response(
+                JSON.stringify({ status: 'healthy', timestamp: new Date().toISOString() }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+        }
+
+        console.log('🧮 Processing request...')
+        
+        // Parse request body
+        const requestData: VectorRequest = await req.json();
+        console.log(`📄 Processing document ${requestData.documentId} - Text length: ${requestData.extractedText.length} chars`);
 
         const { documentId, extractedText, metadata = {} } = requestData;
 
-    if (!documentId || !extractedText) {
-            console.error('❌ Missing required parameters:', { documentId, hasExtractedText: !!extractedText });
-            throw new Error('Missing required parameters: documentId and extractedText');
-    }
+        // Clean and validate text
+        const cleanedText = extractedText.trim()
+            .replace(/[^\x20-\x7E\n]/g, '') // Keep only printable ASCII chars and newlines
+            .replace(/\s+/g, ' '); // Normalize whitespace
 
-        console.log(`📄 Processing document ${documentId} - Text length: ${extractedText.length} chars`);
+        console.log(`📄 Cleaned text length: ${cleanedText.length} chars`);
+        console.log(`📄 First 100 chars of cleaned text: "${cleanedText.slice(0, 100)}..."`);
+
+        // Create chunks from cleaned text
+        const chunker = new TextChunker();
+        const chunks = chunker.createChunks(cleanedText);
+
+        // Initialize OpenAI embeddings
+        const openaiKey = Deno.env.get('OPENAI_API_KEY');
+        if (!openaiKey) {
+            throw new Error('OpenAI API key not found');
+        }
+        const embeddings = new OpenAIEmbeddings(openaiKey);
 
         // Initialize Supabase client
-        const supabaseClient = createClient(
-            Deno.env.get('SUPABASE_URL') ?? '',
-            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-        );
+        const supabaseUrl = Deno.env.get('SUPABASE_URL');
+        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+        if (!supabaseUrl || !supabaseKey) {
+            throw new Error('Supabase credentials not found');
+        }
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get document record
-    const { data: document, error: docError } = await supabaseClient
-      .from('documents')
-      .select('*')
-      .eq('id', documentId)
-            .single();
+        // Process chunks in batches
+        const batchSize = 10;
+        let totalVectors = 0;
+        let batchStartTime = performance.now();
 
-    if (docError || !document) {
-            throw new Error(`Document not found: ${docError?.message || 'Unknown error'}`);
-    }
-
-        // Create text chunks
-        const chunker = new TextChunker();
-        const chunks = chunker.createChunks(extractedText);
-
-    // Initialize OpenAI embeddings
-        const embeddings = new OpenAIEmbeddings(Deno.env.get('OPENAI_API_KEY') ?? '');
-
-        // Process chunks in batches to avoid rate limits
-        const batchSize = 20;
-        const results = [];
-        
-        for (let i = 0; i < chunks.length; i += batchSize) {
-            const batchStartTime = performance.now();
-            const batch = chunks.slice(i, Math.min(i + batchSize, chunks.length));
-            
-            console.log(`
-🔄 Processing Batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(chunks.length / batchSize)}:
-- Batch size: ${batch.length} chunks
-- Total chars in batch: ${batch.reduce((sum, chunk) => sum + chunk.text.length, 0)}
+        console.log(`🔄 Processing Batch 1/1:
+- Batch size: ${chunks.length} chunks
+- Total chars in batch: ${chunks.reduce((sum, chunk) => sum + chunk.text.length, 0)}
             `);
 
-            try {
-                // Generate embeddings for batch
-                const embeddingStartTime = performance.now();
-                const batchEmbeddings = await embeddings.embedBatch(
-                    batch.map(chunk => chunk.text)
-                );
-                const embeddingTime = performance.now() - embeddingStartTime;
-                
-                console.log(`
+        // Generate embeddings for all chunks
+        const embeddingStartTime = performance.now();
+        const batchEmbeddings = await embeddings.embedTexts(chunks.map(chunk => chunk.text));
+        const embeddingTime = performance.now() - embeddingStartTime;
+        metrics.embeddingTimes.push(embeddingTime);
+
+        console.log(`
 ✨ Embedding Generation:
 - Time taken: ${embeddingTime.toFixed(2)}ms
-- Average time per chunk: ${(embeddingTime / batch.length).toFixed(2)}ms
+- Average time per chunk: ${(embeddingTime / chunks.length).toFixed(2)}ms
                 `);
 
-                metrics.embeddingTimes.push(embeddingTime);
-                metrics.batchSizes.push(batch.length);
+        // Store vectors in database
+        const vectorData = chunks.map((chunk, idx) => ({
+            document_record_id: documentId,
+            chunk_index: chunk.metadata.chunk_index,
+            content_embedding: batchEmbeddings[idx],
+            chunk_text: chunk.text,
+            metadata: chunk.metadata
+        }));
 
-                // Store vectors
-                const vectorInserts = batch.map((chunk, batchIndex) => ({
-                    document_id: documentId,
-                    chunk_index: chunk.metadata.chunk_index,
-                    content_embedding: batchEmbeddings[batchIndex],
-                    chunk_text: chunk.text,
-                    chunk_metadata: {
-                        ...chunk.metadata,
-          ...metadata,
-          processed_at: new Date().toISOString(),
-                        embedding_method: 'openai',
-                        processing_stats: {
-                            chunk_processing_time_ms: embeddingTime / batch.length,
-                            total_batch_time_ms: performance.now() - batchStartTime
-                        }
-                    }
-                }));
+        const { error: insertError } = await supabase
+            .from('document_vectors')
+            .insert(vectorData);
 
-                const { error: insertError } = await supabaseClient
-          .from('document_vectors')
-                    .insert(vectorInserts);
+        if (insertError) {
+            throw new Error(`Failed to store vectors: ${insertError.message}`);
+        }
 
-                if (insertError) {
-                    console.error(`❌ Failed to store vectors for batch ${i / batchSize + 1}:`, insertError);
-                    throw insertError;
-                }
+        totalVectors += chunks.length;
+        const batchTime = performance.now() - batchStartTime;
+        metrics.batchTimes.push(batchTime);
+        metrics.batchSizes.push(chunks.length);
 
-                results.push(...vectorInserts.map(v => ({
-                    chunk_index: v.chunk_index,
-                    vector_length: v.content_embedding.length
-                })));
-
-                const batchTime = performance.now() - batchStartTime;
-                metrics.batchTimes.push(batchTime);
-                
-                console.log(`
+        console.log(`
 ✅ Batch Complete:
 - Total time: ${batchTime.toFixed(2)}ms
 - Storage time: ${(batchTime - embeddingTime).toFixed(2)}ms
                 `);
 
-      } catch (error) {
-                console.error(`❌ Error processing batch ${i / batchSize + 1}:`, error);
-                throw error;
-      }
-    }
+        // Verify vectors were created
+        const { data: verifyData, error: verifyError } = await supabase
+            .from('document_vectors')
+            .select('document_record_id, chunk_index')
+            .eq('document_record_id', documentId);
 
-        metrics.totalTime = performance.now() - metrics.startTime;
+        if (verifyError) {
+            throw new Error(`Failed to verify vectors: ${verifyError.message}`);
+        }
+
+        console.log(`
+✅ Vector Creation Verified:
+- Expected vectors: ${chunks.length}
+- Created vectors: ${verifyData.length}
+- First vector dimensions: ${batchEmbeddings[0].length}
+        `);
+
+        // Calculate final metrics
+        const totalTime = performance.now() - metrics.startTime;
+        metrics.totalTime = totalTime;
 
         console.log(`
 📊 Final Processing Statistics:
-- Total time: ${metrics.totalTime.toFixed(2)}ms
-- Chunking time: ${metrics.chunkingTime?.toFixed(2)}ms (${((metrics.chunkingTime || 0) / metrics.totalTime * 100).toFixed(2)}%)
+- Total time: ${totalTime.toFixed(2)}ms
+- Chunking time: ${metrics.chunkingTime?.toFixed(2)}ms (${((metrics.chunkingTime || 0) / totalTime * 100).toFixed(2)}%)
 - Average embedding time per batch: ${(metrics.embeddingTimes.reduce((a, b) => a + b, 0) / metrics.embeddingTimes.length).toFixed(2)}ms
 - Average batch processing time: ${(metrics.batchTimes.reduce((a, b) => a + b, 0) / metrics.batchTimes.length).toFixed(2)}ms
-- Processing rate: ${(metrics.totalCharsProcessed / metrics.totalTime * 1000).toFixed(2)} chars/second
+- Processing rate: ${(metrics.totalCharsProcessed / totalTime * 1000).toFixed(2)} chars/second
         `);
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-                document_id: documentId,
-                chunks_processed: chunks.length,
-                results: results,
-                processing_metrics: metrics
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        return new Response(
+            JSON.stringify({
+                success: true,
+                vectors_created: totalVectors,
+                processing_time_ms: totalTime
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
 
-  } catch (error) {
-        console.error('Error:', error);
-    return new Response(
-      JSON.stringify({
-                error: error.message,
-                processing_metrics: metrics 
-      }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    } catch (error) {
+        console.error('❌ Error:', error);
+        return new Response(
+            JSON.stringify({
+                error: error.message
+            }),
+            { 
+                status: 500,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            }
         );
-  }
+    }
 }); 

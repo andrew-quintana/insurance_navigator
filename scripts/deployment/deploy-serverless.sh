@@ -9,50 +9,76 @@ set -e  # Exit on any error
 echo "🚀 Starting Medicare Navigator Serverless Migration Deployment"
 echo "=============================================================="
 
-# Colors for output
+# Color codes
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Print functions
+print_error() {
+    echo -e "${RED}[ERROR] $1${NC}"
+}
+
+print_success() {
+    echo -e "${GREEN}[SUCCESS] $1${NC}"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[WARNING] $1${NC}"
+}
+
+print_info() {
+    echo -e "[INFO] $1"
+}
+
 # Configuration
 PROJECT_DIR="$(pwd)"
+
+# Update Supabase directory path handling
+if [ -d "$PROJECT_DIR/supabase" ]; then
+    SUPABASE_DIR="$PROJECT_DIR/supabase"
+elif [ -d "$PROJECT_DIR/db/supabase" ]; then
 SUPABASE_DIR="$PROJECT_DIR/db/supabase"
+else
+    print_error "Supabase directory not found in either location"
+    exit 1
+fi
+
 UI_DIR="$PROJECT_DIR/ui"
 
 # Functions to deploy
 FUNCTIONS=(
-    "doc-processor"
-    "link-assigner"
     "doc-parser"
-    "vector-processor"
+    "upload-handler"
 )
-
-# Function to print colored output
-print_status() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
 
 # Function to check if command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# Validation checks
-print_status "Performing pre-deployment checks..."
+# Function to check Supabase project link
+check_supabase_link() {
+    if [ -d "$SUPABASE_DIR" ]; then
+        cd "$SUPABASE_DIR" || exit 1
+        if ! supabase projects list >/dev/null 2>&1; then
+            print_warning "Supabase project not linked. You'll need to link it manually:"
+            echo "supabase link --project-ref your-project-ref"
+        fi
+        cd "$PROJECT_DIR" || exit 1
+    else
+        print_error "Supabase directory not found"
+        exit 1
+    fi
+}
+
+# Pre-deployment checks
+print_info "Performing pre-deployment checks..."
+
+# Check Supabase project link
+check_supabase_link
 
 # Check if Supabase CLI is installed
 if ! command_exists supabase; then
@@ -67,16 +93,10 @@ if [ ! -f "$PROJECT_DIR/main.py" ]; then
     exit 1
 fi
 
-# Check if Supabase project is linked
-if [ ! -f "$SUPABASE_DIR/.env" ]; then
-    print_warning "Supabase project not linked. You'll need to link it manually:"
-    echo "cd db/supabase && supabase link"
-fi
-
 print_success "Pre-deployment checks passed"
 
 # Step 1: Install frontend dependencies
-print_status "Installing frontend dependencies..."
+print_info "Installing frontend dependencies..."
 cd "$UI_DIR"
 if [ -f "package-lock.json" ]; then
     npm ci
@@ -86,11 +106,11 @@ fi
 print_success "Frontend dependencies installed"
 
 # Step 2: Deploy Edge Functions
-print_status "Deploying Edge Functions to Supabase..."
-cd "$SUPABASE_DIR"
+print_info "Deploying Edge Functions to Supabase..."
+cd "$SUPABASE_DIR" || exit 1
 
 for func in "${FUNCTIONS[@]}"; do
-    print_status "Deploying function: $func"
+    print_info "Deploying function: $func"
     
     if [ -d "functions/$func" ]; then
         supabase functions deploy "$func" --no-verify-jwt
@@ -109,7 +129,7 @@ done
 print_success "All Edge Functions deployed successfully"
 
 # Step 3: Set up environment variables
-print_status "Setting up environment variables..."
+print_info "Setting up environment variables..."
 
 echo ""
 echo "🔧 REQUIRED ENVIRONMENT VARIABLES"
@@ -131,7 +151,7 @@ echo "   Command: supabase secrets set SERVICE_AUTH_TOKEN=your_secure_token"
 echo ""
 
 # Step 4: Update database policies if needed
-print_status "Checking database policies..."
+print_info "Checking database policies..."
 
 echo ""
 echo "📋 REQUIRED DATABASE POLICIES"
@@ -149,7 +169,7 @@ echo "FOR ALL USING (auth.jwt() ->> 'role' = 'service_role');"
 echo ""
 
 # Step 5: Frontend environment setup
-print_status "Setting up frontend environment..."
+print_info "Setting up frontend environment..."
 
 cd "$UI_DIR"
 
@@ -169,7 +189,7 @@ else
 fi
 
 # Step 6: Test deployment
-print_status "Testing Edge Function deployment..."
+print_info "Testing Edge Function deployment..."
 
 echo ""
 echo "🧪 TESTING EDGE FUNCTIONS"
@@ -177,15 +197,15 @@ echo "========================="
 echo ""
 echo "You can test the deployed functions using:"
 echo ""
-echo "1. Test doc-processor:"
-echo "   curl -X POST 'https://your-project.supabase.co/functions/v1/doc-processor' \\"
+echo "1. Test doc-parser:"
+echo "   curl -X POST 'https://your-project.supabase.co/functions/v1/doc-parser' \\"
 echo "        -H 'Authorization: Bearer your_token' \\"
 echo "        -H 'Content-Type: application/json' \\"
 echo "        -d '{\"filename\":\"test.pdf\",\"contentType\":\"application/pdf\",\"fileSize\":1024}'"
 echo ""
 
 # Step 7: Integration instructions
-print_status "Integration instructions..."
+print_info "Integration instructions..."
 
 echo ""
 echo "🔄 INTEGRATION STEPS"
@@ -201,10 +221,8 @@ echo "   - Chat functionality"
 echo "   - Existing search features"
 echo ""
 echo "3. Monitor Edge Function logs:"
-echo "   supabase functions logs doc-processor"
-echo "   supabase functions logs link-assigner"
 echo "   supabase functions logs doc-parser"
-echo "   supabase functions logs vector-processor"
+echo "   supabase functions logs upload-handler"
 echo ""
 
 # Final success message

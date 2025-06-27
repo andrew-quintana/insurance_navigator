@@ -39,9 +39,16 @@ console.log('📄 Doc parser starting...')
 
 // Configuration
 const CONFIG = {
-  UPLOAD_BUCKET: 'raw_documents',
-  STORAGE_BUCKET: 'documents',
+  BUCKET: 'docs',
+  RAW_PREFIX: 'raw',
+  PROCESSED_PREFIX: 'processed',
   MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
+  ALLOWED_MIME_TYPES: [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain'
+  ],
   LLAMA_PARSE_API_URL: 'https://api.cloud.llamaindex.ai/api/v1/parsing/upload',
   MAX_RETRIES: 3,
   RETRY_DELAY_MS: 1000,
@@ -50,10 +57,11 @@ const CONFIG = {
 
 // Log configuration on startup
 console.log('📝 Doc parser configuration:', {
-  uploadBucket: CONFIG.UPLOAD_BUCKET,
-  storageBucket: CONFIG.STORAGE_BUCKET,
+  bucket: CONFIG.BUCKET,
+  rawPrefix: CONFIG.RAW_PREFIX,
+  processedPrefix: CONFIG.PROCESSED_PREFIX,
   maxFileSize: CONFIG.MAX_FILE_SIZE,
-  maxRetries: CONFIG.MAX_RETRIES
+  allowedMimeTypes: CONFIG.ALLOWED_MIME_TYPES
 })
 
 // Add memory check function
@@ -80,7 +88,7 @@ async function downloadFileWithRetries(supabase: SupabaseClient, bucket: string,
   console.log('🔍 Starting file download:', {
     bucket,
     path,
-    configBucket: CONFIG.UPLOAD_BUCKET,
+    configBucket: CONFIG.BUCKET,
     timestamp: new Date().toISOString()
   })
   
@@ -185,7 +193,7 @@ async function streamFileDownload(storagePath: string): Promise<Uint8Array | nul
       if (attempt < maxRetries - 1) {
         console.log(`⏳ Waiting ${retryDelays[attempt]}ms before retry...`)
         await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]))
-        } else {
+      } else {
         console.error('❌ All download attempts failed:', err)
         throw err
       }
@@ -195,272 +203,126 @@ async function streamFileDownload(storagePath: string): Promise<Uint8Array | nul
   return null
 }
 
-// Add retry mechanism for LlamaParse uploads
+// Upload file to LlamaParse
 async function uploadToLlamaParse(formData: FormData, llamaCloudKey: string): Promise<Response> {
-  const maxRetries = 3
-  const retryDelays = [2000, 4000, 8000] // 2s, 4s, 8s
-
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      console.log(`📤 LlamaParse upload attempt ${attempt + 1}/${maxRetries}`)
-      
-      const response = await fetch('https://api.cloud.llamaindex.ai/api/parsing/upload', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${llamaCloudKey}`,
-          'Accept': 'application/json'
-        },
-        body: formData
-      })
-
-      // If not rate limited, return immediately
-      if (response.status !== 429) {
-        return response
-      }
-      
-      // Get retry-after header if available
-      const retryAfter = response.headers.get('retry-after')
-      const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : retryDelays[attempt]
-
-      console.log(`🔄 Rate limited (attempt ${attempt + 1}/${maxRetries}), waiting ${waitTime}ms`)
-
-      if (attempt < maxRetries - 1) {
-        await new Promise(resolve => setTimeout(resolve, waitTime))
-      } else {
-        return response
-      }
-    } catch (error) {
-      console.error(`❌ LlamaParse upload attempt ${attempt + 1} failed:`, error)
-
-      if (attempt < maxRetries - 1) {
-        await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]))
-      } else {
-        throw error
-      }
-    }
-  }
-
-  throw new Error('Upload failed after all retries')
-}
-
-// Initialize Supabase client
-const supabase = createClient(
-  Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-)
-
-serve(async (req) => {
-  // Handle CORS
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+  const headers = {
+    'accept': 'application/json',
+    'Authorization': `Bearer ${llamaCloudKey}`
   }
 
   try {
-    // Parse request
-    const { jobId, payload } = await req.json()
-    
-    if (!jobId || !payload) {
-      throw new Error('Missing required parameters: jobId and payload')
-    }
-
-    const {
-      document_id,
-      raw_storage_path,
-      raw_storage_bucket,
-      final_storage_path,
-      final_storage_bucket,
-      content_type
-    } = payload
-
-    if (!document_id || !raw_storage_path || !raw_storage_bucket || !final_storage_path || !final_storage_bucket || !content_type) {
-      throw new Error('Invalid job payload: missing required fields')
-    }
-
-    // Start job
-    await supabase
-      .from('processing_jobs')
-      .update({ 
-        status: 'processing',
-        started_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', jobId)
-
-    // Update document status
-    await supabase
-      .from('documents')
-      .update({ 
-        status: 'processing',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', document_id)
-
-    // Get file from storage with retries
-    console.log('📥 Downloading file from storage:', {
-      bucket: raw_storage_bucket,
-      path: raw_storage_path
+    const response = await fetch(CONFIG.LLAMA_PARSE_API_URL, {
+      method: 'POST',
+      headers,
+      body: formData
     })
-    
-    const fileData = await downloadFileWithRetries(supabase, raw_storage_bucket, raw_storage_path)
+
+    if (!response.ok) {
+      throw new Error(`LlamaParse API error: ${response.status} - ${await response.text()}`)
+    }
+
+    return response
+  } catch (error) {
+    console.error('❌ LlamaParse API error:', error)
+    throw error
+  }
+}
+
+serve(async (req) => {
+  metrics.startTime = Date.now()
+
+  try {
+    // Handle CORS preflight
+    if (req.method === 'OPTIONS') {
+      return new Response('ok', { headers: corsHeaders })
+    }
+
+    // Get environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const llamaCloudKey = Deno.env.get('LLAMA_CLOUD_API_KEY')
+
+    if (!supabaseUrl || !supabaseKey || !llamaCloudKey) {
+      throw new Error('Missing required environment variables')
+    }
+
+    // Initialize Supabase client
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    // Parse request body
+    const { documentId, storagePath, filename, contentType = 'application/pdf' } = await req.json()
+
+    if (!documentId || !storagePath || !filename) {
+      throw new Error('Missing required parameters: documentId, storagePath, filename')
+    }
+
+    // Download file from storage
+    const fileData = await downloadFileWithRetries(supabase, CONFIG.BUCKET, storagePath)
     if (!fileData) {
-      throw new Error('Failed to download file: No data received')
+      throw new Error('Failed to download file')
     }
 
-    // Create FormData for LlamaParse API
+    metrics.fileSize = fileData.size
+
+    // Create FormData for LlamaParse
     const formData = new FormData()
-    formData.append('file', fileData, raw_storage_path)
+    formData.append('file', fileData, filename)
 
-    // Call LlamaParse API
-    let parseResponse: Response | null = null
-    let retryCount = 0
-    let lastError: string | Error | null = null
+    // Upload to LlamaParse
+    const llamaResponse = await uploadToLlamaParse(formData, llamaCloudKey)
+    const extractedData = await llamaResponse.json()
 
-    while (retryCount < CONFIG.MAX_RETRIES) {
-      try {
-        parseResponse = await fetch(CONFIG.LLAMA_PARSE_API_URL, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': `Bearer ${Deno.env.get('LLAMA_CLOUD_API_KEY')}`
-          },
-          body: formData
-        })
-
-        if (parseResponse.ok) {
-          break
-        }
-
-        lastError = await parseResponse.text()
-        throw new Error(`LlamaParse API error: ${lastError}`)
-      } catch (error) {
-        lastError = error
-        retryCount++
-        if (retryCount < CONFIG.MAX_RETRIES) {
-          await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY_MS * retryCount))
-          continue
-        }
-        throw error
-      }
-    }
-
-    if (!parseResponse?.ok) {
-      throw new Error(`Failed to parse document after ${CONFIG.MAX_RETRIES} retries: ${lastError}`)
-    }
-
-    const parsedData = await parseResponse.json()
-
-    // Upload processed file to final storage
-    const { error: uploadError } = await supabase.storage
-      .from(final_storage_bucket)
-      .upload(final_storage_path, fileData, {
-        contentType: content_type,
-        upsert: true
-      })
-
-    if (uploadError) {
-      throw new Error(`Failed to upload processed file: ${uploadError.message}`)
-    }
-
-    // Complete job
-    await supabase
-      .from('processing_jobs')
-      .update({
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        result: {
-          parsedData,
-          final_storage_path,
-          final_storage_bucket
-        }
-      })
-      .eq('id', jobId)
-    
-    // Update document status
-    await supabase
+    // Update document with extracted text
+    const { error: updateError } = await supabase
       .from('documents')
-      .update({ 
-        status: 'completed',
+      .update({
+        extracted_text: extractedData.text,
         metadata: {
-          ...payload,
-          parsed_data: parsedData,
-          processing_completed_at: new Date().toISOString()
-        },
-        updated_at: new Date().toISOString()
+          ...extractedData.metadata,
+          extraction_method: 'llama_parse',
+          content_type: contentType,
+          file_size: metrics.fileSize
+        }
       })
-      .eq('id', document_id)
-    
-    console.log('✅ Document processing complete:', {
-      jobId,
-      document_id,
-      final_storage_path
-    })
+      .eq('id', documentId)
 
-    return new Response(JSON.stringify({
-      success: true,
-      jobId,
-      document_id,
-      final_storage_path
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
+    if (updateError) {
+      throw new Error(`Failed to update document: ${updateError.message}`)
+    }
+
+    // Log final metrics
+    logMetrics('Complete')
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        documentId,
+        metrics: {
+          fileSize: metrics.fileSize,
+          processingTime: Date.now() - metrics.startTime
+        }
+      }),
+      {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      }
+    )
 
   } catch (error) {
-    console.error('❌ Document processing failed:', error)
-    
-    // Get jobId and documentId from the error context
-    let errorJobId: string | undefined
-    let errorDocumentId: string | undefined
-    
-    try {
-      // Try to parse the error message for jobId
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      if (errorMessage.includes('jobId:')) {
-        errorJobId = errorMessage.split('jobId:')[1].trim().split(' ')[0]
-      }
-      
-      // Update job status if we have the jobId
-      if (errorJobId) {
-        await supabase
-          .from('processing_jobs')
-          .update({
-            status: 'failed',
-            error_message: error instanceof Error ? error.message : 'Unknown error occurred',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', errorJobId)
-
-        // Get document ID from job
-        const { data: job } = await supabase
-          .from('processing_jobs')
-          .select('payload')
-          .eq('id', errorJobId)
-          .single()
-
-        if (job?.payload?.document_id) {
-          errorDocumentId = job.payload.document_id
-          await supabase
-            .from('documents')
-            .update({ 
-              status: 'failed',
-              error_message: error instanceof Error ? error.message : 'Unknown error occurred',
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', errorDocumentId)
+    console.error('❌ Error:', error)
+    return new Response(
+      JSON.stringify({
+        error: error.message
+      }),
+      {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
         }
       }
-    } catch (updateError) {
-      console.error('❌ Failed to update error status:', updateError)
-    }
-        
-        return new Response(JSON.stringify({
-          success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
-      jobId: errorJobId,
-      document_id: errorDocumentId
-        }), { 
-          status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
+    )
   }
-}) 
+}); 

@@ -349,8 +349,8 @@ class UnifiedRegulatoryProcessor:
                 'apikey': self.service_role_key
             }
             
-            # Upload to raw_documents bucket
-            upload_url = f"{self.supabase_url}/storage/v1/object/raw_documents/{storage_path}"
+            # Upload to raw-documents bucket
+            upload_url = f"{self.supabase_url}/storage/v1/object/raw-documents/{storage_path}"
             
             timeout = aiohttp.ClientTimeout(total=120)  # Longer timeout for file uploads
             async with aiohttp.ClientSession(timeout=timeout) as session:

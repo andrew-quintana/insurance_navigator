@@ -111,8 +111,8 @@ export default function LoginPage() {
       localStorage.removeItem("token")
       localStorage.removeItem("tokenType")
     }
-    console.log("🏁 Login attempt completed")
-    setIsLoading(false)
+      console.log("🏁 Login attempt completed")
+      setIsLoading(false)
   }
 
   // Helper function to format API errors

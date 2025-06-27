@@ -30,7 +30,7 @@ BEGIN
             -- Check for recent jobs with proper locking
             SELECT id INTO existing_job_id 
             FROM processing_jobs 
-            WHERE document_id = NEW.id 
+            WHERE payload->>'document_id' = NEW.id::text 
             AND created_at > NOW() - INTERVAL '5 minutes'
             AND status NOT IN ('failed', 'cancelled')
             FOR UPDATE SKIP LOCKED;
@@ -38,17 +38,14 @@ BEGIN
             IF existing_job_id IS NULL THEN
                 -- No recent active job found, create new one
                 INSERT INTO processing_jobs (
-                    document_id,
                     job_type,
                     status,
                     priority,
                     payload,
-                    metadata,
                     retry_count,
                     last_retry_at,
                     initial_created_at
                 ) VALUES (
-                    NEW.id,
                     'parse',
                     'pending',
                     1,
@@ -57,9 +54,7 @@ BEGIN
                         'storage_path', NEW.storage_path,
                         'content_type', NEW.content_type,
                         'file_hash', NEW.file_hash,
-                        'original_filename', NEW.original_filename
-                    ),
-                    jsonb_build_object(
+                        'original_filename', NEW.original_filename,
                         'created_from', TG_NAME,
                         'initial_status', NEW.status,
                         'trigger_timestamp', NOW(),
@@ -118,7 +113,7 @@ BEGIN
         UPDATE documents 
         SET status = 'retrying',
             error_message = format('Retrying job. Attempt %s', NEW.retry_count)
-        WHERE id = NEW.document_id;
+        WHERE id = (NEW.payload->>'document_id')::uuid;
     END IF;
     RETURN NEW;
 END;
@@ -132,7 +127,7 @@ CREATE TRIGGER trigger_job_retry_tracking
 
 -- Add index for faster job lookups
 CREATE INDEX IF NOT EXISTS idx_processing_jobs_document_id_created_at 
-ON processing_jobs (document_id, created_at);
+ON processing_jobs ((payload->>'document_id')::uuid, created_at);
 
 -- Add index for status monitoring
 CREATE INDEX IF NOT EXISTS idx_processing_jobs_status_created_at 

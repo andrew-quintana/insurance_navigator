@@ -1,11 +1,7 @@
-// @deno-types="https://esm.sh/@supabase/supabase-js@2.7.1/dist/module/index.d.ts"
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
-import { createClient } from "@supabase/supabase-js"
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+/// <reference lib="deno.unstable" />
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { corsHeaders } from '../_shared/cors.ts'
 
 interface UploadRequest {
   file: {
@@ -32,6 +28,12 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+// Initialize Supabase client
+const supabaseAdmin = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+)
 
 // Validate authentication token and get user ID
 async function getUserId(token: string): Promise<string> {
@@ -81,9 +83,6 @@ serve(async (req) => {
   }
 
   try {
-    // Log request details for debugging
-    console.log('Request headers:', Object.fromEntries(req.headers.entries()));
-    
     // Get auth token
     const token = req.headers.get('Authorization')?.split(' ')[1]
     if (!token) {
@@ -94,40 +93,16 @@ serve(async (req) => {
     const userId = await getUserId(token);
     console.log('Validated user ID:', userId);
 
-    // Initialize Supabase admin client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
-      throw new Error('Missing environment variables')
-    }
-
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
-
-    // Parse request body as FormData with error handling
-    let formData: FormData;
-    try {
-      formData = await req.formData();
-      console.log('FormData parsed successfully');
-    } catch (error) {
-      console.error('FormData parsing error:', error);
-      return new Response(
-        JSON.stringify({ error: 'Invalid form data format' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Get file and metadata from FormData with logging
+    // Parse request body as FormData
+    const formData = await req.formData();
     const file = formData.get('file');
     const metadataStr = formData.get('metadata');
-    console.log('Received file:', file ? 'yes' : 'no');
-    console.log('Received metadata:', metadataStr ? 'yes' : 'no');
 
     // Parse metadata
     let metadata = {};
     if (metadataStr) {
       try {
         metadata = JSON.parse(metadataStr as string);
-        console.log('Parsed metadata:', metadata);
       } catch (error) {
         console.error('Metadata parsing error:', error);
         // Continue without metadata if parsing fails
@@ -160,7 +135,7 @@ serve(async (req) => {
     // Generate document ID and storage path
     const documentId = crypto.randomUUID()
     const timestamp = new Date().toISOString()
-    const storagePath = `docs/${userId}/${timestamp}_${file.name}`
+    const storagePath = `${userId}/raw/${timestamp}_${file.name}`
 
     // Upload file
     const { error: uploadError } = await supabaseAdmin
@@ -188,27 +163,44 @@ serve(async (req) => {
         status: 'pending',
         metadata: {
           ...metadata,
-          upload_completed_at: new Date().toISOString()
+          upload_timestamp: timestamp
         }
       })
       .select()
       .single()
 
     if (documentError) {
-      // Try to clean up the uploaded file if document creation fails
-      await supabaseAdmin.storage.from('docs').remove([storagePath])
-      throw new Error(`Failed to create document: ${documentError.message}`)
+      throw new Error(`Failed to create document record: ${documentError.message}`)
     }
 
-    // The database trigger will automatically create a job record
-    // and the job processor will pick it up
+    // Create processing job
+    const { data: job, error: jobError } = await supabaseAdmin
+      .from('processing_jobs')
+      .insert({
+        document_id: documentId,
+        job_type: 'doc_parse',
+        status: 'pending',
+        priority: 0,
+        payload: {
+          document_id: documentId,
+          storage_path: storagePath,
+          content_type: file.type,
+          document_type: metadata.documentType
+        }
+      })
+      .select()
+      .single()
+
+    if (jobError) {
+      throw new Error(`Failed to create processing job: ${jobError.message}`)
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
-        documentId: document.id,
-        storagePath,
-        status: 'pending'
+        documentId,
+        jobId: job.id,
+        storagePath
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
@@ -216,8 +208,13 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({
+        error: error.message
+      }),
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
     )
   }
-})
+});
