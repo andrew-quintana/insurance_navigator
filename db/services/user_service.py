@@ -38,6 +38,7 @@ class UserService:
         email: str, 
         password: str, 
         full_name: str,
+        role: str = 'user',
         metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Create a new user in the database."""
@@ -59,39 +60,27 @@ class UserService:
                     if existing_user:
                         raise ValueError("User with this email already exists")
                     
-                    # Insert new user into auth.users
+                    # Insert new user into auth.users with metadata
+                    user_metadata = {
+                        'full_name': full_name,
+                        'role': role,
+                        **(metadata or {})
+                    }
+                    
                     await conn.execute(
                         """
-                        INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, confirmed_at)
-                        VALUES ($1, $2, $3, NOW(), NOW())
-                        """,
-                        user_id, email, hashed_password
-                    )
-                    
-                    # Create user profile
-                    await conn.execute(
-                        """
-                        INSERT INTO public.user_profiles (user_id, full_name, metadata)
-                        VALUES ($1, $2, $3)
-                        """,
-                        user_id, full_name, json.dumps(metadata or {})
-                    )
-                    
-                    # Get default role ID
-                    role_row = await conn.fetchrow(
-                        "SELECT id FROM public.roles WHERE name = 'user'"
-                    )
-                    
-                    if role_row:
-                        # Assign default role
-                        await conn.execute(
-                            """
-                            INSERT INTO public.user_roles (user_id, role_id)
-                            VALUES ($1, $2)
-                            ON CONFLICT (user_id, role_id) DO NOTHING
-                            """,
-                            user_id, role_row['id']
+                        INSERT INTO auth.users (
+                            id, 
+                            email, 
+                            encrypted_password, 
+                            email_confirmed_at,
+                            confirmed_at,
+                            raw_user_meta_data
                         )
+                        VALUES ($1, $2, $3, NOW(), NOW(), $4)
+                        """,
+                        user_id, email, hashed_password, json.dumps(user_metadata)
+                    )
                     
                     # Get complete user data
                     user_data = await conn.fetchrow(
@@ -100,15 +89,12 @@ class UserService:
                             u.id,
                             u.email,
                             p.full_name,
+                            p.role,
                             p.created_at,
-                            p.metadata,
-                            array_agg(r.name) as roles
+                            p.metadata
                         FROM auth.users u
                         JOIN public.user_profiles p ON p.user_id = u.id
-                        LEFT JOIN public.user_roles ur ON ur.user_id = u.id
-                        LEFT JOIN public.roles r ON r.id = ur.role_id
                         WHERE u.id = $1
-                        GROUP BY u.id, u.email, p.full_name, p.created_at, p.metadata
                         """,
                         user_id
                     )
@@ -119,8 +105,9 @@ class UserService:
                         "id": str(user_data["id"]),
                         "email": user_data["email"],
                         "full_name": user_data["full_name"],
+                        "role": user_data["role"],
                         "created_at": user_data["created_at"],
-                        "roles": user_data["roles"] or []
+                        "metadata": user_data["metadata"]
                     }
                 
         except Exception as e:
@@ -141,14 +128,12 @@ class UserService:
                         u.email,
                         u.encrypted_password,
                         p.full_name,
+                        p.role,
                         p.last_login,
-                        array_agg(r.name) as roles
+                        p.metadata
                     FROM auth.users u
                     JOIN public.user_profiles p ON p.user_id = u.id
-                    LEFT JOIN public.user_roles ur ON ur.user_id = u.id
-                    LEFT JOIN public.roles r ON r.id = ur.role_id
                     WHERE u.email = $1
-                    GROUP BY u.id, u.email, u.encrypted_password, p.full_name, p.last_login
                     """,
                     email
                 )
@@ -172,8 +157,9 @@ class UserService:
                     "id": str(user_row["id"]),
                     "email": user_row["email"],
                     "full_name": user_row["full_name"],
+                    "role": user_row["role"],
                     "last_login": user_row["last_login"],
-                    "roles": user_row["roles"] or []
+                    "metadata": user_row["metadata"]
                 }
                 
                 # Create JWT token
@@ -195,14 +181,21 @@ class UserService:
         try:
             pool = await get_db_pool()
             
-            async with pool.get_connection() as conn:
+            async with pool.acquire() as conn:
                 user_row = await conn.fetchrow(
                     """
-                    SELECT u.id, u.email, p.full_name, p.created_at, p.updated_at, 
-                           p.last_login, p.metadata
+                    SELECT 
+                        u.id,
+                        u.email,
+                        p.full_name,
+                        p.role,
+                        p.created_at,
+                        p.updated_at,
+                        p.last_login,
+                        p.metadata
                     FROM auth.users u
                     JOIN public.user_profiles p ON p.user_id = u.id
-                    WHERE u.email = $1 AND u.confirmed_at IS NOT NULL
+                    WHERE u.email = $1
                     """,
                     email
                 )
@@ -210,18 +203,15 @@ class UserService:
                 if not user_row:
                     return None
                 
-                # Get user roles
-                user_roles = await self._get_user_roles(conn, user_row["id"])
-                
                 return {
                     "id": str(user_row["id"]),
                     "email": user_row["email"],
                     "full_name": user_row["full_name"],
+                    "role": user_row["role"],
                     "created_at": user_row["created_at"],
                     "updated_at": user_row["updated_at"],
                     "last_login": user_row["last_login"],
-                    "metadata": json.loads(user_row["metadata"]) if user_row["metadata"] else {},
-                    "roles": user_roles
+                    "metadata": user_row["metadata"]
                 }
                 
         except Exception as e:
@@ -233,14 +223,21 @@ class UserService:
         try:
             pool = await get_db_pool()
             
-            async with pool.get_connection() as conn:
+            async with pool.acquire() as conn:
                 user_row = await conn.fetchrow(
                     """
-                    SELECT u.id, u.email, p.full_name, p.created_at, p.updated_at, 
-                           p.last_login, p.metadata
+                    SELECT 
+                        u.id,
+                        u.email,
+                        p.full_name,
+                        p.role,
+                        p.created_at,
+                        p.updated_at,
+                        p.last_login,
+                        p.metadata
                     FROM auth.users u
                     JOIN public.user_profiles p ON p.user_id = u.id
-                    WHERE u.id = $1 AND u.confirmed_at IS NOT NULL
+                    WHERE u.id = $1
                     """,
                     uuid.UUID(user_id)
                 )
@@ -248,18 +245,15 @@ class UserService:
                 if not user_row:
                     return None
                 
-                # Get user roles
-                user_roles = await self._get_user_roles(conn, user_row["id"])
-                
                 return {
                     "id": str(user_row["id"]),
                     "email": user_row["email"],
                     "full_name": user_row["full_name"],
+                    "role": user_row["role"],
                     "created_at": user_row["created_at"],
                     "updated_at": user_row["updated_at"],
                     "last_login": user_row["last_login"],
-                    "metadata": json.loads(user_row["metadata"]) if user_row["metadata"] else {},
-                    "roles": user_roles
+                    "metadata": user_row["metadata"]
                 }
                 
         except Exception as e:
@@ -429,7 +423,7 @@ class UserService:
         to_encode = {
             "sub": user_data["email"],
             "user_id": user_data["id"],
-            "roles": user_data.get("roles", []),
+            "role": user_data["role"],
             "exp": expire
         }
         
@@ -456,9 +450,6 @@ class UserService:
             
             # Get fresh user data from database
             user_data = await self.get_user_by_email(email)
-            if not user_data or not user_data["is_active"]:
-                return None
-            
             return user_data
             
         except ValueError:
