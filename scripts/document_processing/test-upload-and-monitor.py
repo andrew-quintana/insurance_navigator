@@ -13,10 +13,18 @@ import asyncio
 import aiohttp
 import hashlib
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Get Supabase URL from environment
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+if not SUPABASE_URL:
+    raise ValueError("SUPABASE_URL environment variable not set")
 
 # Configuration
 API_BASE = "https://insurance-navigator-api.onrender.com"
-SUPABASE_URL = "https://jhrespvvhbnloxrieycf.supabase.co"
 
 # Test credentials (from your logs)
 TEST_EMAIL = "deploymenttest@example.com"

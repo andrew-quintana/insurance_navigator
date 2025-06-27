@@ -1,0 +1,9 @@
+[functions]
+[functions.doc-parser]
+verify_jwt = true
+
+[functions.vector-processor]
+verify_jwt = true
+
+[functions.job-processor]
+verify_jwt = true

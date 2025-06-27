@@ -1,139 +1,221 @@
+/// <reference lib="deno.unstable" />
+/// <reference lib="dom" />
+
 // @deno-types="https://deno.land/x/types/deno.d.ts"
+// @deno-types="npm:@types/node"
 
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.21.0'
+// deno-lint-ignore-file no-explicit-any
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
-import { OpenAIEmbeddings } from '../_shared/embeddings.ts'
 
-// Performance monitoring
-const metrics = {
-  startTime: 0,
-  jobStartTime: 0,
-  memoryUsage: 0
+declare global {
+  interface Deno {
+    env: {
+      get(key: string): string | undefined;
+    };
+  }
 }
 
-function logMetrics(stage: string, jobType?: string) {
-  const memory = Deno.memoryUsage()
-  const heapUsed = Math.round(memory.heapUsed / 1024 / 1024)
-  const rss = Math.round(memory.rss / 1024 / 1024)
-  console.log(`
-📊 Performance Metrics - ${stage}${jobType ? ` (${jobType})` : ''}:
-- Processing Time: ${Date.now() - metrics.startTime}ms
-- Job Time: ${metrics.jobStartTime ? Date.now() - metrics.jobStartTime : 0}ms
-- Heap Used: ${heapUsed}MB
-- RSS: ${rss}MB
-`)
-}
-
+// Types
 interface ProcessingJob {
-  id: string;
-  document_id: string;
-  job_type: 'parse' | 'chunk' | 'embed' | 'complete' | 'notify';
-  payload: any;
-  retry_count: number;
-  priority: number;
+  id: string
+  document_id: string
+  job_type: string
+  status: string
+  payload: {
+    document_id: string
+    storage_path: string
+    content_type: string
+    document_type?: string
+    created_at?: string
+  }
 }
 
 interface JobResult {
-  success: boolean;
-  error?: string;
-  data?: any;
+  success: boolean
+  data?: any
+  error?: string
 }
-
-// Add retry configuration
-const RETRY_CONFIG = {
-  MAX_RETRIES: 3,
-  INITIAL_DELAY: 1000,
-  BACKOFF_FACTOR: 2,
-  MAX_DELAY: 10000
-}
-
-// Add memory management
-const MEMORY_CONFIG = {
-  LIMIT: 100 * 1024 * 1024, // 100MB
-  WARNING_THRESHOLD: 80 * 1024 * 1024 // 80MB
-}
-
-// Add retry helper
-async function withRetry<T>(
-  operation: () => Promise<T>,
-  retryCount = 0
-): Promise<T> {
-  try {
-    return await operation()
-  } catch (error) {
-    if (retryCount >= RETRY_CONFIG.MAX_RETRIES) {
-      throw error
-    }
-
-    const delay = Math.min(
-      RETRY_CONFIG.INITIAL_DELAY * Math.pow(RETRY_CONFIG.BACKOFF_FACTOR, retryCount),
-      RETRY_CONFIG.MAX_DELAY
-    )
-
-    console.log(`⚠️ Operation failed, retrying in ${delay}ms (attempt ${retryCount + 1}/${RETRY_CONFIG.MAX_RETRIES})`)
-    await new Promise(resolve => setTimeout(resolve, delay))
-    return withRetry(operation, retryCount + 1)
-  }
-}
-
-// Add memory check
-function checkMemory(): boolean {
-  const memory = Deno.memoryUsage()
-  const used = memory.heapUsed + memory.external
-  
-  if (used > MEMORY_CONFIG.LIMIT) {
-    console.error(`❌ Memory limit exceeded: ${Math.round(used / 1024 / 1024)}MB used`)
-    return false
-  }
-  
-  if (used > MEMORY_CONFIG.WARNING_THRESHOLD) {
-    console.warn(`⚠️ High memory usage: ${Math.round(used / 1024 / 1024)}MB used`)
-  }
-
-  return true
-}
-
-console.log('🔄 Job processor starting...')
 
 // Initialize Supabase client
-const supabase = createClient(
+const supabaseClient = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 )
 
-// Job execution functions
-async function executeParseJob(job: ProcessingJob): Promise<JobResult> {
-  const { document_id, raw_storage_path, raw_storage_bucket, final_storage_path, final_storage_bucket, content_type } = job.payload
+// Retry configuration
+const MAX_RETRIES = 3;
+const INITIAL_BACKOFF_MS = 1000;
 
-  if (!document_id || !raw_storage_path || !raw_storage_bucket || !final_storage_path || !final_storage_bucket || !content_type) {
+interface ProcessRequest {
+  jobId: string;
+  documentId: string;
+}
+
+interface JobRecord {
+  id: string;
+  status: JobStatus;
+  document_id: string;
+  created_at: string;
+  updated_at: string;
+  error_message?: string;
+  error_details?: unknown;
+  metadata: Record<string, unknown>;
+}
+
+type JobStatus = 
+  | 'STARTED'
+  | 'PARSE_FAILED'
+  | 'VECTORIZE_FAILED'
+  | 'COMPLETED';
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function retryWithBackoff<T>(
+  operation: () => Promise<T>,
+  retries = MAX_RETRIES,
+  backoff = INITIAL_BACKOFF_MS
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    if (retries === 0) {
+      throw error;
+    }
+    console.log(`Operation failed, retrying in ${backoff}ms... (${retries} retries left)`);
+    await sleep(backoff);
+    return retryWithBackoff(operation, retries - 1, backoff * 2);
+  }
+}
+
+async function getJob(
+  supabase: any,
+  jobId: string
+): Promise<JobRecord | null> {
+  const { data, error } = await supabase
+    .from('jobs')
+    .select('*')
+    .eq('id', jobId)
+    .single();
+
+  if (error) {
+    console.error(`Failed to get job: ${error.message}`);
+    return null;
+  }
+
+  return data;
+}
+
+async function updateJobStatus(
+  supabase: any,
+  jobId: string,
+  status: JobStatus,
+  errorMessage?: string,
+  errorDetails?: unknown
+): Promise<void> {
+  const { error } = await supabase
+    .from('jobs')
+    .update({
+      status,
+      error_message: errorMessage,
+      error_details: errorDetails,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', jobId);
+
+  if (error) {
+    console.error(`Failed to update job status: ${error.message}`);
+  }
+}
+
+async function startProcessing(
+  supabase: any,
+  jobId: string,
+  documentId: string
+): Promise<void> {
+  try {
+    // Call doc-parser function with retry
+    await retryWithBackoff(async () => {
+      const parserResponse = await fetch(`${supabaseUrl}/functions/v1/doc-parser`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseServiceRoleKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ documentId })
+      });
+
+      if (!parserResponse.ok) {
+        throw new Error(`Parser failed: ${await parserResponse.text()}`);
+      }
+      return parserResponse;
+    });
+
+    // Call vector-processor function with retry
+    await retryWithBackoff(async () => {
+      const vectorResponse = await fetch(`${supabaseUrl}/functions/v1/vector-processor`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseServiceRoleKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ documentId })
+      });
+
+      if (!vectorResponse.ok) {
+        throw new Error(`Vectorization failed: ${await vectorResponse.text()}`);
+      }
+      return vectorResponse;
+    });
+
+    await updateJobStatus(supabase, jobId, 'COMPLETED');
+  } catch (error) {
+    let status: JobStatus = 'PARSE_FAILED';
+    if (error.message.includes('Vectorization failed')) {
+      status = 'VECTORIZE_FAILED';
+    }
+    await updateJobStatus(supabase, jobId, status, error.message, error);
+    throw error;
+  }
+}
+
+async function executeParseJob(job: ProcessingJob): Promise<JobResult> {
+  const { document_id, storage_path, content_type, document_type } = job.payload
+
+  if (!document_id || !storage_path || !content_type) {
     throw new Error('Missing required parameters in payload')
   }
 
   console.log('🔄 Executing parse job:', {
     jobId: job.id,
     documentId: document_id,
-    rawPath: raw_storage_path,
+    storagePath: storage_path,
     timestamp: new Date().toISOString()
   })
 
+  // Extract user_id from storage_path
+  const userId = storage_path.split('/')[0]
+  if (!userId) {
+    throw new Error('Invalid storage path: missing user_id')
+  }
+
   // Call doc-parser with required parameters
-  const { data: parserResult, error: parserError } = await supabase.functions.invoke('doc-parser', {
-    body: {
+  const { data: parserResult, error: parserError } = await supabaseClient.functions.invoke('doc-parser', {
+    body: JSON.stringify({
       jobId: job.id,
       payload: {
         document_id,
-        raw_storage_path,
-        raw_storage_bucket,
-        final_storage_path,
-        final_storage_bucket,
-        content_type
+        raw_storage_path: storage_path,
+        raw_storage_bucket: 'docs',
+        final_storage_path: `${userId}/processed/${storage_path.split('/').pop()}`,
+        final_storage_bucket: 'docs',
+        content_type,
+        document_type
       }
-    },
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    }
+    })
   })
 
   if (parserError) {
@@ -158,252 +240,71 @@ async function executeParseJob(job: ProcessingJob): Promise<JobResult> {
     throw new Error(`Doc-parser failed: ${parserError.message}`)
   }
 
-  if (!parserResult) {
-    throw new Error('Doc-parser returned no result')
-  }
-
   console.log('✅ Doc-parser completed successfully:', {
     jobId: job.id,
     documentId: document_id,
     timestamp: new Date().toISOString()
   })
 
-  return {
-    success: true,
-    data: parserResult
+  // Call vector-processor after successful parsing
+  console.log('🔄 Starting vectorization:', {
+    jobId: job.id,
+    documentId: document_id,
+    timestamp: new Date().toISOString()
+  })
+
+  const processedPath = `${userId}/processed/${storage_path.split('/').pop()}`
+
+  // Get the processed document content
+  const { data: processedDoc, error: downloadError } = await supabaseClient
+    .storage
+    .from('docs')
+    .download(`${userId}/processed/${storage_path.split('/').pop()}`)
+
+  if (downloadError) {
+    console.error('❌ Failed to download processed document:', {
+      error: downloadError,
+      jobId: job.id,
+      documentId: document_id,
+      timestamp: new Date().toISOString()
+    })
+    throw new Error(`Failed to download processed document: ${downloadError.message}`)
   }
-}
 
-async function executeChunkJob(job: ProcessingJob): Promise<JobResult> {
-  console.log(`📄 Executing chunk job for document ${job.document_id}`)
-  
-  try {
-    const content = job.payload.content
-    if (!content) {
-      throw new Error('No content provided for chunking')
-    }
+  // Convert blob to text
+  const extractedText = await processedDoc.text()
 
-    // Simple chunking strategy - split by paragraphs
-    const chunks = content
-      .split('\n\n')
-      .filter(chunk => chunk.trim().length > 0)
-      .map(chunk => chunk.trim())
+  const { data: vectorResult, error: vectorError } = await supabaseClient.functions.invoke('vector-processor', {
+    body: JSON.stringify({
+      documentId: document_id,
+      extractedText,
+      metadata: {
+        content_type,
+        document_type,
+        storage_path: processedPath,
+        processing_time: new Date().toISOString()
+      }
+    })
+  })
 
-    // Create embedding job for chunks
-    await createNextJob(job.document_id, 'embed', {
-      document_id: job.document_id,
-      chunks,
-      metadata: job.payload.metadata
+  if (vectorError) {
+    console.error('❌ Vector-processor error:', {
+      error: vectorError,
+      jobId: job.id,
+      documentId: document_id,
+      timestamp: new Date().toISOString()
     })
 
-    return { success: true, data: { chunks: chunks.length } }
-  } catch (error) {
-    console.error(`❌ Chunk job failed:`, error)
-    return { success: false, error: error.message }
+    throw new Error(`Vector-processor failed: ${vectorError.message}`)
   }
-}
 
-async function executeEmbedJob(job: ProcessingJob): Promise<JobResult> {
-  console.log(`📄 Executing embed job for document ${job.document_id}`)
-  
-  try {
-    const chunks = job.payload.chunks
-    if (!chunks || !Array.isArray(chunks)) {
-      throw new Error('Invalid chunks data')
-    }
+  console.log('✅ Vector-processor completed successfully:', {
+    jobId: job.id,
+    documentId: document_id,
+    timestamp: new Date().toISOString()
+  })
 
-    // Store chunks in document_chunks table
-    const { error: insertError } = await supabase
-      .from('document_chunks')
-      .insert(chunks.map(chunk => ({
-        document_id: job.document_id,
-        content: chunk,
-        metadata: job.payload.metadata
-      })))
-
-    if (insertError) {
-      throw insertError
-    }
-
-    return { success: true, data: { chunks: chunks.length } }
-  } catch (error) {
-    console.error(`❌ Embed job failed:`, error)
-    return { success: false, error: error.message }
-  }
-}
-
-async function executeCompleteJob(job: ProcessingJob): Promise<JobResult> {
-  console.log(`📄 Executing complete job for document ${job.document_id}`)
-  
-  try {
-    // Update document status
-    const { error: updateError } = await supabase
-      .from('documents')
-      .update({
-        status: 'completed',
-        metadata: {
-          ...job.payload.metadata,
-          completed_at: new Date().toISOString()
-        }
-      })
-      .eq('id', job.document_id)
-
-    if (updateError) {
-      throw updateError
-    }
-
-    // Create notification job
-    await createNextJob(job.document_id, 'notify', {
-      document_id: job.document_id,
-      status: 'completed',
-      metadata: job.payload.metadata
-    })
-
-    return { success: true }
-  } catch (error) {
-    console.error(`❌ Complete job failed:`, error)
-    return { success: false, error: error.message }
-  }
-}
-
-async function executeNotifyJob(job: ProcessingJob): Promise<JobResult> {
-  console.log(`📄 Executing notify job for document ${job.document_id}`)
-  
-  try {
-    // Get document owner
-    const { data: document, error: docError } = await supabase
-      .from('documents')
-      .select('user_id')
-      .eq('id', job.document_id)
-      .single()
-
-    if (docError || !document) {
-      throw new Error('Failed to get document owner')
-    }
-
-    // Insert notification
-    const { error: notifyError } = await supabase
-      .from('notifications')
-      .insert({
-        user_id: document.user_id,
-        type: 'document_processed',
-        payload: {
-          document_id: job.document_id,
-          status: job.payload.status,
-          metadata: job.payload.metadata
-        }
-      })
-
-    if (notifyError) {
-      throw notifyError
-    }
-
-    return { success: true }
-  } catch (error) {
-    console.error(`❌ Notify job failed:`, error)
-    return { success: false, error: error.message }
-  }
-}
-
-async function createNextJob(
-  documentId: string,
-  jobType: ProcessingJob['job_type'],
-  payload: any
-): Promise<void> {
-  const { error } = await supabase
-    .from('processing_jobs')
-    .insert({
-      document_id: documentId,
-      job_type: jobType,
-      status: 'pending',
-      payload,
-      priority: 1,
-      retry_count: 0
-    })
-
-  if (error) {
-    throw new Error(`Failed to create ${jobType} job: ${error.message}`)
-  }
-}
-
-async function processJob(job: ProcessingJob): Promise<JobResult> {
-  try {
-    // Update job status to running
-    const { error: updateError } = await supabase
-      .from('processing_jobs')
-      .update({ 
-        status: 'running',
-        started_at: new Date().toISOString()
-      })
-      .eq('id', job.id)
-
-    if (updateError) {
-      throw new Error(`Failed to update job status: ${updateError.message}`)
-    }
-
-    // Process based on job type
-    let result: JobResult
-    switch (job.job_type) {
-      case 'parse':
-        result = await executeParseJob(job)
-        break
-      case 'chunk':
-        result = await executeChunkJob(job)
-        break
-      case 'embed':
-        result = await executeEmbedJob(job)
-        break
-      case 'complete':
-        result = await executeCompleteJob(job)
-        break
-      case 'notify':
-        result = await executeNotifyJob(job)
-        break
-      default:
-        throw new Error(`Unsupported job type: ${job.job_type}`)
-    }
-
-    // Update job with result
-    const { error: completeError } = await supabase
-      .from('processing_jobs')
-      .update({
-        status: result.success ? 'completed' : 'failed',
-        result: result.data || null,
-        error_message: result.error || null,
-        completed_at: new Date().toISOString()
-      })
-      .eq('id', job.id)
-
-    if (completeError) {
-      throw new Error(`Failed to update job completion: ${completeError.message}`)
-    }
-
-    return result
-  } catch (error) {
-    console.error('❌ Job processing failed:', error)
-    
-    // Update job status to failed
-    await supabase
-      .from('processing_jobs')
-      .update({
-        status: 'failed',
-        error_message: error.message,
-        completed_at: new Date().toISOString()
-      })
-      .eq('id', job.id)
-
-    return {
-      success: false,
-      error: error.message
-    }
-  }
-}
-
-// Add result type
-interface JobProcessingResult {
-  jobId: string;
-  result?: JobResult;
-  error?: string;
+  return { success: true, data: { parserResult, vectorResult } }
 }
 
 serve(async (req) => {
@@ -413,44 +314,35 @@ serve(async (req) => {
   }
 
   try {
-    metrics.startTime = Date.now()
     console.log('🔄 Processing request...')
-    logMetrics('request-start')
 
-    // Parse request
-    let requestData
-    try {
-      const text = await req.text()
-      console.log('📄 Raw request body:', text)
-      
+    // Parse request body
+    let requestData: { jobId: string; documentId?: string } | null = null
+    const contentType = req.headers.get('content-type')
+    
+    if (contentType?.includes('application/json')) {
       try {
-        requestData = text ? JSON.parse(text) : {}
+        const text = await req.text()
+        console.log('📄 Raw request body:', text)
+        
+        if (text) {
+          requestData = JSON.parse(text)
+          console.log('📄 Parsed request data:', requestData)
+        }
       } catch (parseError) {
-        console.error('❌ Failed to parse request body:', parseError)
+        console.error('❌ Failed to parse JSON body:', parseError)
         return new Response(JSON.stringify({ 
           error: 'Invalid JSON in request body',
-          details: parseError instanceof Error ? parseError.message : 'Failed to parse JSON',
-          receivedBody: text
+          details: parseError instanceof Error ? parseError.message : 'Failed to parse JSON'
         }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-    } catch (readError) {
-      console.error('❌ Failed to read request body:', readError)
-      return new Response(JSON.stringify({ 
-        error: 'Failed to read request body',
-        details: readError instanceof Error ? readError.message : 'Unknown error reading request body'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
     }
 
-    console.log('📄 Parsed request data:', requestData)
-
-    // Validate required fields
-    if (!requestData.jobId) {
+    // Validate jobId
+    if (!requestData?.jobId) {
       console.error('❌ Missing jobId in request:', requestData)
       return new Response(JSON.stringify({ 
         error: 'Missing required parameter: jobId',
@@ -464,7 +356,7 @@ serve(async (req) => {
 
     // Get job details
     console.log('🔍 Fetching job details:', { jobId: requestData.jobId })
-    const { data: job, error: jobError } = await supabase
+    const { data: job, error: jobError } = await supabaseClient
       .from('processing_jobs')
       .select('*')
       .eq('id', requestData.jobId)
@@ -474,7 +366,8 @@ serve(async (req) => {
       console.error('❌ Failed to fetch job:', jobError)
       return new Response(JSON.stringify({ 
         error: 'Failed to fetch job',
-        details: jobError?.message || 'Job not found'
+        details: jobError?.message || 'Job not found',
+        jobId: requestData.jobId
       }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -488,7 +381,7 @@ serve(async (req) => {
       jobType: job.job_type
     })
     
-    const result = await processJob(job)
+    const result = await executeParseJob(job)
 
     console.log('✅ Job processing complete:', {
       jobId: job.id,

@@ -36,5 +36,8 @@
   "repository": {
     "type": "git",
     "url": "private"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.50.2"
   }
-} 
+}

@@ -1,16 +1,27 @@
 /// <reference lib="deno.ns" />
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { corsHeaders } from '../_shared/cors.ts'
+
+// Configuration
+const CONFIG = {
+  BUCKET: 'docs',
+  RAW_PREFIX: 'raw',
+  PROCESSED_PREFIX: 'processed',
+  CHUNKS_PREFIX: 'chunks'
+}
+
+// Log configuration on startup
+console.log('📝 Chunking service configuration:', {
+  bucket: CONFIG.BUCKET,
+  rawPrefix: CONFIG.RAW_PREFIX,
+  processedPrefix: CONFIG.PROCESSED_PREFIX,
+  chunksPrefix: CONFIG.CHUNKS_PREFIX
+})
 
 interface ChunkRequest {
   documentId: string
   text: string
-}
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 }
 
 function chunkText(text: string, chunkSize: number = 1500, overlap: number = 100): string[] {
@@ -87,7 +98,7 @@ serve(async (req) => {
     const chunks = chunkText(text)
     
     // Create storage folder path
-    const storagePath = `raw_documents/${documentId}/chunks`
+    const storagePath = `${CONFIG.BUCKET}/${documentId}/chunks`
     
     // Store chunks in storage bucket
     console.log('💾 Storing chunks in bucket...')

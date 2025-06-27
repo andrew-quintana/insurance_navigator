@@ -8,10 +8,18 @@ import json
 import time
 import os
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Get Supabase URL from environment
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+if not SUPABASE_URL:
+    raise ValueError("SUPABASE_URL environment variable not set")
 
 # Configuration
 API_BASE = "https://insurance-navigator-api.onrender.com"
-SUPABASE_URL = "https://jhrespvvhbnloxrieycf.supabase.co"
 
 # Test credentials
 TEST_EMAIL = "deploymenttest@example.com"
