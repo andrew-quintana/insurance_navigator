@@ -10,6 +10,7 @@ pydantic==2.6.3
 # Database Essentials
 asyncpg==0.29.0
 SQLAlchemy==2.0.28
+psycopg2-binary==2.9.9
 
 # Security Essentials  
 python-jose[cryptography]==3.3.0
