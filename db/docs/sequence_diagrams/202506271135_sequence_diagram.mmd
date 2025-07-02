@@ -1,0 +1,65 @@
+sequenceDiagram
+    participant Client
+    participant Frontend
+    participant Backend
+    participant Supabase Auth
+    participant Storage Bucket
+    participant Processing Supervisor
+    participant Parse Document
+    participant Chunk Document
+    participant Vectorize Document
+    participant LlamaParse API
+    participant OpenAI API
+    participant Database
+
+    %% === Sign Up Flow ===
+    Client->>Frontend: Submit Sign Up Form
+    Frontend->>Backend: POST /signup (email, password)
+    Backend->>Supabase Auth: signUpWithPassword()
+    Supabase Auth-->>Backend: JWT (access + refresh), user_id
+    Backend->>Database: Insert user record (user_id, metadata)
+    Database-->>Backend: Confirm user record created
+    Backend-->>Frontend: Return JWT
+    Frontend-->>Client: Sign Up Success
+
+    %% === Login Flow ===
+    Client->>Frontend: Submit Login Form
+    Frontend->>Backend: POST /login (email, password)
+    Backend->>Supabase Auth: signInWithPassword()
+    Supabase Auth-->>Backend: JWT (access + refresh)
+    Backend-->>Frontend: Return JWT
+    Frontend-->>Client: Login Success
+
+    %% === Document Upload Flow ===
+    Client->>Frontend: Upload Document
+    Frontend->>Storage Bucket: Store Document
+    Storage Bucket-->>Frontend: Return Storage Path
+    Frontend->>Database: Create document record (status = "uploaded")
+    Frontend->>Processing Supervisor: Trigger Processing
+
+    %% === Processing Step 1: Parse Document ===
+    Processing Supervisor->>Parse Document: Start Parsing (doc_id)
+    Parse Document->>Database: Fetch document metadata (bucket + key)
+    Database-->>Parse Document: Return document path
+    Parse Document->>Storage Bucket: Download file (using signed URL or service key)
+    Storage Bucket-->>Parse Document: Return file content
+    Parse Document->>LlamaParse API: Send document content
+    LlamaParse API-->>Parse Document: Return parsed JSON
+    Parse Document->>Database: Store parsed output, update status ("parsed")
+    Parse Document->>Processing Supervisor: Notify Completion (doc_id)
+
+    %% === Processing Step 2: Chunk Document ===
+    Processing Supervisor->>Chunk Document: Start Chunking
+    Chunk Document->>Database: Store Chunks (status = "chunked")
+    Chunk Document->>Processing Supervisor: Notify Completion (doc_id)
+
+    %% === Processing Step 3: Vectorize Document ===
+    Processing Supervisor->>Vectorize Document: Start Vectorization
+    Vectorize Document->>OpenAI API: Get Embeddings
+    OpenAI API-->>Vectorize Document: Return Vectors
+    Vectorize Document->>Database: Store Embeddings (status = "vectorized")
+    Vectorize Document->>Processing Supervisor: Notify Completion (doc_id)
+
+    %% === Final Status Update ===
+    Database-->>Frontend: Document Ready
+    Frontend-->>Client: Show Success

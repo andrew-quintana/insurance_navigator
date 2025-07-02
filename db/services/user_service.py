@@ -1,487 +1,421 @@
 """
-User service for database operations with Supabase PostgreSQL.
-Handles user registration, authentication, and role management.
+User service module for database operations related to users.
 """
-
+from typing import Optional, Dict, Any, Tuple, List
+from fastapi import Depends, HTTPException, status
+from supabase import Client as SupabaseClient, create_client
+import os
 import logging
-import uuid
 import json
-from datetime import datetime, timedelta
-from typing import Optional, Dict, Any, List
-from passlib.context import CryptContext
-import jwt
-import asyncpg
+from datetime import datetime
+from config.database import get_supabase_client as get_base_client
+import uuid
 
-from .db_pool import get_db_pool, get_db_session
-from ..config import config
-from utils.security_config import get_security_config
-
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Security configuration
-security_config = get_security_config()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# JWT configuration
-SECRET_KEY = security_config.jwt_secret_key
-ALGORITHM = security_config.jwt_algorithm
-ACCESS_TOKEN_EXPIRE_MINUTES = security_config.access_token_expire_minutes
-
 class UserService:
-    """Service for user-related database operations."""
-    
-    def __init__(self):
-        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-        self.pool = None
-    
-    async def _ensure_pool(self):
-        """Ensure database pool is initialized."""
-        if not self.pool:
-            self.pool = await get_db_pool()
-    
-    async def create_user(
-        self, 
-        email: str, 
-        password: str, 
-        full_name: str,
-        role: str = 'user',
-        metadata: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """Create a new user in the database."""
+    """Service for managing user data and operations."""
+
+    def __init__(self, db_client: SupabaseClient):
+        """Initialize the user service."""
+        self.db = db_client
+        self.table = "users"
+        self.roles_table = "user_roles"
+        self.audit_table = "audit_logs"
+
+    def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get a user by their ID."""
         try:
-            await self._ensure_pool()
+            logger.info(f"Fetching user with ID: {user_id}")
             
-            # Hash password
-            hashed_password = self.pwd_context.hash(password)
-            user_id = uuid.uuid4()
+            # Get user from database
+            response = self.db.table(self.table).select("*").eq("id", user_id).execute()
             
-            async with self.pool.get_connection() as conn:
-                async with conn.transaction():
-                    # Check if user already exists
-                    existing_user = await conn.fetchrow(
-                        "SELECT id FROM auth.users WHERE email = $1",
-                        email
-                    )
-                    
-                    if existing_user:
-                        raise ValueError("User with this email already exists")
-                    
-                    # Insert new user into auth.users with metadata
-                    user_metadata = {
-                        'full_name': full_name,
-                        'role': role,
-                        **(metadata or {})
-                    }
-                    
-                    await conn.execute(
-                        """
-                        INSERT INTO auth.users (
-                            id, 
-                            email, 
-                            encrypted_password, 
-                            email_confirmed_at,
-                            confirmed_at,
-                            raw_user_meta_data
-                        )
-                        VALUES ($1, $2, $3, NOW(), NOW(), $4)
-                        """,
-                        user_id, email, hashed_password, json.dumps(user_metadata)
-                    )
-                    
-                    # Get complete user data
-                    user_data = await conn.fetchrow(
-                        """
-                        SELECT 
-                            u.id,
-                            u.email,
-                            p.full_name,
-                            p.role,
-                            p.created_at,
-                            p.metadata
-                        FROM auth.users u
-                        JOIN public.user_profiles p ON p.user_id = u.id
-                        WHERE u.id = $1
-                        """,
-                        user_id
-                    )
-                    
-                    logger.info(f"Created user: {email} with ID: {user_id}")
-                    
-                    return {
-                        "id": str(user_data["id"]),
-                        "email": user_data["email"],
-                        "full_name": user_data["full_name"],
-                        "role": user_data["role"],
-                        "created_at": user_data["created_at"],
-                        "metadata": user_data["metadata"]
-                    }
-                
-        except Exception as e:
-            logger.error(f"Failed to create user {email}: {str(e)}")
-            raise
-    
-    async def authenticate_user(self, email: str, password: str) -> Optional[Dict[str, Any]]:
-        """Authenticate user with email and password and return JWT token and user data."""
-        try:
-            await self._ensure_pool()
+            # Check if response has data
+            if not response.data or len(response.data) == 0:
+                logger.warning(f"No user found with ID {user_id}")
+                return None
             
-            async with self.pool.get_connection() as conn:
-                # Get user with password hash
-                user_row = await conn.fetchrow(
-                    """
-                    SELECT 
-                        u.id,
-                        u.email,
-                        u.encrypted_password,
-                        p.full_name,
-                        p.role,
-                        p.last_login,
-                        p.metadata
-                    FROM auth.users u
-                    JOIN public.user_profiles p ON p.user_id = u.id
-                    WHERE u.email = $1
-                    """,
-                    email
-                )
-                
-                if not user_row:
-                    logger.warning(f"Authentication failed - user not found: {email}")
-                    return None
-                
-                # Verify password
-                if not self.pwd_context.verify(password, user_row["encrypted_password"]):
-                    logger.warning(f"Authentication failed - invalid password: {email}")
-                    return None
-                
-                # Update last login time
-                await conn.execute(
-                    "UPDATE public.user_profiles SET last_login = NOW() WHERE user_id = $1",
-                    user_row["id"]
-                )
-                
-                user_data = {
-                    "id": str(user_row["id"]),
-                    "email": user_row["email"],
-                    "full_name": user_row["full_name"],
-                    "role": user_row["role"],
-                    "last_login": user_row["last_login"],
-                    "metadata": user_row["metadata"]
-                }
-                
-                # Create JWT token
-                access_token = self.create_access_token(user_data)
-                
-                logger.info(f"User authenticated successfully: {email}")
-                
-                return {
-                    "access_token": access_token,
-                    "user": user_data
-                }
-                
-        except Exception as e:
-            logger.error(f"Authentication error for {email}: {str(e)}")
-            return None
-    
-    async def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
-        """Get user by email address."""
-        try:
-            await self._ensure_pool()
+            return response.data[0]
             
-            async with self.pool.get_connection() as conn:
-                user_row = await conn.fetchrow(
-                    """
-                    SELECT 
-                        u.id,
-                        u.email,
-                        p.full_name,
-                        p.role,
-                        p.created_at,
-                        p.updated_at,
-                        p.last_login,
-                        p.metadata
-                    FROM auth.users u
-                    JOIN public.user_profiles p ON p.user_id = u.id
-                    WHERE u.email = $1
-                    """,
-                    email
-                )
-                
-                if not user_row:
-                    return None
-                
-                return {
-                    "id": str(user_row["id"]),
-                    "email": user_row["email"],
-                    "full_name": user_row["full_name"],
-                    "role": user_row["role"],
-                    "created_at": user_row["created_at"],
-                    "updated_at": user_row["updated_at"],
-                    "last_login": user_row["last_login"],
-                    "metadata": user_row["metadata"]
-                }
-                
-        except Exception as e:
-            logger.error(f"Error getting user by email {email}: {str(e)}")
-            return None
-    
-    async def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """Get user by ID."""
-        try:
-            await self._ensure_pool()
-            
-            async with self.pool.get_connection() as conn:
-                user_row = await conn.fetchrow(
-                    """
-                    SELECT 
-                        u.id,
-                        u.email,
-                        p.full_name,
-                        p.role,
-                        p.created_at,
-                        p.updated_at,
-                        p.last_login,
-                        p.metadata
-                    FROM auth.users u
-                    JOIN public.user_profiles p ON p.user_id = u.id
-                    WHERE u.id = $1
-                    """,
-                    uuid.UUID(user_id)
-                )
-                
-                if not user_row:
-                    return None
-                
-                return {
-                    "id": str(user_row["id"]),
-                    "email": user_row["email"],
-                    "full_name": user_row["full_name"],
-                    "role": user_row["role"],
-                    "created_at": user_row["created_at"],
-                    "updated_at": user_row["updated_at"],
-                    "last_login": user_row["last_login"],
-                    "metadata": user_row["metadata"]
-                }
-                
         except Exception as e:
             logger.error(f"Error getting user by ID {user_id}: {str(e)}")
             return None
-    
-    async def update_user(
+
+    def create_user(
         self,
-        user_id: str,
-        updates: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
-        """Update user information."""
+        email: str,
+        password: str,
+        consent_version: str,
+        consent_timestamp: str,
+        name: str = None  # Add name parameter with default value
+    ) -> Dict[str, Any]:
+        """Create a new user with HIPAA compliance fields."""
         try:
-            await self._ensure_pool()
+            # Create auth user
+            auth_user = self.db.auth.sign_up({
+                "email": email,
+                "password": password
+            })
             
-            # Prepare update fields
-            allowed_fields = ['full_name', 'metadata']
-            update_fields = {k: v for k, v in updates.items() if k in allowed_fields}
+            # Create user record with HIPAA compliance fields
+            user_data = {
+                "id": auth_user.user.id,
+                "email": email,
+                "name": name or email.split("@")[0],  # Use email prefix if name not provided
+                "consent_version": consent_version,
+                "consent_timestamp": consent_timestamp,
+                "is_active": True
+            }
             
-            if not update_fields:
-                raise ValueError("No valid fields to update")
+            result = self.db.table(self.table).insert(user_data).execute()
             
-            # Build dynamic update query
-            set_clauses = []
-            values = []
-            param_count = 1
+            if not result.data:
+                raise Exception("Failed to create user record")
             
-            for field, value in update_fields.items():
-                set_clauses.append(f"{field} = ${param_count}")
-                values.append(value)
-                param_count += 1
+            return auth_user
             
-            # Add updated_at
-            set_clauses.append(f"updated_at = ${param_count}")
-            values.append(datetime.utcnow())
-            param_count += 1
+        except Exception as e:
+            # Cleanup on failure
+            if "auth_user" in locals():
+                try:
+                    self.db.auth.admin.delete_user(auth_user.user.id)
+                except:
+                    pass  # Best effort cleanup
+            raise Exception(f"Failed to create user: {str(e)}")
+
+    def authenticate_user(self, email: str, password: str) -> Dict[str, Any]:
+        """Authenticate a user with email and password.
+        
+        Args:
+            email: User's email
+            password: User's password
             
-            # Add user_id to values
-            values.append(uuid.UUID(user_id))
+        Returns:
+            Dict containing user and session data
             
-            async with self.pool.get_connection() as conn:
-                # Update user profile
-                updated_row = await conn.fetchrow(
-                    f"""
-                    UPDATE public.user_profiles
-                    SET {', '.join(set_clauses)}
-                    WHERE user_id = ${param_count}
-                    RETURNING id, full_name, updated_at, metadata
-                    """,
-                    *values
-                )
-                
-                if not updated_row:
-                    return None
-                
-                return {
-                    "id": str(updated_row["id"]),
-                    "full_name": updated_row["full_name"],
-                    "updated_at": updated_row["updated_at"],
-                    "metadata": json.loads(updated_row["metadata"]) if updated_row["metadata"] else {}
+        Raises:
+            Exception: If authentication fails
+        """
+        try:
+            # Log authentication attempt
+            logger.info(f"Attempting authentication for user: {email}")
+            
+            # Authenticate with Supabase
+            auth_response = self.db.auth.sign_in_with_password({
+                "email": email,
+                "password": password
+            })
+            
+            if not auth_response:
+                raise HTTPException(status_code=401, detail="Invalid login credentials")
+            
+            # Get user data
+            user_data = self.get_user_by_id(auth_response.user.id)
+            if not user_data:
+                raise HTTPException(status_code=401, detail="User not found")
+            
+            # Update last login
+            self.db.table(self.table).update({
+                "last_login": datetime.utcnow().isoformat()
+            }).eq("id", auth_response.user.id).execute()
+            
+            # Create audit log
+            self.db.table("audit_logs").insert({
+                "user_id": auth_response.user.id,
+                "action": "user_login",
+                "details": {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "success": True
                 }
-                
-        except Exception as e:
-            logger.error(f"Error updating user {user_id}: {str(e)}")
-            raise
-    
-    async def assign_role(self, user_id: str, role_name: str) -> bool:
-        """Assign a role to a user."""
-        try:
-            await self._ensure_pool()
+            }).execute()
             
-            async with self.pool.get_connection() as conn:
-                # Get role ID
-                role_row = await conn.fetchrow(
-                    "SELECT id FROM roles WHERE name = $1",
-                    role_name
-                )
-                
-                if not role_row:
-                    raise ValueError(f"Role '{role_name}' not found")
-                
-                # Assign role (ignore if already assigned)
-                await conn.execute(
-                    """
-                    INSERT INTO user_roles (user_id, role_id)
-                    VALUES ($1, $2)
-                    ON CONFLICT (user_id, role_id) DO NOTHING
-                    """,
-                    uuid.UUID(user_id), role_row["id"]
-                )
-                
-                logger.info(f"Assigned role '{role_name}' to user {user_id}")
-                return True
-                
-        except Exception as e:
-            logger.error(f"Error assigning role {role_name} to user {user_id}: {str(e)}")
-            return False
-    
-    async def remove_role(self, user_id: str, role_name: str) -> bool:
-        """Remove a role from a user."""
-        try:
-            await self._ensure_pool()
+            return {
+                "user": {
+                    "id": auth_response.user.id,
+                    "email": auth_response.user.email
+                },
+                "session": {
+                    "access_token": auth_response.session.access_token,
+                    "refresh_token": auth_response.session.refresh_token,
+                    "expires_at": auth_response.session.expires_at
+                }
+            }
             
-            async with self.pool.get_connection() as conn:
-                # Get role ID
-                role_row = await conn.fetchrow(
-                    "SELECT id FROM roles WHERE name = $1",
-                    role_name
-                )
-                
-                if not role_row:
-                    return False
-                
-                # Remove role assignment
-                result = await conn.execute(
-                    "DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2",
-                    uuid.UUID(user_id), role_row["id"]
-                )
-                
-                logger.info(f"Removed role '{role_name}' from user {user_id}")
-                return "DELETE" in result
-                
         except Exception as e:
-            logger.error(f"Error removing role {role_name} from user {user_id}: {str(e)}")
-            return False
-    
-    async def _get_user_roles(self, conn: asyncpg.Connection, user_id: uuid.UUID) -> List[str]:
-        """Get all roles for a user."""
-        role_rows = await conn.fetch(
-            """
-            SELECT r.name 
-            FROM roles r 
-            JOIN user_roles ur ON r.id = ur.role_id 
-            WHERE ur.user_id = $1
-            """,
-            user_id
-        )
-        return [row["name"] for row in role_rows]
-    
-    async def _assign_default_role(self, conn: asyncpg.Connection, user_id: uuid.UUID) -> None:
-        """Assign default 'user' role to new user."""
-        try:
-            # Get 'user' role ID
-            role_row = await conn.fetchrow(
-                "SELECT id FROM roles WHERE name = 'user'"
-            )
+            # Log error
+            logger.error(f"Authentication error: {str(e)}")
             
-            if role_row:
-                await conn.execute(
-                    "INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)",
-                    user_id, role_row["id"]
-                )
-                logger.info(f"Assigned default 'user' role to user {user_id}")
+            # Create audit log for failed attempt
+            if "auth_response" in locals() and auth_response and hasattr(auth_response, "user"):
+                try:
+                    self.db.table("audit_logs").insert({
+                        "user_id": auth_response.user.id,
+                        "action": "user_login",
+                        "details": {
+                            "timestamp": datetime.utcnow().isoformat(),
+                            "success": False,
+                            "error": str(e)
+                        }
+                    }).execute()
+                except:
+                    pass  # Best effort audit logging
+            
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    def get_user_from_token(self, token: str, refresh_token: Optional[str] = None, expires_at: Optional[int] = None) -> Optional[Dict[str, Any]]:
+        """Get user data from a JWT token.
+        
+        Args:
+            token: Access token
+            refresh_token: Optional refresh token. If provided, will be used to establish a full session.
+            expires_at: Optional token expiration timestamp
+            
+        Returns:
+            User data or None if token is invalid
+        """
+        try:
+            # Set auth session with proper session data
+            if refresh_token:
+                self.db.auth.set_session(token, refresh_token)
             else:
-                logger.warning("Default 'user' role not found in database")
-                
-        except Exception as e:
-            logger.error(f"Error assigning default role to user {user_id}: {str(e)}")
-            # Don't raise - user creation should still succeed
-    
-    # Authentication helper methods
-    def create_access_token(self, user_data: Dict[str, Any]) -> str:
-        """Create JWT access token for user."""
-        expires_delta = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        expire = datetime.utcnow() + expires_delta
-        
-        to_encode = {
-            "sub": user_data["email"],
-            "user_id": user_data["id"],
-            "role": user_data["role"],
-            "exp": expire
-        }
-        
-        encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-        return encoded_jwt
-    
-    def verify_token(self, token: str) -> Dict[str, Any]:
-        """Verify and decode JWT token."""
-        try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            return payload
-        except jwt.PyJWTError as e:
-            logger.warning(f"Invalid token: {str(e)}")
-            raise ValueError("Invalid token")
-    
-    async def validate_session(self, token: str) -> Optional[Dict[str, Any]]:
-        """Validate user session token and return user data."""
-        try:
-            payload = self.verify_token(token)
-            email = payload.get("sub")
+                # For backward compatibility, try with just access token
+                self.db.auth.set_session(token, token)  # Use access token as refresh token for compatibility
             
-            if not email:
+            # Get user from token
+            user_response = self.db.auth.get_user()
+            
+            if not user_response:
                 return None
             
-            # Get fresh user data from database
-            user_data = await self.get_user_by_email(email)
+            # Get user data from database
+            user_data = self.get_user_by_id(user_response.user.id)
+            
+            # Create audit log
+            self.db.table("audit_logs").insert({
+                "user_id": user_response.user.id,
+                "action": "token_access",
+                "details": {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "success": True,
+                    "session_type": "full" if refresh_token else "access_only"
+                }
+            }).execute()
+            
             return user_data
             
-        except ValueError:
+        except Exception as e:
+            # Log error
+            logger.error(f"Error getting user from token: {str(e)}")
+            
+            # Create audit log for failed attempt
+            if "user_response" in locals() and user_response and hasattr(user_response.user, "id"):
+                try:
+                    self.db.table("audit_logs").insert({
+                        "user_id": user_response.user.id,
+                        "action": "token_access",
+                        "details": {
+                            "timestamp": datetime.utcnow().isoformat(),
+                            "success": False,
+                            "error": str(e),
+                            "session_type": "full" if refresh_token else "access_only"
+                        }
+                    }).execute()
+                except:
+                    pass  # Best effort audit logging
+            
             return None
 
-    async def register_user(self, email: str, password: str, full_name: str) -> str:
-        """Register a new user and return JWT token (expected by main.py)."""
-        try:
-            # Create user in database
-            user_data = await self.create_user(email, password, full_name)
+    def update_user(self, user_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update a user's data.
+        
+        Args:
+            user_id: The ID of the user to update
+            update_data: Dictionary of fields to update
             
-            # Create and return JWT token
-            token = self.create_access_token(user_data)
-            return token
+        Returns:
+            Updated user data or None if update failed
+            
+        Raises:
+            Exception: If update fails
+        """
+        try:
+            # Remove updated_at from update data if present
+            if "updated_at" in update_data:
+                del update_data["updated_at"]
+            
+            # Update user record
+            result = self.db.table(self.table).update(update_data).eq("id", user_id).execute()
+            
+            if not result.data:
+                return None
+            
+            # Create audit log
+            self.db.table("audit_logs").insert({
+                "user_id": user_id,
+                "action": "user_update",
+                "details": {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "success": True,
+                    "fields_updated": list(update_data.keys())
+                }
+            }).execute()
+            
+            return result.data[0]
             
         except Exception as e:
-            logger.error(f"Failed to register user {email}: {str(e)}")
-            raise
+            # Log error
+            try:
+                self.db.table("audit_logs").insert({
+                    "user_id": user_id,
+                    "action": "user_update",
+                    "details": {
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "success": False,
+                        "error": str(e),
+                        "fields_attempted": list(update_data.keys())
+                    }
+                }).execute()
+            except:
+                pass  # Best effort audit logging
+            
+            raise Exception(f"Failed to update user: {str(e)}")
 
-    async def get_user_from_token(self, token: str) -> Optional[Dict[str, Any]]:
-        """Get user data from JWT token (expected by main.py)."""
-        return await self.validate_session(token)
+    def delete_user(self, user_id: str) -> bool:
+        """Delete a user."""
+        try:
+            logger.info(f"Deleting user: {user_id}")
+            result = self.db.table(self.table).delete().eq("id", user_id).execute()
+            return bool(result.data)
+        except Exception as e:
+            logger.error(f"Error deleting user {user_id}: {str(e)}")
+            return False
 
-# Global user service instance
-user_service = UserService()
+    def search_users(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Search for users based on filters."""
+        try:
+            logger.info(f"Searching users with filters: {filters}")
+            query = self.db.table(self.table).select("*")
+            for key, value in filters.items():
+                query = query.eq(key, value)
+            result = query.execute()
+            return result.data if result.data else []
+        except Exception as e:
+            logger.error(f"Error searching users: {str(e)}")
+            return []
+
+    def get_user_roles(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get roles for a user."""
+        try:
+            logger.info(f"Fetching roles for user: {user_id}")
+            result = self.db.table(self.roles_table).select("role").eq("user_id", user_id).execute()
+            return result.data if result.data else []
+        except Exception as e:
+            logger.error(f"Error getting roles for user {user_id}: {str(e)}")
+            return []
+
+    def update_user_roles(self, user_id: str, roles: List[str], action: str = "add") -> bool:
+        """Update roles for a user."""
+        try:
+            logger.info(f"Adding roles {roles} for user: {user_id}")
+            
+            if action == "add":
+                # Add new roles
+                role_data = [{"user_id": user_id, "role": role} for role in roles]
+                self.db.table(self.roles_table).insert(role_data).execute()
+            elif action == "remove":
+                # Remove specified roles
+                self.db.table(self.roles_table).delete().eq("user_id", user_id).in_("role", roles).execute()
+            elif action == "set":
+                # Replace all roles
+                self.db.table(self.roles_table).delete().eq("user_id", user_id).execute()
+                if roles:
+                    role_data = [{"user_id": user_id, "role": role} for role in roles]
+                    self.db.table(self.roles_table).insert(role_data).execute()
+            return True
+        except Exception as e:
+            logger.error(f"Error updating roles for user {user_id}: {str(e)}")
+            return False
+
+    def create_audit_log(
+        self,
+        user_id: str,
+        action: str,
+        details: Dict[str, Any],
+        success: bool = True
+    ) -> Dict[str, Any]:
+        """Create an audit log entry."""
+        try:
+            log_data = {
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "action": action,
+                "details": details,
+                "success": success,
+                "created_at": datetime.utcnow().isoformat()
+            }
+            result = self.db.table(self.audit_table).insert(log_data).execute()
+            return result.data[0] if result.data else None
+        except Exception as e:
+            raise Exception(f"Failed to create audit log: {str(e)}")
+
+    def deactivate_user(self, user_id: str) -> bool:
+        """Deactivate a user by setting is_active to false.
+        
+        Args:
+            user_id: The ID of the user to deactivate
+            
+        Returns:
+            bool: True if deactivation was successful, False otherwise
+        """
+        try:
+            # Update user record
+            result = self.db.table(self.table).update({
+                "is_active": False
+            }).eq("id", user_id).execute()
+            
+            if not result.data:
+                return False
+            
+            # Create audit log
+            self.db.table("audit_logs").insert({
+                "user_id": user_id,
+                "action": "user_deactivate",
+                "details": {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "success": True
+                }
+            }).execute()
+            
+            return True
+            
+        except Exception as e:
+            # Log error
+            try:
+                self.db.table("audit_logs").insert({
+                    "user_id": user_id,
+                    "action": "user_deactivate",
+                    "details": {
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "success": False,
+                        "error": str(e)
+                    }
+                }).execute()
+            except:
+                pass  # Best effort audit logging
+            
+            return False
 
 async def get_user_service() -> UserService:
-    """Get the global user service instance."""
-    return user_service 
+    """Get configured user service instance."""
+    try:
+        client = await get_base_client()
+        return UserService(client)
+    except Exception as e:
+        logger.error(f"Error creating user service: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        )

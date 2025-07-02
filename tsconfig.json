@@ -1,27 +1,26 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
+    "allowJs": true,
+    "lib": ["deno.window", "dom"],
     "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "outDir": "./dist",
-    "rootDir": "."
+    "types": ["deno"]
   },
-  "include": ["scripts/**/*"],
-  "exclude": ["node_modules"]
-} 
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "outDir": "./dist",
-    "rootDir": "."
+  "lint": {
+    "files": {
+      "include": ["supabase/functions/tests/"]
+    },
+    "rules": {
+      "tags": ["recommended"]
+    }
   },
-  "include": ["scripts/**/*"],
-  "exclude": ["node_modules"]
+  "fmt": {
+    "files": {
+      "include": ["supabase/functions/tests/"]
+    },
+    "options": {
+      "lineWidth": 100,
+      "indentWidth": 2,
+      "singleQuote": true
+    }
+  }
 } 

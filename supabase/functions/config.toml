@@ -1,0 +1,21 @@
+# Edge Functions Configuration
+
+# Document processor function - requires JWT
+[functions.doc-processor]
+verify_jwt = true
+import_map = "./import_map.json"
+
+# Link assigner function - requires JWT
+[functions.link-assigner]
+verify_jwt = true
+import_map = "./import_map.json"
+
+# Document parser function - no JWT required for webhook
+[functions.doc-parser]
+verify_jwt = false
+import_map = "./import_map.json"
+
+# Vector processor function - requires JWT
+[functions.vector-processor]
+verify_jwt = true
+import_map = "./import_map.json" 

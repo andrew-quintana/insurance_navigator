@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "lib": ["deno.window", "dom", "esnext"],
+    "strict": true,
+    "target": "esnext",
+    "module": "esnext"
+  },
+  "imports": {
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.3",
+    "std/": "https://deno.land/std@0.217.0/",
+    "testing/": "https://deno.land/std@0.217.0/testing/"
+  },
+  "tasks": {
+    "test": "deno test --allow-all --env-file=./.env.test"
+  },
+  "lint": {
+    "files": {
+      "include": ["tests/"]
+    },
+    "rules": {
+      "tags": ["recommended"]
+    }
+  },
+  "fmt": {
+    "files": {
+      "include": ["tests/"]
+    },
+    "options": {
+      "lineWidth": 100,
+      "indentWidth": 2,
+      "singleQuote": true
+    }
+  }
+} 

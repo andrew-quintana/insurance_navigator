@@ -1,0 +1,12 @@
+{
+  "imports": {
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.0",
+    "@supabase/auth-helpers-shared": "https://esm.sh/@supabase/auth-helpers-shared@0.6.0",
+    "llamaparse": "https://esm.sh/llamaparse@0.1.0",
+    "openai": "https://esm.sh/openai@4.24.0",
+    "zod": "https://esm.sh/zod@3.22.4",
+    "cors": "https://deno.land/x/cors@v1.2.2/mod.ts",
+    "std/": "https://deno.land/std@0.208.0/",
+    "jose": "https://deno.land/x/jose@v4.14.4/index.ts"
+  }
+} 

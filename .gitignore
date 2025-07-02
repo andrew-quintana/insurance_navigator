@@ -8,6 +8,13 @@ vibe_coding_directive.md
 .cursor/
 z_prompt_sops/
 
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.test
+.env.production
+
 # Python
 __pycache__/
 *.py[cod]
@@ -42,25 +49,30 @@ env/
 *.swp
 *.swo
 
-# Environment variables
-.env
-.env.*
-!.env.template
-
-# Logs
-logs/
-*.log
-
-# Test coverage
+# Testing
 .coverage
 htmlcov/
 .pytest_cache/
+.tox/
 
-# Documentation
-docs/_build/
+# Logs
+*.log
+logs/
+log/
 
-# macOS
+# Local Supabase
+.supabase/
+volumes/
+
+# Build output
+.next/
+out/
+build/
+dist/
+
+# Misc
 .DS_Store
+Thumbs.db
 
 # Project specific
 vector_store/

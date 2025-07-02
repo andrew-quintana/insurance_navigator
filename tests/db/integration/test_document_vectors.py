@@ -6,7 +6,7 @@ from typing import List
 
 from supabase.client import Client
 from tests.db.helpers import get_test_client
-from tests.config.test_config import get_test_config
+from tests.config.test_config import get_base_test_config
 
 class TestDocumentVectors:
     @pytest.fixture(scope="class")
@@ -17,9 +17,10 @@ class TestDocumentVectors:
     def service_client(self) -> Client:
         return get_test_client(auth_type="service_role")  # Service role client for vector operations
     
-    @pytest.fixture(scope="class")
-    def config(self):
-        return get_test_config()
+    @pytest.fixture
+    def test_config():
+        """Get test configuration."""
+        return get_base_test_config()
     
     @pytest.fixture(scope="class")
     def test_user_id(self) -> str:

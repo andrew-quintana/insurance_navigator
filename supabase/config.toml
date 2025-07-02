@@ -1,33 +1,54 @@
+# A string used to distinguish different Supabase projects on the same host.
+project_id = "insurance_navigator"
 
-[functions.progress-tracker]
+[api]
 enabled = true
-verify_jwt = true
-import_map = "./functions/progress-tracker/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/progress-tracker/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/progress-tracker/*.html" ]
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["extensions"]
+max_rows = 1000
 
-[functions.processing-webhook]
-enabled = true
-verify_jwt = true
-import_map = "./functions/processing-webhook/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/processing-webhook/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/processing-webhook/*.html" ]
+[db]
+port = 54322
+major_version = 15
 
-[functions.doc-processor]
+[studio]
 enabled = true
-verify_jwt = true
-import_map = "./functions/doc-processor/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/doc-processor/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/doc-processor/*.html" ]
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://localhost:3000"]
+jwt_expiry = 3600
+enable_signup = true
+jwt_secret = "zNfav2GWycDdZIsQxJ5UogupJmcKHUkt3pV/LC87Dkk="
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+[auth.rate_limit]
+email_sent = 2
+sms_sent = 30
+token_refresh = 150
+sign_in_sign_ups = 30
+token_verifications = 30
+
+[analytics]
+enabled = false
+
+[edge_runtime]
+enabled = true
+policy = "oneshot"
+inspector_port = 8083
+deno_version = 1

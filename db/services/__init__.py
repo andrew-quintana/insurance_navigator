@@ -1,3 +1,4 @@
 """
-Database services package providing core functionality.
+Database services module.
+Contains service classes for database operations.
 """ 

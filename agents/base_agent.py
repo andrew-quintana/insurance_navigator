@@ -56,108 +56,55 @@ class BaseAgent:
     
     def __init__(
         self,
-        name: str = None,
-        llm: Optional[BaseLanguageModel] = None,
-        logger: Optional[logging.Logger] = None,
-        use_mock: bool = False,
+        name: str,
+        description: str,
+        api_key: Optional[str] = None,
+        tools: Optional[List[BaseTool]] = None,
     ):
         """
-        Initialize the base agent with common components.
+        Initialize base agent.
         
         Args:
-            name: The name of the agent for logging purposes
-            llm: An optional language model to use
-            logger: An optional pre-configured logger
-            use_mock: Whether to use mock responses for testing
+            name: Agent name
+            description: Agent description
+            api_key: Optional API key
+            tools: Optional list of tools
         """
-        self.name = name or self.__class__.__name__
-        self.use_mock = use_mock
-        
-        # Get configuration
-        try:
-            self.config_manager = get_config_manager()
-            if name:
-                self.agent_config = self.config_manager.get_agent_config(name)
-                
-                # Extract model config
-                model_config = self.agent_config["model"]
-                
-                # Extract paths
-                self.core_file_path = self.agent_config["core_file"]["path"]
-                self.core_file_version = self.agent_config["core_file"]["version"]
-                self.prompt_path = self.agent_config["prompt"]["path"]
-                self.prompt_version = self.agent_config["prompt"]["version"]
-                self.prompt_description = self.agent_config["prompt"].get("description", "")
-                self.examples_path = self.agent_config["examples"]["path"]
-                self.examples_version = self.agent_config["examples"]["version"]
-            else:
-                # Default values if name is not provided
-                self.agent_config = {}
-                self.core_file_path = None
-                self.core_file_version = "0.1"
-                self.prompt_path = None
-                self.prompt_version = "0.1"
-                self.prompt_description = ""
-                self.examples_path = None
-                self.examples_version = "0.1"
-                model_config = {"name": "claude-3-sonnet-20240229-v1h", "temperature": 0.0}
-        except Exception as e:
-            # Fallback configuration
-            self.agent_config = {}
-            self.config_manager = None
-            self.core_file_path = None
-            self.core_file_version = "0.1"
-            self.prompt_path = None
-            self.prompt_version = "0.1"
-            self.prompt_description = ""
-            self.examples_path = None
-            self.examples_version = "0.1"
-            model_config = {"name": "claude-3-sonnet-20240229-v1h", "temperature": 0.0}
-            
-            if logger:
-                logger.error(f"Error loading agent configuration: {str(e)}")
-                logger.error(traceback.format_exc())
-        
-        # Set up LLM
-        if not use_mock:
-            self.llm = llm or ChatAnthropic(
-                model=model_config["name"], 
-                temperature=model_config["temperature"]
-            )
-        else:
-            self.llm = None
-        
-        # Set up logging
-        if logger is None:
-            # Use centralized logs directory instead of agent-specific directories
-            self.logger = self._setup_logger(self.name)
-        else:
-            self.logger = logger
-        
-        # Enhanced performance tracking
-        self.metrics = {
-            "total_requests": 0,
-            "successful_requests": 0,
-            "failed_requests": 0,
-            "avg_response_time": 0,
-            "total_response_time": 0,
-            "token_usage": {
-                "prompt_tokens": 0,
-                "completion_tokens": 0,
-                "total_tokens": 0
-            },
-            "by_category": {}
-        }
-        
-        # Initialize state history for tracking
-        self.state_history = []
-        self.tools = []
-        
-        self.logger.info(f"{self.name} agent initialized with prompt version {self.prompt_version}")
-        
-        # Perform agent-specific initialization
-        self._initialize_agent()
+        self.name = name
+        self.description = description
+        self.api_key = api_key
+        self.tools = tools or []
     
+    async def run(self, **kwargs: Dict[str, Any]) -> Any:
+        """
+        Run the agent.
+        
+        Args:
+            **kwargs: Keyword arguments
+            
+        Returns:
+            Agent result
+        """
+        raise NotImplementedError("Subclasses must implement run()")
+    
+    async def add_tool(self, tool: BaseTool) -> None:
+        """
+        Add a tool to the agent.
+        
+        Args:
+            tool: Tool to add
+        """
+        self.tools.append(tool)
+    
+    async def remove_tool(self, tool_name: str) -> None:
+        """
+        Remove a tool from the agent.
+        
+        Args:
+            tool_name: Name of tool to remove
+        """
+        self.tools = [t for t in self.tools if t.name != tool_name]
+
     def _initialize_agent(self) -> None:
         """
         Initialize agent-specific components.

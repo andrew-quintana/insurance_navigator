@@ -1,181 +1,175 @@
-/// <reference lib="deno.ns" />
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+/**
+ * Chunking Service Edge Function
+ * 
+ * This function handles document chunking:
+ * 1. Retrieves parsed document content
+ * 2. Chunks content into smaller segments
+ * 3. Stores chunks for vectorization
+ */
+
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { corsHeaders } from '../_shared/cors.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // Configuration
-const CONFIG = {
-  BUCKET: 'docs',
-  RAW_PREFIX: 'raw',
-  PROCESSED_PREFIX: 'processed',
-  CHUNKS_PREFIX: 'chunks'
-}
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 
-// Log configuration on startup
-console.log('📝 Chunking service configuration:', {
-  bucket: CONFIG.BUCKET,
-  rawPrefix: CONFIG.RAW_PREFIX,
-  processedPrefix: CONFIG.PROCESSED_PREFIX,
-  chunksPrefix: CONFIG.CHUNKS_PREFIX
-})
+// Initialize Supabase client
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 interface ChunkRequest {
   documentId: string
-  text: string
 }
 
-function chunkText(text: string, chunkSize: number = 1500, overlap: number = 100): string[] {
-  if (text.length <= chunkSize) return [text]
-  
-  const chunks: string[] = []
-  let start = 0
-  
-  while (start < text.length) {
-    let end = start + chunkSize
-    
-    // Find next sentence boundary
-    if (end < text.length) {
-      const nextPeriod = text.indexOf('.', end)
-      end = nextPeriod > -1 && nextPeriod - end < 100 ? nextPeriod + 1 : end
-    }
-    
-    chunks.push(text.slice(Math.max(0, start - overlap), end))
-    start = end
+interface Chunk {
+  content: string
+  metadata: {
+    documentId: string
+    pageNumber?: number
+    chunkNumber: number
   }
-  
+}
+
+async function getDocumentContent(documentId: string): Promise<any> {
+  const { data, error } = await supabase
+    .from('document_content')
+    .select('content')
+    .eq('document_id', documentId)
+    .single()
+
+  if (error) throw error
+  return data.content
+}
+
+function chunkContent(content: any): Chunk[] {
+  const chunks: Chunk[] = []
+  let chunkNumber = 0
+
+  // Process each page or section
+  if (Array.isArray(content)) {
+    content.forEach((section, pageNumber) => {
+      // Split content into chunks of roughly 1000 characters
+      const text = section.text || section.content || ''
+      const words = text.split(/\s+/)
+      let currentChunk = ''
+
+      words.forEach((word: string) => {
+        if ((currentChunk + ' ' + word).length > 1000) {
+          // Store current chunk
+          chunks.push({
+            content: currentChunk.trim(),
+            metadata: {
+              documentId: content.documentId,
+              pageNumber: pageNumber + 1,
+              chunkNumber: ++chunkNumber
+            }
+          })
+          currentChunk = word
+        } else {
+          currentChunk += (currentChunk ? ' ' : '') + word
+        }
+      })
+
+      // Store the last chunk if not empty
+      if (currentChunk.trim()) {
+        chunks.push({
+          content: currentChunk.trim(),
+          metadata: {
+            documentId: content.documentId,
+            pageNumber: pageNumber + 1,
+            chunkNumber: ++chunkNumber
+          }
+        })
+      }
+    })
+  } else if (typeof content === 'string') {
+    // Handle plain text content
+    const words = content.split(/\s+/)
+    let currentChunk = ''
+
+    words.forEach((word: string) => {
+      if ((currentChunk + ' ' + word).length > 1000) {
+        chunks.push({
+          content: currentChunk.trim(),
+          metadata: {
+            documentId: content.documentId,
+            chunkNumber: ++chunkNumber
+          }
+        })
+        currentChunk = word
+      } else {
+        currentChunk += (currentChunk ? ' ' : '') + word
+      }
+    })
+
+    if (currentChunk.trim()) {
+      chunks.push({
+        content: currentChunk.trim(),
+        metadata: {
+          documentId: content.documentId,
+          chunkNumber: ++chunkNumber
+        }
+      })
+    }
+  }
+
   return chunks
+}
+
+async function storeChunks(chunks: Chunk[]) {
+  const { error } = await supabase
+    .from('document_chunks')
+    .insert(chunks.map(chunk => ({
+      document_id: chunk.metadata.documentId,
+      content: chunk.content,
+      page_number: chunk.metadata.pageNumber,
+      chunk_number: chunk.metadata.chunkNumber,
+      created_at: new Date().toISOString()
+    })))
+
+  if (error) throw error
+}
+
+async function handleChunkRequest(req: Request) {
+  try {
+    const { documentId } = await req.json() as ChunkRequest
+
+    // Get document content
+    const content = await getDocumentContent(documentId)
+
+    // Create chunks
+    const chunks = chunkContent(content)
+
+    // Store chunks
+    await storeChunks(chunks)
+
+    return new Response(JSON.stringify({
+      status: 'success',
+      documentId,
+      chunkCount: chunks.length,
+      message: 'Document chunked successfully'
+    }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 200
+    })
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 500
+    })
+  }
 }
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { 
+    return new Response(null, {
       headers: {
-        ...corsHeaders,
-        'Allow': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
       }
     })
   }
 
-  // Handle unsupported methods
-  if (!['GET', 'POST', 'OPTIONS'].includes(req.method)) {
-    return new Response('Method not allowed', { 
-      status: 405,
-      headers: {
-        ...corsHeaders,
-        'Allow': 'GET, POST, OPTIONS',
-        'Content-Type': 'text/plain'
-      }
-    })
-  }
-
-  // Add health check endpoint
-  if (req.method === 'GET') {
-    return new Response(
-      JSON.stringify({ 
-        status: 'healthy',
-        service: 'chunking-service',
-        timestamp: new Date().toISOString()
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-  }
-
-  try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    )
-
-    const { documentId, text }: ChunkRequest = await req.json()
-    
-    if (!documentId || !text) {
-      throw new Error('Missing required fields')
-    }
-
-    // Generate chunks
-    console.log('📝 Chunking text...', { textLength: text.length })
-    const chunks = chunkText(text)
-    
-    // Create storage folder path
-    const storagePath = `${CONFIG.BUCKET}/${documentId}/chunks`
-    
-    // Store chunks in storage bucket
-    console.log('💾 Storing chunks in bucket...')
-    const chunkUploads = chunks.map(async (content, index) => {
-      const chunkPath = `${storagePath}/chunk_${index}.txt`
-      const { error: uploadError } = await supabaseClient
-        .storage
-        .from('documents')
-        .upload(chunkPath, new Blob([content], { type: 'text/plain' }), {
-          cacheControl: '3600',
-          upsert: true
-        })
-      
-      if (uploadError) throw uploadError
-      return index
-    })
-
-    // Upload all chunks
-    await Promise.all(chunkUploads)
-    console.log('✅ All chunks stored successfully')
-
-    // Store processing status in database
-    console.log('📊 Creating processing status record...')
-    const { error: statusError } = await supabaseClient
-      .from('document_processing_status')
-      .insert({
-        document_id: documentId,
-        total_chunks: chunks.length,
-        processed_chunks: [],
-        status: 'chunked',
-        chunk_size: 1500,
-        overlap: 100,
-        storage_path: storagePath
-      })
-
-    if (statusError) throw statusError
-
-    // Update document status
-    await supabaseClient
-      .from('documents')
-      .update({ 
-        status: 'processing',
-        total_chunks: chunks.length,
-        processed_chunks: 0
-      })
-      .eq('id', documentId)
-
-    // Queue first batch for processing
-    console.log('🚀 Queueing first batch for processing...')
-    const batchSize = 5
-    const firstBatch = Array.from({ length: Math.min(batchSize, chunks.length) }, (_, i) => i)
-    
-    await supabaseClient.functions.invoke('vector-processor', {
-      body: JSON.stringify({ documentId, chunkIndices: firstBatch })
-    })
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        totalChunks: chunks.length,
-        message: 'Document chunked and processing started',
-        storagePath
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    )
-
-  } catch (error) {
-    console.error('❌ Error:', error)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400
-      }
-    )
-  }
+  return handleChunkRequest(req)
 }) 

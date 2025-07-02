@@ -3,20 +3,15 @@ services:
     name: insurance-navigator-api
     env: docker
     plan: free
-    dockerfilePath: ./config/docker/Dockerfile
+    dockerfilePath: ./Dockerfile
     region: oregon
     branch: staging
     port: 8000
     healthCheckPath: /health
-    # Render optimizations for cold starts and timeouts
+    # Render optimizations for faster startup
     buildCommand: "echo 'Using Docker build - no additional build command needed'"
     preDeployCommand: "echo 'Pre-deploy optimization complete'"
-    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1 --timeout-keep-alive 75 --timeout 300 --no-access-log"
-    healthCheckTimeout: 300
-    numReplicas: 1
     envVars:
-      - key: PORT
-        value: "8000"
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_ANON_KEY
@@ -47,18 +42,4 @@ services:
       - key: UVICORN_WORKERS
         value: "1"
       - key: STARTUP_TIMEOUT
-        value: "300"
-      - key: KEEP_ALIVE
-        value: "75"
-      - key: MAX_REQUESTS
-        value: "1000"
-      - key: MAX_REQUESTS_JITTER
-        value: "100"
-      # Increased proxy timeouts
-      - key: RENDER_PROXY_TIMEOUT
-        value: "300"
-      - key: RENDER_PROXY_CONNECT_TIMEOUT
-        value: "120"
-      # Add CORS environment variable
-      - key: ALLOWED_ORIGINS
-        value: "https://insurance-navigator.vercel.app,https://insurance-navigator-*.vercel.app,https://*-andrew-quintanas-projects.vercel.app,http://localhost:3000,https://insurance-navigator-hr7oebcu2-andrew-quintanas-projects.vercel.app,https://insurance-navigator-gdievtrsx-andrew-quintanas-projects.vercel.app,https://insurance-navigator-3u3iv7xq0-andrew-quintanas-projects.vercel.app,https://insurance-navigator-ajzpmcvgz-andrew-quintanas-projects.vercel.app,https://insurance-navigator-cwtwocttv-andrew-quintanas-projects.vercel.app,https://insurance-navigator-kkedlaqxo-andrew-quintanas-projects.vercel.app,https://insurance-navigator-pexzb9r79-andrew-quintanas-projects.vercel.app"
+        value: "30"

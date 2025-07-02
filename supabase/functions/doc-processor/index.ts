@@ -1,32 +1,61 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
+import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
+import { corsHeaders } from "../_shared/cors.ts";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { processDocument } from "./processor.ts";
 
-// Setup type definitions for built-in Supabase Runtime APIs
-import "jsr:@supabase/functions-js/edge-runtime.d.ts"
+interface RequestBody {
+  document_id: string;
+}
 
-console.log("Hello from Functions!")
-
-Deno.serve(async (req) => {
-  const { name } = await req.json()
-  const data = {
-    message: `Hello ${name}!`,
+serve(async (req: Request) => {
+  // Handle CORS
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
-  return new Response(
-    JSON.stringify(data),
-    { headers: { "Content-Type": "application/json" } },
-  )
-})
+  try {
+    const url = new URL(req.url);
+    
+    // Health check endpoint
+    if (url.pathname.endsWith("/health")) {
+      return new Response(
+        JSON.stringify({ status: "healthy", timestamp: new Date().toISOString() }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    }
 
-/* To invoke locally:
+    // Regular document processing endpoint
+    const supabaseClient: SupabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    );
 
-  1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
-  2. Make an HTTP request:
+    const { document_id }: RequestBody = await req.json();
+    if (!document_id) {
+      throw new Error("document_id is required");
+    }
 
-  curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/doc-processor' \
-    --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' \
-    --header 'Content-Type: application/json' \
-    --data '{"name":"Functions"}'
+    const result = await processDocument(document_id, supabaseClient);
 
-*/
+    return new Response(
+      JSON.stringify(result),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
+
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return new Response(
+      JSON.stringify({ error: errorMessage }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      }
+    );
+  }
+}); 

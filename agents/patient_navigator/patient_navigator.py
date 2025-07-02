@@ -31,6 +31,9 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.language_models import BaseLanguageModel
 from langchain_anthropic import ChatAnthropic
 from langchain_core.output_parsers import PydanticOutputParser
+from pydantic import BaseModel, Field
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.tools import BaseTool
 
 # Import base agent and exceptions
 from agents.base_agent import BaseAgent
@@ -68,6 +71,13 @@ if not logger.handlers:
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
 
+class NavigationResult(BaseModel):
+    """Result of a navigation request."""
+    
+    success: bool = Field(default=False, description="Whether the navigation was successful")
+    message: str = Field(default="", description="Navigation result message")
+    next_steps: List[str] = Field(default_factory=list, description="List of next steps")
+    resources: List[str] = Field(default_factory=list, description="List of relevant resources")
 
 class PatientNavigatorAgent(RAGMixin, BaseAgent):
     """Agent responsible for front-facing interactions with users."""
@@ -75,7 +85,8 @@ class PatientNavigatorAgent(RAGMixin, BaseAgent):
     def __init__(self, 
                  llm: Optional[BaseLanguageModel] = None,
                  prompt_security_agent = None,
-                 config_manager: Optional[ConfigManager] = None):
+                 config_manager: Optional[ConfigManager] = None,
+                 api_key: Optional[str] = None):
         """
         Initialize the Patient Navigator Agent.
         
@@ -83,6 +94,7 @@ class PatientNavigatorAgent(RAGMixin, BaseAgent):
             llm: An optional language model to use
             prompt_security_agent: An optional reference to the Prompt Security Agent
             config_manager: Configuration manager instance
+            api_key: An optional API key for authentication
         """
         # Get configuration manager if not provided
         self.config_manager = config_manager or ConfigManager()
@@ -102,7 +114,8 @@ class PatientNavigatorAgent(RAGMixin, BaseAgent):
         # Initialize the base agent
         super().__init__(
             name="patient_navigator", 
-            llm=llm or ChatAnthropic(model=model_name, temperature=temperature)
+            llm=llm or ChatAnthropic(model=model_name, temperature=temperature),
+            api_key=api_key
         )
         
         # Initialize the output parser
@@ -555,6 +568,24 @@ class PatientNavigatorAgent(RAGMixin, BaseAgent):
                 confidence_score=0.0,
                 metadata={"error": str(e)}
             )
+
+    async def navigate(self, query: str) -> NavigationResult:
+        """
+        Process a navigation request.
+        
+        Args:
+            query: Navigation query
+            
+        Returns:
+            Navigation result
+        """
+        # TODO: Implement navigation logic
+        return NavigationResult(
+            success=True,
+            message="Navigation request processed",
+            next_steps=["Review coverage options", "Contact insurance provider"],
+            resources=["Insurance policy guide", "Provider directory"],
+        )
 
 # Example usage
 if __name__ == "__main__":

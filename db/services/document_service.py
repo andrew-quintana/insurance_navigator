@@ -1,644 +1,290 @@
 """
-Document Service for MVP Refactoring
-Handles policy basics extraction, hybrid search (facts + vectors), and simplified document operations
+Document service module for managing document operations with HIPAA compliance.
 """
-
-import asyncio
-import json
+from typing import Optional, Dict, Any, List, BinaryIO
+from pathlib import Path
+from fastapi import Depends, HTTPException, status
+from supabase import Client as SupabaseClient
 import logging
-import re
-from typing import Dict, List, Any, Optional, Tuple
+import os
 from datetime import datetime
-import uuid
+from cryptography.fernet import Fernet
+from config.database import get_supabase_client as get_base_client
 
-from .db_pool import get_db_pool
-from .encryption_service import EncryptionServiceFactory
-from ..config import config
-
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class DocumentService:
-    """
-    Simplified document service focused on policy basics and hybrid search.
-    Replaces complex processing job system with direct LLM-based policy extraction.
-    """
-    
-    def __init__(self):
-        self.encryption_service = EncryptionServiceFactory.create_service(config.encryption.provider)
-        self.logger = logging.getLogger(__name__)
-        
-    async def extract_policy_basics(self, document_id: str, text: str) -> Dict[str, Any]:
-        """
-        Extract policy basics from document text using LLM.
-        
-        Args:
-            document_id: Document UUID
-            text: Extracted document text
-            
-        Returns:
-            Dict containing policy facts like deductible, copay, annual_max, etc.
-        """
-        try:
-            logger.info(f"Extracting policy basics for document {document_id}")
-            
-            # Determine if this is an insurance policy document
-            if not self._is_insurance_document(text):
-                logger.info(f"Document {document_id} doesn't appear to be an insurance policy")
-                return {}
-            
-            # Extract policy facts using pattern matching and heuristics
-            # In production, this would use an LLM API call
-            policy_facts = await self._extract_insurance_facts(text)
-            
-            # Update the database with extracted facts
-            await self.update_policy_basics(document_id, policy_facts)
-            
-            logger.info(f"Extracted policy basics for {document_id}: {len(policy_facts)} facts")
-            return policy_facts
-            
-        except Exception as e:
-            logger.error(f"Failed to extract policy basics for {document_id}: {e}")
-            raise
-    
-    def _is_insurance_document(self, text: str) -> bool:
-        """Check if document appears to be an insurance policy."""
-        insurance_keywords = [
-            'deductible', 'copay', 'coinsurance', 'premium', 'coverage',
-            'policy', 'benefit', 'out-of-pocket', 'network', 'medicare',
-            'medicaid', 'insurance', 'plan', 'member', 'subscriber'
-        ]
-        
-        text_lower = text.lower()
-        keyword_count = sum(1 for keyword in insurance_keywords if keyword in text_lower)
-        
-        # If we find at least 3 insurance-related keywords, consider it an insurance document
-        return keyword_count >= 3
-    
-    async def _extract_insurance_facts(self, text: str) -> Dict[str, Any]:
-        """
-        Extract insurance facts using pattern matching.
-        In production, this would be replaced with LLM API calls.
-        """
-        facts = {}
-        text_lower = text.lower()
-        
-        # Extract deductible
-        deductible_patterns = [
-            r'deductible[:\s]*\$?(\d{1,3}(?:,\d{3})*)',
-            r'annual deductible[:\s]*\$?(\d{1,3}(?:,\d{3})*)',
-            r'\$?(\d{1,3}(?:,\d{3})*)\s*deductible'
-        ]
-        
-        for pattern in deductible_patterns:
-            match = re.search(pattern, text_lower)
-            if match:
-                facts['deductible'] = int(match.group(1).replace(',', ''))
-                break
-        
-        # Extract copay
-        copay_patterns = [
-            r'copay[:\s]*\$?(\d{1,3})',
-            r'co-pay[:\s]*\$?(\d{1,3})',
-            r'primary care[:\s]*\$?(\d{1,3})',
-            r'\$?(\d{1,3})\s*copay'
-        ]
-        
-        for pattern in copay_patterns:
-            match = re.search(pattern, text_lower)
-            if match:
-                facts['copay_primary'] = int(match.group(1))
-                break
-        
-        # Extract out-of-pocket maximum
-        oop_patterns = [
-            r'out-of-pocket maximum[:\s]*\$?(\d{1,3}(?:,\d{3})*)',
-            r'annual out-of-pocket[:\s]*\$?(\d{1,3}(?:,\d{3})*)',
-            r'maximum out-of-pocket[:\s]*\$?(\d{1,3}(?:,\d{3})*)'
-        ]
-        
-        for pattern in oop_patterns:
-            match = re.search(pattern, text_lower)
-            if match:
-                facts['annual_max'] = int(match.group(1).replace(',', ''))
-                break
-        
-        # Extract coinsurance
-        coinsurance_patterns = [
-            r'coinsurance[:\s]*(\d{1,2})%',
-            r'(\d{1,2})%\s*coinsurance'
-        ]
-        
-        for pattern in coinsurance_patterns:
-            match = re.search(pattern, text_lower)
-            if match:
-                facts['coinsurance_percentage'] = int(match.group(1))
-                break
-        
-        # Extract plan type
-        if 'hmo' in text_lower:
-            facts['plan_type'] = 'HMO'
-        elif 'ppo' in text_lower:
-            facts['plan_type'] = 'PPO'
-        elif 'epo' in text_lower:
-            facts['plan_type'] = 'EPO'
-        elif 'pos' in text_lower:
-            facts['plan_type'] = 'POS'
-        
-        # Extract network information
-        if 'in-network' in text_lower or 'in network' in text_lower:
-            facts['has_network_restrictions'] = True
-        
-        # Add extraction metadata
-        facts['_extraction_metadata'] = {
-            'extracted_at': datetime.utcnow().isoformat(),
-            'extraction_method': 'pattern_matching',
-            'document_length': len(text),
-            'facts_found': len([k for k in facts.keys() if not k.startswith('_')])
-        }
-        
-        return facts
-    
-    async def get_policy_facts(self, document_id: str) -> Dict[str, Any]:
-        """
-        Get policy facts for a document quickly using JSONB query.
-        Target: <50ms response time.
-        """
-        try:
-            pool = await get_db_pool()
-            async with pool.get_connection() as conn:
-                # Use the database function for fast JSONB lookup
-                facts = await conn.fetchval(
-                    "SELECT get_policy_facts($1)",
-                    uuid.UUID(document_id)
-                )
-                
-                return facts or {}
-                
-        except Exception as e:
-            logger.error(f"Failed to get policy facts for {document_id}: {e}")
-            return {}
-    
-    async def update_policy_basics(self, document_id: str, facts: Dict[str, Any]) -> bool:
-        """Update policy_basics JSONB column for a document."""
-        try:
-            pool = await get_db_pool()
-            async with pool.get_connection() as conn:
-                # Use the database function to update policy basics
-                success = await conn.fetchval(
-                    "SELECT update_policy_basics($1, $2)",
-                    uuid.UUID(document_id),
-                    json.dumps(facts)
-                )
-                
-                if success:
-                    logger.info(f"Updated policy basics for document {document_id}")
-                else:
-                    logger.warning(f"Document {document_id} not found for policy basics update")
-                
-                return success
-                
-        except Exception as e:
-            logger.error(f"Failed to update policy basics for {document_id}: {e}")
-            return False
-    
-    async def search_hybrid(self, user_id: str, query: str, limit: int = 10) -> Dict[str, Any]:
-        """
-        Hybrid search combining structured policy facts lookup + vector semantic search.
-        Target: <600ms response time.
-        """
-        try:
-            logger.info(f"Performing hybrid search for user {user_id}: '{query}'")
-            
-            # Parse query for structured facts
-            structured_criteria = self._parse_query_for_facts(query)
-            
-            # Perform both searches concurrently
-            tasks = [
-                self._search_policy_facts(user_id, structured_criteria, limit),
-                self._search_semantic_vectors(user_id, query, limit)
-            ]
-            
-            policy_results, vector_results = await asyncio.gather(*tasks)
-            
-            # Combine and rank results
-            combined_results = self._combine_search_results(policy_results, vector_results, query)
-            
-            return {
-                'query': query,
-                'total_results': len(combined_results),
-                'results': combined_results[:limit],
-                'search_metadata': {
-                    'structured_criteria': structured_criteria,
-                    'policy_facts_found': len(policy_results),
-                    'vector_results_found': len(vector_results),
-                    'search_timestamp': datetime.utcnow().isoformat()
-                }
-            }
-            
-        except Exception as e:
-            logger.error(f"Hybrid search failed for user {user_id}: {e}")
-            return {
-                'query': query,
-                'total_results': 0,
-                'results': [],
-                'error': str(e)
-            }
-    
-    def _parse_query_for_facts(self, query: str) -> Dict[str, Any]:
-        """Parse natural language query for structured policy criteria."""
-        criteria = {}
-        query_lower = query.lower()
-        
-        # Parse deductible queries
-        deductible_match = re.search(r'deductible.*?(\d{1,3}(?:,\d{3})*)', query_lower)
-        if deductible_match:
-            deductible_value = int(deductible_match.group(1).replace(',', ''))
-            
-            if 'under' in query_lower or 'less than' in query_lower or 'below' in query_lower:
-                criteria['deductible_max'] = deductible_value
-            elif 'over' in query_lower or 'more than' in query_lower or 'above' in query_lower:
-                criteria['deductible_min'] = deductible_value
-            else:
-                criteria['deductible'] = deductible_value
-        
-        # Parse copay queries
-        copay_match = re.search(r'copay.*?(\d{1,3})', query_lower)
-        if copay_match:
-            copay_value = int(copay_match.group(1))
-            criteria['copay_primary'] = copay_value
-        
-        # Parse plan type queries
-        if 'hmo' in query_lower:
-            criteria['plan_type'] = 'HMO'
-        elif 'ppo' in query_lower:
-            criteria['plan_type'] = 'PPO'
-        elif 'epo' in query_lower:
-            criteria['plan_type'] = 'EPO'
-        
-        return criteria
-    
-    async def _search_policy_facts(self, user_id: str, criteria: Dict[str, Any], limit: int) -> List[Dict[str, Any]]:
-        """Search documents by policy criteria using JSONB queries."""
-        if not criteria:
-            return []
-        
-        try:
-            pool = await get_db_pool()
-            async with pool.get_connection() as conn:
-                # Build dynamic JSONB query based on criteria
-                jsonb_criteria = {}
-                
-                for key, value in criteria.items():
-                    if not key.endswith('_min') and not key.endswith('_max'):
-                        jsonb_criteria[key] = value
-                
-                # Use the database function for policy criteria search
-                if jsonb_criteria:
-                    results = await conn.fetch(
-                        "SELECT * FROM search_by_policy_criteria($1, $2) LIMIT $3",
-                        uuid.UUID(user_id),
-                        json.dumps(jsonb_criteria),
-                        limit
-                    )
-                    
-                    return [{
-                        'document_id': str(row['id']),
-                        'filename': row['original_filename'],
-                        'policy_facts': row['policy_basics'],
-                        'created_at': row['created_at'],
-                        'search_type': 'policy_facts',
-                        'relevance_score': 0.9  # High relevance for exact fact matches
-                    } for row in results]
-                
-                return []
-                
-        except Exception as e:
-            logger.error(f"Policy facts search failed: {e}")
-            return []
-    
-    async def _search_semantic_vectors(self, user_id: str, query: str, limit: int) -> List[Dict[str, Any]]:
-        """Search documents using vector similarity."""
-        try:
-            # This would typically use the embedding service to convert query to vector
-            # For now, we'll simulate vector search with a basic text search
-            pool = await get_db_pool()
-            async with pool.get_connection() as conn:
-                
-                # Get documents that might contain the query terms
-                results = await conn.fetch("""
-                    SELECT DISTINCT 
-                        d.id as document_id,
-                        d.original_filename,
-                        d.created_at,
-                        d.policy_basics
-                    FROM document_vectors dv
-                    JOIN documents d ON dv.document_record_id = d.id
-                    WHERE dv.user_id = $1 
-                    AND dv.is_active = true
-                    AND d.status = 'completed'
-                    ORDER BY d.created_at DESC
-                    LIMIT $2
-                """, uuid.UUID(user_id), limit)
-                
-                return [{
-                    'document_id': str(row['document_id']),
-                    'filename': row['original_filename'],
-                    'policy_facts': row['policy_basics'],
-                    'created_at': row['created_at'],
-                    'search_type': 'vector_semantic',
-                    'relevance_score': 0.7  # Moderate relevance for semantic matches
-                } for row in results]
-                
-        except Exception as e:
-            logger.error(f"Vector search failed: {e}")
-            return []
-    
-    def _combine_search_results(self, policy_results: List[Dict], vector_results: List[Dict], query: str) -> List[Dict]:
-        """Combine and rank results from both search methods."""
-        # Create a map to deduplicate by document_id
-        results_map = {}
-        
-        # Add policy results (higher priority)
-        for result in policy_results:
-            doc_id = result['document_id']
-            results_map[doc_id] = result
-        
-        # Add vector results (but don't override policy results)
-        for result in vector_results:
-            doc_id = result['document_id']
-            if doc_id not in results_map:
-                results_map[doc_id] = result
-            else:
-                # Combine search types if document found in both
-                existing = results_map[doc_id]
-                existing['search_type'] = 'hybrid'
-                existing['relevance_score'] = max(existing['relevance_score'], result['relevance_score'])
-        
-        # Sort by relevance score (descending) and creation date (descending)
-        combined_results = list(results_map.values())
-        combined_results.sort(
-            key=lambda x: (x['relevance_score'], x['created_at']),
-            reverse=True
-        )
-        
-        return combined_results
-    
-    async def get_document_status(self, document_id: str, user_id: str) -> Dict[str, Any]:
-        """Get simplified document status (replaces complex progress tracking)."""
-        try:
-            pool = await get_db_pool()
-            async with pool.get_connection() as conn:
-                doc = await conn.fetchrow("""
-                    SELECT 
-                        id, original_filename, status, document_type,
-                        file_size, content_type, policy_basics,
-                        created_at, updated_at
-                    FROM documents
-                    WHERE id = $1 AND user_id = $2
-                """, uuid.UUID(document_id), uuid.UUID(user_id))
-                
-                if not doc:
-                    return {'error': 'Document not found'}
-                
-                return {
-                    'document_id': str(doc['id']),
-                    'filename': doc['original_filename'],
-                    'status': doc['status'],
-                    'document_type': doc['document_type'],
-                    'file_size': doc['file_size'],
-                    'content_type': doc['content_type'],
-                    'has_policy_facts': doc['policy_basics'] is not None,
-                    'policy_facts_count': len(doc['policy_basics'] or {}) if doc['policy_basics'] else 0,
-                    'created_at': doc['created_at'],
-                    'updated_at': doc['updated_at']
-                }
-                
-        except Exception as e:
-            logger.error(f"Failed to get document status for {document_id}: {e}")
-            return {'error': str(e)}
-    
-    async def list_user_documents(self, user_id: str, limit: int = 50, document_type: Optional[str] = None) -> List[Dict[str, Any]]:
-        """List user documents with policy facts summary."""
-        try:
-            pool = await get_db_pool()
-            async with pool.get_connection() as conn:
-                where_clause = "WHERE user_id = $1"
-                params = [uuid.UUID(user_id)]
-                
-                if document_type:
-                    where_clause += " AND document_type = $2"
-                    params.append(document_type)
-                
-                docs = await conn.fetch(f"""
-                    SELECT 
-                        id, original_filename, status, document_type,
-                        file_size, policy_basics, created_at
-                    FROM documents
-                    {where_clause}
-                    ORDER BY created_at DESC
-                    LIMIT ${'2' if not document_type else '3'}
-                """, *params, limit)
-                
-                return [{
-                    'document_id': str(doc['id']),
-                    'filename': doc['original_filename'],
-                    'status': doc['status'],
-                    'document_type': doc['document_type'],
-                    'file_size': doc['file_size'],
-                    'has_policy_facts': doc['policy_basics'] is not None,
-                    'policy_summary': self._create_policy_summary(doc['policy_basics']),
-                    'created_at': doc['created_at']
-                } for doc in docs]
-                
-        except Exception as e:
-            logger.error(f"Failed to list documents for user {user_id}: {e}")
-            return []
-    
-    def _create_policy_summary(self, policy_basics: Optional[Dict]) -> Dict[str, Any]:
-        """Create a brief summary of policy facts for display."""
-        if not policy_basics:
-            return {}
-        
-        summary = {}
-        
-        if 'deductible' in policy_basics:
-            summary['deductible'] = f"${policy_basics['deductible']:,}"
-        
-        if 'copay_primary' in policy_basics:
-            summary['copay'] = f"${policy_basics['copay_primary']}"
-        
-        if 'annual_max' in policy_basics:
-            summary['out_of_pocket_max'] = f"${policy_basics['annual_max']:,}"
-        
-        if 'plan_type' in policy_basics:
-            summary['plan_type'] = policy_basics['plan_type']
-        
-        return summary
+    """Service for managing document operations with HIPAA compliance."""
 
-    async def create_document(
-        self, 
-        user_id: str, 
-        filename: str, 
-        file_size: int, 
-        content_type: str,
-        file_hash: str,
-        storage_path: str,
-        document_type: str = 'user_uploaded',
-        metadata: Dict[str, Any] = None
-    ) -> Dict[str, Any]:
-        """Create a new document record."""
-        try:
-            pool = await get_db_pool()
-            async with pool.get_connection() as conn:
-                document = await conn.fetchrow("""
-                    INSERT INTO documents (
-                        user_id, original_filename, file_size, content_type,
-                        file_hash, storage_path, document_type, metadata,
-                        status
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                    RETURNING id, original_filename, status, created_at
-                """, 
-                uuid.UUID(user_id), filename, file_size, content_type,
-                file_hash, storage_path, document_type, 
-                json.dumps(metadata or {}), 'pending'
-                )
-                
-                return {
-                    'document_id': str(document['id']),
-                    'filename': document['original_filename'],
-                    'status': document['status'],
-                    'created_at': document['created_at']
-                }
-        except Exception as e:
-            self.logger.error(f"Failed to create document: {e}")
-            raise
+    def __init__(self, supabase_client: SupabaseClient):
+        """Initialize the document service."""
+        self.supabase = supabase_client
+        self.table = "documents"
+        self.audit_table = "audit_logs"
+        self.encryption_key = os.getenv("DOCUMENT_ENCRYPTION_KEY")
+        if not self.encryption_key:
+            raise ValueError("Document encryption key not configured")
+        self.fernet = Fernet(self.encryption_key.encode())
 
-    async def update_document_status(
-        self, 
-        document_id: str, 
-        status: str,
-        error_message: str = None
-    ) -> bool:
-        """Update document status."""
+    async def get_document(self, document_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get document with access logging."""
         try:
-            pool = await get_db_pool()
-            async with pool.get_connection() as conn:
-                result = await conn.execute("""
-                    UPDATE documents 
-                    SET status = $1,
-                        error_message = $2,
-                        updated_at = NOW()
-                    WHERE id = $3
-                """, status, error_message, uuid.UUID(document_id))
-                return result == "UPDATE 1"
-        except Exception as e:
-            self.logger.error(f"Failed to update document status: {e}")
-            return False
-
-    async def get_document(self, document_id: str) -> Optional[Dict[str, Any]]:
-        """Get document by ID."""
-        try:
-            pool = await get_db_pool()
-            async with pool.get_connection() as conn:
-                doc = await conn.fetchrow("""
-                    SELECT 
-                        id, user_id, original_filename, file_size,
-                        content_type, file_hash, storage_path,
-                        document_type, status, error_message,
-                        metadata, created_at, updated_at,
-                        jurisdiction, program, effective_date,
-                        expiration_date, source_url, tags
-                    FROM documents
-                    WHERE id = $1
-                """, uuid.UUID(document_id))
+            logger.info(f"Fetching document {document_id} for user {user_id}")
+            
+            # Get document with RLS policy check
+            response = await self.supabase.table(self.table).select("*").eq("id", document_id).eq("user_id", user_id).single().execute()
+            
+            if response.error:
+                logger.error(f"Error fetching document: {response.error}")
+                return None
                 
-                if not doc:
-                    return None
-                    
-                return {
-                    'document_id': str(doc['id']),
-                    'user_id': str(doc['user_id']),
-                    'filename': doc['original_filename'],
-                    'file_size': doc['file_size'],
-                    'content_type': doc['content_type'],
-                    'file_hash': doc['file_hash'],
-                    'storage_path': doc['storage_path'],
-                    'document_type': doc['document_type'],
-                    'status': doc['status'],
-                    'error_message': doc['error_message'],
-                    'metadata': doc['metadata'],
-                    'created_at': doc['created_at'],
-                    'updated_at': doc['updated_at'],
-                    'jurisdiction': doc['jurisdiction'],
-                    'program': doc['program'],
-                    'effective_date': doc['effective_date'],
-                    'expiration_date': doc['expiration_date'],
-                    'source_url': doc['source_url'],
-                    'tags': doc['tags']
-                }
+            if not response.data:
+                return None
+                
+            # Update access log
+            access_log = response.data.get("access_log", [])
+            access_log.append({
+                "timestamp": datetime.utcnow().isoformat(),
+                "action": "document_accessed",
+                "user_id": user_id
+            })
+            
+            # Update document metadata
+            await self.supabase.table(self.table).update({
+                "last_accessed": datetime.utcnow().isoformat(),
+                "access_log": access_log
+            }).eq("id", document_id).execute()
+            
+            # Create audit log entry
+            await self.supabase.table(self.audit_table).insert({
+                "user_id": user_id,
+                "action": "document_accessed",
+                "details": {
+                    "document_id": document_id,
+                    "timestamp": datetime.utcnow().isoformat()
+                },
+                "success": True
+            }).execute()
+            
+            return response.data
+            
         except Exception as e:
-            self.logger.error(f"Failed to get document: {e}")
+            logger.error(f"Error getting document: {str(e)}")
             return None
 
-    async def list_user_documents(
-        self, 
-        user_id: str, 
-        document_type: Optional[str] = None,
-        limit: int = 50
-    ) -> List[Dict[str, Any]]:
-        """List documents for a user."""
+    async def create_document(self, user_id: str, metadata: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Create a new document record with HIPAA compliance."""
         try:
-            pool = await get_db_pool()
-            async with pool.get_connection() as conn:
-                where_clause = "WHERE user_id = $1"
-                params = [uuid.UUID(user_id)]
+            logger.info(f"Creating document for user: {user_id}")
+            
+            # Add HIPAA-required metadata
+            metadata.update({
+                "created_at": datetime.utcnow().isoformat(),
+                "last_accessed": datetime.utcnow().isoformat(),
+                "encryption_enabled": True,
+                "hipaa_compliant": True
+            })
+            
+            data = {
+                "user_id": user_id,
+                "metadata": metadata,
+                "status": "pending",
+                "encryption_key_id": self.encryption_key[:8],  # Store reference to key version
+                "access_log": []
+            }
+            
+            response = await self.supabase.table(self.table).insert(data).execute()
+            
+            if response.error:
+                logger.error(f"Error creating document: {response.error}")
+                return None
+            
+            # Create audit log entry
+            await self.supabase.table(self.audit_table).insert({
+                "user_id": user_id,
+                "action": "document_created",
+                "details": {
+                    "document_id": response.data[0]["id"],
+                    "timestamp": datetime.utcnow().isoformat()
+                },
+                "success": True
+            }).execute()
                 
-                if document_type:
-                    where_clause += " AND document_type = $2"
-                    params.append(document_type)
-                
-                docs = await conn.fetch(f"""
-                    SELECT 
-                        id, original_filename, status, document_type,
-                        file_size, metadata, created_at,
-                        jurisdiction, program, tags
-                    FROM documents
-                    {where_clause}
-                    ORDER BY created_at DESC
-                    LIMIT ${'2' if document_type else '3'}
-                """, *params, limit)
-                
-                return [{
-                    'document_id': str(doc['id']),
-                    'filename': doc['original_filename'],
-                    'status': doc['status'],
-                    'document_type': doc['document_type'],
-                    'file_size': doc['file_size'],
-                    'metadata': doc['metadata'],
-                    'jurisdiction': doc['jurisdiction'],
-                    'program': doc['program'],
-                    'tags': doc['tags'],
-                    'created_at': doc['created_at']
-                } for doc in docs]
+            return response.data[0]
+            
         except Exception as e:
-            self.logger.error(f"Failed to list documents: {e}")
-            return []
+            logger.error(f"Error creating document: {str(e)}")
+            return None
 
-    async def delete_document(self, document_id: str, user_id: str) -> bool:
-        """Delete a document."""
+    async def update_document_status(self, document_id: str, status: str, message: Optional[str] = None) -> bool:
+        """Update document status."""
         try:
-            pool = await get_db_pool()
-            async with pool.get_connection() as conn:
-                result = await conn.execute("""
-                    DELETE FROM documents
-                    WHERE id = $1 AND user_id = $2
-                """, uuid.UUID(document_id), uuid.UUID(user_id))
-                return result == "DELETE 1"
+            logger.info(f"Updating document {document_id} status to: {status}")
+            data = {"status": status}
+            if message:
+                data["status_message"] = message
+                
+            response = await self.supabase.table(self.table).update(data).eq("id", document_id).execute()
+            
+            if response.error:
+                logger.error(f"Error updating document status: {response.error}")
+                return False
+                
+            return True
+            
         except Exception as e:
-            self.logger.error(f"Failed to delete document: {e}")
+            logger.error(f"Error updating document status: {str(e)}")
             return False
 
-# Service factory function
+    async def upload_document(self, file_path: Path, user_id: str, content_type: str) -> Optional[str]:
+        """
+        Upload a document with encryption and create its record.
+        
+        Args:
+            file_path: Path to the file to upload
+            user_id: ID of the user uploading the document
+            content_type: MIME type of the document
+            
+        Returns:
+            Document ID if successful, None otherwise
+        """
+        try:
+            logger.info(f"Uploading document {file_path} for user {user_id}")
+            
+            # Read and encrypt file content
+            with open(file_path, 'rb') as f:
+                file_content = f.read()
+                encrypted_content = self.fernet.encrypt(file_content)
+
+            # Upload encrypted content to storage
+            storage_path = f"documents/{user_id}/{file_path.name}"
+            response = await self.supabase.storage.from_('documents').upload(
+                storage_path,
+                encrypted_content,
+                file_options={
+                    'content-type': content_type,
+                    'x-upsert': 'true',
+                    'x-encrypted': 'true'
+                }
+            )
+
+            if response.error:
+                logger.error(f"Error uploading file: {response.error}")
+                return None
+
+            # Create document record with HIPAA metadata
+            doc_data = {
+                "user_id": user_id,
+                "filename": file_path.name,
+                "content_type": content_type,
+                "status": "uploaded",
+                "storage_path": storage_path,
+                "encryption_enabled": True,
+                "encryption_key_id": self.encryption_key[:8],
+                "created_at": datetime.utcnow().isoformat(),
+                "last_accessed": datetime.utcnow().isoformat(),
+                "access_log": [],
+                "hipaa_compliant": True
+            }
+            
+            doc_response = await self.supabase.table(self.table).insert(doc_data).execute()
+
+            if doc_response.error:
+                logger.error(f"Error creating document record: {doc_response.error}")
+                # Clean up uploaded file
+                await self.supabase.storage.from_('documents').remove([storage_path])
+                return None
+
+            # Create audit log entry
+            await self.supabase.table(self.audit_table).insert({
+                "user_id": user_id,
+                "action": "document_uploaded",
+                "details": {
+                    "document_id": doc_response.data[0]["id"],
+                    "filename": file_path.name,
+                    "timestamp": datetime.utcnow().isoformat()
+                },
+                "success": True
+            }).execute()
+
+            return doc_response.data[0]["id"]
+
+        except Exception as e:
+            logger.error(f"Error uploading document: {str(e)}")
+            return None
+
+    async def get_document_chunks(self, document_id: str) -> List[Dict[str, Any]]:
+        """Get document chunks."""
+        try:
+            logger.info(f"Fetching chunks for document: {document_id}")
+            response = await self.supabase.table("document_chunks").select("*").eq("document_id", document_id).execute()
+            
+            if response.error:
+                logger.error(f"Error getting document chunks: {response.error}")
+                return []
+                
+            return response.data if response.data else []
+            
+        except Exception as e:
+            logger.error(f"Error getting document chunks: {str(e)}")
+            return []
+
+    async def get_document_vectors(self, document_id: str) -> List[Dict[str, Any]]:
+        """Get document vectors."""
+        try:
+            logger.info(f"Fetching vectors for document: {document_id}")
+            response = await self.supabase.table("document_vectors").select("*").eq("document_id", document_id).execute()
+            
+            if response.error:
+                logger.error(f"Error getting document vectors: {response.error}")
+                return []
+                
+            return response.data if response.data else []
+            
+        except Exception as e:
+            logger.error(f"Error getting document vectors: {str(e)}")
+            return []
+
+    async def delete_document(self, document_id: str) -> bool:
+        """Delete a document and its associated data."""
+        try:
+            logger.info(f"Deleting document: {document_id}")
+            
+            # Get document info
+            doc = await self.get_document(document_id, "")
+            if not doc:
+                return False
+
+            # Delete from storage
+            storage_response = await self.supabase.storage.from_('documents').remove([doc["storage_path"]])
+            
+            if storage_response.error:
+                logger.error(f"Error deleting document from storage: {storage_response.error}")
+                return False
+
+            # Delete document record (this will cascade to chunks and vectors)
+            delete_response = await self.supabase.table(self.table).delete().eq("id", document_id).execute()
+            
+            if delete_response.error:
+                logger.error(f"Error deleting document record: {delete_response.error}")
+                return False
+
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error deleting document: {str(e)}")
+            return False
+
 async def get_document_service() -> DocumentService:
-    """Get document service instance."""
-    return DocumentService()
+    """Get configured document service instance."""
+    try:
+        client = get_base_client()
+        return DocumentService(client)
+    except Exception as e:
+        logger.error(f"Error creating document service: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        ) 

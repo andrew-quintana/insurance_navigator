@@ -1,15 +1,31 @@
+"""
+Tests for base agent functionality.
+"""
+
 import pytest
 from unittest.mock import Mock, patch
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_core.tools import BaseTool
 from agents.base_agent import BaseAgent
+from typing import Optional, Dict, Any
+from pydantic import BaseModel, Field
 
 class MockTool(BaseTool):
-    name = "mock_tool"
-    description = "A mock tool for testing"
+    """Mock tool for testing."""
     
-    def _run(self, query: str) -> str:
-        return f"Mock tool response to: {query}"
+    name: str = Field(default="mock_tool", description="Tool name")
+    description: str = Field(default="Mock tool for testing", description="Tool description")
+    
+    def __init__(self, name: Optional[str] = None, description: Optional[str] = None):
+        """Initialize mock tool."""
+        super().__init__(
+            name=name or self.name,
+            description=description or self.description,
+        )
+    
+    async def run(self, **kwargs: Dict[str, Any]) -> str:
+        """Run the tool."""
+        return "mock result"
 
 @pytest.fixture
 def base_agent():
@@ -94,4 +110,14 @@ def test_memory_integration(agent_with_memory):
     agent_with_memory.run(prompt, "test input")
     
     # Verify memory was updated
-    agent_with_memory.memory.save_context.assert_called_once() 
+    agent_with_memory.memory.save_context.assert_called_once()
+
+def test_base_tool():
+    """Test base tool functionality."""
+    tool = MockTool()
+    assert tool.name == "mock_tool"
+    assert tool.description == "Mock tool for testing"
+    
+    tool = MockTool(name="custom_tool", description="Custom description")
+    assert tool.name == "custom_tool"
+    assert tool.description == "Custom description" 

@@ -1,105 +1,96 @@
-"""Integration tests for Supabase connection."""
+"""
+Tests for Supabase connection verification.
+"""
+
 import os
 import pytest
-from unittest.mock import patch, AsyncMock
-import httpx
-from supabase import create_client, Client
+from tests.db.helpers import verify_supabase_connection, get_supabase_client, SupabaseVerificationError
 
-from db.config import config
-
-@pytest.fixture
-async def mock_http_client():
-    """Create a mock HTTP client for testing."""
-    client = AsyncMock(spec=httpx.Client)
-    client.post.return_value.json.return_value = {'count': 1}
-    client.get.return_value.json.return_value = [
-        {'name': 'documents', 'public': False}
-    ]
-    return client
-
-@pytest.fixture
-async def mock_supabase_client(mock_http_client):
-    """Create a mock Supabase client."""
-    client = AsyncMock(spec=Client)
+def test_supabase_connection_verification():
+    """Test comprehensive Supabase connection verification."""
+    # Get environment variables
+    url = os.getenv("SUPABASE_TEST_URL") or os.getenv("SUPABASE_URL")
+    anon_key = os.getenv("SUPABASE_TEST_KEY") or os.getenv("SUPABASE_ANON_KEY")
+    service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    db_password = os.getenv("DB_PASSWORD", "postgres")
     
-    # Mock table operations
-    table_mock = AsyncMock()
-    table_mock.select.return_value.execute.return_value.data = [{'count': 1}]
-    table_mock.select.return_value.execute.return_value.error = None
-    client.table.return_value = table_mock
+    # Skip test if environment variables are not set
+    if not all([url, anon_key, service_role_key]):
+        pytest.skip("Required environment variables not set")
     
-    # Mock storage operations
-    storage_mock = AsyncMock()
-    storage_mock.list_buckets.return_value = [
-        {'name': 'documents', 'public': False}
-    ]
-    client.storage = storage_mock
+    # Run verification
+    success, status, message = verify_supabase_connection(
+        url=url,
+        anon_key=anon_key,
+        service_role_key=service_role_key,
+        db_password=db_password
+    )
     
-    return client
+    # Print detailed status for debugging
+    print("\nSupabase Connection Verification Results:")
+    print(message)
+    
+    # Assert overall success
+    assert success, f"Supabase connection verification failed:\n{message}"
+    
+    # Assert individual components
+    assert status["env_vars_present"], "Environment variables check failed"
+    assert status["url_valid"], "URL validation failed"
+    assert status["api_anon_access"], "Anonymous API access failed"
+    assert status["api_service_access"], "Service role API access failed"
+    assert status["db_direct_access"], "Direct database access failed"
 
-class TestSupabaseConnection:
-    """Integration tests for Supabase connection."""
-
-    @pytest.mark.asyncio
-    async def test_health_check(self, mock_supabase_client, mock_http_client):
-        """Test Supabase health check query."""
-        with patch('supabase.create_client', return_value=mock_supabase_client):
-            client = create_client(config.supabase.url, config.supabase.anon_key)
-            
-            # Execute health check query
-            result = await client.table('health_check').select('count').execute()
-            
-            # Verify response
-            assert result.data is not None
-            assert not result.error
-            assert len(result.data) == 1
-            assert result.data[0]['count'] == 1
-            
-            # Verify mock calls
-            client.table.assert_called_once_with('health_check')
-            client.table().select.assert_called_once_with('count')
-
-    @pytest.mark.asyncio
-    async def test_storage_bucket_access(self, mock_supabase_client):
-        """Test access to Supabase storage bucket."""
-        with patch('supabase.create_client', return_value=mock_supabase_client):
-            client = create_client(config.supabase.url, config.supabase.service_role_key)
-            
-            # List storage buckets
-            buckets = await client.storage.list_buckets()
-            
-            # Verify response
-            assert len(buckets) == 1
-            assert buckets[0]['name'] == config.supabase.storage_bucket
-            assert not buckets[0]['public']
-            
-            # Verify mock calls
-            client.storage.list_buckets.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_connection_error_handling(self, mock_supabase_client):
-        """Test handling of connection errors."""
-        mock_supabase_client.table.side_effect = Exception("Connection failed")
+def test_supabase_client_creation():
+    """Test Supabase client creation with both anon and service role keys."""
+    # Get environment variables
+    url = os.getenv("SUPABASE_TEST_URL") or os.getenv("SUPABASE_URL")
+    anon_key = os.getenv("SUPABASE_TEST_KEY") or os.getenv("SUPABASE_ANON_KEY")
+    service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    
+    # Skip test if environment variables are not set
+    if not all([url, anon_key, service_role_key]):
+        pytest.skip("Required environment variables not set")
+    
+    # Test anon client creation
+    anon_client = get_supabase_client(url=url, key=anon_key)
+    assert anon_client is not None, "Failed to create anonymous client"
+    
+    # Test service role client creation
+    service_client = get_supabase_client(
+        url=url,
+        key=service_role_key,
+        use_service_role=True
+    )
+    assert service_client is not None, "Failed to create service role client"
+    
+    # Test basic query with both clients
+    try:
+        # Anonymous client should be able to read public data
+        anon_result = anon_client.table("users").select("count").execute()
+        assert anon_result is not None, "Anonymous client query failed"
         
-        with patch('supabase.create_client', return_value=mock_supabase_client):
-            client = create_client(config.supabase.url, config.supabase.anon_key)
-            
-            with pytest.raises(Exception) as exc_info:
-                await client.table('health_check').select('count').execute()
-            
-            assert "Connection failed" in str(exc_info.value)
+        # Service role client should be able to read all data
+        service_result = service_client.table("users").select("*").execute()
+        assert service_result is not None, "Service role client query failed"
+    except Exception as e:
+        pytest.fail(f"Client query tests failed: {str(e)}")
 
-    @pytest.mark.asyncio
-    async def test_storage_operation_error(self, mock_supabase_client):
-        """Test handling of storage operation errors."""
-        mock_supabase_client.storage.list_buckets.side_effect = Exception(
-            "Storage operation failed"
+def test_invalid_credentials():
+    """Test error handling with invalid credentials."""
+    # Test verify_supabase_connection with invalid credentials
+    with pytest.raises(SupabaseVerificationError) as exc_info:
+        verify_supabase_connection(
+            url="http://invalid-url",
+            anon_key="invalid-key",
+            service_role_key="invalid-service-key",
+            db_password="invalid-password"
         )
-        
-        with patch('supabase.create_client', return_value=mock_supabase_client):
-            client = create_client(config.supabase.url, config.supabase.service_role_key)
-            
-            with pytest.raises(Exception) as exc_info:
-                await client.storage.list_buckets()
-            
-            assert "Storage operation failed" in str(exc_info.value)
+    assert "Failed to access Supabase URL" in str(exc_info.value)
+    
+    # Test get_supabase_client with invalid credentials
+    with pytest.raises(SupabaseVerificationError) as exc_info:
+        get_supabase_client(
+            url="http://invalid-url",
+            key="invalid-key"
+        )
+    assert "Failed to access Supabase URL" in str(exc_info.value) 

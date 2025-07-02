@@ -22,7 +22,7 @@ import uuid
 # Import test configuration
 from tests.config.rag_test_config import (
     get_active_config, 
-    get_test_config,
+    get_rag_test_config,
     create_custom_config,
     DocumentTestConfig,
     RAGTestConfig
@@ -342,7 +342,7 @@ class TestRAGConfiguration:
     
     def test_default_config_loading(self):
         """Test loading default configurations."""
-        config = get_test_config("current_test")
+        config = get_rag_test_config("current_test")
         
         assert config is not None
         assert config.primary_document.document_id == "d64bfbbe-ff7f-4b51-b220-a0fa20756d9d"
@@ -363,7 +363,7 @@ class TestRAGConfiguration:
         assert custom_config.primary_document.description == "Test custom configuration"
         
         # Should be able to retrieve it
-        retrieved_config = get_test_config("test_custom")
+        retrieved_config = get_rag_test_config("test_custom")
         assert retrieved_config.primary_document.document_id == new_doc_id
     
     def test_config_validation(self):
@@ -378,7 +378,7 @@ class TestRAGConfiguration:
     
     def test_config_serialization(self):
         """Test configuration serialization and deserialization."""
-        config = get_test_config("current_test")
+        config = get_rag_test_config("current_test")
         
         # Test to_dict
         config_dict = config.to_dict()
@@ -397,7 +397,7 @@ async def run_quick_test(document_id: Optional[str] = None) -> Dict[str, Any]:
     if document_id:
         config = create_custom_config(document_id, "quick_test", description="Quick validation test")
     else:
-        config = get_test_config("minimal_test")
+        config = get_rag_test_config("minimal_test")
     
     test_instance = TestRAGPipeline()
     await test_instance.setup()

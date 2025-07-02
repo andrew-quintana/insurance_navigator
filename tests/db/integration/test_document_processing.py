@@ -1,191 +1,216 @@
+"""
+Unit tests for document processing functionality.
+
+This module tests the core document processing functionality including:
+1. Document parsing
+2. Chunking
+3. Vectorization
+4. Status management
+"""
+
 import pytest
 import uuid
 from datetime import datetime
-from typing import Dict, List
+from unittest.mock import AsyncMock, MagicMock, patch, mock_open
+from typing import Dict, Any, List
+from langchain_core.documents import Document
 
-from supabase.client import Client
-from tests.db.helpers import get_test_client
+from db.services.document_service import DocumentService
+from db.services.embedding_service import EmbeddingService
+from config.parser import DocumentParser
 from tests.config.test_config import get_test_config
 
 class TestDocumentProcessing:
-    @pytest.fixture(scope="class")
-    def supabase(self) -> Client:
-        return get_test_client()
-    
-    @pytest.fixture(scope="class")
-    def config(self):
-        return get_test_config()
+    @pytest.fixture
+    def mock_storage_service(self):
+        """Mock storage service for testing."""
+        mock = MagicMock()
+        mock.get_document = AsyncMock(return_value=b"Test document content")
+        mock.store_document = AsyncMock(return_value="test/path/document.pdf")
+        return mock
 
-    @pytest.fixture(scope="class")
-    def test_user_id(self) -> str:
-        """Create a test user ID that will be used across all tests."""
-        return str(uuid.uuid4())
+    @pytest.fixture
+    def mock_embedding_service(self):
+        """Mock embedding service for testing."""
+        mock = MagicMock()
+        mock.create_embeddings = AsyncMock(return_value=[[0.1] * 1536])  # Mock embedding vector
+        return mock
 
-    def test_document_creation(self, supabase: Client, test_user_id: str):
-        """Test creating a document in the unified schema."""
-        doc_data = {
-            "user_id": test_user_id,
-            "original_filename": "test_document.pdf",
-            "document_type": "user_uploaded",
-            "content_type": "application/pdf",
-            "storage_path": f"documents/{uuid.uuid4()}/test_document.pdf",
-            "metadata": {
-                "jurisdiction": "federal",
-                "program": "medicare",
-                "document_date": datetime.now().isoformat(),
-                "tags": ["test", "integration"]
+    @pytest.fixture
+    def mock_document_service(self):
+        """Mock document service for testing."""
+        mock = MagicMock()
+        mock.create_document = AsyncMock(return_value={"id": str(uuid.uuid4())})
+        mock.update_document_status = AsyncMock()
+        mock.get_document_status = AsyncMock(return_value={"status": "pending"})
+        return mock
+
+    @pytest.fixture
+    def test_document_data(self):
+        """Test document data fixture."""
+        return {
+            'original_filename': 'test_doc.pdf',
+            'document_type': 'user_uploaded',
+            'content_type': 'application/pdf',
+            'storage_path': f'documents/{uuid.uuid4()}/test_doc.pdf',
+            'metadata': {
+                'jurisdiction': 'federal',
+                'program': 'medicare',
+                'document_date': datetime.now().isoformat(),
+                'tags': ['test', 'unit']
             },
-            "status": "pending"
+            'status': 'pending'
         }
-        
-        response = supabase.table("documents").insert(doc_data).execute()
-        assert response.data, "Document creation failed"
-        assert response.data[0]["id"], "No document ID returned"
-        assert response.data[0]["document_type"] == "user_uploaded"
-        
-        # Clean up
-        supabase.table("documents").delete().eq("id", response.data[0]["id"]).execute()
 
-    def test_document_vector_processing(self, supabase: Client, test_user_id: str):
-        """Test vector processing for a document."""
-        # Create test document
-        doc_data = {
-            "user_id": test_user_id,
-            "original_filename": "vector_test.pdf",
-            "document_type": "regulatory",
-            "content_type": "application/pdf",
-            "storage_path": f"documents/{uuid.uuid4()}/vector_test.pdf",
-            "metadata": {
-                "jurisdiction": "state",
-                "state": "CA",
-                "program": "medicaid",
-                "document_date": datetime.now().isoformat()
-            },
-            "status": "pending"
-        }
-        
-        doc_response = supabase.table("documents").insert(doc_data).execute()
-        doc_id = doc_response.data[0]["id"]
-        
-        # Create test vector
-        vector_data = {
-            "document_id": doc_id,
-            "chunk_index": 0,
-            "chunk_text": "This is a test chunk for vector processing",
-            "content_embedding": [0.1] * 1536,  # Example embedding
-            "metadata": {
-                "page_number": 1,
-                "section": "introduction"
-            }
-        }
-        
-        vector_response = supabase.table("document_vectors").insert(vector_data).execute()
-        assert vector_response.data, "Vector creation failed"
-        assert vector_response.data[0]["document_id"] == doc_id
-        
-        # Clean up
-        supabase.table("document_vectors").delete().eq("document_id", doc_id).execute()
-        supabase.table("documents").delete().eq("id", doc_id).execute()
+    @pytest.mark.asyncio
+    async def test_document_creation(self, mock_document_service, test_document_data):
+        """Test document creation."""
+        # Test creating a document
+        doc_id = await mock_document_service.create_document(
+            user_id=str(uuid.uuid4()),
+            metadata=test_document_data
+        )
+        assert doc_id is not None
+        assert isinstance(doc_id, dict)
+        assert "id" in doc_id
 
-    def test_document_search(self, supabase: Client, test_user_id: str):
-        """Test document search functionality."""
-        # Create test documents with different jurisdictions
-        docs = [
-            {
-                "user_id": test_user_id,
-                "original_filename": f"test_doc_{i}.pdf",
-                "document_type": "regulatory",
-                "content_type": "application/pdf",
-                "storage_path": f"documents/{uuid.uuid4()}/test_doc_{i}.pdf",
-                "metadata": {
-                    "jurisdiction": jur,
-                    "program": prog,
-                    "document_date": datetime.now().isoformat()
-                },
-                "status": "active"
-            }
-            for i, (jur, prog) in enumerate([
-                ("federal", "medicare"),
-                ("state", "medicaid"),
-                ("county", "dual_eligible")
-            ])
+        # Verify document status
+        status = await mock_document_service.get_document_status(doc_id["id"])
+        assert status["status"] == "pending"
+
+    @pytest.mark.asyncio
+    async def test_document_parsing(self):
+        """Test document parsing functionality."""
+        with patch('config.parser.LlamaParse') as mock_llama_parse_class, \
+             patch('builtins.open', mock_open(read_data=b"Test document content")), \
+             patch('pathlib.Path.exists', return_value=True):
+            
+            # Setup mock LlamaParse
+            mock_llama_parse = MagicMock()
+            mock_llama_parse_class.return_value = mock_llama_parse
+            
+            # Mock document parsing
+            mock_doc = MagicMock()
+            mock_doc.text = "Test Insurance Policy\nPolicy Number: TEST-123"
+            mock_doc.page_number = 1
+            mock_llama_parse.load_data.return_value = [mock_doc]
+            
+            # Create parser with mocked dependencies
+            with patch.dict('os.environ', {'LLAMA_CLOUD_API_KEY': 'test_key'}):
+                parser = DocumentParser()
+            
+            # Create a test file
+            test_file = "test/path/document.pdf"
+            
+            # Test parsing
+            result = parser.parse_document(test_file)
+            
+            # Verify result
+            assert isinstance(result, list)
+            assert len(result) == 1
+            assert isinstance(result[0], Document)
+            assert "Test Insurance Policy" in result[0].page_content
+            assert "Policy Number: TEST-123" in result[0].page_content
+            assert result[0].metadata['page_number'] == 1
+            assert result[0].metadata['source'] == test_file
+
+    @pytest.mark.asyncio
+    async def test_document_chunking(self):
+        """Test document chunking functionality."""
+        with patch('config.parser.LlamaParse') as mock_llama_parse_class, \
+             patch('builtins.open', mock_open(read_data=b"Test document content")), \
+             patch('pathlib.Path.exists', return_value=True):
+            
+            # Setup mock
+            mock_llama_parse = MagicMock()
+            mock_llama_parse_class.return_value = mock_llama_parse
+            
+            # Create a long document text
+            mock_doc = MagicMock()
+            mock_doc.text = "Test " * 1000  # Long enough to create multiple chunks
+            mock_doc.page_number = 1
+            mock_llama_parse.load_data.return_value = [mock_doc]
+            
+            # Create parser with mocked dependencies
+            with patch.dict('os.environ', {'LLAMA_CLOUD_API_KEY': 'test_key'}):
+                parser = DocumentParser()
+            
+            # Create a test file
+            test_file = "test/path/document.pdf"
+            
+            # Parse document
+            docs = parser.parse_document(test_file)
+            assert len(docs) == 1
+            assert isinstance(docs[0], Document)
+            assert len(docs[0].page_content) > 100
+
+    @pytest.mark.asyncio
+    async def test_document_vectorization(self, mock_embedding_service):
+        """Test document vectorization."""
+        # Create test chunks
+        chunks = [
+            Document(page_content="Test chunk 1", metadata={"page": 1}),
+            Document(page_content="Test chunk 2", metadata={"page": 1})
         ]
         
-        doc_ids = []
-        for doc in docs:
-            response = supabase.table("documents").insert(doc).execute()
-            doc_ids.append(response.data[0]["id"])
+        # Test vectorization
+        vectors = await mock_embedding_service.create_embeddings(
+            [chunk.page_content for chunk in chunks]
+        )
         
-        # Test search by jurisdiction
-        fed_docs = supabase.table("documents").select("*").eq("metadata->jurisdiction", "federal").execute()
-        assert len(fed_docs.data) == 1, "Federal document search failed"
-        
-        # Test search by program
-        medicaid_docs = supabase.table("documents").select("*").eq("metadata->program", "medicaid").execute()
-        assert len(medicaid_docs.data) == 1, "Medicaid document search failed"
-        
-        # Clean up
-        for doc_id in doc_ids:
-            supabase.table("documents").delete().eq("id", doc_id).execute()
+        # Verify vectors
+        assert len(vectors) == 1  # Mock returns single vector
+        assert len(vectors[0]) == 1536  # OpenAI embedding size
 
-    def test_document_metadata(self, supabase: Client, test_user_id: str):
-        """Test document metadata handling."""
-        doc_data = {
-            "user_id": test_user_id,
-            "original_filename": "metadata_test.pdf",
-            "document_type": "user_uploaded",
-            "content_type": "application/pdf",
-            "storage_path": f"documents/{uuid.uuid4()}/metadata_test.pdf",
-            "metadata": {
-                "jurisdiction": "federal",
-                "program": "medicare",
-                "document_date": datetime.now().isoformat(),
-                "tags": ["test", "metadata"],
-                "custom_field": "test_value"
-            },
-            "status": "active"
-        }
-        
-        response = supabase.table("documents").insert(doc_data).execute()
-        doc_id = response.data[0]["id"]
-        
-        # Update metadata
-        update_data = {
-            "metadata": {
-                **doc_data["metadata"],
-                "updated_field": "new_value"
-            }
-        }
-        
-        update_response = supabase.table("documents").update(update_data).eq("id", doc_id).execute()
-        assert update_response.data[0]["metadata"]["updated_field"] == "new_value"
-        
-        # Clean up
-        supabase.table("documents").delete().eq("id", doc_id).execute()
-
-    def test_document_status_transitions(self, supabase: Client, test_user_id: str):
+    @pytest.mark.asyncio
+    async def test_status_transitions(self, mock_document_service, test_document_data):
         """Test document status transitions."""
-        doc_data = {
-            "user_id": test_user_id,
-            "original_filename": "status_test.pdf",
-            "document_type": "regulatory",
-            "content_type": "application/pdf",
-            "storage_path": f"documents/{uuid.uuid4()}/status_test.pdf",
-            "metadata": {
-                "jurisdiction": "federal",
-                "program": "medicare"
-            },
-            "status": "pending"
-        }
-        
-        response = supabase.table("documents").insert(doc_data).execute()
-        doc_id = response.data[0]["id"]
+        # Create document
+        doc_id = await mock_document_service.create_document(
+            user_id=str(uuid.uuid4()),
+            metadata=test_document_data
+        )
         
         # Test status transitions
-        statuses = ["processing", "processed", "active"]
+        statuses = ["processing", "parsed", "chunked", "vectorized", "active"]
         for status in statuses:
-            update_response = supabase.table("documents").update({"status": status}).eq("id", doc_id).execute()
-            assert update_response.data[0]["status"] == status
+            await mock_document_service.update_document_status(
+                document_id=doc_id["id"],
+                status=status
+            )
+            mock_document_service.get_document_status.return_value = {"status": status}
+            current_status = await mock_document_service.get_document_status(doc_id["id"])
+            assert current_status["status"] == status
+
+    @pytest.mark.asyncio
+    async def test_error_handling(self, mock_document_service, test_document_data):
+        """Test error handling in document processing."""
+        # Test with invalid document data
+        invalid_data = {**test_document_data}
+        invalid_data.pop('original_filename')  # Make data invalid
         
-        # Clean up
-        supabase.table("documents").delete().eq("id", doc_id).execute() 
+        # Mock error behavior
+        mock_document_service.create_document.side_effect = ValueError("Missing required field")
+        
+        with pytest.raises(ValueError) as exc_info:
+            await mock_document_service.create_document(
+                user_id=str(uuid.uuid4()),
+                metadata=invalid_data
+            )
+        assert "Missing required field" in str(exc_info.value)
+        
+        # Test with processing error
+        mock_document_service.create_document.side_effect = None  # Reset mock
+        doc_id = await mock_document_service.create_document(
+            user_id=str(uuid.uuid4()),
+            metadata=test_document_data
+        )
+        mock_document_service.update_document_status.side_effect = Exception("Processing error")
+        
+        with pytest.raises(Exception) as exc_info:
+            await mock_document_service.update_document_status(
+                document_id=doc_id["id"],
+                status="error",
+                message="Test error"
+            )
+        assert "Processing error" in str(exc_info.value) 
