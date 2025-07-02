@@ -24,12 +24,14 @@ requests>=2.31.0
 # Environment
 python-dotenv==1.0.1
 
-# Lazy-loaded AI dependencies (loaded on-demand)
+# Document Processing & AI
 langchain>=0.1.0
+langchain-core>=0.1.0
+llama-parse>=0.1.1
+llama-cloud>=0.0.6
+llama-index>=0.10.0
 supabase>=2.3.0
 anthropic>=0.8.0
-
-# Minimal document processing
 PyPDF2>=3.0.0
 
 # Utilities
