@@ -13,6 +13,9 @@ import asyncpg
 from dataclasses import dataclass
 from typing import List, Optional, Dict, Any, Union
 from uuid import UUID
+from pydantic import BaseModel, Field
+from langchain_openai import OpenAIEmbeddings
+import numpy as np
 
 from db.services.db_pool import get_db_pool
 
@@ -46,14 +49,19 @@ class VectorResult:
 class VectorRetrievalTool:
     """Tool for retrieving document vectors from the database."""
     
-    def __init__(self, force_supabase: bool = False):
+    def __init__(self, force_supabase: bool = False, api_key: Optional[str] = None):
         """
         Initialize the vector retrieval tool.
         
         Args:
             force_supabase: If True, connect directly to Supabase instead of using local database
+            api_key: API key for OpenAI embeddings
         """
         self.force_supabase = force_supabase
+        self.embeddings = OpenAIEmbeddings(
+            model="text-embedding-3-small",
+            openai_api_key=api_key,
+        )
         
     async def _get_connection(self):
         """Get database connection, either from pool or direct to Supabase."""
@@ -280,6 +288,55 @@ class VectorRetrievalTool:
         }
         
         return summary
+
+    async def get_document_vectors(self, documents: List[str]) -> List[np.ndarray]:
+        """
+        Get vector embeddings for documents.
+        
+        Args:
+            documents: List of document texts
+            
+        Returns:
+            List of vector embeddings
+        """
+        embeddings = await self.embeddings.aembed_documents(documents)
+        return [np.array(embedding) for embedding in embeddings]
+    
+    async def get_document_text(self, document_id: str) -> str:
+        """
+        Get document text by ID.
+        
+        Args:
+            document_id: Document ID
+            
+        Returns:
+            Document text
+        """
+        # TODO: Implement document storage and retrieval
+        raise NotImplementedError("Document storage not implemented")
+    
+    async def search(
+        self,
+        query: str,
+        filters: Optional[VectorFilter] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Search for documents similar to query.
+        
+        Args:
+            query: Search query
+            filters: Search filters
+            
+        Returns:
+            List of search results
+        """
+        if filters is None:
+            filters = VectorFilter()
+        
+        query_vector = await self.embeddings.aembed_query(query)
+        
+        # TODO: Implement vector search
+        raise NotImplementedError("Vector search not implemented")
 
 # Convenience functions for agents
 async def get_document_vectors(

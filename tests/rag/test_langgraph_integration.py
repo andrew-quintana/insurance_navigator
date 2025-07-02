@@ -9,7 +9,7 @@ import logging
 from typing import Dict, Any, Optional, List
 
 # Test configuration
-from tests.config.rag_test_config import get_test_config, update_document_id
+from tests.config.rag_test_config import get_rag_test_config, update_document_id
 
 # Services
 from db.services.document_service import DocumentService
@@ -33,7 +33,7 @@ class LangGraphRAGIntegration:
         if document_id:
             self.config = update_document_id(document_id)
         else:
-            self.config = get_test_config()
+            self.config = get_rag_test_config()
         
         self.document_service = DocumentService()
         self.vector_tool = VectorRetrievalTool()

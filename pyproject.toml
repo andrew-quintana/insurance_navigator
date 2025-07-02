@@ -5,20 +5,18 @@ build-backend = "hatchling.build"
 [project]
 name = "insurance_navigator"
 version = "0.1.0"
+description = "HIPAA-compliant insurance document processing system"
+requires-python = ">=3.11"
 authors = [
-  { name="Accessa", email="info@accessa.ai" },
-]
-description = "Insurance policy navigation and analysis system"
-readme = "README.md"
-requires-python = ">=3.8"
-dependencies = [
-    "supabase",
-    "pytest",
-    "bcrypt",
-    "python-dotenv",
+    { name = "Accessa Team" }
 ]
 
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
 [tool.pytest.ini_options]
-pythonpath = [
-  "."
-] 
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+python_classes = ["Test*"]
+addopts = "-v --tb=short" 

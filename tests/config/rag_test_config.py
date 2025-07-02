@@ -14,84 +14,84 @@ functionality with LangGraph agents. It includes:
 import os
 import uuid
 from typing import Dict, Any, List, Optional, Union
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from datetime import datetime
 import json
+from pydantic import BaseModel, Field
 
 @dataclass
 class DocumentTestConfig:
-    """Configuration for testing with specific documents."""
+    """Configuration for test documents."""
+    
     document_id: str
-    document_type: str = "insurance_policy"
-    expected_content_type: str = "policy_document"
-    test_user_id: Optional[str] = None
+    document_type: str
+    test_user_id: str
     description: str = ""
     
-    def __post_init__(self):
-        """Validate document ID format."""
-        try:
-            uuid.UUID(self.document_id)
-        except ValueError:
-            raise ValueError(f"Invalid document_id format: {self.document_id}")
-        
-        if self.test_user_id is None:
-            # Generate a consistent test user ID based on document ID
-            self.test_user_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"test-user-{self.document_id}"))
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return asdict(self)
 
-@dataclass
-class RAGTestConfig:
-    """Main configuration for RAG testing."""
+class RAGTestConfig(BaseModel):
+    """Configuration for RAG testing."""
     
-    # Document Configuration
-    primary_document: DocumentTestConfig
-    additional_documents: List[DocumentTestConfig] = field(default_factory=list)
+    # Feature flags
+    enable_langgraph: bool = Field(default=False, description="Enable LangGraph integration")
+    enable_mock: bool = Field(default=True, description="Enable mock responses")
+    enable_logging: bool = Field(default=True, description="Enable test logging")
     
-    # Search Configuration
-    vector_search_limit: int = 10
-    similarity_threshold: float = 0.7
-    chunk_size: int = 1000
-    chunk_overlap: int = 200
+    # Document configuration
+    primary_document: Dict[str, Any] = Field(
+        default_factory=lambda: DocumentTestConfig(
+            document_id="test-doc-1",
+            document_type="test",
+            test_user_id="test-user-1",
+            description="Test document for RAG pipeline validation"
+        ).to_dict(),
+        description="Primary document for testing",
+    )
+    additional_documents: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Additional test documents",
+    )
     
-    # LangGraph Configuration
-    enable_langgraph: bool = True
-    workflow_timeout: int = 30  # seconds
-    max_iterations: int = 5
+    # Processing configuration
+    chunk_size: int = Field(default=1000, description="Document chunk size")
+    chunk_overlap: int = Field(default=200, description="Document chunk overlap")
+    
+    # Search configuration
+    vector_search_limit: int = Field(default=10, description="Maximum number of search results")
+    similarity_threshold: float = Field(default=0.7, description="Minimum similarity threshold")
+    
+    # Workflow configuration
+    workflow_timeout: int = Field(default=30, description="Workflow timeout in seconds")
+    max_iterations: int = Field(default=5, description="Maximum workflow iterations")
     
     # Agent Configuration
-    primary_agent: str = "patient_navigator"
-    fallback_agents: List[str] = field(default_factory=lambda: ["regulatory", "chat_communicator"])
+    primary_agent: str = Field(default="patient_navigator", description="Primary agent name")
+    fallback_agents: List[str] = Field(
+        default=["regulatory", "chat_communicator"],
+        description="List of fallback agents"
+    )
     
     # Test Configuration
-    test_queries: List[str] = field(default_factory=list)
-    expected_results: Dict[str, Any] = field(default_factory=dict)
+    test_queries: List[str] = Field(default_factory=list, description="Test queries")
+    expected_results: Dict[str, Any] = Field(default_factory=dict, description="Expected test results")
     
     # Environment Configuration
-    use_mock_llm: bool = True
-    mock_response_delay: float = 0.1
+    use_mock_llm: bool = Field(default=True, description="Use mock LLM")
+    mock_response_delay: float = Field(default=0.1, description="Mock response delay")
     
     # Validation Configuration
-    validate_embeddings: bool = True
-    validate_chunks: bool = True
-    validate_search_results: bool = True
+    validate_embeddings: bool = Field(default=True, description="Validate embeddings")
+    validate_chunks: bool = Field(default=True, description="Validate chunks")
+    validate_search_results: bool = Field(default=True, description="Validate search results")
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
         return {
-            "primary_document": {
-                "document_id": self.primary_document.document_id,
-                "document_type": self.primary_document.document_type,
-                "test_user_id": self.primary_document.test_user_id,
-                "description": self.primary_document.description
-            },
-            "additional_documents": [
-                {
-                    "document_id": doc.document_id,
-                    "document_type": doc.document_type,
-                    "test_user_id": doc.test_user_id,
-                    "description": doc.description
-                }
-                for doc in self.additional_documents
-            ],
+            "primary_document": self.primary_document,
+            "additional_documents": self.additional_documents,
             "vector_search_limit": self.vector_search_limit,
             "similarity_threshold": self.similarity_threshold,
             "chunk_size": self.chunk_size,
@@ -113,32 +113,7 @@ class RAGTestConfig:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'RAGTestConfig':
         """Create configuration from dictionary."""
-        primary_doc = DocumentTestConfig(**data["primary_document"])
-        additional_docs = [
-            DocumentTestConfig(**doc_data)
-            for doc_data in data.get("additional_documents", [])
-        ]
-        
-        return cls(
-            primary_document=primary_doc,
-            additional_documents=additional_docs,
-            vector_search_limit=data.get("vector_search_limit", 10),
-            similarity_threshold=data.get("similarity_threshold", 0.7),
-            chunk_size=data.get("chunk_size", 1000),
-            chunk_overlap=data.get("chunk_overlap", 200),
-            enable_langgraph=data.get("enable_langgraph", True),
-            workflow_timeout=data.get("workflow_timeout", 30),
-            max_iterations=data.get("max_iterations", 5),
-            primary_agent=data.get("primary_agent", "patient_navigator"),
-            fallback_agents=data.get("fallback_agents", ["regulatory", "chat_communicator"]),
-            test_queries=data.get("test_queries", []),
-            expected_results=data.get("expected_results", {}),
-            use_mock_llm=data.get("use_mock_llm", True),
-            mock_response_delay=data.get("mock_response_delay", 0.1),
-            validate_embeddings=data.get("validate_embeddings", True),
-            validate_chunks=data.get("validate_chunks", True),
-            validate_search_results=data.get("validate_search_results", True)
-        )
+        return cls(**data)
 
 # Default configurations for different test scenarios
 DEFAULT_TEST_CONFIGS = {
@@ -146,9 +121,9 @@ DEFAULT_TEST_CONFIGS = {
         primary_document=DocumentTestConfig(
             document_id="d64bfbbe-ff7f-4b51-b220-a0fa20756d9d",
             document_type="insurance_policy",
-            test_user_id="27b30e9d-0d06-4325-910f-20fe9d686f14",  # Correct user ID for this test data
+            test_user_id="27b30e9d-0d06-4325-910f-20fe9d686f14",
             description="Current test document for RAG pipeline validation"
-        ),
+        ).to_dict(),
         test_queries=[
             "What is the deductible amount?",
             "What are the copay requirements?",
@@ -174,9 +149,9 @@ DEFAULT_TEST_CONFIGS = {
         primary_document=DocumentTestConfig(
             document_id="d64bfbbe-ff7f-4b51-b220-a0fa20756d9d",
             document_type="insurance_policy",
-            test_user_id="27b30e9d-0d06-4325-910f-20fe9d686f14",  # Correct user ID for this test data
+            test_user_id="27b30e9d-0d06-4325-910f-20fe9d686f14",
             description="Minimal test configuration"
-        ),
+        ).to_dict(),
         test_queries=["What is covered by this policy?"],
         vector_search_limit=5,
         use_mock_llm=True
@@ -186,9 +161,9 @@ DEFAULT_TEST_CONFIGS = {
         primary_document=DocumentTestConfig(
             document_id="d64bfbbe-ff7f-4b51-b220-a0fa20756d9d",
             document_type="insurance_policy",
-            test_user_id="27b30e9d-0d06-4325-910f-20fe9d686f14",  # Correct user ID for this test data
+            test_user_id="27b30e9d-0d06-4325-910f-20fe9d686f14",
             description="Comprehensive test with multiple scenarios"
-        ),
+        ).to_dict(),
         test_queries=[
             "What is the deductible amount?",
             "What are the copay requirements?",
@@ -209,24 +184,37 @@ DEFAULT_TEST_CONFIGS = {
     )
 }
 
-def get_test_config(config_name: str = "current_test") -> RAGTestConfig:
+# Initialize current test configuration
+CURRENT_TEST_CONFIG = DEFAULT_TEST_CONFIGS["current_test"]
+
+_test_config = RAGTestConfig()
+
+def get_rag_test_config(test_name: Optional[str] = None) -> RAGTestConfig:
     """
-    Get a test configuration by name.
+    Get RAG test configuration.
     
     Args:
-        config_name: Name of the configuration to retrieve
+        test_name: Optional test name to get specific configuration
         
     Returns:
-        RAGTestConfig instance
-        
-    Raises:
-        KeyError: If configuration name not found
+        Test configuration
     """
-    if config_name not in DEFAULT_TEST_CONFIGS:
-        available = list(DEFAULT_TEST_CONFIGS.keys())
-        raise KeyError(f"Unknown config '{config_name}'. Available: {available}")
+    if test_name is None:
+        return _test_config
     
-    return DEFAULT_TEST_CONFIGS[config_name]
+    if test_name not in DEFAULT_TEST_CONFIGS:
+        raise ValueError(f"Unknown test configuration: {test_name}")
+    
+    return DEFAULT_TEST_CONFIGS[test_name]
+
+def get_active_config() -> RAGTestConfig:
+    """
+    Get active test configuration.
+    
+    Returns:
+        Active test configuration
+    """
+    return get_rag_test_config()
 
 def create_custom_config(
     document_id: str,
@@ -256,7 +244,7 @@ def create_custom_config(
     
     # Create new RAG config
     config = RAGTestConfig(
-        primary_document=doc_config,
+        primary_document=doc_config.to_dict(),
         vector_search_limit=kwargs.get("vector_search_limit", base_config.vector_search_limit),
         similarity_threshold=kwargs.get("similarity_threshold", base_config.similarity_threshold),
         chunk_size=kwargs.get("chunk_size", base_config.chunk_size),
@@ -338,44 +326,30 @@ def get_active_config() -> RAGTestConfig:
         )
     
     # Fall back to current test config
-    return get_test_config("current_test")
+    return get_rag_test_config("current_test")
 
 # Quick access functions
 def get_current_document_id() -> str:
     """Get the current test document ID."""
-    return get_active_config().primary_document.document_id
+    return get_active_config().primary_document["document_id"]
 
 def get_current_user_id() -> str:
     """Get the current test user ID."""
-    return get_active_config().primary_document.test_user_id
+    return get_active_config().primary_document["test_user_id"]
 
 def get_test_queries() -> List[str]:
     """Get the current test queries."""
     return get_active_config().test_queries
 
-# Current test configuration - easily changeable
-CURRENT_TEST_CONFIG = RAGTestConfig(
-    primary_document=DocumentTestConfig(
-        document_id="d64bfbbe-ff7f-4b51-b220-a0fa20756d9d",
-        description="Current test document for RAG pipeline validation"
-    ),
-    test_queries=[
-        "What is the deductible amount?",
-        "What are the copay requirements?", 
-        "What services are covered?",
-        "What is the out-of-pocket maximum?"
-    ]
-)
-
-def get_test_config() -> RAGTestConfig:
-    """Get current test configuration."""
-    return CURRENT_TEST_CONFIG
+def get_rag_test_config() -> RAGTestConfig:
+    """Get current RAG test configuration."""
+    return _test_config
 
 def update_document_id(new_document_id: str) -> RAGTestConfig:
     """Update configuration with new document ID."""
     global CURRENT_TEST_CONFIG
-    CURRENT_TEST_CONFIG.primary_document.document_id = new_document_id
-    CURRENT_TEST_CONFIG.primary_document.test_user_id = str(
+    CURRENT_TEST_CONFIG.primary_document["document_id"] = new_document_id
+    CURRENT_TEST_CONFIG.primary_document["test_user_id"] = str(
         uuid.uuid5(uuid.NAMESPACE_DNS, f"test-user-{new_document_id}")
     )
     return CURRENT_TEST_CONFIG 

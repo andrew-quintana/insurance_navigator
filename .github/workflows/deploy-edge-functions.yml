@@ -1,0 +1,52 @@
+name: Deploy Edge Functions
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/functions/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      
+      - name: Deploy Edge Functions
+        run: |
+          functions=(
+            "doc-processor"
+            "link-assigner"
+            "doc-parser"
+            "vector-processor"
+          )
+          
+          for func in "${functions[@]}"; do
+            echo "Deploying $func..."
+            supabase functions deploy "$func" --project-ref $PROJECT_ID
+          done
+      
+      - name: Verify Deployments
+        run: |
+          for func in "${functions[@]}"; do
+            echo "Verifying $func..."
+            response=$(curl -s -o /dev/null -w "%{http_code}" \
+              "https://$PROJECT_ID.supabase.co/functions/v1/$func/health" \
+              -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+            
+            if [ "$response" != "200" ]; then
+              echo "Function $func health check failed with status $response"
+              exit 1
+            fi
+          done 

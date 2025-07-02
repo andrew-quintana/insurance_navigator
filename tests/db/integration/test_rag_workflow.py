@@ -9,7 +9,7 @@ import numpy as np
 
 from supabase.client import Client
 from tests.db.helpers import get_test_client, cleanup_test_data
-from tests.config.test_config import get_test_config, TestConfig
+from tests.config.test_config import get_rag_test_config, TestConfig
 
 class TestRAGWorkflow:
     @pytest.fixture(scope="class")
@@ -22,7 +22,7 @@ class TestRAGWorkflow:
     
     @pytest.fixture(scope="class")
     def config(self) -> TestConfig:
-        return get_test_config()
+        return get_rag_test_config()
     
     @pytest.fixture(scope="class")
     def test_user_id(self, service_client: Client) -> str:

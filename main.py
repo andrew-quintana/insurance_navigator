@@ -27,6 +27,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import hashlib
 from utils.cors_config import get_cors_config, get_cors_headers
 import re
+import psycopg2
+import traceback
 
 # Database service imports
 from db.services.user_service import get_user_service, UserService
@@ -35,10 +37,10 @@ from db.services.storage_service import get_storage_service, StorageService
 from db.services.document_service import DocumentService
 from db.services.db_pool import get_db_pool
 
-# Set up logging
+# Set up logging with more detailed format
 logging.basicConfig(
     level=logging.INFO,
-    format='%(levelname)s:%(name)s:%(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s - %(pathname)s:%(lineno)d'
 )
 logger = logging.getLogger(__name__)
 
@@ -51,63 +53,71 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Debug middleware for CORS
-class CORSDebugMiddleware(BaseHTTPMiddleware):
+# Custom error handler middleware
+class ErrorHandlerMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        # Only log CORS issues
-        origin = request.headers.get("origin")
-        if origin:
-            cors_config = get_cors_config()
-            is_allowed = False
-            
-            # Check exact matches
-            if origin in cors_config["allow_origins"]:
-                is_allowed = True
-            else:
-                # Check wildcards
-                for allowed_origin in cors_config["allow_origins"]:
-                    if '*' in allowed_origin:
-                        pattern = allowed_origin.replace('*', '.*').replace('.', '\.')
-                        if re.match(pattern, origin):
-                            is_allowed = True
-                            break
-                
-                # Check regex
-                if not is_allowed and "allow_origin_regex" in cors_config:
-                    pattern = re.compile(cors_config["allow_origin_regex"])
-                    if pattern.match(origin):
-                        is_allowed = True
-            
-            if not is_allowed:
-                logger.warning(f"❌ CORS: Origin not allowed: {origin}")
-        
-        response = await call_next(request)
-        return response
+        try:
+            response = await call_next(request)
+            return response
+        except HTTPException as e:
+            logger.warning(f"HTTP Exception: {str(e)} - Path: {request.url.path}")
+            return JSONResponse(
+                status_code=e.status_code,
+                content={"detail": e.detail}
+            )
+        except Exception as e:
+            logger.error(f"Unhandled exception: {str(e)}\n{traceback.format_exc()}")
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={"detail": "Internal server error"}
+            )
 
-# Add request logging middleware
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    """Log all requests for debugging."""
-    start_time = time.time()
-    
-    # Only log the path and method
-    logger.info(f"➡️ {request.method} {request.url.path}")
-    
-    try:
-        response = await call_next(request)
-        process_time = time.time() - start_time
+# Request logging middleware with performance tracking
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        start_time = time.time()
+        request_id = str(uuid.uuid4())
         
-        # Only log errors or slow responses
-        if response.status_code >= 400 or process_time > 1.0:
-            logger.info(f"⬅️ {request.method} {request.url.path} - Status: {response.status_code} - Time: {process_time:.2f}s")
+        # Log request details
+        logger.info(f"Request {request_id} started - Method: {request.method} Path: {request.url.path}")
         
-        return response
-    except Exception as e:
-        logger.error(f"❌ Request failed: {str(e)}")
-        raise
+        try:
+            response = await call_next(request)
+            process_time = time.time() - start_time
+            
+            # Log response details
+            status_code = response.status_code
+            logger.info(
+                f"Request {request_id} completed - "
+                f"Status: {status_code} - "
+                f"Time: {process_time:.2f}s"
+            )
+            
+            # Add custom headers
+            response.headers["X-Request-ID"] = request_id
+            response.headers["X-Process-Time"] = str(process_time)
+            
+            return response
+            
+        except Exception as e:
+            process_time = time.time() - start_time
+            logger.error(
+                f"Request {request_id} failed - "
+                f"Error: {str(e)} - "
+                f"Time: {process_time:.2f}s"
+            )
+            raise
 
-# Health check cache
-_health_cache = {"result": None, "timestamp": 0}
+# Add middleware
+app.add_middleware(ErrorHandlerMiddleware)
+app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    **get_cors_config()
+)
+
+# Health check cache with type hints
+_health_cache: Dict[str, Any] = {"result": None, "timestamp": 0}
 
 @app.head("/")
 async def root_head():
@@ -142,23 +152,31 @@ async def health_check(request: Request):
     # Perform actual health check
     try:
         # Test database connection
-        db_pool = await get_db_pool()
+        db_pool = get_db_pool()
         if db_pool:
             try:
-                async with db_pool.get_connection() as conn:
-                    await conn.execute("SELECT 1")
+                # Test a simple query using Supabase client
+                response = db_pool.table('users').select("id").limit(1).execute()
                 db_status = "healthy"
             except Exception as e:
                 db_status = f"error: {str(e)[:50]}"
                 logger.warning(f"⚠️ Database connection error: {e}")
         else:
             db_status = "unavailable"
-            logger.warning("⚠️ Database pool unavailable")
+            logger.warning("⚠️ Database client unavailable")
+
+        # Check service dependencies
+        services_status = {
+            "database": db_status,
+            "supabase_auth": "healthy" if os.getenv("SUPABASE_URL") else "not_configured",
+            "llamaparse": "healthy" if os.getenv("LLAMAPARSE_API_KEY") else "not_configured",
+            "openai": "healthy" if os.getenv("OPENAI_API_KEY") else "not_configured"
+        }
 
         result = {
-            "status": "healthy" if db_status == "healthy" else "degraded",
+            "status": "healthy" if all(s == "healthy" for s in services_status.values()) else "degraded",
             "timestamp": datetime.utcnow().isoformat(),
-            "database": db_status,
+            "services": services_status,
             "version": "3.0.0"
         }
         
@@ -168,34 +186,11 @@ async def health_check(request: Request):
         
         return result
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
+        logger.error(f"Health check failed: {e}\n{traceback.format_exc()}")
         return JSONResponse(
             status_code=500,
             content={"status": "error", "message": str(e)}
         )
-
-# Pydantic models
-class UserResponse(BaseModel):
-    id: str
-    email: str
-    full_name: str
-    created_at: Optional[datetime] = None
-    is_active: bool = True
-    roles: List[str] = []
-
-class RegisterRequest(BaseModel):
-    email: str
-    password: str
-    full_name: str
-
-class LoginRequest(BaseModel):
-    email: str
-    password: str
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-    user: Optional[Dict[str, Any]] = None
 
 # Global service instances
 user_service_instance = None
@@ -206,36 +201,46 @@ storage_service_instance = None
 storage_service: Optional[StorageService] = None
 
 # Authentication utilities
-async def get_current_user(request: Request) -> UserResponse:
+async def get_current_user(request: Request) -> Dict[str, Any]:
     """Extract and validate user from JWT token."""
     global user_service_instance
     
     if not user_service_instance:
         user_service_instance = await get_user_service()
     
-    # Get token from Authorization header
+    # Get tokens from Authorization and Refresh-Token headers
     auth_header = request.headers.get("authorization")
+    refresh_token = request.headers.get("refresh-token")  # Optional refresh token header
+    expires_at = request.headers.get("expires-at")  # Optional expiration header
+    
     if not auth_header or not auth_header.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing or invalid authorization header"
         )
     
-    token = auth_header.split(" ")[1]
+    access_token = auth_header.split(" ")[1]
     
     try:
+        # Convert expires_at to int if provided
+        expires_at_int = int(expires_at) if expires_at else None
+        
         # Validate token and get user
-        user_data = await user_service_instance.get_user_from_token(token)
+        user_data = await user_service_instance.get_user_from_token(
+            token=access_token,
+            refresh_token=refresh_token,
+            expires_at=expires_at_int
+        )
         if not user_data:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token"
             )
         
-        return UserResponse(**user_data)
+        return user_data
         
     except Exception as e:
-        logger.error(f"Token validation error: {str(e)}")
+        logger.error(f"Token validation error: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token"
@@ -244,7 +249,7 @@ async def get_current_user(request: Request) -> UserResponse:
 @app.get("/documents/{document_id}/status")
 async def get_document_status(
     document_id: str,
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """Get simplified document status."""
     try:
@@ -252,7 +257,7 @@ async def get_document_status(
         doc_service = DocumentService()
         
         # Get document status
-        status = await doc_service.get_document_status(document_id, str(current_user.id))
+        status = await doc_service.get_document_status(document_id, str(current_user["id"]))
         
         if not status:
                 raise HTTPException(status_code=404, detail="Document not found")
@@ -273,10 +278,10 @@ async def get_document_status(
 async def upload_document_backend(
     file: UploadFile = File(...),
     policy_id: str = Form(...),
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """Handle document upload with simplified processing."""
-    logger.info(f"📄 Upload request received - File: {file.filename}, Size: {file.size if hasattr(file, 'size') else 'unknown'}, User: {current_user.email}")
+    logger.info(f"📄 Upload request received - File: {file.filename}, Size: {file.size if hasattr(file, 'size') else 'unknown'}, User: {current_user['email']}")
     
     try:
         # Validate file size
@@ -295,7 +300,7 @@ async def upload_document_backend(
         # Upload document
         logger.info(f"🔄 Starting document upload for {file.filename}")
         upload_result = await storage_service.upload_document(
-            user_id=str(current_user.id),
+            user_id=str(current_user["id"]),
             file_content=contents,
             filename=file.filename,
             content_type=file.content_type or "application/octet-stream"
@@ -327,10 +332,10 @@ async def upload_document_backend(
                 headers={
                     'Authorization': f'Bearer {supabase_service_key}',
                     'Content-Type': 'application/json',
-                    'X-User-ID': str(current_user.id)
+                    'X-User-ID': str(current_user["id"])
                 },
                 json={
-                    'userId': str(current_user.id),
+                    'userId': str(current_user["id"]),
                     'filename': file.filename,
                     'fileSize': file_size,
                     'contentType': file.content_type or "application/octet-stream",
@@ -410,29 +415,47 @@ async def startup_event():
         
         # Initialize core services synchronously to ensure they're ready
         user_service_instance = await get_user_service()
+        logger.info("✅ User service initialized")
+        
         conversation_service_instance = await get_conversation_service()
+        logger.info("✅ Conversation service initialized")
+        
         storage_service_instance = await get_storage_service()
+        logger.info("✅ Storage service initialized")
+        
+        # Verify environment variables
+        required_vars = [
+            "SUPABASE_URL",
+            "SUPABASE_SERVICE_ROLE_KEY",
+            "LLAMAPARSE_API_KEY",
+            "OPENAI_API_KEY"
+        ]
+        
+        missing_vars = [var for var in required_vars if not os.getenv(var)]
+        if missing_vars:
+            logger.warning(f"⚠️ Missing environment variables: {', '.join(missing_vars)}")
         
         logger.info("✅ Core services initialized")
         
     except Exception as e:
-        logger.error(f"⚠️ Service initialization failed: {e}")
+        logger.error(f"⚠️ Service initialization failed: {e}\n{traceback.format_exc()}")
         # Re-raise to prevent app from starting in bad state
         raise
-
-async def initialize_background_services():
-    """Initialize non-critical services in background."""
-    try:
-        # Initialize additional services here
-        logger.info("🔄 Background service initialization complete")
-    except Exception as e:
-        logger.error(f"⚠️ Background service initialization failed: {e}")
 
 # Shutdown event
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown."""
     logger.info("🛑 Shutting down Insurance Navigator API")
+    
+    try:
+        # Close database connections
+        db_pool = get_db_pool()
+        if db_pool:
+            await db_pool.close()
+            logger.info("✅ Database connections closed")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}\n{traceback.format_exc()}")
 
 @app.post("/login")
 async def login(request: Request, response: Response):
@@ -486,14 +509,14 @@ async def login(request: Request, response: Response):
 
 # Add /me endpoint for session validation
 @app.get("/me")
-async def get_current_user_info(current_user: UserResponse = Depends(get_current_user)):
+async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_current_user)):
     """Get current user information."""
     try:
         # Get user service
         user_service = await get_user_service()
         
         # Get fresh user data
-        user_data = await user_service.get_user_by_id(current_user.id)
+        user_data = await user_service.get_user_by_id(current_user["id"])
         if not user_data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -549,8 +572,8 @@ async def add_cors_headers(request: Request, call_next):
         logger.error(f"Error in CORS middleware: {str(e)}")
         return Response(status_code=500, content="Internal server error")
 
-@app.post("/register", response_model=Token)
-async def register(request: RegisterRequest):
+@app.post("/register", response_model=Dict[str, Any])
+async def register(request: Dict[str, Any]):
     """Register a new user with database persistence."""
     try:
         # Get user service
@@ -558,20 +581,20 @@ async def register(request: RegisterRequest):
         
         # Create user in database
         user_data = await user_service.create_user(
-            email=request.email,
-            password=request.password,
-            full_name=request.full_name
+            email=request["email"],
+            password=request["password"],
+            full_name=request["full_name"]
         )
         
         # Authenticate user to get token
-        auth_result = await user_service.authenticate_user(request.email, request.password)
+        auth_result = await user_service.authenticate_user(request["email"], request["password"])
         if not auth_result:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="User created but authentication failed"
             )
         
-        logger.info(f"✅ User registered successfully: {request.email}")
+        logger.info(f"✅ User registered successfully: {request['email']}")
         return {
             "access_token": auth_result["access_token"],
             "token_type": "bearer",
@@ -579,18 +602,169 @@ async def register(request: RegisterRequest):
         }
         
     except ValueError as e:
-        logger.warning(f"Registration failed for {request.email}: {str(e)}")
+        logger.warning(f"Registration failed for {request['email']}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
     except Exception as e:
-        logger.error(f"❌ Registration error for {request.email}: {str(e)}")
+        logger.error(f"❌ Registration error for {request['email']}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Registration failed"
         )
 
+@app.get("/api/v1/status")
+async def detailed_status():
+    """Detailed status check including database connectivity"""
+    try:
+        # Check database connection
+        conn = psycopg2.connect(os.getenv("SUPABASE_DB_URL"))
+        conn.close()
+        db_status = "connected"
+    except Exception as e:
+        db_status = f"error: {str(e)}"
+
+    return {
+        "status": "operational",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": os.getenv("APP_VERSION", "1.0.0"),
+        "database": db_status,
+        "environment": os.getenv("NODE_ENV", "development")
+    }
+
+# Authentication models
+class SignupRequest(BaseModel):
+    """Request model for user signup."""
+    email: str
+    password: str
+    consent_version: str
+    consent_timestamp: str
+
+class LoginRequest(BaseModel):
+    """Request model for user login."""
+    email: str
+    password: str
+
+@app.post("/auth/signup", status_code=status.HTTP_201_CREATED)
+async def signup(request: SignupRequest):
+    """
+    Sign up a new user with HIPAA consent tracking.
+    
+    Args:
+        request: SignupRequest containing user data
+        
+    Returns:
+        Dict containing user data and access token
+    """
+    try:
+        # Get user service
+        user_service = await get_user_service()
+        
+        # Create user
+        user_data = await user_service.create_user(
+            email=request.email,
+            password=request.password,
+            consent_version=request.consent_version,
+            consent_timestamp=request.consent_timestamp
+        )
+        
+        return user_data
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Signup error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+@app.post("/auth/login")
+async def login(request: LoginRequest):
+    """
+    Authenticate a user and return session data.
+    
+    Args:
+        request: LoginRequest containing user credentials
+        
+    Returns:
+        Dict containing user data and session info
+    """
+    try:
+        # Get user service
+        user_service = await get_user_service()
+        
+        # Authenticate user
+        auth_data = await user_service.authenticate_user(
+            email=request.email,
+            password=request.password
+        )
+        
+        return auth_data
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Login error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e)
+        )
+
+@app.get("/auth/user")
+async def get_current_user(request: Request):
+    """
+    Get current user data from auth token.
+    
+    Args:
+        request: Request object containing authorization header
+        
+    Returns:
+        Dict containing user data
+    """
+    try:
+        # Get authorization header
+        authorization = request.headers.get("Authorization")
+        
+        # Validate token
+        if not authorization or not authorization.startswith("Bearer "):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authorization header"
+            )
+            
+        token = authorization.split(" ")[1]
+        
+        # Get user service
+        user_service = await get_user_service()
+        
+        # Get user data
+        user_data = await user_service.get_user_from_token(token)
+        
+        if not user_data:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
+            )
+            
+        return user_data
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting user data: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000,
+        log_level="info",
+        access_log=True
+    )
