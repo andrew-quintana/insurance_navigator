@@ -11,6 +11,12 @@ services:
     # Render optimizations for faster startup
     buildCommand: "echo 'Using Docker build - no additional build command needed'"
     preDeployCommand: "echo 'Pre-deploy optimization complete'"
+    # Increased startup timeout and health check settings
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1 --timeout-keep-alive 75"
+    healthCheckTimeout: 180
+    numReplicas: 1
+    autoscaling:
+      enabled: false
     envVars:
       - key: SUPABASE_URL
         sync: false
@@ -42,4 +48,10 @@ services:
       - key: UVICORN_WORKERS
         value: "1"
       - key: STARTUP_TIMEOUT
-        value: "30"
+        value: "180"
+      - key: KEEP_ALIVE
+        value: "75"
+      - key: MAX_REQUESTS
+        value: "1000"
+      - key: MAX_REQUESTS_JITTER
+        value: "100"
