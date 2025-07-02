@@ -11,6 +11,8 @@ import logging
 from supabase import create_client, Client
 import httpx
 from contextlib import asynccontextmanager
+import asyncio
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
@@ -95,20 +97,34 @@ def get_pgvector_config() -> Dict[str, Any]:
     }
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=4, max=10)
+)
 async def get_supabase_client() -> Client:
-    """
-    Get a configured Supabase client.
+    """Get a Supabase client with retry logic"""
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_key = os.getenv("SUPABASE_KEY")
     
-    Returns:
-        Supabase client instance
-    """
-    url = os.getenv('SUPABASE_TEST_URL', os.getenv('SUPABASE_URL'))
-    key = os.getenv('SUPABASE_TEST_KEY', os.getenv('SUPABASE_KEY'))
-    
-    if not url or not key:
+    if not supabase_url or not supabase_key:
         raise ValueError("SUPABASE_URL and SUPABASE_KEY environment variables must be set")
     
-    return create_client(url, key)
+    try:
+        client = create_client(
+            supabase_url,
+            supabase_key,
+            options={
+                'pool_connections': 10,  # Maximum number of connections in the pool
+                'pool_timeout': 30,      # Seconds to wait for available connection
+                'retry_limit': 3,        # Number of retries for failed requests
+                'timeout': 30            # Request timeout in seconds
+            }
+        )
+        return client
+    except Exception as e:
+        # Log the error but don't expose internal details
+        logging.warning(f"Database connection error: {str(e)}")
+        raise
 
 
 @asynccontextmanager
