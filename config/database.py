@@ -136,15 +136,10 @@ async def get_supabase_client() -> Client:
         raise ValueError("SUPABASE_URL and SUPABASE_KEY environment variables must be set")
     
     try:
+        # Create client without custom options - let the library handle defaults
         client = create_client(
             supabase_url,
-            supabase_key,
-            options={
-                'pool_connections': 10,  # Maximum number of connections in the pool
-                'pool_timeout': 30,      # Seconds to wait for available connection
-                'retry_limit': 3,        # Number of retries for failed requests
-                'timeout': 30            # Request timeout in seconds
-            }
+            supabase_key
         )
         return client
     except Exception as e:
