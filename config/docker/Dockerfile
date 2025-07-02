@@ -1,69 +1,68 @@
 # Multi-stage build for faster deployment
 FROM python:3.11-slim as builder
 
-# Create app user in builder stage and install as that user
-RUN useradd --create-home --shell /bin/bash app
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install system dependencies with optimized layer
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y \
     gcc \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Add build arg to force cache invalidation
-ARG CACHEBUST=1
+# Create app user in builder stage
+RUN useradd --create-home --shell /bin/bash app
 
-# Set PATH for pip installations
+# Set working directory and PATH
+WORKDIR /app
 ENV PATH=/home/app/.local/bin:$PATH
+ENV PIP_NO_CACHE_DIR=1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Copy requirements and install as app user
-COPY config/python/requirements-prod.txt /tmp/requirements.txt
+# Copy and install requirements as separate layer for better caching
+COPY --chown=app:app config/python/requirements-prod.txt /tmp/requirements.txt
 USER app
-RUN pip install --upgrade pip --no-warn-script-location --user && \
-    pip install --no-cache-dir --no-warn-script-location --user -r /tmp/requirements.txt && \
-    pip install --no-cache-dir --no-warn-script-location sentence-transformers==2.2.2 llama-parse==0.1.1
+RUN --mount=type=cache,target=/home/app/.cache/pip,sharing=locked \
+    pip install --user --no-warn-script-location -r /tmp/requirements.txt
 
 # Final stage - smaller image
 FROM python:3.11-slim
 
-# Install only runtime dependencies (no build tools)
-RUN apt-get update && apt-get install -y \
+# Install runtime dependencies with optimized layer
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Create app user in final stage
+# Create app user and set up environment
 RUN useradd --create-home --shell /bin/bash app
-
-# Copy pre-built dependencies with correct ownership from start
-COPY --from=builder --chown=app:app /home/app/.local /home/app/.local
-
-# Set working directory and copy app code
 WORKDIR /app
+
+# Copy pre-built dependencies and app code
+COPY --from=builder --chown=app:app /home/app/.local /home/app/.local
 COPY --chown=app:app . .
 
-# Switch to app user
-USER app
-
-# Make sure Python scripts are available in PATH for app user
+# Set up environment variables
 ENV PATH=/home/app/.local/bin:$PATH
 ENV PYTHONPATH=/home/app/.local/lib/python3.11/site-packages:$PYTHONPATH
-
-# Expose port and set environment variables
-EXPOSE 8000
-ENV PORT=8000
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
+ENV PORT=8000
 ENV KEEP_ALIVE=75
 ENV MAX_REQUESTS=1000
 ENV MAX_REQUESTS_JITTER=100
 ENV WORKERS=2
 
-# Optimized health check with longer intervals for free tier
+# Switch to app user
+USER app
+
+# Expose port and configure health check
+EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Use the app user's local bin path for uvicorn with optimized settings
-CMD ["/home/app/.local/bin/uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", \
+# Start uvicorn with optimized settings
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", \
      "--workers", "2", "--timeout-keep-alive", "75", "--limit-max-requests", "1000", \
      "--limit-max-requests-jitter", "100"]
