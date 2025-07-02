@@ -6,7 +6,7 @@ connecting to PostgreSQL with pgvector support and Supabase.
 """
 
 import os
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, AsyncGenerator
 import logging
 from supabase import create_client, Client
 import httpx
@@ -97,6 +97,32 @@ def get_pgvector_config() -> Dict[str, Any]:
     }
 
 
+class DatabasePool:
+    def __init__(self):
+        self._client: Optional[Client] = None
+        self._initialized = False
+
+    async def initialize(self) -> None:
+        """Initialize the database pool if not already initialized"""
+        if not self._initialized:
+            self._client = await get_supabase_client()
+            self._initialized = True
+
+    async def get_client(self) -> Client:
+        """Get the database client, initializing if necessary"""
+        if not self._initialized:
+            await self.initialize()
+        return self._client
+
+    async def cleanup(self) -> None:
+        """Cleanup resources - for Supabase client we just need to remove references"""
+        self._client = None
+        self._initialized = False
+        logger.info("Database pool cleaned up")
+
+# Global pool instance
+db_pool = DatabasePool()
+
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=4, max=10)
@@ -122,23 +148,15 @@ async def get_supabase_client() -> Client:
         )
         return client
     except Exception as e:
-        # Log the error but don't expose internal details
-        logging.warning(f"Database connection error: {str(e)}")
+        logger.warning(f"Database connection error: {str(e)}")
         raise
 
-
 @asynccontextmanager
-async def get_db_client():
-    """
-    Get a database client as an async context manager.
-    
-    Usage:
-        async with get_db_client() as client:
-            # Use client here
-    """
-    client = await get_supabase_client()
+async def get_db() -> AsyncGenerator[Client, None]:
+    """Async context manager for database access"""
     try:
+        client = await db_pool.get_client()
         yield client
-    finally:
-        # Clean up if needed
-        pass 
+    except Exception as e:
+        logger.error(f"Database access error: {str(e)}")
+        raise 
