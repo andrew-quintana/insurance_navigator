@@ -29,13 +29,13 @@ from utils.cors_config import get_cors_config, get_cors_headers
 import re
 import psycopg2
 import traceback
+from config.database import db_pool
 
 # Database service imports
 from db.services.user_service import get_user_service, UserService
 from db.services.conversation_service import get_conversation_service, ConversationService
 from db.services.storage_service import get_storage_service, StorageService
 from db.services.document_service import DocumentService
-from db.services.db_pool import get_db_pool
 
 # Set up logging with more detailed format
 logging.basicConfig(
@@ -404,16 +404,17 @@ async def notify_document_status(
 # Startup event
 @app.on_event("startup")
 async def startup_event():
-    """Initialize services on startup."""
+    """Initialize application services"""
     logger.info("🚀 Starting Insurance Navigator API v3.0.0")
     logger.info("🔧 Backend-orchestrated processing enabled")
-    
-    global user_service_instance, conversation_service_instance, storage_service_instance
+    logger.info("🔄 Service initialization starting...")
     
     try:
-        logger.info("🔄 Service initialization starting...")
+        # Initialize database pool
+        await db_pool.initialize()
+        logger.info("✅ Database pool initialized")
         
-        # Initialize core services synchronously to ensure they're ready
+        # Initialize other services
         user_service_instance = await get_user_service()
         logger.info("✅ User service initialized")
         
@@ -438,24 +439,24 @@ async def startup_event():
         logger.info("✅ Core services initialized")
         
     except Exception as e:
-        logger.error(f"⚠️ Service initialization failed: {e}\n{traceback.format_exc()}")
-        # Re-raise to prevent app from starting in bad state
+        logger.error(f"⚠️ Service initialization failed: {str(e)}")
         raise
 
 # Shutdown event
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Cleanup on shutdown."""
+    """Cleanup application resources"""
     logger.info("🛑 Shutting down Insurance Navigator API")
-    
     try:
-        # Close database connections
-        db_pool = get_db_pool()
-        if db_pool:
-            await db_pool.close()
-            logger.info("✅ Database connections closed")
+        # Cleanup database pool
+        await db_pool.cleanup()
+        logger.info("✅ Database pool cleaned up")
+        
+        # Cleanup other services
+        # ... existing cleanup code ...
+        
     except Exception as e:
-        logger.error(f"Error during shutdown: {e}\n{traceback.format_exc()}")
+        logger.error(f"Error during shutdown: {str(e)}")
 
 @app.post("/login")
 async def login(request: Request, response: Response):
