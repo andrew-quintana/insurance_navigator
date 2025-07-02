@@ -52,3 +52,4 @@ numpy==1.26.4
 # Utilities
 pytz==2024.1
 backoff>=2.2.1
+tenacity>=8.2.3
