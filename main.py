@@ -152,12 +152,16 @@ async def health_check(request: Request):
     # Perform actual health check
     try:
         # Test database connection
-        db_pool = get_db_pool()
+        from config.database import db_pool
         if db_pool:
             try:
-                # Test a simple query using Supabase client
-                response = db_pool.table('users').select("id").limit(1).execute()
-                db_status = "healthy"
+                # Test if pool is initialized
+                client = await db_pool.get_client()
+                if client:
+                    db_status = "healthy"
+                else:
+                    db_status = "not_initialized"
+                    logger.warning("⚠️ Database pool not initialized")
             except Exception as e:
                 db_status = f"error: {str(e)[:50]}"
                 logger.warning(f"⚠️ Database connection error: {e}")
