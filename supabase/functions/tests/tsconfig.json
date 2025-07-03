@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "allowImportingTsExtensions": true,
+    "lib": ["deno.window"],
+    "strict": true,
+    "module": "esnext",
+    "target": "esnext",
+    "moduleResolution": "node",
+    "types": ["deno-types"],
+    "baseUrl": ".",
+    "paths": {
+      "https://deno.land/*": ["./node_modules/@types/deno-types/*"],
+      "../*": ["../*"]
+    }
+  },
+  "include": ["./**/*.ts"],
+  "exclude": ["node_modules"]
+} 
