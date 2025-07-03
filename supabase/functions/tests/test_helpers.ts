@@ -1,8 +1,51 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { join, dirname, fromFileUrl } from "https://deno.land/std@0.217.0/path/mod.ts";
+
+// Get project root helper
+export function getProjectRoot(): string {
+  // Get the directory containing the test file
+  const testDir = dirname(fromFileUrl(import.meta.url));
+  // Go up two levels to get to the project root (from tests/ to functions/)
+  return join(testDir, "..");
+}
+
+export async function initializeTestClient() {
+  const projectRoot = getProjectRoot();
+  const envPath = join(projectRoot, "tests", ".env.test");
+  
+  try {
+    const env = await Deno.readTextFile(envPath);
+    for (const line of env.split("\n")) {
+      const [key, value] = line.split("=");
+      if (key && value) {
+        Deno.env.set(key.trim(), value.trim());
+      }
+    }
+  } catch (error) {
+    console.error("Failed to load .env.test file:", error);
+    console.error("Attempted path:", envPath);
+    throw error;
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Missing required environment variables");
+  }
+
+  return createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false
+    }
+  });
+}
 
 // Test configuration
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
-const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 
 export const createTestClient = () => {
   if (!supabaseUrl) throw new Error('supabaseUrl is required.')
