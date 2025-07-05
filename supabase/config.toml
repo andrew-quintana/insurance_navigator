@@ -4,8 +4,8 @@ project_id = "insurance_navigator"
 [api]
 enabled = true
 port = 54321
-schemas = ["public", "storage", "graphql_public"]
-extra_search_path = ["extensions"]
+schemas = ["public", "storage", "graphql_public", "monitoring"]
+extra_search_path = ["extensions", "monitoring"]
 max_rows = 1000
 
 [db]
@@ -30,7 +30,7 @@ site_url = "http://localhost:3000"
 additional_redirect_urls = ["https://localhost:3000"]
 jwt_expiry = 3600
 enable_signup = true
-jwt_secret = "zNfav2GWycDdZIsQxJ5UogupJmcKHUkt3pV/LC87Dkk="
+jwt_secret = "oSQw+Zc0104XkkhH499o7I1c0vAwYL1zgWZ/OK++mHy7dKo6ZJkvuGbq5q32/6hWvYWWMWnrrJIaGWUSQaoGEA=="
 
 [auth.email]
 enable_signup = true

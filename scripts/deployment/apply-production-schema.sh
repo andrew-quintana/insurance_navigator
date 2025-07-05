@@ -1,61 +1,47 @@
 #!/bin/bash
 set -e
 
-# Check if required environment variables are set
-required_vars=(
-  "SUPABASE_SERVICE_ROLE_KEY"
-  "SUPABASE_DB_URL"
-)
+# Colors for output
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m'
 
-for var in "${required_vars[@]}"; do
-  if [ -z "${!var}" ]; then
-    echo "Error: Required environment variable $var is not set"
+echo "🔄 Starting database deployment process..."
+
+# Step 1: Link project if not already linked
+echo "Checking project link..."
+supabase link || {
+    echo -e "${RED}Failed to link project. Please run 'supabase login' first and try again.${NC}"
     exit 1
-  fi
-done
+}
 
-# Extract database password from SUPABASE_DB_URL
-DB_PASSWORD=$(echo "$SUPABASE_DB_URL" | sed -n 's/.*:\/\/postgres:\([^@]*\)@.*/\1/p')
-if [ -z "$DB_PASSWORD" ]; then
-  echo "Error: Could not extract database password from SUPABASE_DB_URL"
-  exit 1
-fi
+# Step 2: Create backup before migration
+echo "Creating pre-deployment backup..."
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR="backups/pre_deploy_${TIMESTAMP}"
+mkdir -p "$BACKUP_DIR"
 
-echo "🔍 Verifying database connection..."
-if ! PGPASSWORD=$DB_PASSWORD psql "$SUPABASE_DB_URL" -c '\conninfo'; then
-  echo "❌ Failed to connect to database"
-  exit 1
-fi
+supabase db dump -f "$BACKUP_DIR/pre_rollback.sql" || {
+    echo -e "${RED}Failed to create backup. Aborting deployment.${NC}"
+    exit 1
+}
 
-echo "📦 Applying initial schema migration..."
-if ! PGPASSWORD=$DB_PASSWORD psql "$SUPABASE_DB_URL" -f supabase/migrations/20240321000000_initial_schema.sql; then
-  echo "❌ Migration failed"
-  exit 1
-fi
+# Step 3: Apply migrations
+echo "Applying migrations..."
+supabase db push || {
+    echo -e "${RED}Migration failed. Rolling back...${NC}"
+    # Note: Manual intervention may be needed for rollback
+    echo "Backup available at: $BACKUP_DIR/pre_rollback.sql"
+    exit 1
+}
 
-echo "✅ Schema migration completed successfully"
+# Step 4: Verify database state
+echo "Verifying database state..."
+supabase db reset --dry-run || {
+    echo -e "${RED}Database state verification failed.${NC}"
+    echo "Please check the migration logs and backup at: $BACKUP_DIR/pre_rollback.sql"
+    exit 1
+}
 
-echo "🔒 Verifying RLS policies..."
-PGPASSWORD=$DB_PASSWORD psql "$SUPABASE_DB_URL" << 'EOF'
-SELECT tablename, policyname, permissive, roles, cmd, qual, with_check 
-FROM pg_policies 
-WHERE schemaname = 'public' 
-ORDER BY tablename, policyname;
-EOF
-
-echo "📊 Verifying table structures..."
-PGPASSWORD=$DB_PASSWORD psql "$SUPABASE_DB_URL" << 'EOF'
-\d+ public.users
-\d+ public.documents
-\d storage.buckets
-EOF
-
-echo "🗄️ Verifying storage bucket..."
-PGPASSWORD=$DB_PASSWORD psql "$SUPABASE_DB_URL" -c "SELECT * FROM storage.buckets WHERE id = 'documents';"
-
-# Disable pgaudit logging for MVP phase
-echo "Disabling audit logging for MVP phase..."
-PGPASSWORD=$DB_PASSWORD psql "$SUPABASE_DB_URL" -c "ALTER ROLE postgres RESET pgaudit.log;"
-PGPASSWORD=$DB_PASSWORD psql "$SUPABASE_DB_URL" -c "ALTER ROLE authenticator RESET pgaudit.log;"
-
-echo "✨ Database setup complete!" 
+echo -e "${GREEN}✅ Database deployment completed successfully!${NC}"
+echo "Backup location: $BACKUP_DIR/pre_rollback.sql" 

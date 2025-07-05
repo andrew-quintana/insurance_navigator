@@ -1,69 +1,106 @@
-# Edge Functions Tests
+# Testing the Document Processing Pipeline
+
+This directory contains tests for the document processing pipeline, including:
+- Document parsing with LlamaParse
+- Section-based chunking
+- Vector generation with OpenAI embeddings
 
 ## Setup
 
-1. Create a `.env.test` file in the `supabase/functions` directory with the following variables:
-
-```bash
+1. Create a `.env.test` file in the `supabase/functions` directory with the following content:
+```env
 SUPABASE_URL=http://localhost:54321
-SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
-LLAMA_CLOUD_API_KEY=<your-test-api-key>
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+OPENAI_API_KEY=your-openai-api-key
+LLAMA_CLOUD_API_KEY=your-llama-cloud-api-key
+
+# Test configuration
+TEST_USER_ID=test-user
+TEST_DOCUMENT_ID=test-doc-123
+TEST_STORAGE_BUCKET=documents
 ```
 
-You can get the service role key by running:
-```bash
-supabase status
-```
+2. Replace the placeholder values with your actual API keys and configuration.
 
 ## Running Tests
 
-Run the tests using:
-
 ```bash
-deno test --allow-env --allow-net --allow-read
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
 ```
 
 ## Test Structure
 
-The tests are organized as follows:
+The tests are organized into several files:
 
-1. **Document Processing Tests** (`document_processing_test.ts`)
-   - Tests document upload
-   - Tests document parsing
-   - Tests document chunking
-   - Tests vector storage
-   - Tests cleanup
+- `doc_processor.test.ts`: Tests for the document processing service
+- `chunking_service.test.ts`: Tests for the section-based chunking service
+- `vector_service.test.ts`: Tests for the vector generation service
+- `document_pipeline.test.ts`: End-to-end tests for the entire pipeline
 
-2. **Authentication Tests** (Coming soon)
-   - Will test service role authentication
-   - Will test user authentication
+Each test file focuses on a specific component of the pipeline and includes tests for:
+- Happy path scenarios
+- Error handling
+- Edge cases
 
-## Debugging
+## Test Data
 
-If you encounter any issues:
+The tests use sample documents and text content to verify the pipeline's functionality. The test data includes:
+- PDF documents with various sections
+- Text content with different structures
+- Invalid content for error handling tests
 
-1. Ensure Supabase is running locally:
-   ```bash
-   supabase start
-   ```
+## Database Schema
 
-2. Verify your environment variables are set correctly
+The tests assume the following database tables exist:
 
-3. Check that the RLS policies are properly configured:
-   ```bash
-   supabase db reset
-   ```
+### documents
+```sql
+create table documents (
+  id uuid primary key default uuid_generate_v4(),
+  user_id text not null,
+  filename text not null,
+  content_type text not null,
+  status text not null,
+  storage_path text not null,
+  created_at timestamp with time zone default now(),
+  updated_at timestamp with time zone default now()
+);
+```
 
-## Common Issues
+### document_chunks
+```sql
+create table document_chunks (
+  id uuid primary key default uuid_generate_v4(),
+  document_id uuid references documents(id),
+  content text not null,
+  metadata jsonb not null,
+  created_at timestamp with time zone default now()
+);
+```
 
-1. **RLS Policy Violations**
-   - Make sure you're using the service role client for operations that need elevated permissions
-   - Verify the RLS policies are correctly applied after running migrations
+### document_vectors
+```sql
+create table document_vectors (
+  id uuid primary key default uuid_generate_v4(),
+  document_id uuid references documents(id),
+  chunk_id uuid references document_chunks(id),
+  embedding vector(1536),
+  metadata jsonb not null,
+  created_at timestamp with time zone default now()
+);
+``` 
 
-2. **Authentication Issues**
-   - Ensure your service role key is correct
-   - Check that the Supabase URL is accessible
+## Storage Buckets
 
-3. **TypeScript/Deno Issues**
-   - Make sure you're using the correct import paths as configured in `deno.json`
-   - Run `deno cache --reload` if you're seeing stale type errors 
+The tests use the following storage paths:
+- `buckets/raw/`: Raw uploaded documents
+- `buckets/parsed/`: Parsed document content
+
+Make sure these paths exist in your storage bucket. 

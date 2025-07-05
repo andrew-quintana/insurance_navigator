@@ -1,72 +1,77 @@
-# Insurance Navigator - V2 Upload System
+# Archived Documentation
 
-🚀 **Phase 4 Complete**: LlamaParse Integration with Database Reorganization
+This directory contains historical documentation that has been archived from the main docs directory and its subdirectories. These files are kept for historical reference but do not reflect the current state of the system.
 
-## 📊 **Project Status**
+## Directory Structure
 
-- ✅ **Phase 1**: Infrastructure Audit & Git Setup
-- ✅ **Phase 2**: V2 Database Schema & Edge Functions  
-- ✅ **Phase 3**: Edge Functions Development & Storage Integration
-- ✅ **Phase 4**: LlamaParse Integration & Database Reorganization
-- 🔄 **Phase 5**: Vector Processing Pipeline (Next)
-- ⏸️ **Phase 6**: Frontend Integration 
-- ⏸️ **Phase 7**: Testing & Validation
-- ⏸️ **Phase 8**: Production Deployment
+### `/archive/database/`
+Database schema evolution and migration history:
+- Migration guides and summaries
+- Schema refactoring documentation
+- Pre-migration validation results
+- Database reorganization documentation
 
-**Progress**: 50% Complete (4/8 phases)
+### `/archive/deployment/`
+Historical deployment documentation:
+- Phase completion reports
+- Architecture migration summaries
+- Old deployment guides
+- Historical troubleshooting guides
 
-## 🏗️ **Architecture Overview**
+### `/archive/security/`
+Historical security implementation:
+- Function security implementation summaries
+- Historical RLS implementation reports
+- Old security configurations
 
-### **Database Structure (Reorganized)**
-```
-db/
-├── core/                   # Core PostgreSQL (existing structure)
-│   ├── migrations/         # Schema migrations  
-│   ├── models/            # SQLAlchemy models
-│   ├── services/          # Database services
-│   └── scripts/           # Database scripts
-│
-├── supabase/              # Supabase-specific functionality
-│   ├── functions/         # Edge Functions
-│   │   ├── _shared/       # LlamaParse client & utilities
-│   │   ├── upload-handler/
-│   │   ├── processing-webhook/
-│   │   └── progress-tracker/
-│   ├── client/            # TypeScript client library
-│   └── config.toml        # Supabase configuration
-│
-└── config.py             # Shared database configuration
-```
+### `/archive/agents/`
+Agent system evolution:
+- Agent reorganization summaries
+- Historical agent architectures
+- Old prompt management approaches
 
-### **V2 Upload Pipeline**
-```
-User Upload → Supabase Storage → LlamaParse API → Webhook Processing → 
-Vector Embeddings → Search Integration → Real-time Progress Updates
-```
+### `/archive/` (root)
+General project evolution:
+- Phase documentation
+- Integration guides
+- Analysis reports
+- Historical checklists
 
-## 🎯 **Phase 4 Achievements**
+## Contents
 
-### **LlamaParse Integration**
-- ✅ API client with webhook configuration
-- ✅ Automatic document type detection
-- ✅ Webhook processing with content extraction
-- ✅ Fallback to direct processing
-- ✅ Real-time progress tracking
+### Phase Documentation
+- `phase1_infrastructure_audit_report.md`
+- `phase2_database_schema_finalization.md`
+- `phase2_summary.md`
+- `phase3_edge_functions_development.md`
+- `phase3-4-testing-summary.md`
+- `phase4_llamaparse_integration_complete.md`
+- `phase5-verification-report.md`
+- `phase6-completion-report.md`
 
-### **Database Reorganization** 
-- ✅ Moved Supabase code to `db/supabase/`
-- ✅ Maintained clear separation of concerns
-- ✅ Improved future flexibility for platform changes
-- ✅ Better code organization and maintainability
+### Integration Guides (Historical)
+- `supabase_storage_integration.md`
+- `vector_migration_guide.md`
+- `fastapi_integration_guide.md`
+- `supabase_integration_guide.md`
 
-## 🚀 **Ready for Phase 5: Vector Processing Pipeline**
+### Analysis & Reports
+- `RCA_USER_UPLOAD_FAILURE.md`
+- `USER_UPLOAD_FIX_GUIDE.md`
+- `FUNCTIONALITY_VALIDATION_REPORT.md`
+- `failure_mode_analysis.md`
 
-**Next Steps:**
-1. OpenAI embeddings integration
-2. Vector chunking and storage
-3. Encrypted vector processing
-4. Search optimization
+### Checklists & Steps (Completed)
+- `edge-functions-deployment-checklist.md`
+- `immediate-deployment-steps.md`
+- `complete-phase-checklist.md`
+- `comprehensive-progress-checklist.md`
 
----
+## Note
+These documents are maintained for:
+1. Historical context of the project's evolution
+2. Reference for similar future refactoring efforts
+3. Documentation of past technical decisions and their rationale
+4. Understanding the progression of system architecture and design
 
-For detailed documentation, see `docs/phase4_llamaparse_integration_complete.md` 
+Current documentation should be referenced from the main `/docs` directory. 

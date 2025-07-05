@@ -3,16 +3,29 @@
   "version": "1.0.0",
   "description": "Document processing system for insurance documents",
   "scripts": {
-    "test:job-processor": "ts-node scripts/test_job_processor.ts",
-    "verify-storage": "ts-node scripts/deployment/verify_storage.ts"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:doc-processor": "jest tests/doc_processor.test.ts",
+    "test:env": "jest config/environment/__tests__/environment.test.ts",
+    "test:sync": "jest scripts/__tests__/sync-environments.test.ts",
+    "test:upload-handler": "jest tests/upload_handler.test.ts",
+    "sync-env": "ts-node scripts/sync-environments.ts",
+    "verify-storage": "ts-node scripts/deployment/verify_storage.ts",
+    "verify-pipeline": "ts-node scripts/document_processing/verify-pipeline.ts"
   },
   "dependencies": {
+    "@langchain/openai": "^0.5.16",
     "@supabase/supabase-js": "^2.39.0",
-    "jsonwebtoken": "^9.0.2"
+    "dotenv": "^16.3.1",
+    "jsonwebtoken": "^9.0.2",
+    "langchain": "^0.3.29"
   },
   "devDependencies": {
-    "@types/node": "^18.0.0",
-    "ts-node": "^10.9.1",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.0",
     "typescript": "^5.0.0"
   }
 }

@@ -7,18 +7,15 @@
  * 3. Stores vectors in the database
  */
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { serve } from 'https://deno.land/std@0.208.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { OpenAIEmbeddings } from '../_shared/embeddings.ts'
-
-// Configuration
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? ''
+import { edgeConfig } from "../_shared/environment.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
 // Initialize clients
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-const embeddings = new OpenAIEmbeddings(OPENAI_API_KEY)
+const supabase = createClient(edgeConfig.supabaseUrl, edgeConfig.supabaseKey)
+const embeddings = new OpenAIEmbeddings(edgeConfig.openaiApiKey)
 
 interface VectorRequest {
   documentId: string
@@ -97,16 +94,47 @@ async function handleVectorRequest(req: Request) {
   }
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
-      }
-    })
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    // Health check endpoint
+    if (req.url.endsWith("/health")) {
+      return new Response(
+        JSON.stringify({ status: "healthy", timestamp: new Date().toISOString() }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    }
+
+    // Environment test endpoint
+    if (req.url.endsWith("/test-env")) {
+      return new Response(
+        JSON.stringify({ 
+          environment: Deno.env.get('ENV_LEVEL'),
+          config: {
+            enableVectorProcessing: edgeConfig.enableVectorProcessing,
+            enableRegulatoryProcessing: edgeConfig.enableRegulatoryProcessing,
+            logLevel: edgeConfig.logLevel
+          }
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
   }
 
   return handleVectorRequest(req)
+  } catch (error) {
+    console.error('Error:', error.message);
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
+  }
 }) 

@@ -14,12 +14,25 @@ project_root = str(Path(__file__).parent.parent)
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-# Load test environment variables
-env_test_path = os.path.join(project_root, '.env.test')
-if os.path.exists(env_test_path):
-    load_dotenv(env_test_path, override=True)
-else:
-    print("Warning: .env.test file not found. Using default test configuration.")
+def load_environment():
+    """Load environment variables based on test environment."""
+    # Priority order: .env.test > .env.local > .env
+    env_files = [
+        os.path.join(project_root, '.env.test'),
+        os.path.join(project_root, '.env.local'),
+        os.path.join(project_root, '.env')
+    ]
+    
+    for env_file in env_files:
+        if os.path.exists(env_file):
+            load_dotenv(env_file, override=True)
+            print(f"Loaded environment from {env_file}")
+            break
+    else:
+        print("Warning: No environment file found. Using default test configuration.")
+
+# Load environment variables
+load_environment()
 
 # Import after environment is loaded
 from db.services.user_service import UserService, get_user_service
@@ -195,9 +208,20 @@ def setup_test_env() -> None:
     
     # Store original environment variables
     original_env = {key: os.environ.get(key) for key in test_env.keys()}
+    original_jwt_secret = os.environ.get("SUPABASE_JWT_SECRET")  # Store original JWT secret
     
-    # Update environment with test values, preserving existing JWT secret
+    # Update environment with test values
     os.environ.update(test_env)
+    
+    # Ensure JWT secret is set and consistent
+    if not os.environ.get("SUPABASE_JWT_SECRET"):
+        if os.environ.get("JWT_SECRET"):
+            os.environ["SUPABASE_JWT_SECRET"] = os.environ["JWT_SECRET"]
+        else:
+            # Generate a new JWT secret if none exists
+            jwt_secret = os.environ.get("SUPABASE_JWT_SECRET") or os.urandom(32).hex()
+            os.environ["SUPABASE_JWT_SECRET"] = jwt_secret
+            os.environ["JWT_SECRET"] = jwt_secret
     
     yield
     
@@ -207,6 +231,12 @@ def setup_test_env() -> None:
             os.environ.pop(key, None)
         else:
             os.environ[key] = value
+    
+    # Restore original JWT secret
+    if original_jwt_secret:
+        os.environ["SUPABASE_JWT_SECRET"] = original_jwt_secret
+    else:
+        os.environ.pop("SUPABASE_JWT_SECRET", None)
 
 @pytest.fixture(scope="session")
 def test_config() -> TestConfig:

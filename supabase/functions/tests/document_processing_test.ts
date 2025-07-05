@@ -1,7 +1,7 @@
 // @ts-ignore: Deno types
-import { assertEquals } from "https://deno.land/std@0.217.0/testing/asserts.ts";
+import { assertEquals, assertExists } from "std/testing/asserts.ts";
 // @ts-ignore: Supabase types
-import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 // @ts-ignore: Deno types
 import { load } from "https://deno.land/std@0.217.0/dotenv/mod.ts";
 // @ts-ignore: Deno types
@@ -9,9 +9,10 @@ import { join } from "https://deno.land/std@0.217.0/path/mod.ts";
 // @ts-ignore: Local types
 import { ProcessingLog } from "../doc-processor/types.ts";
 // @ts-ignore: Local helpers
-import { getProjectRoot, initializeTestClient } from "./test_helpers.ts";
-import { ProcessingMetadata, ProcessingResponse } from "../doc-processor/types.ts";
-import { ProcessingResult } from "../doc-processor/types.ts";
+import { getProjectRoot, loadEnvironment, initializeTestClient, getEdgeFunctionLogs } from "./test_helpers.ts";
+import { ProcessingMetadata, ProcessingResponse, ProcessingResult } from "../doc-processor/types.ts";
+import { edgeConfig } from "../_shared/environment.ts";
+import { createServiceRoleJWT } from "../_shared/jwt.ts";
 
 interface TestDocument {
   id: string;
@@ -24,9 +25,31 @@ interface TestDocument {
   document_chunks?: { count: number }[];
 }
 
-// Load environment variables from project root .env.test
-const projectRoot = getProjectRoot();
-await load({ export: true, envPath: join(projectRoot, '.env.test') });
+// Load environment variables
+async function loadTestEnvironment() {
+  const env = Deno.env.get("ENV") || "test";
+  const envFiles = [
+    `.env.${env}.local`,
+    `.env.${env}`,
+    '.env.local',
+    '.env'
+  ];
+
+  for (const file of envFiles) {
+    try {
+      await load({ export: true, envPath: file });
+      console.log(`Loading environment from ${file}`);
+    } catch (e) {
+      // Ignore missing files
+      if (!(e instanceof Deno.errors.NotFound)) {
+        console.error(`Error loading ${file}:`, e);
+      }
+    }
+  }
+}
+
+// Initialize before running tests
+await loadTestEnvironment();
 
 // Set required environment variables for testing
 const requiredEnvVars: Record<string, string> = {
@@ -148,20 +171,20 @@ async function setupTestEnv() {
 // Helper function to read test PDF file
 async function readTestPDF(): Promise<Uint8Array> {
   const projectRoot = getProjectRoot();
-  const pdfPath = join(projectRoot, "tests", "test.pdf");
+  const pdfPath = join(projectRoot, 'supabase', 'functions', 'tests', 'test.pdf');
   
   try {
     const fileInfo = await Deno.stat(pdfPath);
     if (!fileInfo.isFile) {
-      throw new Error(`Test PDF not found at ${pdfPath}`);
+      throw new Error('Test PDF path exists but is not a file');
     }
     return await Deno.readFile(pdfPath);
-  } catch (error: unknown) {
-    console.error("Failed to read test PDF file:");
-    console.error("- Error:", error instanceof Error ? error.message : String(error));
-    console.error("- Project root:", projectRoot);
-    console.error("- Attempted PDF path:", pdfPath);
-    console.error("Please ensure test.pdf exists in the tests directory");
+  } catch (error) {
+    console.error('Failed to read test PDF file:');
+    console.error(`- ${error}`);
+    console.error(`- Project root: ${projectRoot}`);
+    console.error(`- Attempted PDF path: ${pdfPath}`);
+    console.error('Please ensure test.pdf exists in the tests directory');
     throw error;
   }
 }
@@ -186,44 +209,65 @@ async function verifyDocumentStorage(client: SupabaseClient, storagePath: string
   }
 }
 
-// Helper function to create test document
+// Helper function to create a test user
+async function createTestUser(client: SupabaseClient): Promise<string> {
+  const userId = crypto.randomUUID();
+  const { error } = await client
+    .from('users')
+    .insert({
+      id: userId,
+      email: `test-${userId}@example.com`,
+      name: `Test User ${userId}`
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  return userId;
+}
+
+// Helper function to create a test document
 async function createTestDocument(client: SupabaseClient, userId: string): Promise<TestDocument> {
-  const pdfData = await readTestPDF();
-  const filename = "test.pdf";
-  const storagePath = `${userId}/${filename}`;
+  // Create a simple test PDF file
+  const testContent = new Uint8Array([37, 80, 68, 70, 45, 49, 46, 55, 10]); // %PDF-1.7 header
+  const filename = 'test-document.pdf';
+  const storagePath = `test-documents/${crypto.randomUUID()}.pdf`;
 
   // Upload file to storage
   const { error: uploadError } = await client.storage
-    .from("documents")
-    .upload(storagePath, pdfData, {
-      contentType: "application/pdf",
+    .from('documents')
+    .upload(storagePath, testContent, {
+      contentType: 'application/pdf',
       upsert: true
     });
 
   if (uploadError) {
-    console.error("Failed to upload test document:", uploadError);
+    console.error('Failed to upload test document:', uploadError);
     throw uploadError;
   }
 
   // Create document record
-  const { data: doc, error: insertError } = await client
-    .from("documents")
-    .insert({
-      user_id: userId,
-      filename,
-      content_type: "application/pdf",
-      status: "processing",
-      storage_path: storagePath
-    })
-    .select()
-    .single();
+  const testDoc = {
+    id: crypto.randomUUID(), // Document ID should be unique, not match user ID
+    user_id: userId,
+    filename: filename,
+    content_type: 'application/pdf',
+    status: 'processing',
+    storage_path: storagePath
+  };
+
+  const { error: insertError } = await client
+    .from('documents')
+    .insert(testDoc);
 
   if (insertError) {
-    console.error("Failed to create document record:", insertError);
+    // Clean up uploaded file if document creation fails
+    await client.storage.from('documents').remove([storagePath]);
     throw insertError;
   }
 
-  return doc as TestDocument;
+  return testDoc;
 }
 
 // Helper function to cleanup test data
@@ -246,6 +290,101 @@ async function cleanupTestData(client: SupabaseClient, userId: string) {
     .eq('id', userId);
   
   if (userError) console.error('Error cleaning up test user:', userError);
+}
+
+// Helper function to verify processing logs
+async function verifyProcessingLogs(client: SupabaseClient, document_id: string) {
+  const logs = await getProcessingLogs(client, document_id);
+  if (!logs || logs.length === 0) {
+    throw new Error('No processing logs found');
+  }
+  
+  // Verify we have logs for each stage
+  const expectedStages = [
+    'metadata_fetch',
+    'status_update',
+    'document_download',
+    'chunk_creation',
+    'chunk_storage',
+    'vector_generation',
+    'completion_update',
+    'processing_complete'
+  ];
+
+  // Check that we have all expected stages
+  const stages = logs.map(log => log.stage);
+  for (const expectedStage of expectedStages) {
+    assertEquals(
+      stages.includes(expectedStage),
+      true,
+      `Missing log for stage: ${expectedStage}`
+    );
+  }
+
+  // Verify each log has required metadata
+  for (const log of logs) {
+    // Basic log structure
+    assertExists(log.id, 'Log should have an ID');
+    assertExists(log.document_id, 'Log should have a document_id');
+    assertExists(log.stage, 'Log should have a stage');
+    assertExists(log.status, 'Log should have a status');
+    assertExists(log.metadata, 'Log should have metadata');
+
+    // Metadata fields
+    const metadata = log.metadata;
+    assertExists(metadata.timestamp, 'Metadata should have timestamp');
+    assertExists(metadata.memory_usage, 'Metadata should have memory_usage');
+    assertExists(metadata.duration_ms, 'Metadata should have duration_ms');
+    assertExists(metadata.stage_number, 'Metadata should have stage_number');
+    assertExists(metadata.total_stages_completed, 'Metadata should have total_stages_completed');
+
+    // Stage-specific metadata
+    switch (log.stage) {
+      case 'metadata_fetch':
+        assertExists(metadata.document_type, 'Metadata fetch should have document_type');
+        assertExists(metadata.filename, 'Metadata fetch should have filename');
+        break;
+      case 'document_download':
+        assertExists(metadata.size, 'Document download should have size');
+        assertExists(metadata.content_type, 'Document download should have content_type');
+        break;
+      case 'chunk_creation':
+        assertExists(metadata.chunk_count, 'Chunk creation should have chunk_count');
+        assertExists(metadata.avg_chunk_size, 'Chunk creation should have avg_chunk_size');
+        break;
+      case 'chunk_storage':
+        assertExists(metadata.chunks_stored, 'Chunk storage should have chunks_stored');
+        break;
+      case 'vector_generation':
+        assertExists(metadata.vectors_generated, 'Vector generation should have vectors_generated');
+        break;
+      case 'processing_complete':
+        assertExists(metadata.total_chunks, 'Processing complete should have total_chunks');
+        assertExists(metadata.total_vectors, 'Processing complete should have total_vectors');
+        assertExists(metadata.processing_time_ms, 'Processing complete should have processing_time_ms');
+        assertExists(metadata.stage_timings, 'Processing complete should have stage_timings');
+        break;
+    }
+
+    // Verify timing data
+    if (metadata.duration_ms !== undefined) {
+      assertEquals(
+        typeof metadata.duration_ms,
+        'number',
+        'duration_ms should be a number'
+      );
+      assertEquals(
+        metadata.duration_ms >= 0,
+        true,
+        'duration_ms should be non-negative'
+      );
+    }
+  }
+
+  // Verify processing completion
+  const completionLog = logs.find(log => log.stage === 'processing_complete');
+  assertExists(completionLog, 'Should have a processing_complete log');
+  assertEquals(completionLog.status, 'success', 'Final status should be success');
 }
 
 // Helper function to get processing logs
@@ -280,124 +419,144 @@ function displayProcessingLogs(logs: ProcessingLog[]) {
   }
 }
 
-// Helper function to wait for document status
-async function waitForDocumentStatus(
-  client: SupabaseClient,
-  docId: string,
-  expectedStatus: string,
-  maxAttempts = 30
-): Promise<TestDocument> {
-  let attempts = 0;
-  const delay = 2000; // 2 seconds between attempts
-
-  while (attempts < maxAttempts) {
-    attempts++;
-    
-    // Get current document status
-    const { data: doc, error: docError } = await client
-      .from('documents')
-      .select('*, document_chunks(count)')
-      .eq('id', docId)
-      .single();
-
-    if (docError) {
-      console.error(`Failed to get document status (attempt ${attempts}):`, docError);
-      throw docError;
-    }
-
-    // Get processing logs
-    const logs = await getProcessingLogs(client, docId);
-    
-    // Display detailed status
-    console.log(`\nAttempt ${attempts}/${maxAttempts}`);
-    console.log('Current Status:', doc.status);
-    console.log('Expected Status:', expectedStatus);
-    console.log('Document Chunks:', doc.document_chunks?.[0]?.count ?? 0);
-    console.log('Storage Path:', doc.storage_path);
-    if (doc.error_message) {
-      console.log('Error Message:', doc.error_message);
-    }
-
-    // Display processing logs
-    console.log('\nProcessing Logs:');
-    console.log('----------------');
-    for (const log of logs) {
-      console.log(`[${new Date(log.created_at).toISOString()}] ${log.stage} - ${log.status}`);
-      console.log('  Metadata:', JSON.stringify(log.metadata, null, 2));
-      if (log.error_message) {
-        console.log('  Error:', log.error_message);
-      }
-      console.log('----------------');
-    }
-
-    // Check if document has reached expected status
-    if (doc.status === expectedStatus) {
-      return doc;
-    }
-
-    // Check for error status
-    if (doc.status === 'error') {
-      console.error('Document processing failed:', doc.error_message);
-      throw new Error(`Document processing failed: ${doc.error_message}`);
-    }
-
-    // Wait before next attempt
-    await new Promise(resolve => setTimeout(resolve, delay));
-  }
-
-  throw new Error(`Document status did not update to ${expectedStatus} after ${maxAttempts} attempts`);
-}
-
 // Helper function to verify document chunks
-async function verifyDocumentChunks(client: SupabaseClient, docId: string): Promise<boolean> {
-  const { data: chunks, error: chunksError } = await client
+async function verifyDocumentChunks(client: SupabaseClient, document_id: string): Promise<boolean> {
+  const { data: chunks, error } = await client
     .from('document_chunks')
     .select('*')
-    .eq('document_id', docId)
-    .order('chunk_index');
+    .eq('document_id', document_id)
+    .order('chunk_index', { ascending: true });
 
-  if (chunksError) throw chunksError;
-  
-  // Verify we have chunks
+  if (error) {
+    console.error('Failed to fetch chunks:', error);
+    throw error;
+  }
+
   if (!chunks || chunks.length === 0) {
     throw new Error('No chunks found for document');
   }
 
-  // Verify chunk properties
+  // Verify each chunk has required fields
   chunks.forEach((chunk, index) => {
-    assertEquals(chunk.id, index, 'Chunk indices should be sequential');
-    assertEquals(chunk.content, 'Test content', 'Chunk content should be "Test content"');
+    assertExists(chunk.id, 'Chunk should have an ID');
+    assertExists(chunk.document_id, 'Chunk should have a document_id');
+    assertExists(chunk.content, 'Chunk should have content');
+    assertExists(chunk.chunk_index, 'Chunk should have an index');
+    assertEquals(chunk.chunk_index, index, 'Chunk indices should be sequential');
   });
 
   return true;
 }
 
 // Helper function to verify document vectors
-async function verifyDocumentVectors(client: SupabaseClient, documentId: string): Promise<void> {
-  const { data: chunks } = await client
+async function verifyDocumentVectors(client: SupabaseClient, document_id: string): Promise<boolean> {
+  // First get all chunks for the document
+  const { data: chunks, error: chunksError } = await client
     .from('document_chunks')
     .select('id')
-    .eq('document_id', documentId);
+    .eq('document_id', document_id);
+
+  if (chunksError) {
+    console.error('Failed to fetch chunks:', chunksError);
+    throw chunksError;
+  }
 
   if (!chunks || chunks.length === 0) {
-    throw new Error('No chunks found for vector verification');
+    throw new Error('No chunks found for document');
   }
 
-  const chunkIds = chunks.map(c => c.id);
-  const { data: vectors, error } = await client
-    .from('document_vectors')
+  // Then verify vectors exist for each chunk
+  for (const chunk of chunks) {
+    const { data: vectors, error: vectorError } = await client
+      .from('document_vectors')
+      .select('*')
+      .eq('chunk_id', chunk.id);
+
+    if (vectorError) {
+      console.error('Failed to fetch vectors:', vectorError);
+      throw vectorError;
+    }
+
+    if (!vectors || vectors.length === 0) {
+      throw new Error(`No vectors found for chunk ${chunk.id}`);
+    }
+
+    // Verify each vector has required fields and dimensions
+    vectors.forEach(vector => {
+      assertExists(vector.id, 'Vector should have an ID');
+      assertExists(vector.chunk_id, 'Vector should have a chunk_id');
+      assertExists(vector.vector_data, 'Vector should have vector_data');
+      assertEquals(vector.vector_data.length, 1536, 'Vector should have 1536 dimensions (text-embedding-3-small)');
+    });
+  }
+
+  return true;
+}
+
+// Helper function to wait for document status
+async function waitForDocumentStatus(client: SupabaseClient, documentId: string, targetStatus: string, maxAttempts = 30): Promise<void> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const { data: document } = await client
+      .from('documents')
+      .select('*')
+      .eq('id', documentId)
+      .single();
+
+    if (document?.status === targetStatus) {
+      return;
+    }
+
+    // Check edge function logs
+    const logs = await getEdgeFunctionLogs(client, 'doc-processor');
+    if (logs.length > 0) {
+      console.log('Edge Function Logs:');
+      logs.forEach(log => {
+        console.log(`[${log.status}] ${log.function_name} - ${log.execution_time_ms}ms`);
+        if (log.metadata) {
+          console.log('Metadata:', log.metadata);
+        }
+        if (log.error_message) {
+          console.log('Error:', log.error_message);
+        }
+      });
+    }
+
+    console.log(`Current processing stage: ${document?.status || 'unknown'}`);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+
+  throw new Error(`Timeout waiting for document status to become ${targetStatus}`);
+}
+
+// Helper function to display edge function logs
+async function displayEdgeFunctionLogs(client: SupabaseClient, functionName: string) {
+  const { data: logs, error } = await client
+    .schema('monitoring')
+    .from('edge_function_logs')
     .select('*')
-    .in('chunk_id', chunkIds);
+    .eq('function_name', functionName)
+    .order('created_at', { ascending: true });
 
   if (error) {
-    throw new Error(`Failed to verify vectors: ${error.message}`);
+    console.error('Failed to fetch edge function logs:', error);
+    return;
   }
 
-  if (!vectors) {
-    throw new Error('No vectors found');
+  console.log('\nEdge Function Logs:');
+  console.log('===================');
+  for (const log of logs) {
+    console.log(`[${new Date(log.created_at).toISOString()}] ${log.status.toUpperCase()}`);
+    console.log(`Request ID: ${log.request_id}`);
+    console.log(`Execution Time: ${log.execution_time_ms}ms`);
+    console.log(`Memory Usage: ${log.memory_usage_mb.toFixed(2)}MB`);
+    if (log.error_message) {
+      console.log(`Error: ${log.error_message}`);
+    }
+    if (log.metadata) {
+      console.log('Metadata:', JSON.stringify(log.metadata, null, 2));
+    }
+    console.log('-------------------');
   }
-
-  assertEquals(vectors.length > 0, true, 'Should have at least one vector embedding');
 }
 
 // Test Supabase client setup and connection
@@ -414,76 +573,124 @@ Deno.test('Test Supabase Client Setup', async () => {
 });
 
 // Test document upload and initial processing
-Deno.test('Test Document Upload Flow', async () => {
-  const { client, userId } = await setupTestEnv();
-  if (!userId) throw new Error('Failed to create test user');
-  
+Deno.test("Document Upload Flow", async (t) => {
+  const jwt = await createServiceRoleJWT();
+  const client = createClient(
+    edgeConfig.supabaseUrl,
+    edgeConfig.supabaseKey,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false
+      },
+      global: {
+        headers: {
+          Authorization: `Bearer ${jwt}`
+        }
+      }
+    }
+  );
+  let userId: string | undefined;
+  let testDoc: TestDocument | undefined;
+
   try {
-    // Upload test document
-    const testDoc = await createTestDocument(client, userId);
-    assertEquals(testDoc.id, userId, 'Document ID should match user ID');
-    assertEquals(testDoc.status, 'processing', 'Initial status should be processing');
+    // Create test user
+    userId = await createTestUser(client);
+
+    // Create test document
+    testDoc = await createTestDocument(client, userId);
+
+    // Verify document was created with correct user_id
+    assertEquals(testDoc.user_id, userId, 'Document should be associated with the correct user');
+    assertEquals(testDoc.status, 'processing', 'Document should be in processing state');
+    assertExists(testDoc.storage_path, 'Document should have a storage path');
+
+  } catch (error) {
+    console.error('Test failed:', error);
+    throw error;
   } finally {
-    await cleanupTestData(client, userId);
+    // Cleanup
+    if (testDoc?.id) {
+      await client.from('documents').delete().eq('id', testDoc.id);
+    }
+    if (userId) {
+      await client.from('users').delete().eq('id', userId);
+    }
   }
 });
 
 // Test document parsing with LlamaParse
-Deno.test('Test Document Parsing Stage', async () => {
-  const { userId } = await setupTestEnv();
-  if (!userId) throw new Error('Failed to create test user');
-  
+Deno.test("Test Document Parsing Stage", async () => {
   // Use service role client for all operations
-  const serviceClient = getServiceRoleClient();
+  const client = getServiceRoleClient();
   
   try {
-    console.log('Creating test document...');
-    const testDoc = await createTestDocument(serviceClient, userId);
-    console.log('Test document created:', testDoc.id);
+    console.log("Creating test document...");
+    const testDoc = await createTestDocument(client, "test-user-" + Math.random().toString(36).substring(7));
+    console.log("Test document created:", testDoc.id);
 
-    // Wait for document to be processed
-    console.log('Waiting for document processing...');
-    const processedDoc = await waitForDocumentStatus(serviceClient, testDoc.id, 'completed');
+    // Create test PDF content
+    const testContent = new Blob(["Test PDF content"], { type: "application/pdf" });
     
-    // Verify document was processed successfully
-    console.log('Verifying document processing...');
-    assertEquals(processedDoc.status, 'completed', 'Document should be marked as completed');
-    assertEquals(processedDoc.storage_path, userId + '/test.pdf', 'Document storage path should match');
+    // Upload to raw directory
+    const rawPath = `buckets/raw/${testDoc.storage_path}`;
+    await client.storage
+      .from("documents")
+      .upload(rawPath, testContent, {
+        contentType: "application/pdf",
+        upsert: true
+      });
+    console.log("Test file uploaded to:", rawPath);
     
-    // Display processing logs for debugging
-    const logs = await getProcessingLogs(serviceClient, testDoc.id);
+    // Call doc-processor function
+    const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/doc-processor`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        documentId: testDoc.id
+      })
+    });
+
+    assertEquals(response.status, 200, "Doc processor should return 200");
+    const result: ProcessingResult = await response.json();
+    assertEquals(result.success, true, "Processing should succeed");
+    assertEquals(result.document_id, testDoc.id, "Document ID should match");
+    assertEquals(result.status, "parsed", "Status should be parsed");
+    assertExists(result.metadata, "Metadata should exist");
+    
+    // Verify document was processed
+    const processedDoc = await waitForDocumentStatus(client, testDoc.id, "parsed");
+    assertEquals(processedDoc.status, "parsed", "Document should be marked as parsed");
+    
+    // Verify storage paths
+    const parsedPath = `buckets/parsed/${testDoc.storage_path}`;
+    const { data: parsedContent } = await client.storage
+      .from("documents")
+      .download(parsedPath);
+    assertExists(parsedContent, "Parsed content should exist");
+
+    // Display processing logs
+    const logs = await getProcessingLogs(client, testDoc.id);
     displayProcessingLogs(logs);
-    
-    // Verify document chunks were created
-    console.log('Verifying document chunks...');
-    const hasChunks = await verifyDocumentChunks(serviceClient, testDoc.id);
-    assertEquals(hasChunks, true, 'Document should have chunks');
-    
-    // Verify vectors were created
-    console.log('Verifying document vectors...');
-    await verifyDocumentVectors(serviceClient, testDoc.id);
-    
-    console.log('Test completed successfully');
-  } catch (error: unknown) {
-    console.error('Test failed with error:', error);
-    // Display detailed error information
-    if (error instanceof Error) {
-      const supabaseError = error as { error?: { details?: string; message?: string; code?: string } };
-      if (supabaseError.error?.details) {
-        console.error('Error details:', supabaseError.error.details);
-      }
-      if (supabaseError.error?.message) {
-        console.error('Error message:', supabaseError.error.message);
-      }
-      if (supabaseError.error?.code) {
-        console.error('Error code:', supabaseError.error.code);
-      }
-    }
+
+    console.log("Test completed successfully");
+
+  } catch (error) {
+    console.error("Test failed:", error);
     throw error;
   } finally {
-    // Clean up test data
-    console.log('Cleaning up test data...');
-    await cleanupTestData(serviceClient, userId);
+    // Cleanup
+    if (testDoc?.id) {
+      await client.from("documents").delete().eq("id", testDoc.id);
+      await client.storage.from("documents").remove([
+        `buckets/raw/${testDoc.storage_path}`,
+        `buckets/parsed/${testDoc.storage_path}`
+      ]);
+    }
   }
 });
 
@@ -590,10 +797,11 @@ Deno.test('Test Storage Cleanup', async () => {
 
 // Test complete document processing pipeline
 Deno.test('Test Complete Document Processing Pipeline', async () => {
-  const client = getServiceRoleClient();
-  const userId = uuidv4(); // Generate a valid UUID for the user
-
-  let testDoc: TestDocument | null = null;
+  // Initialize test environment and client
+  await loadEnvironment();
+  const client = await initializeTestClient();
+  const userId = crypto.randomUUID();
+  let testDoc = null;
 
   try {
     console.log('Starting complete pipeline test...');
@@ -613,7 +821,7 @@ Deno.test('Test Complete Document Processing Pipeline', async () => {
       throw new Error(`Failed to create test user: ${userError.message}`);
     }
 
-    // 1. Create test document
+    // Create test document
     console.log('Creating test document...');
     const { data: doc, error: createError } = await client
       .from('documents')
@@ -631,10 +839,11 @@ Deno.test('Test Complete Document Processing Pipeline', async () => {
       throw new Error(`Failed to create test document: ${createError?.message}`);
     }
 
-    testDoc = doc as TestDocument;
-    assertEquals(testDoc.id, userId, 'Document ID should match user ID');
-    
-    // 2. Upload real PDF file
+    testDoc = doc;
+    assertExists(testDoc.id, 'Document should have an ID');
+    assertEquals(testDoc.user_id, userId, 'Document should be associated with the correct user');
+
+    // Upload test PDF
     console.log('Uploading test PDF...');
     const testPdfContent = await readTestPDF();
     const { error: uploadError } = await client
@@ -645,24 +854,22 @@ Deno.test('Test Complete Document Processing Pipeline', async () => {
         duplex: 'simplex',
         upsert: true
       });
-    
+
     if (uploadError) {
       console.error('Upload error:', uploadError);
       throw uploadError;
     }
 
-    // 3. Call the Edge Function directly
+    // Call the Edge Function
     console.log('Calling document processor...');
     const response = await fetch('http://127.0.0.1:54321/functions/v1/doc-processor', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.p2fuVDatv5iaDizrYVeg2Gx_U1utFdpwLHwkiZfsRxs`,
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        document_id: testDoc.id,
-        storage_path: testDoc.storage_path,
-        content_type: testDoc.content_type
+        document_id: testDoc.id
       })
     });
 
@@ -671,27 +878,31 @@ Deno.test('Test Complete Document Processing Pipeline', async () => {
       throw new Error(`Failed to call document processor: ${error}`);
     }
 
-    // 4. Wait for document to be processed
+    // Wait for document processing
     console.log('Waiting for document processing...');
     const processedDoc = await waitForDocumentStatus(client, testDoc.id, 'completed', 30);
     assertEquals(processedDoc.status, 'completed', 'Document should be processed');
 
-    // 5. Verify chunks were created
-    console.log('Verifying document chunks...');
+    // Display edge function logs
+    console.log('Fetching edge function logs...');
+    await displayEdgeFunctionLogs(client, 'doc-processor');
+
+    // Verify processing results
+    console.log('Verifying processing results...');
+    await verifyProcessingLogs(client, testDoc.id);
     await verifyDocumentChunks(client, testDoc.id);
-
-    // 6. Verify vectors were created
-    console.log('Verifying document vectors...');
     await verifyDocumentVectors(client, testDoc.id);
-
-    // 7. Display final processing logs
-    const finalLogs = await getProcessingLogs(client, testDoc.id);
-    console.log('\nFinal Processing Logs:');
-    displayProcessingLogs(finalLogs);
 
     console.log('Pipeline test completed successfully');
   } catch (error) {
     console.error('Pipeline test failed:', error);
+    
+    // Display edge function logs on failure for debugging
+    if (testDoc?.id) {
+      console.log('\nEdge Function Logs for Failed Test:');
+      await displayEdgeFunctionLogs(client, 'doc-processor');
+    }
+    
     throw error;
   } finally {
     // Cleanup test data
@@ -701,7 +912,6 @@ Deno.test('Test Complete Document Processing Pipeline', async () => {
         .delete()
         .eq('id', testDoc.id);
     }
-    // Clean up test user
     await client
       .from('users')
       .delete()
@@ -792,12 +1002,17 @@ export async function displayProcessingResults(client: SupabaseClient, docId: st
 // Test document processing
 Deno.test("Document processing", async (t) => {
   const client = await initializeTestClient();
-  const userId = "test-user-" + crypto.randomUUID();
-  let testDoc: TestDocument;
+  let userId: string | undefined;
+  let testDoc: TestDocument | undefined;
 
   try {
     console.log('\nStarting document processing test');
     console.log('--------------------------------');
+    
+    // Create test user
+    console.log('\nCreating test user...');
+    userId = await createTestUser(client);
+    console.log('Test user created:', userId);
     
     // Create test document
     console.log('\nCreating test document...');
@@ -813,7 +1028,11 @@ Deno.test("Document processing", async (t) => {
     console.log('\nVerifying processing results...');
     assertEquals(processedDoc.status, 'completed', 'Document should be marked as completed');
     
-    // Get final processing logs
+    // Verify processing logs
+    console.log('\nVerifying processing logs...');
+    await verifyProcessingLogs(client, testDoc.id);
+    
+    // Get final processing logs for display
     const finalLogs = await getProcessingLogs(client, testDoc.id);
     console.log('\nFinal Processing Logs:');
     console.log('----------------');
@@ -826,6 +1045,18 @@ Deno.test("Document processing", async (t) => {
       console.log('----------------');
     }
 
+    // Display timing summary
+    const completionLog = finalLogs.find(log => log.stage === 'processing_complete');
+    if (completionLog?.metadata.stage_timings) {
+      console.log('\nProcessing Stage Timings:');
+      console.log('------------------------');
+      for (const [stage, duration] of Object.entries(completionLog.metadata.stage_timings)) {
+        console.log(`${stage}: ${duration}ms`);
+      }
+      console.log('------------------------');
+      console.log(`Total Processing Time: ${completionLog.metadata.processing_time_ms}ms`);
+    }
+
   } catch (error) {
     console.error('\nTest failed:', error);
     throw error;
@@ -835,6 +1066,10 @@ Deno.test("Document processing", async (t) => {
     if (testDoc?.id) {
       await client.from('documents').delete().eq('id', testDoc.id);
       console.log('Test document deleted');
+    }
+    if (userId) {
+      await client.from('users').delete().eq('id', userId);
+      console.log('Test user deleted');
     }
     console.log('Test cleanup completed');
   }

@@ -1,10 +1,31 @@
 {
   "compilerOptions": {
-    "allowJs": true,
-    "lib": ["deno.window", "dom"],
+    "target": "es2020",
+    "module": "commonjs",
+    "lib": ["es2020"],
     "strict": true,
-    "types": ["deno"]
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"]
+    },
+    "types": ["node", "jest"]
   },
+  "include": [
+    "config/**/*.ts",
+    "scripts/**/*.ts",
+    "supabase/functions/**/*.ts",
+    "tests/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ],
   "lint": {
     "files": {
       "include": ["supabase/functions/tests/"]
