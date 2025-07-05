@@ -1,67 +1,66 @@
 # 📚 Insurance Navigator Documentation
 
-Welcome to the comprehensive documentation for the Insurance Navigator system. This directory contains all project documentation organized by category.
+Welcome to the comprehensive documentation for the Insurance Navigator system. This directory contains all current project documentation organized by category.
 
 ## 📁 Documentation Structure
 
-### 🚀 [Project Documentation](./project/)
-Core project information and getting started guides:
-- **[README.md](./project/README.md)** - Main project overview, architecture, and setup
-- **[implementation_status.md](./project/implementation_status.md)** - Current implementation status and roadmap
-
-### 🌐 [Deployment](./deployment/)
-Production deployment guides and troubleshooting:
-- **[deploy-guide.md](./deployment/deploy-guide.md)** - Complete deployment guide for Render + Supabase
-- **[DEPLOYMENT_SUMMARY.md](./deployment/DEPLOYMENT_SUMMARY.md)** - Quick deployment summary for FREE TIER
-- **[DEPLOYMENT_STATUS.md](./deployment/DEPLOYMENT_STATUS.md)** - Current deployment status and verification
-- **[RENDER_TROUBLESHOOTING.md](./deployment/RENDER_TROUBLESHOOTING.md)** - Troubleshooting guide for Render.com issues
-
-### 🤖 [Agents](./agents/)
-Agent system documentation and troubleshooting:
-- **[AGENT_REORGANIZATION_SUMMARY.md](./agents/AGENT_REORGANIZATION_SUMMARY.md)** - Directory structure changes and benefits
-- **[regulatory_troubleshooting.md](./agents/regulatory_troubleshooting.md)** - Regulatory agent specific troubleshooting
-
 ### 🏗️ [Architecture](./architecture/)
 System architecture and design documents:
-- System design patterns
+- System design patterns and diagrams
 - Component interactions
 - Data flow diagrams
+- Agent workflow architecture
+
+### 🎯 [Design](./design/)
+Design specifications and system-level designs:
+- System-level design
+- Agent-level design
+- I/O specifications
+- Design rationale
+
+### 🤖 [Agents](./agents/)
+Agent system documentation:
+- Agent organization and structure
+- Regulatory agent documentation
+- Agent troubleshooting guides
+- Agent workflow patterns
+
+### 🚀 [Deployment](./deployment/)
+Production deployment documentation:
+- Deployment guides and procedures
+- Environment configuration
+- Cloud service setup
+- Troubleshooting guides
 
 ### 🔐 [Security](./security/)
-Security documentation and best practices:
-- **[security_configuration.md](./security_configuration.md)** - Security configuration guide
-- Security protocols and guidelines
-- Threat model documentation
+Security documentation and compliance:
+- Security configuration
+- CORS management
+- Environment management rules
+- Function security guidelines
 
-### 📋 [Examples](./examples/)
+### 📋 [Project](./project/)
+Core project information:
+- Project overview and goals
+- Implementation status
+- Development guidelines
+- Best practices
+
+### 📊 [Examples](./examples/)
 Usage examples and demonstrations:
 - API usage examples
 - Integration patterns
 - Sample configurations
 
-### 🎯 [Design](./design/)
-Design documents and specifications:
-- UI/UX design guidelines
-- API design specifications
-- Database schema design
-
-### 📊 [Prompt Management](./prompt_management/)
-Prompt engineering and management:
-- Prompt versioning
-- Evaluation methodologies
-- Performance optimization
-
-### 🧪 [Prompt Evaluation](./prompt_evaluation/)
-Prompt testing and evaluation:
-- Evaluation frameworks
-- Performance metrics
-- Testing strategies
-
-### ⚕️ [FMEA](./fmea/)
+### 🔍 [FMEA](./fmea/)
 Failure Mode and Effects Analysis:
-- Risk assessment documentation
-- Failure analysis reports
-- Mitigation strategies
+- System-level FMEA
+- Component-level analysis
+- Risk assessment templates
+
+## Historical Documentation
+
+For historical context, implementation progress, and past technical decisions, please refer to the [archive](./archive/) directory.
 
 ## 🚀 Quick Start
 
@@ -97,18 +96,19 @@ Available in the root docs directory:
 ## 📝 Contributing to Documentation
 
 When adding new documentation:
-1. Place files in the appropriate category directory
-2. Update this index with a brief description
-3. Follow the existing naming conventions
-4. Include clear headers and navigation
+1. Place it in the appropriate category directory
+2. Update this README if adding new categories
+3. Follow the established format and style
+4. Include clear examples where applicable
+5. Cross-reference related documentation
 
 ## 🏷️ Documentation Standards
 
-- Use descriptive filenames with appropriate extensions
-- Include clear section headers and navigation
-- Provide practical examples where applicable
-- Keep troubleshooting guides solution-focused
-- Update the index when adding new files
+- All documentation should be in Markdown format
+- Use clear headings and subheadings
+- Include code examples where relevant
+- Keep content up-to-date with the current implementation
+- Archive outdated documentation instead of deleting
 
 ---
 

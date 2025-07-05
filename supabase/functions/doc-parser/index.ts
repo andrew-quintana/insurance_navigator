@@ -9,15 +9,10 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-// Configuration
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const LLAMAPARSE_API_KEY = Deno.env.get('LLAMAPARSE_API_KEY') ?? ''
-const LLAMAPARSE_BASE_URL = Deno.env.get('LLAMAPARSE_BASE_URL') ?? 'https://api.cloud.llamaindex.ai'
+import { edgeConfig } from "../_shared/environment";
 
 // Initialize Supabase client
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+const supabase = createClient(edgeConfig.supabaseUrl, edgeConfig.supabaseKey)
 
 interface ParseRequest {
   documentId: string
@@ -37,10 +32,10 @@ async function parseDocument(documentData: Uint8Array): Promise<any> {
   const formData = new FormData()
   formData.append('file', new Blob([documentData], { type: 'application/pdf' }))
 
-  const response = await fetch(`${LLAMAPARSE_BASE_URL}/parse`, {
+  const response = await fetch(`${edgeConfig.llamaparseBaseUrl}/parse`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${LLAMAPARSE_API_KEY}`
+      'Authorization': `Bearer ${edgeConfig.llamaparseApiKey}`
     },
     body: formData
   })

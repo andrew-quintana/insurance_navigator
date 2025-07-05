@@ -10,14 +10,10 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-// Configuration
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const LLAMAPARSE_API_KEY = Deno.env.get('LLAMAPARSE_API_KEY') ?? ''
+import { edgeConfig } from "../_shared/environment";
 
 // Initialize Supabase client
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+const supabase = createClient(edgeConfig.supabaseUrl, edgeConfig.supabaseKey)
 
 // Processing states
 const ProcessingState = {
@@ -69,11 +65,11 @@ async function handleProcessingRequest(req: Request) {
 
           // Call document parser
           const parserResponse = await fetch(
-            `${SUPABASE_URL}/functions/v1/doc-parser`,
+            `${edgeConfig.supabaseUrl}/functions/v1/doc-parser`,
             {
               method: 'POST',
               headers: {
-                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                'Authorization': `Bearer ${edgeConfig.supabaseKey}`,
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
@@ -95,11 +91,11 @@ async function handleProcessingRequest(req: Request) {
 
           // Call chunking service
           const chunkResponse = await fetch(
-            `${SUPABASE_URL}/functions/v1/chunking-service`,
+            `${edgeConfig.supabaseUrl}/functions/v1/chunking-service`,
             {
               method: 'POST',
               headers: {
-                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                'Authorization': `Bearer ${edgeConfig.supabaseKey}`,
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
@@ -120,11 +116,11 @@ async function handleProcessingRequest(req: Request) {
 
           // Call vectorization service
           const vectorResponse = await fetch(
-            `${SUPABASE_URL}/functions/v1/vector-service`,
+            `${edgeConfig.supabaseUrl}/functions/v1/vector-service`,
             {
               method: 'POST',
               headers: {
-                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                'Authorization': `Bearer ${edgeConfig.supabaseKey}`,
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({

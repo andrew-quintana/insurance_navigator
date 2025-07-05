@@ -1,43 +1,79 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { join, dirname, fromFileUrl } from "https://deno.land/std@0.217.0/path/mod.ts";
+import { load } from "https://deno.land/std@0.217.0/dotenv/mod.ts";
 
-// Get project root helper
+// Get project root directory
 export function getProjectRoot(): string {
-  // Get the directory containing the test file
-  const testDir = dirname(fromFileUrl(import.meta.url));
-  // Go up two levels to get to the project root (from tests/ to functions/)
-  return join(testDir, "..");
+  const currentDir = new URL(".", import.meta.url).pathname;
+  return join(currentDir, "..", "..", "..");
 }
 
-export async function initializeTestClient() {
+// Load environment variables based on current environment
+export async function loadEnvironment() {
   const projectRoot = getProjectRoot();
-  const envPath = join(projectRoot, "tests", ".env.test");
+  const env = Deno.env.get("ENV") || "test";
   
-  try {
-    const env = await Deno.readTextFile(envPath);
-    for (const line of env.split("\n")) {
-      const [key, value] = line.split("=");
-      if (key && value) {
-        Deno.env.set(key.trim(), value.trim());
+  // Define environment file priorities
+  const envFiles = [
+    `.env.${env}.local`,  // First priority: environment-specific local overrides
+    `.env.${env}`,        // Second priority: environment-specific defaults
+    '.env.local',         // Third priority: local overrides
+    '.env'                // Fourth priority: default fallback
+  ];
+  
+  // Load each env file in order of priority
+  for (const file of envFiles) {
+    try {
+      const envPath = join(projectRoot, file);
+      const fileInfo = await Deno.stat(envPath);
+      
+      if (fileInfo.isFile) {
+        console.log(`Loading environment from ${file}`);
+        const env = await load({ envPath });
+        
+        // Set environment variables
+        for (const [key, value] of Object.entries(env)) {
+          if (!Deno.env.get(key)) {  // Don't override existing env vars
+            Deno.env.set(key, value);
+          }
+        }
+      }
+    } catch (error) {
+      if (!(error instanceof Deno.errors.NotFound)) {
+        console.warn(`Warning: Error loading ${file}:`, error);
       }
     }
-  } catch (error) {
-    console.error("Failed to load .env.test file:", error);
-    console.error("Attempted path:", envPath);
-    throw error;
   }
+  
+  // Validate required environment variables
+  const requiredVars = [
+    'SUPABASE_URL',
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'OPENAI_API_KEY',
+    'LLAMAPARSE_API_KEY'
+  ];
+  
+  const missingVars = requiredVars.filter(varName => !Deno.env.get(varName));
+  if (missingVars.length > 0) {
+    throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+  }
+}
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
+// Initialize test client with proper configuration
+export async function initializeTestClient() {
+  await loadEnvironment();
+  
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
   if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Missing required environment variables");
+    throw new Error('Failed to initialize test client: Missing Supabase configuration');
   }
-
+  
   return createClient(supabaseUrl, supabaseKey, {
     auth: {
-      autoRefreshToken: false,
       persistSession: false,
+      autoRefreshToken: false,
       detectSessionInUrl: false
     }
   });
@@ -175,5 +211,32 @@ export const mockOpenAIClient = {
         }]
       }
     }
+  }
+}
+
+export async function getEdgeFunctionLogs(client: SupabaseClient, functionName: string, requestId?: string) {
+  try {
+    let query = client
+      .schema('monitoring')
+      .from('edge_function_logs')
+      .select('*')
+      .eq('function_name', functionName)
+      .order('created_at', { ascending: false });
+
+    if (requestId) {
+      query = query.eq('request_id', requestId);
+    }
+
+    const { data, error } = await query.limit(10);
+    
+    if (error) {
+      console.error('Failed to fetch edge function logs:', error);
+      return [];
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error fetching edge function logs:', error);
+    return [];
   }
 } 

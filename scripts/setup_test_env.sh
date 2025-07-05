@@ -3,6 +3,10 @@
 # Check if .env.test exists, if not create it from example
 if [ ! -f .env.test ]; then
     echo "Creating .env.test file with test configuration..."
+    
+    # Generate a secure JWT secret
+    JWT_SECRET=$(openssl rand -base64 32)
+    
     cat > .env.test << EOL
 # Test Environment Configuration
 NODE_ENV=test
@@ -11,7 +15,10 @@ NODE_ENV=test
 SUPABASE_TEST_URL=http://127.0.0.1:54321
 SUPABASE_TEST_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
 SUPABASE_SERVICE_ROLE_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
-SUPABASE_JWT_SECRET=your-super-secret-jwt-token-with-at-least-32-characters-long
+
+# JWT Configuration
+SUPABASE_JWT_SECRET=${JWT_SECRET}
+JWT_SECRET=${JWT_SECRET}
 
 # Database Configuration
 DB_HOST=localhost
@@ -34,6 +41,23 @@ fi
 
 # Source the environment variables
 source .env.test
+
+# Ensure JWT secret is set and synchronized
+if [ -z "$SUPABASE_JWT_SECRET" ] || [ -z "$JWT_SECRET" ]; then
+    echo "Generating new JWT secret..."
+    JWT_SECRET=$(openssl rand -base64 32)
+    echo "SUPABASE_JWT_SECRET=${JWT_SECRET}" >> .env.test
+    echo "JWT_SECRET=${JWT_SECRET}" >> .env.test
+    source .env.test
+fi
+
+# Verify JWT secret is set and synchronized
+if [ "$SUPABASE_JWT_SECRET" != "$JWT_SECRET" ]; then
+    echo "Warning: JWT secrets do not match. Synchronizing..."
+    JWT_SECRET=$SUPABASE_JWT_SECRET
+    echo "JWT_SECRET=${JWT_SECRET}" >> .env.test
+    source .env.test
+fi
 
 # Start Supabase services if not running
 if ! supabase status | grep -q "Started"; then

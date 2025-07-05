@@ -124,7 +124,7 @@ print_success "Project linked successfully"
 print_status "Deploying Edge Functions..."
 echo ""
 
-functions=("doc-processor" "link-assigner" "doc-parser" "vector-processor")
+functions=("upload-handler" "link-assigner" "doc-parser" "vector-processor")
 
 for func in "${functions[@]}"; do
     print_status "Deploying $func..."

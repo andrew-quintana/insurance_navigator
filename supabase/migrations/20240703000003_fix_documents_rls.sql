@@ -19,6 +19,9 @@ END $$;
 -- =============================================================================
 
 DROP POLICY IF EXISTS "Users can read own documents" ON documents;
+DROP POLICY IF EXISTS "Users can insert own documents" ON documents;
+DROP POLICY IF EXISTS "Users can update own documents" ON documents;
+DROP POLICY IF EXISTS "Users can delete own documents" ON documents;
 DROP POLICY IF EXISTS "Service role has full access to documents" ON documents;
 
 -- =============================================================================
@@ -26,35 +29,80 @@ DROP POLICY IF EXISTS "Service role has full access to documents" ON documents;
 -- =============================================================================
 
 -- Allow users to read their own documents
-CREATE POLICY "Users can read own documents" ON documents
-    FOR SELECT
-    TO authenticated
-    USING (user_id = auth.uid());
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'documents' 
+        AND policyname = 'Users can read own documents'
+    ) THEN
+        EXECUTE 'CREATE POLICY "Users can read own documents" ON documents
+            FOR SELECT
+            TO authenticated
+            USING (user_id = auth.uid())';
+    END IF;
+END $$;
 
 -- Allow users to insert their own documents
-CREATE POLICY "Users can insert own documents" ON documents
-    FOR INSERT
-    TO authenticated
-    WITH CHECK (user_id = auth.uid());
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'documents' 
+        AND policyname = 'Users can insert own documents'
+    ) THEN
+        EXECUTE 'CREATE POLICY "Users can insert own documents" ON documents
+            FOR INSERT
+            TO authenticated
+            WITH CHECK (user_id = auth.uid())';
+    END IF;
+END $$;
 
 -- Allow users to update their own documents
-CREATE POLICY "Users can update own documents" ON documents
-    FOR UPDATE
-    TO authenticated
-    USING (user_id = auth.uid());
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'documents' 
+        AND policyname = 'Users can update own documents'
+    ) THEN
+        EXECUTE 'CREATE POLICY "Users can update own documents" ON documents
+            FOR UPDATE
+            TO authenticated
+            USING (user_id = auth.uid())';
+    END IF;
+END $$;
 
 -- Allow users to delete their own documents
-CREATE POLICY "Users can delete own documents" ON documents
-    FOR DELETE
-    TO authenticated
-    USING (user_id = auth.uid());
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'documents' 
+        AND policyname = 'Users can delete own documents'
+    ) THEN
+        EXECUTE 'CREATE POLICY "Users can delete own documents" ON documents
+            FOR DELETE
+            TO authenticated
+            USING (user_id = auth.uid())';
+    END IF;
+END $$;
 
 -- Service role has full access to documents
-CREATE POLICY "Service role has full access to documents" ON documents
-    FOR ALL
-    TO service_role
-    USING (true)
-    WITH CHECK (true);
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'documents' 
+        AND policyname = 'Service role has full access to documents'
+    ) THEN
+        EXECUTE 'CREATE POLICY "Service role has full access to documents" ON documents
+            FOR ALL
+            TO service_role
+            USING (true)
+            WITH CHECK (true)';
+    END IF;
+END $$;
 
 -- =============================================================================
 -- STEP 3: VERIFY RLS IS ENABLED
@@ -62,5 +110,10 @@ CREATE POLICY "Service role has full access to documents" ON documents
 
 -- Ensure RLS is enabled
 ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
+
+-- Check documents table constraints
+SELECT conname, pg_get_constraintdef(oid)
+FROM pg_constraint
+WHERE conrelid = 'documents'::regclass;
 
 COMMIT; 

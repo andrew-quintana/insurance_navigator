@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import jwt
 from datetime import datetime, timedelta
 import uuid
+import os
 
 # Import the auth handlers (adjust path as needed)
 from db.services.auth_service import AuthService
@@ -35,9 +36,9 @@ def mock_db_session():
 def jwt_config():
     """Create a test JWT configuration."""
     return JWTConfig(
-        secret="test_secret",
-        algorithm="HS256",
-        access_token_expire_minutes=30
+        secret=os.getenv("SUPABASE_JWT_SECRET"),
+        token_expire_minutes=15,
+        algorithm="HS256"
     )
 
 @pytest.fixture
