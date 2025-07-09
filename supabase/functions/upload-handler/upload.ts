@@ -1,4 +1,5 @@
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { getPipelineFilename } from '../_shared/date_utils.ts';
 
 export async function handleUpload(
   req: Request,
@@ -36,15 +37,16 @@ export async function handleUpload(
     const buffer = new Uint8Array(arrayBuffer);
     console.log('File converted to buffer, size:', buffer.length);
 
-    // Generate file path using verified user ID and required structure
-    const filePath = `user/${userId}/raw/${Date.now()}-${file.name}`;
+    // Generate file path using verified user ID and timestamp
+    const uploadTimestamp = new Date();
+    const filePath = `user/${userId}/raw/${getPipelineFilename(uploadTimestamp, file.name)}`;
     console.log('Generated file path:', filePath);
 
     // Check if file exists and clean it up if needed
     const { data: existingFile } = await supabase.storage
       .from('files')
       .list(`user/${userId}/raw`, {
-        search: `${Date.now()}-${file.name}`
+        search: file.name
       });
 
     if (existingFile?.length > 0) {
@@ -59,7 +61,7 @@ export async function handleUpload(
       }
     }
 
-    // Upload file to files bucket using service role permissions
+    // Upload file to files bucket
     console.log('Starting Supabase storage upload...');
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('files')
@@ -77,7 +79,6 @@ export async function handleUpload(
 
     // Add record to documents table
     console.log('Creating document record...');
-    // Log the full insert response
     const insertResponse = await supabase
       .schema('documents')  // Explicitly set schema
       .from('documents')
@@ -86,7 +87,8 @@ export async function handleUpload(
           owner: userId,
           name: file.name,
           source_path: filePath,
-          processing_status: 'uploaded'
+          processing_status: 'uploaded',
+          uploaded_at: uploadTimestamp.toISOString()
         }
       ])
       .select()
@@ -96,11 +98,8 @@ export async function handleUpload(
 
     const { data: documentData, error: documentError } = insertResponse;
 
-    // Change the error check to look for actual error properties
     if (documentError && Object.keys(documentError).length > 0) {
-      // Log the raw error object first
       console.error('Raw document error:', documentError);
-      
       console.error('Document creation error:', {
         error: documentError,
         code: documentError.code,
@@ -130,13 +129,13 @@ export async function handleUpload(
         size: buffer.length
       }
     };
+
   } catch (error) {
     console.error('Storage error:', error instanceof Error ? {
       message: error.message,
       name: error.name,
       stack: error.stack
     } : error);
-    
     throw error;
   }
 }
