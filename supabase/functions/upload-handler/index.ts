@@ -1,185 +1,124 @@
-import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.208.0/http/server.ts"; 
 import { corsHeaders } from "../_shared/cors.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { handleUpload, ParsedContent, ProcessingResult, UploadHandlerError } from "./processor.ts";
-import { edgeConfig } from "../_shared/environment.ts";
+import { handleUpload } from "./upload.ts";
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-interface RequestBody {
-  userId: string;
-  documentId: string;
-  content: string;
-  metadata: {
-    extractionMethod: string;
-    contentType: string;
-    size: number;
-    filename: string;
-  };
-}
+console.log("Starting upload handler...");
 
-async function logExecution(
-  supabaseClient: any,
-  functionName: string,
-  requestId: string,
-  startTime: number,
-  status: string,
-  error?: string,
-  metadata?: any
-) {
-  const executionTime = Date.now() - startTime;
-  const memoryUsage = Deno.memoryUsage().heapUsed / 1024 / 1024; // Convert to MB
+function createSupabaseClient(): SupabaseClient {
+  console.log('Creating Supabase client...');
+  
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || Deno.env.get('URL');
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY');
 
-  try {
-    await supabaseClient
-      .from('function_executions')
-      .insert({
-        function_name: functionName,
-        request_id: requestId,
-        status,
-        execution_time_ms: executionTime,
-        memory_usage_mb: memoryUsage,
-        error_message: error,
-        metadata
-      });
-  } catch (logError) {
-    console.error('Failed to log execution:', logError);
+  console.log("Environment variables:", {
+    hasSupabaseUrl: !!supabaseUrl,
+    hasServiceRoleKey: !!serviceRoleKey,
+    supabaseUrl,
+    // Don't log the full key for security
+    serviceRoleKeyPresent: !!serviceRoleKey
+  });
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error('Missing required environment variables');
+    throw new Error('Missing required environment variables');
   }
+
+  return createClient(supabaseUrl, serviceRoleKey);
 }
 
-serve(async (req) => {
-  const startTime = Date.now();
-  const requestId = crypto.randomUUID();
+function createResponse(data: any, status = 200) {
+  return new Response(
+    JSON.stringify(data),
+    {
+      status,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+}
+
+serve(async (req: Request) => {
+  console.log('Received request:', {
+    method: req.method,
+    url: req.url,
+    headers: Object.fromEntries(req.headers.entries())
+  });
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return createResponse({ success: true });
+  }
+
+  if (req.method !== "POST") {
+    console.warn('Invalid method:', req.method);
+    return createResponse(
+      { success: false, error: "Method Not Allowed" },
+      405
+    );
+  }
 
   try {
-    // Handle preflight CORS
-    if (req.method === 'OPTIONS') {
-      return new Response('ok', { headers: corsHeaders });
+    // Create Supabase client
+    const supabase = createSupabaseClient();
+
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return createResponse({ success: false, error: 'No authorization header' }, 401);
+    }
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) {
+      return createResponse({ success: false, error: 'Invalid token or user not found' }, 401);
     }
 
-    // Parse request body
-    let body: RequestBody;
-    try {
-      body = await req.json();
-    } catch (error) {
-      console.error('Failed to parse request body:', error);
-      return new Response(
-        JSON.stringify({ error: "Invalid request body" }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 400
-        }
-      );
-    }
+    // Handle file upload - pass TEST_USER_ID for now since we're not using JWT
+    console.log('Processing upload with test user ID:', user.id);
+    const result = await handleUpload(req, user.id, supabase);
+    console.log('Upload completed successfully:', result);
+    return createResponse({ success: true, result });
 
-    // Validate request body
-    if (!body.userId || !body.documentId || !body.metadata?.filename) {
-      return new Response(
-        JSON.stringify({ error: "userId, documentId, and metadata.filename are required" }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 400
-        }
-      );
-    }
+  } catch (err: unknown) {
+    const errorDetails = err instanceof Error ? {
+      message: err.message,
+      name: err.name,
+      stack: err.stack
+    } : 'Unknown error';
+    
+    console.error('Error processing request:', errorDetails);
 
-    // Initialize Supabase client
-    let supabaseClient;
-    try {
-      supabaseClient = createClient(
-        edgeConfig.supabaseUrl,
-        edgeConfig.supabaseKey,
-        {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-            detectSessionInUrl: false
-          }
-        }
-      );
-    } catch (error) {
-      console.error('Failed to initialize Supabase client:', error);
-      return new Response(
-        JSON.stringify({ error: "Service unavailable" }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 503
-        }
-      );
-    }
-
-    // Log processing start
-    await logExecution(
-      supabaseClient,
-      'upload-handler',
-      requestId,
-      startTime,
-      'started',
-      undefined,
-      { userId: body.userId, documentId: body.documentId }
-    );
-
-    console.log(`[${body.documentId}] Starting document processing in edge function`);
-
-    // Process the document
-    try {
-      const result = await handleUpload(
-        body.userId,
-        body.documentId,
-        {
-          content: body.content,
-          metadata: body.metadata
-        },
-        supabaseClient
-      );
-
-      // Log successful completion
-      await logExecution(
-        supabaseClient,
-        'upload-handler',
-        requestId,
-        startTime,
-        'completed',
-        undefined,
-        { userId: body.userId, documentId: body.documentId, result }
-      );
-
-      return new Response(
-        JSON.stringify(result),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: result.success ? 200 : (result.statusCode || 500)
-        }
-      );
-    } catch (error) {
-      console.error('Error processing document:', error);
-      const statusCode = error instanceof UploadHandlerError ? error.statusCode : 500;
-      const errorMessage = error instanceof Error ? error.message : 'Internal server error';
-
-      // Log error
-      await logExecution(
-        supabaseClient,
-        'upload-handler',
-        requestId,
-        startTime,
-        'error',
-        errorMessage
-      );
-
-      return new Response(
-        JSON.stringify({ error: errorMessage }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: statusCode
-        }
-      );
-    }
-  } catch (error) {
-    console.error('Unhandled error:', error);
-    return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500
+    if (err instanceof Error) {
+      switch (err.message) {
+        case 'Missing required environment variables':
+          return createResponse({ 
+            success: false, 
+            error: 'Server configuration error',
+            details: errorDetails
+          }, 500);
+        
+        case 'Invalid form data':
+        case 'File missing':
+          return createResponse({ 
+            success: false, 
+            error: err.message,
+            details: errorDetails
+          }, 400);
+        
+        case 'Upload to storage failed':
+          return createResponse({ 
+            success: false, 
+            error: 'Upload to storage failed',
+            details: errorDetails
+          }, 500);
       }
-    );
+    }
+
+    return createResponse({ 
+      success: false, 
+      error: 'Internal server error',
+      details: errorDetails
+    }, 500);
   }
 });

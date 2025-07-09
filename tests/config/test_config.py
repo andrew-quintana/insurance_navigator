@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass
 from typing import Optional
 from pydantic import BaseModel, Field
+from supabase import create_client, Client
 
 @dataclass
 class SupabaseTestConfig:
@@ -89,6 +90,13 @@ class TestConfig:
             vector_dimension=int(os.getenv('VECTOR_DIMENSION', '1536')),
             similarity_threshold=float(os.getenv('SIMILARITY_THRESHOLD', '0.5')),
             max_results=int(os.getenv('MAX_RESULTS', '5'))
+        )
+
+    def get_client(self) -> Client:
+        """Create a Supabase client instance."""
+        return create_client(
+            self.supabase.url,
+            self.supabase.service_role_key
         )
 
 def get_base_test_config() -> TestConfig:

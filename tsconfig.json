@@ -22,7 +22,7 @@
     "scripts/**/*.ts",
     "supabase/functions/**/*.ts",
     "tests/**/*.ts"
-  ],
+, "supabase/_shared/env.ts"  ],
   "exclude": [
     "node_modules"
   ],

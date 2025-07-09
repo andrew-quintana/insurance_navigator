@@ -7,7 +7,7 @@ import json
 import logging
 from typing import Dict, Optional, Tuple, List, Any
 import requests
-from supabase import create_client, Client
+from supabase import Client, create_client
 import psycopg2
 from psycopg2.extensions import connection as PgConnection
 from tests.config.test_config import get_base_test_config

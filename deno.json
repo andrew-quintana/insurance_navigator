@@ -1,20 +1,17 @@
 {
   "compilerOptions": {
-    "allowJs": true,
     "lib": ["deno.ns", "dom"],
-    "strict": true,
-    "allowImportingTsExtensions": true
+    "strict": true
   },
   "imports": {
     "std/": "https://deno.land/std@0.223.0/",
-    "@shared/": "./supabase/functions/_shared/"
+    "@shared/": "./supabase/functions/_shared/",
+    "functions": "./supabase/functions/functions.ts"
   },
   "tasks": {
     "test": "deno test --allow-env --allow-read --allow-net"
   },
   "test": {
-    "files": {
-      "include": ["tests/"]
-    }
+    "include": ["tests/", "supabase/_shared/tests/"]
   }
 } 

@@ -1,0 +1,35 @@
+{
+  "tasks": {
+    "test": "deno test --allow-env --allow-read --allow-write --allow-net"
+  },
+  "compilerOptions": {
+    "allowJs": true,
+    "lib": ["deno.window", "deno.ns", "dom"],
+    "strict": true,
+    "allowImportingTsExtensions": true
+  },
+  "imports": {
+    "std/": "https://deno.land/std@0.208.0/",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2",
+    "cors": "./functions/_shared/cors.ts"
+  },
+  "lint": {
+    "files": {
+      "include": ["./functions/", "./_shared/"]
+    },
+    "rules": {
+      "tags": ["recommended"]
+    }
+  },
+  "fmt": {
+    "files": {
+      "include": ["./functions/", "./_shared/"]
+    },
+    "options": {
+      "useTabs": false,
+      "lineWidth": 100,
+      "indentWidth": 2,
+      "singleQuote": true
+    }
+  }
+}
