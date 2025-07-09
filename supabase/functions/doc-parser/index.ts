@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from "../_shared/cors.ts";
+import { getPipelineFilename } from "../_shared/date_utils.ts";
 
 const LLAMAPARSE_API_KEY = Deno.env.get("LLAMAPARSE_API_KEY");
 
@@ -38,7 +39,7 @@ serve(async (req: Request) => {
         const { data: docDetails, error: dbError } = await supabase
             .schema('documents')
             .from('documents')
-            .select('source_path, name, owner')
+            .select('source_path, name, owner, uploaded_at')
             .eq('id', docId)
             .single();
 
@@ -107,6 +108,8 @@ serve(async (req: Request) => {
         let pollCount = 0;
         const maxPolls = 60; // Maximum number of polls (60 seconds timeout)
         console.log('🔄 Starting polling for job completion');
+        
+        // First wait for job to complete
         while (true) {
             pollCount++;
             console.log(`📡 Polling attempt ${pollCount}/${maxPolls}`);
@@ -152,11 +155,51 @@ serve(async (req: Request) => {
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
-        console.log('✅ Document parsing complete:', result);
+        // Now fetch the markdown result with its own timeout
+        console.log('🔄 Fetching markdown result');
+        let markdownPollCount = 0;
+        const maxMarkdownPolls = 30; // 30 second timeout for markdown fetch
+        
+        while (true) {
+            markdownPollCount++;
+            console.log(`📡 Markdown fetch attempt ${markdownPollCount}/${maxMarkdownPolls}`);
+            
+            try {
+                const resultRes = await fetch(`https://api.cloud.llamaindex.ai/api/v1/parsing/job/${job_id}/result/markdown`, {
+                    headers: {
+                        'Authorization': `Bearer ${LLAMAPARSE_API_KEY}`,
+                        'accept': 'application/json'
+                    }
+                });
+
+                if (!resultRes.ok) {
+                    if (markdownPollCount >= maxMarkdownPolls) {
+                        throw new Error(`Failed to fetch markdown after ${maxMarkdownPolls} attempts: ${resultRes.statusText}`);
+                    }
+                    console.log('⏳ Markdown not ready yet, waiting...');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    continue;
+                }
+
+                result = await resultRes.json();
+                console.log('📄 Markdown results retrieved successfully');
+                break;
+            } catch (error) {
+                if (markdownPollCount >= maxMarkdownPolls) {
+                    throw new Error(`Failed to fetch markdown after ${maxMarkdownPolls} attempts: ${error.message}`);
+                }
+                console.log('⚠️ Markdown fetch failed, retrying:', error);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+        }
+
+        console.log('✅ Document parsing complete');
 
         console.log("💾 Preparing to save parsed content");
-        const parsedContent = JSON.stringify(responseData, null, 2);
-        const parsedFileName = `user/${docDetails.owner}/parsed/${Date.now()}-${docDetails.name.replace(/\.[^/.]+$/, ".json")}`;
+        const parsedContent = JSON.stringify(result, null, 2);
+        const parsedFileName = `user/${docDetails.owner}/parsed/${
+            getPipelineFilename(docDetails.uploaded_at, docDetails.name.replace(/\.[^/.]+$/, ".json"))
+        }`;
         console.log("- Target path:", parsedFileName);
 
         console.log("📤 Uploading parsed file");
@@ -178,7 +221,8 @@ serve(async (req: Request) => {
             .from("documents")
             .update({
                 processing_status: "parsed",
-                parsed_at: new Date().toISOString()
+                parsed_at: new Date().toISOString(),
+                parsed_path: parsedFileName
             })
             .eq("id", docId);
 
@@ -189,7 +233,20 @@ serve(async (req: Request) => {
 
         console.log("✅ Document status updated to 'parsed'");
 
-        console.log("🎉 Processing completed successfully");
+        // Handoff to chunker (no await = fire-and-forget)
+        fetch(`${Deno.env.get('SUPABASE_URL') || Deno.env.get('URL')}/functions/v1/chunker`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY')}`
+            },
+            body: JSON.stringify({ docId: docId })
+        }).then(res => {
+            console.log("🛰️ chunker triggered, status:", res.status);
+        }).catch(err => {
+            console.error("⚠️ Error triggering chunker:", err);
+        });
+
         return new Response(JSON.stringify({
             success: true,
             docId,

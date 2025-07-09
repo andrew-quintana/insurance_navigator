@@ -11,9 +11,10 @@ import json
 from tests.supabase.functions._shared.conftest import supabase_config, test_user
 
 # Test constants
-TEST_FILE_CONTENT = b"Hello, World!"
+with open('examples/simulated_insurance_document.pdf', 'rb') as f:
+    TEST_FILE_CONTENT = f.read()
 TEST_CONTENT_TYPE = "application/pdf"
-TEST_FILE_NAME = "test.pdf"
+TEST_FILE_NAME = "simulated_insurance_document.pdf"
 MAX_POLL_ATTEMPTS = 30  # 30 seconds timeout
 POLL_INTERVAL = 1  # 1 second between polls
 
@@ -24,6 +25,7 @@ class PipelineState:
     started_at: Optional[datetime] = None
     upload_time: Optional[float] = None
     parse_time: Optional[float] = None
+    chunk_time: Optional[float] = None
 
     def start_timer(self):
         """Start pipeline timer."""
@@ -40,6 +42,11 @@ class PipelineState:
         if self.started_at:
             self.parse_time = (datetime.now() - self.started_at).total_seconds()
 
+    def record_chunk_time(self):
+        """Record chunk stage duration."""
+        if self.started_at:
+            self.chunk_time = (datetime.now() - self.started_at).total_seconds()
+
     @property
     def total_time(self) -> Optional[float]:
         """Get total pipeline duration."""
@@ -48,7 +55,7 @@ class PipelineState:
         return None
 
 class TestPipeline:
-    """Test suite for document processing pipeline (upload-handler -> doc-parser)."""
+    """Test suite for document processing pipeline (upload-handler -> doc-parser -> chunker)."""
 
     @pytest.fixture
     def pipeline_state(self) -> PipelineState:
@@ -70,6 +77,11 @@ class TestPipeline:
     def get_document_status(self, doc_id: str) -> Dict[str, Any]:
         """Get current document status from database."""
         result = self.supabase.schema("documents").from_("documents").select("*").eq("id", doc_id).single().execute()
+        return result.data
+
+    def get_document_chunks(self, doc_id: str) -> list[Dict[str, Any]]:
+        """Get chunks for a document."""
+        result = self.supabase.schema("documents").from_("document_chunks").select("*").eq("doc_id", doc_id).execute()
         return result.data
 
     @pytest.fixture
@@ -106,7 +118,7 @@ class TestPipeline:
         pipeline_state = trigger_pipeline
         assert pipeline_state.doc_id, "Pipeline not triggered successfully"
         
-        # Poll for document status
+        # Poll for document status through parsing and chunking
         print("\n🔄 Monitoring document processing...")
         final_doc = None
         for attempt in range(MAX_POLL_ATTEMPTS):
@@ -114,11 +126,23 @@ class TestPipeline:
             print(f"\n📄 Document State (attempt {attempt + 1}):")
             print(json.dumps(doc, indent=2))
             
-            if doc['processing_status'] == 'parsed':
-                print(f"✅ Document processed after {attempt + 1} attempts")
+            # Record timing for parse completion
+            if doc['processing_status'] == 'parsed' and not pipeline_state.parse_time:
                 pipeline_state.record_parse_time()
-                final_doc = doc
-                break
+                print(f"✅ Document parsed after {pipeline_state.parse_time:.2f}s")
+            
+            # Record timing and check chunks for chunking completion
+            if doc['processing_status'] == 'chunked':
+                if not pipeline_state.chunk_time:
+                    pipeline_state.record_chunk_time()
+                    print(f"✅ Document chunked after {pipeline_state.chunk_time:.2f}s")
+                
+                chunks = self.get_document_chunks(pipeline_state.doc_id)
+                if chunks:
+                    print(f"\n📊 Found {len(chunks)} chunks:")
+                    
+                    final_doc = doc
+                    break
             
             print(f"⏳ Document status: {doc['processing_status']} (attempt {attempt + 1}/{MAX_POLL_ATTEMPTS})")
             time.sleep(POLL_INTERVAL)
@@ -130,7 +154,7 @@ class TestPipeline:
         print(json.dumps(final_doc, indent=2))
         
         # Verify final document state
-        assert final_doc['processing_status'] == 'parsed'
+        assert final_doc['processing_status'] == 'chunked'
         assert 'source_path' in final_doc, "Document should have source_path field"
         assert final_doc['source_path'], "source_path should not be empty"
             
@@ -138,6 +162,18 @@ class TestPipeline:
         assert 'parsed_at' in final_doc, "Document should have parsed_at timestamp"
         assert final_doc['parsed_at'] is not None, "parsed_at should not be null"
         
+        # Verify chunks
+        chunks = self.get_document_chunks(pipeline_state.doc_id)
+        assert chunks, "Document should have chunks"
+        assert len(chunks) > 0, "At least one chunk should be created"
+        
+        # Verify chunk structure
+        for chunk in chunks:
+            assert 'id' in chunk, "Chunk should have ID"
+            assert 'doc_id' in chunk, "Chunk should have document ID"
+            assert chunk['doc_id'] == pipeline_state.doc_id, "Chunk should reference correct document"
+            assert 'content' in chunk, "Chunk should have text content"
+            
         # Verify performance
         total_time = pipeline_state.total_time
         assert total_time is not None
@@ -145,8 +181,10 @@ class TestPipeline:
         print(f"\n📊 Pipeline Performance Summary:")
         print(f"Upload Stage: {pipeline_state.upload_time:.2f}s")
         print(f"Processing Time: {pipeline_state.parse_time:.2f}s")
+        print(f"Chunking Time: {pipeline_state.chunk_time:.2f}s")
         print(f"Total Pipeline Time: {total_time:.2f}s")
         
         assert pipeline_state.upload_time < 5.0, "Upload stage took too long"
         assert pipeline_state.parse_time < 30.0, "Processing took too long"
-        assert total_time < 35.0, "Total pipeline took too long"
+        assert pipeline_state.chunk_time < 35.0, "Chunking took too long"
+        assert total_time < 70.0, "Total pipeline took too long"
