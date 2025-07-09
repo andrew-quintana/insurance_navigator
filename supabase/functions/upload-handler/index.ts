@@ -78,6 +78,25 @@ serve(async (req: Request) => {
     console.log('Processing upload with test user ID:', user.id);
     const result = await handleUpload(req, user.id, supabase);
     console.log('Upload completed successfully:', result);
+
+    // Call the next edge function: doc-parser
+    const docParserRes = await fetch(`${Deno.env.get('SUPABASE_URL') || Deno.env.get('URL')}/functions/v1/doc-parser`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY')}`  // or your serverless access pattern
+      },
+      body: JSON.stringify({ docId: result.document.id })
+    });
+
+    if (!docParserRes.ok) {
+      const errText = await docParserRes.text();
+      console.error("doc-parser failed:", errText);
+    } else {
+      const docParserResult = await docParserRes.json();
+      console.log("doc-parser result:", docParserResult);
+    }
+
     return createResponse({ success: true, result });
 
   } catch (err: unknown) {
@@ -121,4 +140,6 @@ serve(async (req: Request) => {
       details: errorDetails
     }, 500);
   }
+
+  
 });
