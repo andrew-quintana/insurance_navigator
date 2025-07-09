@@ -128,7 +128,21 @@ serve(async (req: Request) => {
         }
 
         console.log("✅ Document status updated to 'chunked'");
-        console.log("🎉 Processing completed successfully");
+
+
+        // Handoff to embedder (no await = fire-and-forget)
+        fetch(`${Deno.env.get('SUPABASE_URL') || Deno.env.get('URL')}/functions/v1/embedder`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY')}`
+            },
+            body: JSON.stringify({ docId: docId })
+        }).then(res => {
+            console.log("🛰️ embedder triggered, status:", res.status);
+        }).catch(err => {
+            console.error("⚠️ Error triggering embedder:", err);
+        });
 
         return new Response(JSON.stringify({
             success: true,

@@ -26,6 +26,7 @@ class PipelineState:
     upload_time: Optional[float] = None
     parse_time: Optional[float] = None
     chunk_time: Optional[float] = None
+    embed_time: Optional[float] = None
 
     def start_timer(self):
         """Start pipeline timer."""
@@ -46,6 +47,11 @@ class PipelineState:
         """Record chunk stage duration."""
         if self.started_at:
             self.chunk_time = (datetime.now() - self.started_at).total_seconds()
+
+    def record_embed_time(self):
+        """Record embed stage duration."""
+        if self.started_at:
+            self.embed_time = (datetime.now() - self.started_at).total_seconds()
 
     @property
     def total_time(self) -> Optional[float]:
@@ -139,8 +145,17 @@ class TestPipeline:
                 
                 chunks = self.get_document_chunks(pipeline_state.doc_id)
                 if chunks:
-                    print(f"\n📊 Found {len(chunks)} chunks:")
-                    
+                    print(f"\n📊 Found {len(chunks)} chunks")
+
+            # Record timing for embedding completion
+            if doc['processing_status'] == 'embedded':
+                if not pipeline_state.embed_time:
+                    pipeline_state.record_embed_time()
+                    print(f"✅ Document embedded after {pipeline_state.embed_time:.2f}s")
+                
+                chunks = self.get_document_chunks(pipeline_state.doc_id)
+                if chunks and all(chunk.get('embedding') is not None for chunk in chunks):
+                    print(f"\n📊 All {len(chunks)} chunks embedded")
                     final_doc = doc
                     break
             
@@ -154,7 +169,7 @@ class TestPipeline:
         print(json.dumps(final_doc, indent=2))
         
         # Verify final document state
-        assert final_doc['processing_status'] == 'chunked'
+        assert final_doc['processing_status'] == 'embedded'
         assert 'source_path' in final_doc, "Document should have source_path field"
         assert final_doc['source_path'], "source_path should not be empty"
             
@@ -167,12 +182,16 @@ class TestPipeline:
         assert chunks, "Document should have chunks"
         assert len(chunks) > 0, "At least one chunk should be created"
         
-        # Verify chunk structure
+        # Verify chunk structure and embeddings
         for chunk in chunks:
             assert 'id' in chunk, "Chunk should have ID"
             assert 'doc_id' in chunk, "Chunk should have document ID"
             assert chunk['doc_id'] == pipeline_state.doc_id, "Chunk should reference correct document"
             assert 'content' in chunk, "Chunk should have text content"
+            assert 'embedding' in chunk, "Chunk should have embedding"
+            assert chunk['embedding'] is not None, "Chunk embedding should not be null"
+            assert isinstance(chunk['embedding'], list), "Chunk embedding should be a vector"
+            assert len(chunk['embedding']) > 0, "Chunk embedding should not be empty"
             
         # Verify performance
         total_time = pipeline_state.total_time
@@ -182,9 +201,11 @@ class TestPipeline:
         print(f"Upload Stage: {pipeline_state.upload_time:.2f}s")
         print(f"Processing Time: {pipeline_state.parse_time:.2f}s")
         print(f"Chunking Time: {pipeline_state.chunk_time:.2f}s")
+        print(f"Embedding Time: {pipeline_state.embed_time:.2f}s")
         print(f"Total Pipeline Time: {total_time:.2f}s")
         
         assert pipeline_state.upload_time < 5.0, "Upload stage took too long"
         assert pipeline_state.parse_time < 30.0, "Processing took too long"
         assert pipeline_state.chunk_time < 35.0, "Chunking took too long"
-        assert total_time < 70.0, "Total pipeline took too long"
+        assert pipeline_state.embed_time < 40.0, "Embedding took too long"
+        assert total_time < 110.0, "Total pipeline took too long"
