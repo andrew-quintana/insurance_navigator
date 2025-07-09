@@ -16,23 +16,31 @@ if project_root not in sys.path:
 
 def load_environment():
     """Load environment variables based on test environment."""
-    # Priority order: .env.test > .env.local > .env
-    env_files = [
-        os.path.join(project_root, '.env.test'),
-        os.path.join(project_root, '.env.local'),
-        os.path.join(project_root, '.env')
-    ]
+    # Use .env.development as default for tests unless overridden
+    env_file = os.path.join(project_root, '.env.development')
     
-    for env_file in env_files:
-        if os.path.exists(env_file):
-            load_dotenv(env_file, override=True)
-            print(f"Loaded environment from {env_file}")
-            break
+    # Clear any existing Supabase environment variables
+    for key in list(os.environ.keys()):
+        if key.startswith(('SUPABASE_', 'NEXT_PUBLIC_SUPABASE_')):
+            del os.environ[key]
+    
+    if os.path.exists(env_file):
+        load_dotenv(env_file, override=True)
+        print(f"Loaded test environment from {env_file}")
     else:
         print("Warning: No environment file found. Using default test configuration.")
 
-# Load environment variables
-load_environment()
+# Only load environment if not running environment-specific tests
+def should_load_default_env():
+    """Check if we should load default environment"""
+    running_env_tests = any(
+        'test_env_files.py' in arg 
+        for arg in sys.argv
+    )
+    return not running_env_tests
+
+if should_load_default_env():
+    load_environment()
 
 # Import after environment is loaded
 from db.services.user_service import UserService, get_user_service
@@ -40,7 +48,7 @@ from db.services.document_service import DocumentService, get_document_service
 from db.services.storage_service import StorageService, get_storage_service
 from db.services.transaction_service import TransactionService, get_transaction_service
 from config.database import get_supabase_client
-from db.config import SupabaseConfig, DatabaseConfig, get_base_test_config
+from db.config import SupabaseConfig, DatabaseConfig
 from supabase import create_client, Client
 
 # Import test configuration
@@ -58,9 +66,9 @@ def event_loop():
 def supabase_config() -> SupabaseConfig:
     """Create Supabase configuration with HIPAA-ready settings."""
     return SupabaseConfig(
-        url=os.getenv("SUPABASE_TEST_URL", "http://127.0.0.1:54321"),
+        url=os.getenv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:54321"),
         service_role_key=os.getenv("SUPABASE_SERVICE_ROLE_KEY"),
-        anon_key=os.getenv("SUPABASE_TEST_KEY"),
+        anon_key=os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
         jwt_secret=os.getenv("SUPABASE_JWT_SECRET"),
         encryption_key=os.getenv("SUPABASE_ENCRYPTION_KEY"),
         audit_logging=os.getenv("AUDIT_LOGGING_ENABLED", "true").lower() == "true",
@@ -80,11 +88,11 @@ def supabase_client() -> Client:
 def db_config(supabase_config: SupabaseConfig) -> DatabaseConfig:
     """Create database configuration with proper settings."""
     return DatabaseConfig(
-        host=os.getenv("DB_HOST", "localhost"),
-        port=int(os.getenv("DB_PORT", "54322")),
-        database=os.getenv("DB_NAME", "postgres"),
-        user=os.getenv("DB_USER", "postgres"),
-        password=os.getenv("DB_PASSWORD", "postgres"),
+        host=os.getenv("SUPABASE_DB_HOST", "127.0.0.1"),
+        port=int(os.getenv("SUPABASE_DB_PORT", "54322")),
+        database=os.getenv("SUPABASE_DB_NAME", "postgres"),
+        user=os.getenv("SUPABASE_DB_USER", "postgres"),
+        password=os.getenv("SUPABASE_DB_PASSWORD", "postgres"),
         supabase=supabase_config,
         min_connections=1,
         max_connections=int(os.getenv("DB_MAX_CONNECTIONS", "10"))
