@@ -177,14 +177,16 @@ serve(async (req: Request) => {
             .schema("documents")
             .from("documents")
             .update({
-                processing_status: "parsed"
+                processing_status: "parsed",
+                parsed_at: new Date().toISOString()
             })
             .eq("id", docId);
 
         if (updateDocError) {
-            console.error("❌ Failed to update document status:", updateDocError);
-            return new Response("Failed to update document status", { status: 500 });
+            console.error("❌ Error updating document status:", updateDocError);
+            throw new Error(`Failed to update document status: ${updateDocError.message}`);
         }
+
         console.log("✅ Document status updated to 'parsed'");
 
         console.log("🎉 Processing completed successfully");
