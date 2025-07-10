@@ -3,6 +3,14 @@ export type DeploymentEnvironment = 'test' | 'development' | 'staging' | 'produc
 
 export type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
 
+export interface Environment {
+  SUPABASE_URL: string;
+  SUPABASE_ANON_KEY: string;
+  SUPABASE_SERVICE_ROLE_KEY: string;
+  ENVIRONMENT: 'development' | 'staging' | 'production';
+  NGROK_URL?: string; // Optional, only needed in development
+}
+
 export interface EnvConfig {
   // Runtime information
   runtime: RuntimeEnvironment;

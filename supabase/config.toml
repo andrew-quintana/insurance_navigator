@@ -292,6 +292,10 @@ deno_version = 1
 [edge_runtime.secrets]
 "*" = "env(*)"
 
+# Disable auth for processing-webhook function
+[functions.processing-webhook]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
