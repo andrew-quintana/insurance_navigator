@@ -12,42 +12,142 @@ interface DocumentData {
     sections: Section[];
 }
 
+// Define types for tools functionality
+interface ToolChoice {
+    type: "auto" | "any" | "tool" | "none";
+    name?: string;
+}
+
+interface Tool {
+    name: string;
+    description: string;
+    input_schema: {
+        type: string;
+        properties: Record<string, unknown>;
+        required: string[];
+    };
+}
+
+interface MessageWithTools {
+    model: string;
+    max_tokens: number;
+    temperature: number;
+    system?: string;
+    messages: { role: "user" | "assistant" | "system"; content: string }[];
+    tools: Tool[];
+    tool_choice: ToolChoice;
+    betas: string[];
+}
+
+interface ToolCallResponse {
+    tool_call: {
+        output: string;
+    };
+}
+
+interface ToolUseResponse {
+    type: "tool_use";
+    id: string;
+    name: string;
+    input: any;
+}
+
+interface TextResponse {
+    text: string;
+}
+
+type ClaudeContent = ToolUseResponse | TextResponse;
+
 /**
  * Analyzes document structure using Claude to identify section boundaries and hierarchy
  */
 async function analyzeSections(content: string, anthropic: Anthropic): Promise<DocumentData> {
-    const message = await anthropic.messages.create({
-        model: 'claude-3-haiku-20240307',
-        max_tokens: 4096,
-        messages: [{
-            role: 'user',
-            content: `You are a document structure analysis agent. Analyze the following document and extract its section hierarchy with content and page ranges.
-
-Return a JSON object with:
-- "content": the full parsed text (as one string)
-- "sections": an array of objects, each with:
-  - "path": array of integers for hierarchy (e.g. [1], [1,2], [1,2,3])
-  - "title": section heading as string
-  - "content": the parsed text under this section
-  - "pages": [startPage, endPage] if available, otherwise omit
-
-Guidelines:
-- Path depth can vary (e.g., [1], [1,2], [1,2,1,1])
-- Only include meaningful content
-- Skip footers, repeated headers, and noise
-- Ensure valid JSON only (no prose, no wrapping)
-
-Document:
-${content}`
-        }],
-        temperature: 0
-    });
+    // Get the function schema
+    const functionSchema = {
+        name: "extract_document_structure",
+        description: "Extract hierarchical section information from a document",
+        input_schema: {
+            type: "object",
+            properties: {
+                content: {
+                    type: "string",
+                    description: "The full parsed text as one string"
+                },
+                sections: {
+                    type: "array",
+                    items: {
+                        type: "object",
+                        properties: {
+                            path: {
+                                type: "array",
+                                items: { type: "number" },
+                                description: "Hierarchy path e.g. [1], [1,2], [1,2,3]"
+                            },
+                            title: {
+                                type: "string",
+                                description: "Section heading"
+                            },
+                            content: {
+                                type: "string",
+                                description: "Section text content"
+                            },
+                            pages: {
+                                type: "array",
+                                items: { type: "number" },
+                                minItems: 2,
+                                maxItems: 2,
+                                description: "Optional [startPage, endPage]"
+                            }
+                        },
+                        required: ["path", "title", "content"]
+                    }
+                }
+            },
+            required: ["content", "sections"]
+        }
+    };
 
     try {
-        const response = message.content[0].text;
-        return JSON.parse(response) as DocumentData;
+        const messageParams: MessageWithTools = {
+            model: 'claude-3-haiku-20240307',
+            max_tokens: 4096,
+            temperature: 0,
+            system: `You are a document structure analysis agent that extracts hierarchical section information from documents.
+Guidelines for section extraction:
+- Path depth can vary (e.g., [1], [1,2], [1,2,1,1]) to represent the true document hierarchy
+- Only include meaningful content, filtering out noise
+- Skip footers, repeated headers, and other non-content elements
+- Each section must have a clear title and content
+- Page ranges should be included when they can be reliably determined`,
+            messages: [{
+                role: 'user',
+                content: `Please analyze this document and extract its section hierarchy:\n\n${content}`
+            }],
+            tools: [functionSchema],
+            tool_choice: {
+                type: "tool",
+                name: "extract_document_structure"
+            },
+            betas: ["tools-2024-03-14"]
+        };
+
+        const message = await anthropic.messages.create(messageParams as any);
+        console.log("📄 Claude response:", JSON.stringify(message.content[0], null, 2));
+
+        // Check if we got a tool use response
+        const response = message.content[0] as ClaudeContent;
+        
+        if ('type' in response && response.type === 'tool_use') {
+            return JSON.parse(response.input.content) as DocumentData;
+        }
+
+        if ('text' in response) {
+            return JSON.parse(response.text) as DocumentData;
+        }
+
+        throw new Error("Unexpected response format from Claude");
     } catch (error) {
-        console.error("❌ Failed to parse LLM response:", error);
+        console.error("❌ Failed to analyze document sections:", error);
         throw new Error("Failed to analyze document sections");
     }
 }
@@ -134,3 +234,6 @@ export async function chunkDocument(
     console.log(`✅ Generated ${chunks.length} total chunks`);
     return chunks;
 }
+
+// Export the function
+export { analyzeSections, type DocumentData, type Section };
