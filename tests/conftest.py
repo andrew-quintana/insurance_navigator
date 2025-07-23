@@ -53,7 +53,6 @@ from supabase import create_client, Client
 
 # Import test configuration
 from tests.config.test_config import get_base_test_config, TestConfig
-from tests.db.helpers import get_test_client, cleanup_test_data
 
 @pytest.fixture(scope="session")
 def event_loop():
