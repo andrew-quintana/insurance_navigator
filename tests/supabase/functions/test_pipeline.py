@@ -11,10 +11,10 @@ import json
 from tests.supabase.functions._shared.conftest import supabase_config, test_user
 
 # Test constants
-with open('examples/test_serverless_processing.pdf', 'rb') as f:
+with open('examples/scan_classic_hmo.pdf', 'rb') as f:
     TEST_FILE_CONTENT = f.read()
 TEST_CONTENT_TYPE = "application/pdf"
-TEST_FILE_NAME = "test_serverless_processing.pdf"
+TEST_FILE_NAME = "scan_classic_hmo.pdf"
 MAX_POLL_ATTEMPTS = 300  # 180 seconds timeout
 POLL_INTERVAL = 1  # 1 second between polls
 
