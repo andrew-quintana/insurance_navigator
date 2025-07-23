@@ -1,45 +1,17 @@
-import { ChatAnthropic } from "npm:@langchain/anthropic@0.1.1";
-import { PromptTemplate } from "npm:@langchain/core@0.1.1/prompts";
-import { StructuredOutputParser } from "npm:langchain@0.1.1/output_parsers";
 import { 
   DocumentStructure, 
-  DocumentStructureSchema, 
   Chunk,
   Section 
 } from "./types.ts";
+import { MarkdownHeaderParser } from "./markdown_parser.ts";
 
 const CHUNK_SIZE = 6000;
 
 export class DocumentChunker {
-  private model: ChatAnthropic;
-  private parser: StructuredOutputParser<DocumentStructure>;
-  private prompt: PromptTemplate;
+  private markdownParser: MarkdownHeaderParser;
 
-  constructor(apiKey: string) {
-    this.model = new ChatAnthropic({
-      modelName: "claude-3-haiku-20240307",
-      anthropicApiKey: apiKey,
-      temperature: 0,
-    });
-
-    this.parser = StructuredOutputParser.fromZodSchema(DocumentStructureSchema);
-
-    this.prompt = PromptTemplate.fromTemplate(`
-      You are a document structure analysis agent that extracts hierarchical section information from documents.
-      
-      Guidelines for section extraction:
-      - Path depth can vary (e.g., [1], [1,2], [1,2,1,1]) to represent the true document hierarchy
-      - Only include meaningful content, filtering out noise
-      - Skip footers, repeated headers, and other non-content elements
-      - Each section must have a clear title and content
-      - Page ranges should be included when they can be reliably determined
-      
-      {format_instructions}
-      
-      Please analyze this document and extract its section hierarchy:
-      
-      {text}
-    `);
+  constructor(apiKey?: string) {
+    this.markdownParser = new MarkdownHeaderParser();
   }
 
   /**
@@ -103,28 +75,40 @@ export class DocumentChunker {
 
   /**
    * Process a document into semantically meaningful chunks with hierarchy information
+   * Now uses direct markdown parsing instead of LLM to avoid context window issues
    */
   async chunkDocument(content: string): Promise<{
     chunks: Chunk[];
     metadata: DocumentStructure["metadata"];
   }> {
-    // Create the chain
-    const chain = this.prompt
-      .pipe(this.model)
-      .pipe(this.parser);
-
-    // Run the chain
-    const result = await chain.invoke({
-      format_instructions: this.parser.getFormatInstructions(),
-      text: content
-    });
+    console.log("🔍 Parsing markdown content directly (no LLM)");
+    
+    // Validate markdown structure
+    const validation = this.markdownParser.validateMarkdownStructure(content);
+    if (!validation.isValid) {
+      console.warn("⚠️ Markdown validation issues:", validation.issues);
+      if (!validation.hasHeaders) {
+        throw new Error("No headers found in markdown content - cannot chunk without structure");
+      }
+    }
+    
+    console.log(`📊 Found ${validation.headerCount} headers in markdown`);
+    
+    // Parse markdown content into sections
+    const sections = this.markdownParser.parseMarkdownToSections(content);
+    console.log(`✅ Parsed into ${sections.length} sections`);
+    
+    // Generate metadata
+    const metadata = this.markdownParser.getDocumentMetadata(sections);
+    console.log(`📈 Document metadata:`, metadata);
 
     // Convert sections to chunks
-    const chunks = this.sectionsToChunks(result.sections);
+    const chunks = this.sectionsToChunks(sections);
+    console.log(`🧩 Generated ${chunks.length} chunks from sections`);
 
     return {
       chunks,
-      metadata: result.metadata
+      metadata
     };
   }
 } 

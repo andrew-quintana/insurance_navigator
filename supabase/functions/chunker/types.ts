@@ -15,7 +15,7 @@ export const DocumentStructureSchema = z.object({
   metadata: z.object({
     totalSections: z.number(),
     maxDepth: z.number(),
-    documentTitle: z.string().optional(),
+    documentTitle: z.string().optional().describe("Extracted from first header if available"),
   }),
 });
 
