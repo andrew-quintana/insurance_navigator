@@ -100,8 +100,8 @@ serve(async (req: Request) => {
     const parsedData = JSON.parse(await parsedContent.text());
     console.log("✅ Parsed content downloaded and decoded");
 
-    // Initialize document chunker
-    const chunker = new DocumentChunker(Deno.env.get('ANTHROPIC_API_KEY')!);
+    // Initialize document chunker (no API key needed for markdown parsing)
+    const chunker = new DocumentChunker();
 
     // Generate chunks
     console.log("🔄 Generating chunks from parsed content");
