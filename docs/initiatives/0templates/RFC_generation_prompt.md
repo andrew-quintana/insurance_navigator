@@ -1,9 +1,9 @@
 # RFC Generation Prompt Template
 
-Create a comprehensive RFC.md file for [PROJECT/FEATURE NAME], using the completed PRD.md as foundational context.
+Create a comprehensive RFC001.md file for [PROJECT/FEATURE NAME], using the completed PRD001.md as foundational context.
 
 **REFERENCE THE PRD:**
-- PRD file location: [Path to your PRD.md]
+- PRD file location: [Path to your PRD001.md]
 - Key requirements from PRD: [Summarize main functional requirements]
 - Success metrics to achieve: [From PRD success criteria]
 
@@ -30,4 +30,7 @@ Consider these when designing the technical solution:
 - Risk mitigation: [Technical risks and how to handle them]
 - Testing strategy: [How to validate the solution]
 
-Generate a detailed RFC.md that defines the technical architecture, key decisions with rationale, implementation phases, and testing strategy - all aligned with the PRD requirements.
+Generate a detailed RFC001.md that defines the technical architecture, key decisions with rationale, implementation phases, and testing strategy - all aligned with the PRD requirements.
+
+## Document Serialization Note
+Use the next available serial number (RFC001.md, RFC002.md, etc.) to maintain version control and enable parallel exploration of different technical approaches.

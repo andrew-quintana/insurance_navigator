@@ -1,10 +1,10 @@
 # Phased TODO Generation Prompt Template
 
-Create a comprehensive TODO.md implementation breakdown for [PROJECT/FEATURE NAME], using both the PRD.md and RFC.md as context. This TODO will be organized into phases designed for execution in separate Claude Code sessions.
+Create a comprehensive TODO001.md implementation breakdown for [PROJECT/FEATURE NAME], using both the PRD001.md and RFC001.md as context. This TODO will be organized into phases designed for execution in separate Claude Code sessions.
 
 **REFERENCE DOCUMENTS:**
-- PRD file: [Path to PRD.md] - for requirements and acceptance criteria
-- RFC file: [Path to RFC.md] - for technical architecture and implementation plan
+- PRD file: [Path to PRD001.md] - for requirements and acceptance criteria
+- RFC file: [Path to RFC001.md] - for technical architecture and implementation plan
 - Key deliverables: [Main features/components from PRD]
 - Technical approach: [Architecture decisions from RFC]
 
@@ -36,7 +36,7 @@ Generate a detailed TODO.md organized into distinct phases. Each phase should:
 1. **Be self-contained** - Executable in a separate Claude Code chat/REPL session
 2. **Include clear inputs** - List all files, documents, and context needed for that phase
 3. **Specify outputs** - Define what documentation/notes should be saved for future phases
-4. **Reference previous phases** - Use saved outputs from earlier phases (e.g., @phase1_notes.md)
+4. **Reference previous phases** - Use saved outputs from earlier phases (e.g., @TODO001_phase1_notes.md)
 5. **Include session reset instructions** - Remind to run `/clear` or restart before beginning each new phase
 
 **PHASE STRUCTURE:**
@@ -53,7 +53,7 @@ For each phase, include:
 
 ### Prerequisites
 - Files/documents to read: [specific file paths]
-- Previous phase outputs: [@phaseX_notes.md, @implementation_log.md, etc.]
+- Previous phase outputs: [@TODO001_phaseX_notes.md, @TODO001_phaseX_decisions.md, etc.]
 - Session setup: Run `/clear` to start fresh
 
 ### Context for Claude
@@ -65,9 +65,9 @@ For each phase, include:
 [Detailed, actionable tasks for this phase]
 
 ### Expected Outputs
-- Save implementation notes to: @phase[X]_notes.md
-- Document any architectural decisions in: @phase[X]_decisions.md
-- List any issues/blockers for next phase in: @phase[X]_handoff.md
+- Save implementation notes to: @TODO001_phase[X]_notes.md
+- Document any architectural decisions in: @TODO001_phase[X]_decisions.md
+- List any issues/blockers for next phase in: @TODO001_phase[X]_handoff.md
 
 ### Progress Checklist
 #### Setup
@@ -85,9 +85,9 @@ For each phase, include:
 - [ ] Task 6
 
 #### Documentation
-- [ ] Save @phase[X]_notes.md
-- [ ] Save @phase[X]_decisions.md
-- [ ] Save @phase[X]_handoff.md
+- [ ] Save @TODO001_phase[X]_notes.md
+- [ ] Save @TODO001_phase[X]_decisions.md
+- [ ] Save @TODO001_phase[X]_handoff.md
 ```
 
 **FINAL PROJECT CHECKLIST:**
@@ -128,4 +128,7 @@ At the end of the TODO.md, include a comprehensive project completion checklist:
 - [ ] Project ready for production
 ```
 
-Generate the complete phased TODO.md following this methodology with detailed progress checklists for each phase.
+Generate the complete phased TODO001.md following this methodology with detailed progress checklists for each phase.
+
+## Document Serialization Note
+Use the serialization pattern TODO001.md, TODO002.md, etc. for different implementation approaches. Phase documentation should follow the pattern `@TODO001_phaseX_notes.md`, `@TODO001_phaseX_decisions.md`, etc. to prevent confusion when multiple TODO implementations exist.
