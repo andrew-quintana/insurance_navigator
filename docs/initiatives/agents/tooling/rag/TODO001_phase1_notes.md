@@ -17,3 +17,9 @@ This document summarizes the implementation of the MVP Retrieval-Augmented Gener
 - Focused on simplicity, performance (<200ms), and security (user isolation)
 - All tests pass, confirming correct baseline behavior
 - Ready for extension with advanced retrieval strategies in future phases 
+
+## Integration Test
+- Added an integration test (`test_ragtool_real_supabase_integration`) that connects to the real Supabase/Postgres database using environment variables and a hardcoded user_id.
+- The test validates end-to-end retrieval with live data from the `document_chunks` table.
+- The test is skipped if the database is not available.
+- All tests, including the integration test, pass successfully. 

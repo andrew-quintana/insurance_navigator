@@ -18,3 +18,7 @@
 ## Rationale
 - Simplicity and performance prioritized for baseline
 - All design choices made to enable rapid future extension and experimentation 
+
+## Testing Decisions
+- Included both unit tests (with DB mocking) and a real integration test with live Supabase/Postgres data.
+- Rationale: Ensures the MVP baseline is validated both in isolation and in a real environment, increasing confidence in correctness and readiness for future experiments. 

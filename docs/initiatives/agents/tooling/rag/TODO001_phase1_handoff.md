@@ -10,6 +10,10 @@
 - Add analytics, logging, and performance monitoring hooks
 - Prepare documentation for agent integration and API usage
 
+## Integration Test Coverage
+- Integration test with real Supabase/Postgres is present and passing.
+- Future phases should maintain and extend integration test coverage as new retrieval strategies and features are added.
+
 ## Notes for Next Phase
 - Future work will add plugin/expander architecture and advanced retrieval strategies
 - Maintain test coverage as new features are added
