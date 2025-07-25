@@ -20,15 +20,24 @@ import logging
 # --- RetrievalConfig ---
 @dataclass
 class RetrievalConfig:
+    """
+    Configuration for RAG retrieval.
+    Args:
+        similarity_threshold: Minimum similarity for chunk inclusion (0, 1].
+        max_chunks: Maximum number of chunks to return.
+        token_budget: Maximum total tokens for all returned chunks.
+    """
     similarity_threshold: float = 0.7
     max_chunks: int = 10
     token_budget: int = 4000
 
     @classmethod
-    def default(cls):
+    def default(cls) -> "RetrievalConfig":
+        """Return default configuration."""
         return cls()
 
-    def validate(self):
+    def validate(self) -> None:
+        """Validate configuration parameters."""
         assert 0.0 < self.similarity_threshold <= 1.0, "similarity_threshold must be in (0, 1]"
         assert self.max_chunks > 0, "max_chunks must be positive"
         assert self.token_budget > 0, "token_budget must be positive"
@@ -36,6 +45,20 @@ class RetrievalConfig:
 # --- ChunkWithContext ---
 @dataclass
 class ChunkWithContext:
+    """
+    Data structure for a document chunk with context and metadata.
+    Args:
+        id: Unique chunk identifier
+        doc_id: Document identifier
+        chunk_index: Index of chunk in document
+        content: Text content of the chunk
+        section_path: Hierarchical section path (if available)
+        section_title: Section title (if available)
+        page_start: Start page (if available)
+        page_end: End page (if available)
+        similarity: Similarity score (if available)
+        tokens: Token count (if available)
+    """
     id: str
     doc_id: str
     chunk_index: int
@@ -49,12 +72,28 @@ class ChunkWithContext:
 
 # --- RAGTool ---
 class RAGTool:
+    """
+    Main class for Retrieval-Augmented Generation (RAG) using vector similarity search.
+    Performs user-scoped access control and token budget enforcement.
+    """
     def __init__(self, user_id: str, config: Optional[RetrievalConfig] = None):
+        """
+        Args:
+            user_id: User identifier for access control
+            config: RetrievalConfig instance (optional)
+        """
         self.user_id = user_id
         self.config = config or RetrievalConfig.default()
         self.logger = logging.getLogger("RAGTool")
 
     async def retrieve_chunks(self, query_embedding: List[float]) -> List[ChunkWithContext]:
+        """
+        Retrieve document chunks most similar to the query embedding, enforcing user access and token budget.
+        Args:
+            query_embedding: List of floats (embedding vector)
+        Returns:
+            List of ChunkWithContext objects
+        """
         self.config.validate()
         conn = None
         try:
@@ -101,8 +140,12 @@ class RAGTool:
             if conn:
                 await conn.close()
 
-    async def _get_db_conn(self):
-        # Use environment variables for DB connection
+    async def _get_db_conn(self) -> Any:
+        """
+        Get an asyncpg database connection using environment variables.
+        Returns:
+            asyncpg.Connection
+        """
         host = os.getenv("SUPABASE_DB_HOST", "127.0.0.1")
         port = int(os.getenv("SUPABASE_DB_PORT", "5432"))
         user = os.getenv("SUPABASE_DB_USER", "postgres")
