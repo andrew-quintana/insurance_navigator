@@ -4,19 +4,12 @@ import { getPipelineFilename } from '../_shared/date_utils.ts';
 export async function handleUpload(
   req: Request,
   userId: string,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  documentType: string = 'user_document', // new optional argument
+  formData: FormData // Add formData as a parameter
 ) {
   console.log('Starting file upload process...');
   console.log('User ID:', userId);
-
-  let formData;
-  try {
-    formData = await req.formData();
-    console.log('Form data parsed successfully');
-  } catch (error) {
-    console.error('Failed to parse form data:', error);
-    throw new Error('Invalid form data');
-  }
 
   const file = formData.get('file') as File;
   if (!file) {
@@ -39,17 +32,18 @@ export async function handleUpload(
 
     // Generate file path using verified user ID and timestamp
     const uploadTimestamp = new Date();
-    const filePath = `user/${userId}/raw/${getPipelineFilename(uploadTimestamp, file.name)}`;
+    const basePath = documentType === 'regulatory_document' ? 'regulatory' : 'user';
+    const filePath = `${basePath}/${userId}/raw/${getPipelineFilename(uploadTimestamp, file.name)}`;
     console.log('Generated file path:', filePath);
 
     // Check if file exists and clean it up if needed
     const { data: existingFile } = await supabase.storage
       .from('files')
-      .list(`user/${userId}/raw`, {
+      .list(`${basePath}/${userId}/raw`, {
         search: file.name
       });
 
-    if (existingFile?.length > 0) {
+    if ((existingFile?.length ?? 0) > 0) {
       console.log('Found existing file, removing it first...');
       const { error: removeError } = await supabase.storage
         .from('files')
@@ -88,7 +82,8 @@ export async function handleUpload(
           name: file.name,
           source_path: filePath,
           processing_status: 'uploaded',
-          uploaded_at: uploadTimestamp.toISOString()
+          uploaded_at: uploadTimestamp.toISOString(),
+          document_type: documentType // set document_type
         }
       ])
       .select()
@@ -111,7 +106,8 @@ export async function handleUpload(
         owner: userId,
         name: file.name,
         source_path: filePath,
-        processing_status: 'uploaded'
+        processing_status: 'uploaded',
+        document_type: documentType
       });
       
       throw new Error(`Failed to create document record: ${JSON.stringify(documentError)}`);
@@ -139,3 +135,4 @@ export async function handleUpload(
     throw error;
   }
 }
+// TODO: Refactor all callers to use documentType argument for regulatory_document support
