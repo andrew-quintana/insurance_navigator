@@ -44,7 +44,7 @@ serve(async (req: Request) => {
   console.log('Received request:', {
     method: req.method,
     url: req.url,
-    headers: Object.fromEntries(req.headers.entries())
+    headers: Object.fromEntries(Array.from(req.headers.entries()))
   });
 
   // Handle preflight requests
@@ -76,10 +76,35 @@ serve(async (req: Request) => {
 
     // Handle file upload - pass TEST_USER_ID for now since we're not using JWT
     console.log('Processing upload with test user ID:', user.id);
-    const result = await handleUpload(req, user.id, supabase);
-    console.log('Upload completed successfully:', result);
 
-    // Handoff to doc-parser (no await = fire-and-forget)
+    // --- MVP: Regulatory Document Support ---
+    // 1. Detect admin role from user_metadata
+    const isAdmin = user.user_metadata && (user.user_metadata.role === 'admin' || (Array.isArray(user.user_metadata.roles) && user.user_metadata.roles.includes('admin')));
+
+    // 2. Parse form data to get documentType (if present)
+    let documentType = 'user_document';
+    let formData: FormData | undefined;
+
+    if (req.headers.get('content-type') && req.headers.get('content-type').includes('multipart/form-data')) {
+      formData = await req.formData();
+      const docTypeField = formData.get('documentType');
+      if (docTypeField && typeof docTypeField === 'string') {
+        if (docTypeField === 'regulatory_document') {
+          if (!isAdmin) {
+            return createResponse({ 
+              success: false, 
+              error: 'Only admin users can upload regulatory documents' 
+            }, 403);
+          }
+          documentType = 'regulatory_document';
+        } else if (docTypeField === 'user_document') {
+          documentType = 'user_document';
+        }
+      }
+    }
+
+    const result = await handleUpload(req, user.id, supabase, documentType, formData);
+    console.log('Upload completed successfully:', result);
     fetch(`${Deno.env.get('SUPABASE_URL') || Deno.env.get('URL')}/functions/v1/doc-parser`, {
       method: 'POST',
       headers: {
@@ -88,11 +113,10 @@ serve(async (req: Request) => {
       },
       body: JSON.stringify({ docId: result.document.id })
     }).then(res => {
-      console.log("🛰️ doc-parser triggered, status:", res.status);
+      console.log("\ud83d\udef0\ufe0f doc-parser triggered, status:", res.status);
     }).catch(err => {
-      console.error("⚠️ Error triggering doc-parser:", err);
+      console.error("\u26a0\ufe0f Error triggering doc-parser:", err);
     });
-
     return createResponse({ success: true, result });
 
   } catch (err: unknown) {

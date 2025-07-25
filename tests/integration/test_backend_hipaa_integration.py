@@ -11,7 +11,7 @@ from supabase import create_client, Client
 
 from config.database import get_supabase_client
 from tests.config.eval_config import EnvironmentConfig
-from tests.db.helpers import cleanup_test_data
+from tests.db.helpers import clear_test_data
 
 pytestmark = pytest.mark.asyncio
 
@@ -37,7 +37,7 @@ async def supabase_test_client() -> AsyncGenerator[Client, None]:
     yield client
     
     # Cleanup after tests
-    await cleanup_test_data(client, test_data)
+    await clear_test_data(client)
 
 @pytest.fixture
 async def test_app(supabase_test_client: Client) -> AsyncGenerator[FastAPI, None]:
