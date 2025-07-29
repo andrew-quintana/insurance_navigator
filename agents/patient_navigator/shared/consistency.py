@@ -41,8 +41,11 @@ class SelfConsistencyChecker:
         Returns:
             List of response variant strings
         """
-        # TODO: Implement LLM-based variant generation in Phase 2
-        # For Phase 1, return placeholder variants
+        # This method is now a placeholder - actual variant generation
+        # is handled by the agent's _generate_response_variants method
+        # which uses LLM for more sophisticated generation
+        
+        # For backward compatibility, return placeholder variants
         variants = []
         
         for i in range(min(num_variants, self.max_variants)):
