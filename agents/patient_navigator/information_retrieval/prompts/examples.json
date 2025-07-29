@@ -1,0 +1,64 @@
+{
+  "examples": [
+    {
+      "user_query": "What does my insurance cover for doctor visits?",
+      "expert_reframe": "coverage analysis for outpatient physician services",
+      "direct_answer": "Your Classic HMO plan covers doctor visits with a $25 copay for primary care physician visits and a $40 copay for specialist visits. No deductible applies to office visits.",
+      "key_points": [
+        "Primary care visits have $25 copay",
+        "Specialist visits have $40 copay", 
+        "No deductible for office visits",
+        "Referral required for specialist visits"
+      ],
+      "confidence_score": 0.92
+    },
+    {
+      "user_query": "How much do I pay for prescription drugs?",
+      "expert_reframe": "prescription drug benefit structure and cost-sharing analysis",
+      "direct_answer": "Your prescription drug benefits include a $10 copay for generic drugs, $30 for preferred brand drugs, and $50 for non-preferred brand drugs. Mail-order pharmacy is available for maintenance medications.",
+      "key_points": [
+        "Generic drugs: $10 copay",
+        "Preferred brand drugs: $30 copay",
+        "Non-preferred brand drugs: $50 copay",
+        "Mail-order pharmacy available for maintenance drugs"
+      ],
+      "confidence_score": 0.88
+    },
+    {
+      "user_query": "Is physical therapy covered under my plan?",
+      "expert_reframe": "physical therapy services coverage and benefit limits",
+      "direct_answer": "Physical therapy is covered under your plan for up to 20 visits per calendar year with a $30 copay per session. Prior authorization is required for visits beyond the initial evaluation.",
+      "key_points": [
+        "Covered for up to 20 visits per year",
+        "$30 copay per physical therapy session",
+        "Prior authorization required after initial evaluation",
+        "Calendar year benefit period applies"
+      ],
+      "confidence_score": 0.85
+    },
+    {
+      "user_query": "What's my deductible and how does it work?",
+      "expert_reframe": "annual deductible structure and cost-sharing mechanism",
+      "direct_answer": "Your plan has a $1,500 annual deductible per individual ($3,000 family maximum). The deductible applies to most services except office visits, preventive care, and prescription drugs.",
+      "key_points": [
+        "$1,500 individual annual deductible",
+        "$3,000 family maximum deductible",
+        "Office visits and preventive care exempt from deductible",
+        "Prescription drugs have separate copay structure"
+      ],
+      "confidence_score": 0.90
+    },
+    {
+      "user_query": "Do I need a referral to see a specialist?",
+      "expert_reframe": "specialist referral requirements and network access",
+      "direct_answer": "Yes, you need a referral from your primary care physician to see a specialist. Without a referral, specialist visits will not be covered by your insurance.",
+      "key_points": [
+        "Referral required from primary care physician",
+        "Specialist visits not covered without referral",
+        "Primary care physician manages specialist access",
+        "Network specialists only covered"
+      ],
+      "confidence_score": 0.95
+    }
+  ]
+} 
