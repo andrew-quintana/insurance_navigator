@@ -14,8 +14,11 @@
     "verify-pipeline": "ts-node scripts/document_processing/verify-pipeline.ts"
   },
   "dependencies": {
+    "@langchain/core": "^0.3.66",
+    "@langchain/langgraph": "^0.4.0",
     "@langchain/openai": "^0.5.16",
     "@supabase/supabase-js": "^2.39.0",
+    "@tavily/core": "^0.5.10",
     "dotenv": "^16.3.1",
     "jsonwebtoken": "^9.0.2",
     "langchain": "^0.3.29"
