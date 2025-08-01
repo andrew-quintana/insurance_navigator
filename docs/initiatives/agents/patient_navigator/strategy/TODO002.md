@@ -1,625 +1,294 @@
-# TODO002: Strategy Evaluation & Validation System - MVP Implementation Breakdown
+# TODO002: Strategy Evaluation & Validation System - Streamlined MVP Implementation
 
 ## Document Context
 
-This TODO provides the streamlined implementation breakdown for the Strategy Evaluation & Validation System MVP based on requirements from PRD002.md and technical architecture from RFC002.md. The implementation follows REFACTOR001.md simplification prescriptions, emphasizing LLM-first development with prompt engineering over complex algorithms.
+This TODO002 provides the streamlined implementation breakdown for the Strategy Evaluation & Validation System MVP, based on PRD002.md and RFC002.md. The system emphasizes LLM-first development with prompt engineering over complex algorithms, using Python throughout for consistency.
 
 **Reference Documents:**
-- PRD file: docs/initiatives/agents/patient_navigator/strategy/PRD002.md - MVP requirements with speed/cost/effort optimization
-- RFC file: docs/initiatives/agents/patient_navigator/strategy/RFC002.md - LLM-first technical architecture with 4-component workflow
-- Refactor guide: docs/initiatives/agents/patient_navigator/strategy/REFACTOR001.md - Simplification prescription from complex to MVP approach
-- Key deliverables: StrategyMCP (Tavily + semantic search), StrategyCreator (4-strategy prompt generation), RegulatoryAgent (LLM validation), StrategyMemoryLite (dual storage)
-- Technical approach: LangGraph workflow orchestration with simplified toolchain (Tavily + SentenceBERT + Supabase + LangGraph)
+- PRD002.md - MVP requirements with speed/cost/effort optimization
+- RFC002.md - Technical architecture with buffer-based storage workflow
+- REFACTOR001.md - Simplification prescription from complex 001 implementation
+
+## Implementation Overview
+
+The Strategy Evaluation & Validation System MVP implements a 4-component workflow:
+1. **StrategyMCP Tool** - Context gathering with Tavily web search
+2. **StrategyCreator Agent** - LLM-driven strategy generation
+3. **RegulatoryAgent** - Compliance validation with ReAct pattern
+4. **StrategyMemoryLiteWorkflow** - Buffer-based storage and retrieval
+
+### Key Implementation Principles
+
+- **Python-First**: All components implemented in Python for consistency
+- **LLM-Driven**: Prompt engineering over complex algorithms
+- **Buffer-Based Storage**: Agent-orchestrated flow with buffer → commit pattern
+- **Mock Integration**: Mock responses enable rapid development and testing
+- **Graceful Degradation**: System continues with reduced functionality during failures
 
 ## Phase 1: Database Schema & Environment Setup
 
-### Prerequisites
-- Files/documents to read: 
-  - @docs/initiatives/agents/patient_navigator/strategy/PRD002.md
-  - @docs/initiatives/agents/patient_navigator/strategy/RFC002.md
-  - @docs/initiatives/agents/patient_navigator/strategy/REFACTOR001.md
-  - Package.json (for existing dependencies)
-- Session setup: Run `/clear` to start fresh
+### 1.1 Database Schema Creation
 
-### Context for Claude
-**IMPORTANT**: This is a new session. The Strategy Evaluation & Validation System MVP requires LLM-first architecture with 4-component workflow: StrategyMCP (context coordinator using Tavily), StrategyCreator (4-strategy prompt generation), RegulatoryAgent (LLM compliance validation), and StrategyMemoryLite (MVP 2-table storage with dual scoring). Focus on speed/cost/effort optimization replacing quality metrics per REFACTOR001.md.
+**Location**: `supabase/migrations/20250129000000_create_strategy_tables.sql`
 
-### Tasks
+**Tasks**:
+- [x] Create `strategies.strategies` table with speed/cost/effort scoring
+- [x] Create `strategies.strategy_vectors` table for embeddings
+- [x] Create `strategies.strategies_buffer` table for processing reliability
+- [x] Create `strategies.strategy_vector_buffer` table for embedding processing
+- [x] Set up performance indexes and constraints
+- [x] Configure RLS policies following existing patterns
 
-#### Environment Setup
-1. **Install LangGraph dependencies**
-   - Install @langchain/langgraph, @langchain/core for workflow orchestration
-   - Verify compatibility with existing Node.js/TypeScript setup
-   - Install Tavily client: `npm install tavily-client`
+**Key Features**:
+- Dual scoring system (LLM 0.0-1.0, Human 1.0-5.0)
+- Content hash deduplication
+- Buffer-based processing for reliability
+- Vector similarity search support
 
-2. **Configure Supabase SDK integration**
-   - Verify @supabase/supabase-js installation
-   - Test direct SDK connection (following RFC002 requirement)
-   - Confirm pgvector extension enabled in Supabase PostgreSQL
+### 1.2 Environment Setup
 
-3. **Set up Tavily integration**
-   - Configure TAVILY_API_KEY environment variable
-   - Test Tavily client initialization and basic search
-   - Implement 5-second timeout with graceful degradation
+**Tasks**:
+- [x] Install Python dependencies (supabase, tavily, openai)
+- [x] Configure environment variables for API keys
+- [x] Set up logging and monitoring infrastructure
+- [x] Create BaseAgent inheritance patterns
+- [x] Establish testing framework with mock responses
 
-#### Database Schema - MVP 2-Table Design
-4. **Create MVP strategy database schema**
-   - Create `strategies` schema following existing patterns
-   - Create migration file: `supabase/migrations/20250130000000_create_strategy_mvp_tables.sql`
-   
-5. **Implement strategies.strategies table with reliability features**
-   ```sql
-   CREATE TABLE strategies.strategies (
-     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-     title TEXT NOT NULL,
-     category TEXT NOT NULL,
-     approach TEXT NOT NULL,
-     rationale TEXT NOT NULL,
-     actionable_steps JSONB NOT NULL,
-     plan_constraints JSONB NOT NULL,
-     
-     -- Speed/Cost/Effort scoring (replacing quality)
-     llm_score_speed NUMERIC(3,2) CHECK (llm_score_speed >= 0.0 AND llm_score_speed <= 1.0),
-     llm_score_cost NUMERIC(3,2) CHECK (llm_score_cost >= 0.0 AND llm_score_cost <= 1.0),
-     llm_score_effort NUMERIC(3,2) CHECK (llm_score_effort >= 0.0 AND llm_score_effort <= 1.0),
-     
-     -- Human effectiveness scoring (1.0-5.0)
-     human_score_effectiveness NUMERIC(3,2) CHECK (human_score_effectiveness >= 1.0 AND human_score_effectiveness <= 5.0),
-     num_ratings INTEGER DEFAULT 0,
-     
-     -- Reliability and validation fields
-     content_hash TEXT UNIQUE, -- For deduplication
-     validation_status TEXT DEFAULT 'pending' CHECK (validation_status IN ('pending', 'approved', 'flagged', 'rejected')),
-     
-     author_id UUID REFERENCES auth.users(id),
-     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-   );
-   ```
+### 1.3 Project Structure
 
-6. **Implement processing buffer for reliability**
-   ```sql
-   CREATE TABLE strategies.strategies_buffer (
-     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-     strategy_data JSONB NOT NULL,
-     content_hash TEXT NOT NULL,
-     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'abandoned')),
-     retry_count INTEGER DEFAULT 0,
-     expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '24 hours'),
-     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-   );
-   ```
-
-7. **Implement strategies.strategy_vectors table**
-   ```sql
-   CREATE TABLE strategies.strategy_vectors (
-     strategy_id UUID PRIMARY KEY REFERENCES strategies.strategies(id) ON DELETE CASCADE,
-     embedding VECTOR(1536), -- OpenAI text-embedding-3-small
-     model_version TEXT NOT NULL DEFAULT 'text-embedding-3-small',
-     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-   );
-   ```
-
-8. **Add performance optimization and reliability indexes**
-   - Create ivfflat index for vector similarity search
-   - Add indexes for speed/cost/effort scoring and validation status
-   - Create constraint-based filtering indexes
-   - Add buffer management indexes for cleanup efficiency
-
-#### Project Structure
-8. **Create simplified component directory structure**
-   - agents/tooling/mcp/strategy/ (StrategyMCP tool)
-   - agents/patient_navigator/strategy/creator/ (StrategyCreator agent)
-   - agents/patient_navigator/strategy/regulatory/ (RegulatoryAgent)
-   - agents/patient_navigator/strategy/memory/ (StrategyMemoryLite)
-   - agents/patient_navigator/strategy/workflow/ (LangGraph orchestration)
-
-### Expected Outputs
-- Save environment setup notes to: @TODO002_phase1_notes.md
-- Document database schema decisions in: @TODO002_phase1_schema.md
-- List any setup issues for next phase in: @TODO002_phase1_handoff.md
-
-### Progress Checklist
-
-#### Environment Setup
-- [ ] Install @langchain/langgraph and @langchain/core
-- [ ] Install tavily-client package
-- [ ] Verify Node.js/TypeScript compatibility
-- [ ] Confirm @supabase/supabase-js installation
-- [ ] Test direct Supabase SDK connection
-- [ ] Verify pgvector extension enabled
-- [ ] Configure TAVILY_API_KEY environment variable
-- [ ] Test Tavily client basic functionality
-
-#### Database Schema - MVP 2-Table Design
-- [ ] Create `strategies` schema
-- [ ] Create migration file for MVP tables
-- [ ] Implement strategies.strategies table with speed/cost/effort scoring
-  - [ ] id, title, category, approach, rationale fields
-  - [ ] actionable_steps (JSONB) and plan_constraints (JSONB)
-  - [ ] llm_score_speed, llm_score_cost, llm_score_effort (0.0-1.0)
-  - [ ] human_score_effectiveness (1.0-5.0) and num_ratings
-  - [ ] author_id, created_at, updated_at
-- [ ] Implement strategies.strategy_vectors table
-  - [ ] strategy_id (UUID FK + primary key)
-  - [ ] embedding (VECTOR(1536))
-  - [ ] model_version and created_at tracking
-- [ ] Create performance indexes
-  - [ ] ivfflat index for vector similarity
-  - [ ] Index for speed/cost/effort scores
-  - [ ] Constraint-based filtering indexes
-- [ ] Implement RLS policies
-- [ ] Test vector embedding storage and retrieval
-
-#### Project Structure
-- [ ] Create agents/tooling/mcp/strategy/ directory
-- [ ] Create agents/patient_navigator/strategy/creator/ directory
-- [ ] Create agents/patient_navigator/strategy/regulatory/ directory
-- [ ] Create agents/patient_navigator/strategy/memory/ directory
-- [ ] Create agents/patient_navigator/strategy/workflow/ directory
-
-#### Documentation
-- [ ] Save @TODO002_phase1_notes.md
-- [ ] Save @TODO002_phase1_schema.md
-- [ ] Save @TODO002_phase1_handoff.md
-
----
+**Tasks**:
+- [x] Create component directories following existing patterns
+- [x] Set up type definitions and interfaces
+- [x] Establish configuration management
+- [x] Create documentation structure
 
 ## Phase 2: Simplified Component Implementation
 
-### Prerequisites
-- Files/documents to read:
-  - @TODO002_phase1_notes.md
-  - @TODO002_phase1_schema.md
-  - @TODO002_phase1_handoff.md
-  - @docs/initiatives/agents/patient_navigator/strategy/RFC002.md
-- Previous phase outputs: Database schema and project structure
-- Session setup: Run `/clear` to start fresh
+### 2.1 StrategyMCP Tool Implementation
 
-### Context for Claude
-**IMPORTANT**: This is a new session. Phase 1 completed environment setup and MVP database schema. Now implementing the 4 simplified components per REFACTOR001.md: StrategyMCP (Tavily + semantic search), StrategyCreator (4-strategy prompt generation), RegulatoryAgent (LLM validation), StrategyMemoryLite (dual storage). Focus on prompt engineering over complex algorithms.
+**Location**: `agents/tooling/mcp/strategy/`
 
-### Tasks
+**Tasks**:
+- [x] Convert from TypeScript to Python
+- [x] Implement Tavily API integration with 3-query generation
+- [x] Add 5-second timeout with graceful degradation
+- [x] Implement 5-minute TTL caching for web results
+- [x] Add semantic search using pgvector similarity
+- [x] Create `ContextRetrievalResult` output structure
+- [x] Simplify query generation to one query per optimization type
 
-#### StrategyMCP Tool (Simplified Tavily Integration)
-1. **Implement simplified context gathering in agents/tooling/mcp/strategy/core.py**
-   - Create PlanConstraints interface following REFACTOR001.md
-   - Implement StrategyMCPTool with Tavily-only web search
-   - Generate 3 queries per optimization type (speed/cost/effort)
-   - Add semantic search of existing strategies via pgvector
+**Key Features**:
+- Single query per optimization type (speed, cost, effort)
+- Plan context integration for enhanced queries
+- Mock semantic search for development
+- Regulatory context retrieval from documents schema
 
-2. **Implement web search with graceful degradation**
-   - Single Tavily provider (no multi-provider fallback per REFACTOR001.md)
-   - 5-second timeout with fallback to semantic search
-   - 5-minute TTL caching for concurrent requests
-   - Create ContextRetrievalResult output structure
+### 2.2 StrategyCreator Agent Implementation
 
-#### StrategyCreator Agent (4-Strategy Prompt Generation)
-3. **Implement prompt-driven strategy generation in agents/patient_navigator/strategy/creator/agent.py**
-   - Create StrategyCreatorAgent inheriting from BaseAgent
-   - Implement 4-strategy generation: speed, cost, effort, balanced
-   - Use prompt engineering over algorithmic optimization per REFACTOR001.md
-   - Add LLM self-scoring mechanism (0.0-1.0 for speed/cost/effort)
+**Location**: `agents/patient_navigator/strategy/creator/`
 
-4. **Create strategy prompt templates**
-   - Speed prompt: "Generate the fastest possible strategy..."
-   - Cost prompt: "Generate the most cost-effective strategy..."
-   - Effort prompt: "Generate the strategy requiring minimal user effort..."
-   - Balanced prompt: "Generate a balanced strategy optimizing for speed, cost, and effort..."
+**Tasks**:
+- [x] Convert from TypeScript to Python with BaseAgent inheritance
+- [x] Implement 4-strategy generation loop: speed, cost, effort, balanced
+- [x] Create prompt templates for each optimization type
+- [x] Add LLM self-scoring mechanism (0.0-1.0 scale)
+- [x] Create `Strategy` interface and output formatting
+- [x] Include content hash generation for deduplication
 
-5. **Implement Strategy model and output formatting with reliability**
-   - Create Strategy interface with speed/cost/effort scoring
-   - Structure StrategyResponse with 4 strategies array
-   - Include confidence scores, rationale linking, and content hash generation
+**Key Features**:
+- 4 distinct strategies per request
+- LLM-driven optimization through specialized prompts
+- Self-assessment scores for transparency
+- Fallback strategy creation when parsing fails
 
-#### RegulatoryAgent (LLM Validation with Quality Assessment)
-6. **Implement LLM-based compliance and quality validation in agents/patient_navigator/strategy/regulatory/agent.py**
-   - Create RegulatoryAgent inheriting from BaseAgent
-   - ReAct pattern with quality evaluation step for each strategy
-   - Create ValidationResult with compliance_status, reasons, confidence_score
-   - Integrate regulatory context from documents schema
-   - Add post-processing guardrails to prevent harmful recommendations
+### 2.3 RegulatoryAgent Implementation
 
-7. **Implement ReAct validation workflow with quality assessment**
-   - Regulatory context retrieval from existing documents schema
-   - LLM ReAct pattern: Reason (quality check) → Act (compliance validation) → Observe (final assessment)
-   - Quality evaluation prompt: "Assess strategy quality for completeness, clarity, and actionability..."
-   - Compliance prompt: "Validate this healthcare strategy for regulatory compliance..."
-   - Response parsing: approved/flagged/rejected with reasoning
-   - Audit trail generation for compliance review
-   - Manual audit hook for flagged strategies
+**Location**: `agents/patient_navigator/strategy/regulatory/`
 
-#### StrategyMemoryLite Agent (MVP 2-Table Storage with Reliability)
-8. **Implement dual storage system with transaction safety in agents/patient_navigator/strategy/memory/agent.py**
-   - Create StrategyMemoryLiteAgent inheriting from BaseAgent
-   - Direct Supabase SDK calls for strategies.strategies table
-   - Vector operations for strategies.strategy_vectors table
-   - Dual scoring: LLM scores (creation) + human scores (feedback)
-   - Wrap storage operations in transactions with retry logic
+**Tasks**:
+- [x] Convert from TypeScript to Python with BaseAgent inheritance
+- [x] Implement ReAct pattern: Reason → Act → Observe
+- [x] Create quality assessment prompt
+- [x] Create compliance validation prompt with guardrails
+- [x] Implement response parsing for approved/flagged/rejected status
+- [x] Add audit trail logging with manual review hooks
+- [x] Create `ValidationResult` interface with confidence scoring
 
-9. **Implement semantic retrieval and storage with buffer management**
-   - Category-based filtering before vector search
-   - JOIN operations combining metadata with similarity scores
-   - Constraint-based pre-filtering following established patterns
-   - Storage confirmation responses
-   - Buffer processing with idempotency using content hashes
-   - Automatic cleanup of processed buffer entries
+**Key Features**:
+- Multi-step validation (quality → compliance → synthesis)
+- Confidence scoring and source references
+- Manual review hooks for regulatory compliance
+- Complete audit trail for compliance review
 
-### Expected Outputs
-- Save component implementation notes to: @TODO002_phase2_notes.md
-- Document simplified approaches in: @TODO002_phase2_decisions.md
-- List integration issues for next phase in: @TODO002_phase2_handoff.md
+### 2.4 StrategyMemoryLiteWorkflow Implementation
 
-### Progress Checklist
+**Location**: `agents/patient_navigator/strategy/memory/`
 
-#### StrategyMCP Implementation (Tavily + Semantic Search)
-- [ ] Create PlanConstraints TypeScript interface
-- [ ] Implement StrategyMCPTool with Tavily client
-- [ ] Generate 3 optimization queries (speed/cost/effort contexts)
-- [ ] Implement semantic search of existing strategies
-- [ ] Add constraint-based pre-filtering before vector search
-- [ ] Implement 5-second timeout with graceful degradation
-- [ ] Add 5-minute TTL caching for web search results
-- [ ] Create ContextRetrievalResult output structure
-- [ ] Test fallback to semantic search when Tavily fails
+**Tasks**:
+- [x] Convert from agent to Python workflow
+- [x] Implement buffer-based storage workflow
+- [x] Create dual storage: strategies_buffer → strategies → strategy_vector_buffer → strategy_vectors
+- [x] Implement LLM score storage (speed/cost/effort from creation)
+- [x] Add human effectiveness score updates (feedback system)
+- [x] Implement category-based filtering before vector search
+- [x] Add buffer processing with content hash idempotency
+- [x] Include retry logic for failed database operations
 
-#### StrategyCreator Implementation (4-Strategy Prompt Generation)
-- [ ] Create Strategy TypeScript interface with speed/cost/effort scoring
-- [ ] Implement 4-strategy generation loop (speed, cost, effort, balanced)
-- [ ] Create prompt templates for each optimization type
-- [ ] Implement LLM self-scoring mechanism (0.0-1.0 scale)
-- [ ] Add prompt parsing for strategy response with content hash generation
-- [ ] Create StrategyResponse output formatting
-- [ ] Include confidence scores and rationale linking
-- [ ] Test strategy diversity across optimization types
+**Key Features**:
+- Buffer-based workflow for reliability
+- Idempotent processing with content hash deduplication
+- Constraint-based pre-filtering before vector search
+- Dual scoring system (LLM + human feedback)
 
-#### RegulatoryAgent Implementation (ReAct Pattern with Quality Assessment)
-- [ ] Create ValidationResult interface
-- [ ] Implement ReAct pattern with quality evaluation step for each strategy
-- [ ] Create regulatory context retrieval from documents schema
-- [ ] Implement quality assessment prompt: "Assess strategy quality for completeness, clarity, and actionability..."
-- [ ] Implement compliance validation prompt with guardrails
-- [ ] Add ReAct workflow: Reason (quality) → Act (compliance) → Observe (final assessment)
-- [ ] Add post-processing step to prevent harmful recommendations
-- [ ] Add response parsing for approved/flagged/rejected status
-- [ ] Create confidence score calculation
-- [ ] Implement audit trail logging with manual review hooks
-- [ ] Test validation with mock strategies including quality and compliance edge cases
+## Phase 3: Python Workflow Integration
 
-#### StrategyMemoryLite Implementation (MVP 2-Table Storage with Reliability)
-- [ ] Implement direct Supabase SDK operations with transaction safety
-- [ ] Create dual storage: strategies.strategies + strategy_vectors
-- [ ] Implement LLM score storage (speed/cost/effort from creation)
-- [ ] Add human effectiveness score updates (feedback system)
-- [ ] Implement category-based filtering
-- [ ] Create vector similarity search with JOIN operations
-- [ ] Add constraint-based pre-filtering
-- [ ] Implement storage confirmation responses
-- [ ] Add buffer processing with content hash idempotency
-- [ ] Implement automatic cleanup of processed buffer entries
-- [ ] Add retry logic for failed database operations
-- [ ] Test embedding generation and retrieval with failure scenarios
+### 3.1 Workflow Orchestration
 
-#### Documentation
-- [ ] Save @TODO002_phase2_notes.md
-- [ ] Save @TODO002_phase2_decisions.md
-- [ ] Save @TODO002_phase2_handoff.md
+**Location**: `agents/patient_navigator/strategy/workflow/`
 
----
+**Tasks**:
+- [ ] Implement 4-component workflow orchestration
+- [ ] Add error handling and retry logic between components
+- [ ] Create performance monitoring and logging
+- [ ] Add graceful degradation for component failures
+- [ ] Implement state management between workflow components
 
-## Phase 3: LangGraph Workflow Integration
+### 3.2 LLM Integration
 
-### Prerequisites
-- Files/documents to read:
-  - @TODO002_phase2_notes.md
-  - @TODO002_phase2_decisions.md
-  - @TODO002_phase2_handoff.md
-  - @docs/initiatives/agents/patient_navigator/strategy/RFC002.md
-- Previous phase outputs: All 4 simplified components implemented
-- Session setup: Run `/clear` to start fresh
+**Tasks**:
+- [ ] Replace mock responses with OpenAI API integration
+- [ ] Implement rate limiting and token management
+- [ ] Add prompt optimization and caching
+- [ ] Create embedding generation for vector similarity
+- [ ] Add response validation and error handling
 
-### Context for Claude
-**IMPORTANT**: This is a new session. Phase 2 completed all 4 simplified components. Now integrating them into LangGraph workflow per RFC002.md architecture. Focus on 4-node orchestration: StrategyMCP → StrategyCreator → RegulatoryAgent → StrategyMemoryLite with error handling and <30 second performance requirement.
+### 3.3 Vector Embedding Generation
 
-### Tasks
+**Tasks**:
+- [ ] Integrate OpenAI embeddings API
+- [ ] Implement embedding generation for new strategies
+- [ ] Add vector similarity search with pgvector
+- [ ] Create embedding caching and optimization
+- [ ] Add embedding quality validation
 
-#### LangGraph Workflow Integration
-1. **Create workflow orchestration in agents/patient_navigator/strategy/workflow/orchestrator.py**
-   - Define 4-node LangGraph workflow following RFC002.md state management
-   - Implement StrategyWorkflowState interface
-   - Add sequential flow: context_gathering → strategy_generation → regulatory_validation → strategy_storage
-   - Include error handling and timeout mechanisms
+### 3.4 Database Function Creation
 
-2. **Implement state management between components**
-   - PlanConstraints input processing
-   - ContextRetrievalResult → StrategyResponse flow
-   - ValidationResult → StorageResult flow
-   - Error propagation across workflow nodes
-
-3. **Add performance optimization**
-   - Parallel processing where possible (web searches, validation)
-   - Circuit breaker for external service failures
-   - <30 second end-to-end execution requirement
-   - Graceful degradation messaging
-
-#### Component Testing
-4. **StrategyMCP Tool Testing**
-   - Unit tests for Tavily integration with mock responses
-   - Semantic search testing with sample embeddings
-   - 3-query generation validation
-   - Fallback mechanism testing (web failure → semantic only)
-
-5. **StrategyCreator Agent Testing**
-   - 4-strategy generation consistency
-   - LLM self-scoring accuracy validation
-   - Prompt template effectiveness testing
-   - Strategy diversity verification
-
-6. **RegulatoryAgent Testing**
-   - LLM validation with mock regulatory scenarios
-   - Compliance status categorization accuracy
-   - Confidence scoring validation
-   - Audit trail completeness
-
-7. **StrategyMemoryLite Testing**
-   - Dual storage operations (metadata + vectors)
-   - LLM score storage verification
-   - Human feedback update testing
-   - Semantic retrieval accuracy
-
-#### Integration Testing
-8. **End-to-End Workflow Testing**
-   - Complete LangGraph execution with mock services
-   - State management verification between nodes
-   - Performance benchmarking (<30 second requirement)
-   - Error handling and recovery testing
-
-### Expected Outputs
-- Save workflow integration notes to: @TODO002_phase3_notes.md
-- Document testing results in: @TODO002_phase3_testing.md
-- List deployment readiness issues in: @TODO002_phase3_handoff.md
-
-### Progress Checklist
-
-#### LangGraph Workflow
-- [ ] Define StrategyWorkflowState interface from RFC002.md
-- [ ] Implement 4-node workflow (MCP → Creator → Regulatory → Memory)
-- [ ] Add state management for data flow between nodes
-- [ ] Implement error handling and timeout mechanisms
-- [ ] Add circuit breaker for external service failures
-- [ ] Create graceful degradation messaging
-- [ ] Optimize for <30 second end-to-end execution
-- [ ] Test workflow orchestration
-
-#### Component Testing
-- [ ] Test StrategyMCP with mock Tavily responses
-- [ ] Validate 3-query generation per optimization type
-- [ ] Test semantic search with sample embeddings
-- [ ] Verify fallback mechanism (Tavily failure → semantic search)
-- [ ] Test StrategyCreator 4-strategy generation
-- [ ] Validate LLM self-scoring mechanism
-- [ ] Test prompt template effectiveness
-- [ ] Verify strategy diversity across optimization types
-- [ ] Test RegulatoryAgent LLM validation
-- [ ] Validate compliance status categorization
-- [ ] Test confidence scoring accuracy
-- [ ] Verify audit trail completeness
-- [ ] Test StrategyMemoryLite dual storage
-- [ ] Validate LLM score storage and retrieval
-- [ ] Test human feedback update mechanism
-- [ ] Verify semantic retrieval accuracy
-
-#### Integration Testing
-- [ ] Execute complete end-to-end workflow
-- [ ] Verify state management between all nodes
-- [ ] Test error propagation and recovery
-- [ ] Benchmark performance (<30 second requirement)
-- [ ] Test with real Tavily API in staging
-- [ ] Validate Supabase database operations
-- [ ] Test vector similarity search performance
-
-#### Documentation
-- [ ] Save @TODO002_phase3_notes.md
-- [ ] Save @TODO002_phase3_testing.md
-- [ ] Save @TODO002_phase3_handoff.md
-
----
+**Tasks**:
+- [ ] Create `store_strategy_with_transaction` database function
+- [ ] Implement transaction safety and rollback mechanisms
+- [ ] Add retry logic for failed operations
+- [ ] Create database monitoring and alerting
+- [ ] Implement buffer cleanup and maintenance
 
 ## Phase 4: Production Deployment
 
-### Prerequisites
-- Files/documents to read:
-  - @TODO002_phase3_notes.md
-  - @TODO002_phase3_testing.md
-  - @TODO002_phase3_handoff.md
-  - @docs/initiatives/agents/patient_navigator/strategy/PRD002.md (acceptance criteria)
-- Previous phase outputs: Integrated LangGraph workflow with testing
-- Session setup: Run `/clear` to start fresh
+### 4.1 Performance Optimization
 
-### Context for Claude
-**IMPORTANT**: This is a new session. Phase 3 completed LangGraph workflow integration and testing. Now implementing production readiness, monitoring, and final validation per PRD002.md acceptance criteria: <30 second generation, 99% uptime, >80% user satisfaction.
+**Tasks**:
+- [ ] Optimize database queries for sub-100ms response
+- [ ] Implement connection pooling and caching
+- [ ] Add load balancing for concurrent requests
+- [ ] Create performance monitoring and alerting
+- [ ] Optimize prompt engineering for token efficiency
 
-### Tasks
+### 4.2 Security & Compliance
 
-#### Production Readiness
-1. **Implement monitoring and logging**
-   - Request tracking for LangGraph workflow execution
-   - Performance monitoring for <30 second requirement
-   - Error rate monitoring for 99% uptime target
-   - Component failure tracking and alerting
+**Tasks**:
+- [ ] Implement RLS policies for data protection
+- [ ] Add audit trail and logging for compliance
+- [ ] Create secure API key management
+- [ ] Add input validation and sanitization
+- [ ] Implement content validation guardrails
 
-2. **Add essential security measures**
-   - Input validation for plan constraints
-   - API authentication for external services
-   - Audit trail storage for compliance review
-   - Data encryption for sensitive healthcare information
+### 4.3 Testing & Quality Assurance
 
-3. **Performance optimization**
-   - Connection pooling for Supabase operations
-   - Efficient vector indexing for similarity search
-   - Query optimization for constraint filtering
-   - Memory management for LangGraph state
+**Tasks**:
+- [ ] Create comprehensive unit tests for all components
+- [ ] Implement integration tests for workflow
+- [ ] Add performance benchmarking tests
+- [ ] Create security and compliance tests
+- [ ] Implement automated testing pipeline
 
-#### Final Validation
-4. **Acceptance criteria verification**
-   - Strategy generation time < 30 seconds (PRD002.md)
-   - 4-strategy diversity validation
-   - Speed/cost/effort optimization accuracy
-   - System uptime monitoring setup
+## Implementation Notes
 
-5. **User experience validation**
-   - Strategy clarity and actionability assessment
-   - Healthcare consumer feedback collection setup
-   - User satisfaction tracking (>80% target)
-   - Strategy effectiveness measurement
+### Python-First Architecture
 
-#### Documentation and Deployment
-6. **Create deployment documentation**
-   - Environment configuration guide
-   - API documentation for workflow endpoints
-   - Monitoring and alerting setup
-   - Troubleshooting guide for common issues
+All components are implemented in Python for consistency with existing patterns:
+- **BaseAgent Inheritance**: Follows established agent patterns
+- **Type Safety**: Comprehensive type hints and validation
+- **Error Handling**: Graceful degradation and fallback mechanisms
+- **Testing**: Mock responses enable rapid development
 
-7. **Final system validation**
-   - End-to-end testing with production-like data
-   - Load testing for concurrent user support
-   - Compliance audit preparation
-   - Stakeholder acceptance testing
+### Buffer-Based Storage Workflow
 
-### Expected Outputs
-- Save production readiness notes to: @TODO002_phase4_notes.md
-- Document validation results in: @TODO002_phase4_validation.md
-- Create deployment guide: @TODO002_phase4_deployment.md
+The StrategyMemoryLiteWorkflow implements a reliable buffer-based pattern:
+- **strategies_buffer**: Temporary storage for processing
+- **strategies**: Main metadata table with dual scoring
+- **strategy_vector_buffer**: Temporary storage for embeddings
+- **strategy_vectors**: Main vector table for similarity search
 
-### Progress Checklist
+### Mock Integration Pattern
 
-#### Production Features with Logging Infrastructure
-- [ ] Implement structured logging per strategy_id with stage, status, latency
-- [ ] Add performance metric logging for <30 second requirement
-- [ ] Set up error classification logging for failure pattern analysis
-- [ ] Create component failure event logging
-- [ ] Add input validation for plan constraints with content validation
-- [ ] Implement API authentication for external services
-- [ ] Set up audit trail storage for compliance review
-- [ ] Add data encryption for healthcare information
-- [ ] Configure JSON logging format for future monitoring dashboard integration
-- [ ] Set up metric emission for key performance indicators
+All external dependencies use mock responses during development:
+- **LLM Calls**: Mock responses for strategy generation and validation
+- **Web Search**: Mock Tavily responses for context gathering
+- **Embeddings**: Mock vectors for similarity search
+- **Database**: Real Supabase operations with mock data
 
-#### Performance Optimization
-- [ ] Implement connection pooling for Supabase
-- [ ] Optimize vector indexing for similarity search
-- [ ] Create efficient constraint filtering queries
-- [ ] Optimize memory management for LangGraph state
-- [ ] Test concurrent user support capabilities
-- [ ] Validate system scalability under load
+### Performance Targets
 
-#### Final Validation
-- [ ] Verify strategy generation time < 30 seconds
-- [ ] Validate 4-strategy diversity across optimization types
-- [ ] Test speed/cost/effort optimization accuracy
-- [ ] Set up system uptime monitoring
-- [ ] Validate strategy clarity and actionability
-- [ ] Set up user satisfaction tracking (>80% target)
-- [ ] Create strategy effectiveness measurement system
+- **End-to-End**: < 30 seconds for complete workflow
+- **StrategyMCP**: < 5 seconds for context gathering
+- **StrategyCreator**: < 15 seconds for 4-strategy generation
+- **RegulatoryAgent**: < 5 seconds for compliance validation
+- **StrategyMemoryLiteWorkflow**: < 5 seconds for buffer-based storage
 
-#### Documentation
-- [ ] Create environment configuration guide
-- [ ] Write API documentation for workflow endpoints
-- [ ] Document monitoring and alerting setup
-- [ ] Create troubleshooting guide
-- [ ] Save @TODO002_phase4_notes.md
-- [ ] Save @TODO002_phase4_validation.md
-- [ ] Save @TODO002_phase4_deployment.md
+## Success Criteria
 
-#### System Validation
-- [ ] Execute end-to-end testing with production data
-- [ ] Perform load testing for concurrent users
-- [ ] Complete compliance audit preparation
-- [ ] Conduct stakeholder acceptance testing
-- [ ] Verify all PRD002.md acceptance criteria met
-- [ ] Confirm system ready for production deployment
+### Functional Requirements
+- [x] Generate exactly 4 strategies per request
+- [x] Implement speed/cost/effort optimization
+- [x] Provide regulatory validation with confidence scoring
+- [x] Support buffer-based storage workflow
+- [x] Enable constraint-based retrieval with vector similarity
 
-## Project Completion Checklist
+### Performance Requirements
+- [ ] Complete workflow executes in < 30 seconds
+- [ ] Support 10 concurrent requests without degradation
+- [ ] Database queries complete within performance thresholds
+- [ ] Graceful degradation maintains basic functionality
 
-### Phase 1: Database Schema & Environment Setup
-- [ ] LangGraph dependencies installed (@langchain/langgraph, @langchain/core)
-- [ ] Tavily client installed and configured
-- [ ] Supabase SDK integration verified
-- [ ] pgvector extension enabled and tested
-- [ ] MVP 2-table schema created (strategies.strategies + strategy_vectors)
-- [ ] Speed/cost/effort scoring implemented (replacing quality)
-- [ ] Performance indexes created (ivfflat, constraint filtering)
-- [ ] Project directory structure established
-- [ ] Phase 1 documentation saved
+### Quality Requirements
+- [ ] Generated strategies pass regulatory validation > 85% of the time
+- [ ] User feedback collection and scoring updates function correctly
+- [ ] System logging provides sufficient detail for debugging
+- [ ] Error messages are user-friendly and actionable
 
-### Phase 2: Simplified Component Implementation with Reliability
-- [ ] StrategyMCP tool implemented with Tavily + semantic search
-- [ ] 3-query generation per optimization type (speed/cost/effort)
-- [ ] StrategyCreator agent with 4-strategy prompt generation
-- [ ] LLM self-scoring mechanism (0.0-1.0 for speed/cost/effort)
-- [ ] RegulatoryAgent with ReAct pattern including LLM-based quality assessment
-- [ ] StrategyMemoryLite with MVP 2-table dual storage and transaction safety
-- [ ] Buffer management system with content hash deduplication
-- [ ] All components follow BaseAgent inheritance patterns
-- [ ] Phase 2 documentation saved
+## Risk Mitigation
 
-### Phase 3: LangGraph Workflow Integration
-- [ ] 4-node LangGraph workflow implemented
-- [ ] StrategyWorkflowState management between components
-- [ ] Error handling and timeout mechanisms
-- [ ] Component testing completed (mock services)
-- [ ] End-to-end workflow testing completed
-- [ ] Performance benchmarking (<30 second requirement met)
-- [ ] Integration with real external services validated
-- [ ] Phase 3 documentation saved
+### Technical Risks
+- **LLM Quality Variability**: Comprehensive prompt engineering and testing
+- **Tavily API Reliability**: Graceful degradation to semantic search
+- **Database Performance**: Proper indexing and query optimization
+- **Buffer Management**: Regular cleanup and monitoring
 
-### Phase 4: Production Deployment with Logging Infrastructure
-- [ ] Production logging infrastructure implemented with structured per-strategy tracking
-- [ ] Security measures implemented (validation, auth, encryption, content guardrails)
-- [ ] Performance optimization completed with buffer management
-- [ ] Logging configuration for future monitoring dashboard integration
-- [ ] All PRD002.md acceptance criteria verified
-  - [ ] Strategy generation time < 30 seconds
-  - [ ] System uptime capability for 99% target
-  - [ ] User satisfaction tracking mechanism for >80% target
-  - [ ] 4-strategy diversity validation with LLM-based quality assessment
-- [ ] Load testing and scalability validation completed
-- [ ] Deployment documentation created
-- [ ] Phase 4 documentation saved
+### Integration Risks
+- **BaseAgent Compatibility**: Follow established inheritance patterns
+- **Supabase SDK Performance**: Connection pooling and optimization
+- **Python Workflow Scalability**: Efficient state management
 
-### Project Sign-off
-- [ ] All acceptance criteria met (PRD002.md)
-  - [ ] <30 second strategy generation
-  - [ ] 4 optimization types: speed, cost, effort, balanced
-  - [ ] 99% system uptime capability
-  - [ ] >80% user satisfaction measurement system
-- [ ] Technical architecture validated (RFC002.md)
-  - [ ] LLM-first approach with prompt engineering
-  - [ ] Simplified toolchain: Tavily + SentenceBERT + Supabase + LangGraph
-  - [ ] MVP 2-table database design with dual scoring
-  - [ ] Speed/cost/effort optimization (replacing quality)
-- [ ] Simplified implementation completed (REFACTOR001.md)
-  - [ ] Tavily-only web search (no multi-provider fallback)
-  - [ ] Prompt-driven strategy generation
-  - [ ] LLM-based compliance validation
-  - [ ] Direct Supabase SDK integration
-- [ ] Stakeholder approval received
-- [ ] System ready for production deployment
+### Operational Risks
+- **API Rate Limits**: Queue management and caching
+- **Buffer Growth**: Regular cleanup and monitoring
+- **Embedding Failures**: Retry logic and fallback mechanisms
 
 ## Next Steps
 
-This TODO002 completes the simplified implementation breakdown for the Strategy Evaluation & Validation System MVP. Upon completion of all phases, the system will provide:
+Phase 2 is complete with all 4 core components implemented in Python. Phase 3 will focus on:
 
-- **LLM-first healthcare strategy generation** in under 30 seconds
-- **4-strategy optimization approach** (speed, cost, effort, balanced)
-- **Simplified architecture** with prompt engineering over complex algorithms
-- **Tavily-only web search** with semantic search fallback
-- **MVP 2-table database design** with dual scoring system
-- **Production-ready deployment** with monitoring and compliance
+1. **Workflow Orchestration**: Integrate components into seamless workflow
+2. **LLM Integration**: Replace mock responses with OpenAI API
+3. **Vector Embedding**: Implement real embedding generation and similarity search
+4. **Database Functions**: Create transaction-safe database operations
 
-**Post-Implementation Actions:**
-1. Monitor system performance against PRD002.md KPIs
-2. Collect user feedback for prompt optimization
-3. Evaluate expansion to additional healthcare domains
-4. Consider algorithmic enhancements based on MVP success
+The implementation emphasizes rapid development through LLM capabilities, semantic search, and proven architectural patterns rather than complex custom algorithms.
