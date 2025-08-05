@@ -14,13 +14,14 @@
 Create comprehensive isolated testing for:
 - WorkflowPrescriptionAgent with various query patterns and confidence scoring
 - DocumentAvailabilityChecker with different availability scenarios
-- SupervisorWorkflowAgent orchestration logic and error handling
-- Performance testing for individual components
+- LangGraph SupervisorWorkflow orchestration logic and node behavior
+- Performance testing for individual components and workflow execution
 
 ## Key Requirements
 - Unit tests for all components with mock dependencies
 - Test various workflow prescription scenarios and confidence scores
 - Test document availability checking with different user/document combinations
+- Test LangGraph workflow node execution and state management
 - Performance testing to validate <2 second and <500ms requirements
 - Mock-based testing to isolate component behavior
 
@@ -33,6 +34,7 @@ Save phase completion documentation:
 ## Success Criteria
 - All Phase 3 checklist items completed
 - All unit tests pass consistently
-- Performance requirements validated for individual components
+- LangGraph workflow tests validate node execution and state transitions
+- Performance requirements validated for individual components and workflow
 - Test coverage adequate for all core functionality
-- Component issues documented and resolved
+- Component and workflow issues documented and resolved

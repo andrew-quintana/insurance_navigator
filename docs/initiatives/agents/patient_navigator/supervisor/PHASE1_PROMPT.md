@@ -11,17 +11,19 @@
 - `@agents/base_agent.py`
 
 ## Objective
-Create the foundational structure for the supervisor workflow following BaseAgent patterns with:
+Create the foundational structure for the LangGraph supervisor workflow with:
 - Directory structure matching existing agent patterns
-- Pydantic models for all input/output schemas
-- SupervisorWorkflowAgent base class with mock mode support
+- LangGraph workflow orchestration with node-based architecture
+- Pydantic models for workflow state and input/output schemas
+- WorkflowPrescriptionAgent following BaseAgent patterns
 - Project structure following existing patient navigator conventions
 
 ## Key Requirements
-- Follow BaseAgent inheritance patterns from existing agents
-- Implement all Pydantic models defined in TODO001.md Phase 1 checklist
+- Implement LangGraph StateGraph for workflow orchestration
+- Follow BaseAgent inheritance patterns for WorkflowPrescriptionAgent
+- Implement all Pydantic models including SupervisorState for LangGraph state management
 - Support mock mode for development and testing
-- Create proper module structure with __init__.py exports
+- Create proper module structure with workflow.py, agent.py, models.py
 
 ## Expected Outputs
 Save phase completion documentation:
@@ -31,7 +33,8 @@ Save phase completion documentation:
 
 ## Success Criteria
 - All Phase 1 checklist items completed
-- SupervisorWorkflowAgent instantiates without errors
-- All Pydantic models validate correctly
-- Mock mode initialization works
+- LangGraph SupervisorWorkflow compiles without errors
+- WorkflowPrescriptionAgent instantiates without errors
+- All Pydantic models validate correctly (including SupervisorState)
+- Mock mode initialization works for both workflow and agent
 - Directory structure matches existing agent patterns

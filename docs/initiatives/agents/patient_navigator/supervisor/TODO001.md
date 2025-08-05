@@ -7,13 +7,13 @@ This TODO document provides a comprehensive implementation breakdown for the Pat
 **REFERENCE DOCUMENTS:**
 - PRD file: [PRD001.md](./PRD001.md) - MVP product requirements and acceptance criteria
 - RFC file: [RFC001.md](./RFC001.md) - MVP technical architecture and implementation plan
-- Key deliverables: Workflow prescription agent, deterministic document availability checker, supervisor orchestration
-- Technical approach: LLM-based prescription with few-shot learning, Supabase document checking, BaseAgent patterns
+- Key deliverables: LangGraph supervisor workflow, workflow prescription agent, deterministic document availability checker
+- Technical approach: LangGraph workflow orchestration, LLM-based prescription with few-shot learning, Supabase document checking
 
 **CURRENT CODEBASE CONTEXT:**
 - Existing code to modify: `/agents/patient_navigator/` agent patterns for consistency
-- New components to create: SupervisorWorkflowAgent, WorkflowPrescriptionAgent, DocumentAvailabilityChecker
-- Integration points: InformationRetrievalAgent, StrategyWorkflowOrchestrator, Supabase documents table
+- New components to create: LangGraph SupervisorWorkflow, WorkflowPrescriptionAgent, DocumentAvailabilityChecker
+- Integration points: InformationRetrievalAgent, StrategyWorkflowOrchestrator, Supabase documents table, LangGraph framework
 - Testing infrastructure: Follow existing patterns in patient navigator test suite
 
 **IMPLEMENTATION PREFERENCES:**
@@ -53,11 +53,11 @@ This TODO document provides a comprehensive implementation breakdown for the Pat
 You are implementing Phase 1 of the Patient Navigator Supervisor Workflow MVP. This is a proof of concept that demonstrates full supervisor orchestration functionality with 2 workflows (information_retrieval and strategy) designed for extensibility.
 
 **Key Architecture Requirements:**
-- Follow BaseAgent patterns from existing patient navigator agents
-- Implement LLM-based workflow prescription with few-shot learning
-- Create deterministic document availability checking (not agent-based)
-- Support deterministic execution order: information_retrieval → strategy
-- Maintain <2 second total execution time target
+- Implement LangGraph workflow orchestration with node-based architecture
+- Follow BaseAgent patterns for workflow prescription agent
+- Create deterministic document availability checking as LangGraph node (not agent-based)
+- Support deterministic execution flow: agent → check → route
+- Maintain <2 second total execution time target with seamless extensibility to multiple agents
 
 **Reference Implementation Patterns:**
 - `InformationRetrievalAgent`: BaseAgent inheritance, Pydantic models, mock mode support
@@ -68,21 +68,23 @@ You are implementing Phase 1 of the Patient Navigator Supervisor Workflow MVP. T
 
 #### Project Structure Setup
 1. Create supervisor workflow directory structure following existing agent patterns
-2. Set up base supervisor agent module with proper imports
-3. Create Pydantic model definitions for all input/output schemas
+2. Set up LangGraph workflow module with proper imports
+3. Create Pydantic model definitions for workflow state and input/output schemas
 4. Establish mock mode configuration for development and testing
 
 #### Pydantic Models Implementation
-5. Implement `SupervisorWorkflowInput` model with user_query, user_id, workflow_context
-6. Implement `SupervisorWorkflowOutput` model with routing_decision, prescribed_workflows, execution_order
-7. Create `WorkflowPrescriptionResult` model with workflows, confidence_score, reasoning
-8. Create `DocumentAvailabilityResult` model with document_status, missing_documents, readiness
+5. Implement `SupervisorState` model for LangGraph workflow state management
+6. Implement `SupervisorWorkflowInput` model with user_query, user_id, workflow_context
+7. Implement `SupervisorWorkflowOutput` model with routing_decision, prescribed_workflows, execution_order
+8. Create `WorkflowPrescriptionResult` model with workflows, confidence_score, reasoning
+9. Create `DocumentAvailabilityResult` model with document_status, missing_documents, readiness
 
-#### Base Agent Architecture
-9. Implement `SupervisorWorkflowAgent` class inheriting from BaseAgent
-10. Configure agent initialization with name="supervisor_workflow", proper output schema
-11. Set up mock mode support following existing agent patterns
-12. Implement basic agent structure with placeholder methods
+#### LangGraph Workflow Architecture
+10. Implement `SupervisorWorkflow` class with LangGraph StateGraph
+11. Create workflow prescription agent following BaseAgent patterns
+12. Set up LangGraph nodes for workflow prescription, document checking, and routing
+13. Configure workflow state management and node transitions
+14. Set up mock mode support for development and testing
 
 ### Expected Outputs
 - Save implementation notes to: `@TODO001_phase1_notes.md`
@@ -93,12 +95,20 @@ You are implementing Phase 1 of the Patient Navigator Supervisor Workflow MVP. T
 
 #### Setup
 - [ ] Create `/agents/patient_navigator/supervisor/` directory structure
-- [ ] Create `agent.py` with SupervisorWorkflowAgent class
+- [ ] Create `workflow.py` with LangGraph SupervisorWorkflow class
+- [ ] Create `agent.py` with WorkflowPrescriptionAgent class
 - [ ] Create `models.py` with all Pydantic model definitions
 - [ ] Create `__init__.py` with proper exports
 - [ ] Verify directory structure matches existing agent patterns
 
 #### Pydantic Models
+- [ ] Implement SupervisorState model for LangGraph workflow state
+  - [ ] user_query: str field
+  - [ ] user_id: str field
+  - [ ] workflow_context: Optional[Dict[str, Any]] field
+  - [ ] prescribed_workflows: Optional[List[WorkflowType]] field
+  - [ ] document_availability: Optional[DocumentAvailabilityResult] field
+  - [ ] routing_decision: Optional[Literal["PROCEED", "COLLECT"]] field
 - [ ] Implement SupervisorWorkflowInput model
   - [ ] user_query: str field with validation
   - [ ] user_id: str field with validation
@@ -124,26 +134,33 @@ You are implementing Phase 1 of the Patient Navigator Supervisor Workflow MVP. T
   - [ ] document_status: Dict[str, bool] field
 - [ ] Create WorkflowType enum with information_retrieval, strategy values
 
-#### Base Agent Implementation
-- [ ] Implement SupervisorWorkflowAgent class
+#### LangGraph Workflow Implementation
+- [ ] Implement SupervisorWorkflow class
+  - [ ] Initialize with LangGraph StateGraph
+  - [ ] Add workflow prescription node
+  - [ ] Add document availability check node
+  - [ ] Add routing decision node
+  - [ ] Configure node transitions and edges
+  - [ ] Support mock mode configuration
+- [ ] Implement WorkflowPrescriptionAgent class
   - [ ] Inherit from BaseAgent properly
   - [ ] Initialize with correct name, prompt, output_schema
   - [ ] Support mock mode configuration
   - [ ] Add logging setup following existing patterns
-- [ ] Create placeholder methods for core functionality
-  - [ ] `orchestrate_workflow()` method signature
-  - [ ] `_prescribe_workflows()` method signature
-  - [ ] `_check_document_availability()` method signature
-  - [ ] `_make_routing_decision()` method signature
-- [ ] Add proper imports for BaseAgent, models, typing, logging
-- [ ] Verify agent follows existing architectural patterns
+- [ ] Create LangGraph node methods
+  - [ ] `_prescribe_workflow_node()` method
+  - [ ] `_check_documents_node()` method
+  - [ ] `_route_decision_node()` method
+- [ ] Add proper imports for LangGraph, BaseAgent, models, typing, logging
+- [ ] Verify workflow follows existing architectural patterns
 
 #### Validation
 - [ ] Test Pydantic model serialization/deserialization
-- [ ] Verify BaseAgent inheritance works correctly
-- [ ] Test mock mode initialization
-- [ ] Validate all imports resolve correctly
-- [ ] Run basic instantiation test
+- [ ] Verify LangGraph StateGraph compilation works correctly
+- [ ] Verify BaseAgent inheritance works correctly for WorkflowPrescriptionAgent
+- [ ] Test mock mode initialization for both workflow and agent
+- [ ] Validate all imports resolve correctly (LangGraph, BaseAgent, etc.)
+- [ ] Run basic LangGraph workflow instantiation test
 
 #### Documentation
 - [ ] Save `@TODO001_phase1_notes.md` with implementation details
@@ -169,16 +186,16 @@ You are implementing Phase 1 of the Patient Navigator Supervisor Workflow MVP. T
 You are implementing Phase 2 of the Patient Navigator Supervisor Workflow MVP. Phase 1 completed the basic structure and Pydantic models. Now implement the core workflow prescription and document availability checking functionality.
 
 **Phase 2 Focus:**
-- Implement LLM-based workflow prescription with few-shot learning
-- Create deterministic document availability checker with Supabase integration
-- Build supervisor orchestration logic with error handling
+- Implement LLM-based workflow prescription with few-shot learning in WorkflowPrescriptionAgent
+- Create deterministic document availability checker with Supabase integration as LangGraph node
+- Build LangGraph workflow node implementations with error handling
 - Follow performance requirements: <2 second total execution, <500ms document checking
 
 **Key Components to Implement:**
 1. WorkflowPrescriptionAgent with few-shot learning system prompt
-2. DocumentAvailabilityChecker with Supabase integration
-3. SupervisorWorkflowAgent orchestration logic
-4. Error handling and graceful degradation
+2. DocumentAvailabilityChecker with Supabase integration for LangGraph node
+3. LangGraph node implementations for workflow orchestration
+4. Error handling and graceful degradation in workflow state management
 
 ### Tasks
 
@@ -196,12 +213,12 @@ You are implementing Phase 2 of the Patient Navigator Supervisor Workflow MVP. P
 9. Create binary readiness assessment with missing document identification
 10. Optimize queries for <500ms response time target
 
-#### Supervisor Orchestration Logic
-11. Implement main `orchestrate_workflow()` method in SupervisorWorkflowAgent
-12. Add workflow prescription and document checking coordination
-13. Implement routing decision logic (PROCEED/COLLECT)
-14. Add comprehensive error handling and graceful degradation
-15. Implement performance tracking and logging
+#### LangGraph Node Implementation
+11. Implement `_prescribe_workflow_node()` method to use WorkflowPrescriptionAgent
+12. Implement `_check_documents_node()` method to use DocumentAvailabilityChecker
+13. Implement `_route_decision_node()` method for routing logic (PROCEED/COLLECT)
+14. Add comprehensive error handling and graceful degradation in node methods
+15. Implement performance tracking and logging in workflow state
 
 #### Integration Points
 16. Create integration interfaces with InformationRetrievalAgent
@@ -255,25 +272,26 @@ You are implementing Phase 2 of the Patient Navigator Supervisor Workflow MVP. P
   - [ ] Add document status mappings
   - [ ] Generate user-friendly missing document messages
 
-#### Supervisor Orchestration Implementation
-- [ ] Implement main orchestrate_workflow() method
-  - [ ] Parse SupervisorWorkflowInput
-  - [ ] Coordinate workflow prescription and document checking
-  - [ ] Generate routing decisions based on results
+#### LangGraph Node Implementation
+- [ ] Implement _prescribe_workflow_node() method
+  - [ ] Parse SupervisorState input
+  - [ ] Use WorkflowPrescriptionAgent to classify user query
+  - [ ] Update workflow state with prescribed workflows
+  - [ ] Handle workflow prescription failures with graceful degradation
+- [ ] Implement _check_documents_node() method
+  - [ ] Extract prescribed workflows from state
+  - [ ] Use DocumentAvailabilityChecker for document presence
+  - [ ] Update workflow state with document availability results
+  - [ ] Handle document checking failures with error logging
+- [ ] Implement _route_decision_node() method
+  - [ ] Analyze prescribed workflows and document availability
+  - [ ] Generate routing decisions (PROCEED/COLLECT)
   - [ ] Create structured SupervisorWorkflowOutput
-- [ ] Add performance tracking
-  - [ ] Implement execution time measurement
-  - [ ] Track individual component performance
-  - [ ] Add performance logging and alerting
-- [ ] Implement error handling
-  - [ ] Handle workflow prescription failures
-  - [ ] Handle document availability check failures
-  - [ ] Implement graceful degradation strategies
-  - [ ] Add comprehensive error logging
-- [ ] Add routing decision logic
-  - [ ] PROCEED when workflows prescribed and documents available
-  - [ ] COLLECT when workflows prescribed but documents missing
   - [ ] Handle edge cases and error scenarios
+- [ ] Add performance tracking in workflow state
+  - [ ] Implement execution time measurement across nodes
+  - [ ] Track individual node performance
+  - [ ] Add performance logging and alerting
 
 #### Integration Layer Implementation
 - [ ] Create workflow execution interfaces
