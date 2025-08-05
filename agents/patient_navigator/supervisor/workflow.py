@@ -84,6 +84,8 @@ class SupervisorWorkflow:
         Returns:
             Updated state with prescribed workflows
         """
+        node_start_time = time.time()
+        
         try:
             self.logger.info("Executing workflow prescription node")
             
@@ -93,14 +95,28 @@ class SupervisorWorkflow:
             # Update state with prescription results
             state.prescribed_workflows = prescription_result.prescribed_workflows
             
-            self.logger.info(f"Prescribed workflows: {state.prescribed_workflows}")
+            node_time = time.time() - node_start_time
+            self.logger.info(f"Prescribed workflows: {state.prescribed_workflows} (took {node_time:.2f}s)")
+            
+            # Track performance
+            if state.node_performance is None:
+                state.node_performance = {}
+            state.node_performance['prescribe_workflow'] = node_time
+            
             return state
             
         except Exception as e:
-            self.logger.error(f"Error in workflow prescription node: {e}")
+            node_time = time.time() - node_start_time
+            self.logger.error(f"Error in workflow prescription node after {node_time:.2f}s: {e}")
             state.error_message = f"Workflow prescription failed: {str(e)}"
-            # Set default prescription
+            # Set default prescription with low confidence
             state.prescribed_workflows = [WorkflowType.INFORMATION_RETRIEVAL]
+            
+            # Track error performance
+            if state.node_performance is None:
+                state.node_performance = {}
+            state.node_performance['prescribe_workflow'] = node_time
+            
             return state
     
     async def _check_documents_node(self, state: SupervisorState) -> SupervisorState:
@@ -113,6 +129,8 @@ class SupervisorWorkflow:
         Returns:
             Updated state with document availability results
         """
+        node_start_time = time.time()
+        
         try:
             self.logger.info("Executing document availability check node")
             
@@ -135,11 +153,19 @@ class SupervisorWorkflow:
             # Update state with availability results
             state.document_availability = availability_result
             
-            self.logger.info(f"Document availability: ready={availability_result.is_ready}")
+            node_time = time.time() - node_start_time
+            self.logger.info(f"Document availability: ready={availability_result.is_ready} (took {node_time:.2f}s)")
+            
+            # Track performance
+            if state.node_performance is None:
+                state.node_performance = {}
+            state.node_performance['check_documents'] = node_time
+            
             return state
             
         except Exception as e:
-            self.logger.error(f"Error in document availability check node: {e}")
+            node_time = time.time() - node_start_time
+            self.logger.error(f"Error in document availability check node after {node_time:.2f}s: {e}")
             state.error_message = f"Document availability check failed: {str(e)}"
             # Set default availability (not ready)
             state.document_availability = DocumentAvailabilityResult(
@@ -148,6 +174,12 @@ class SupervisorWorkflow:
                 missing_documents=[],
                 document_status={}
             )
+            
+            # Track error performance
+            if state.node_performance is None:
+                state.node_performance = {}
+            state.node_performance['check_documents'] = node_time
+            
             return state
     
     async def _route_decision_node(self, state: SupervisorState) -> SupervisorState:
@@ -160,6 +192,8 @@ class SupervisorWorkflow:
         Returns:
             Updated state with routing decision
         """
+        node_start_time = time.time()
+        
         try:
             self.logger.info("Executing routing decision node")
             
@@ -169,18 +203,34 @@ class SupervisorWorkflow:
                 self.logger.info("Routing decision: PROCEED - documents ready")
             else:
                 routing_decision = "COLLECT"
-                self.logger.info("Routing decision: COLLECT - documents missing")
+                missing_docs = state.document_availability.missing_documents if state.document_availability else []
+                self.logger.info(f"Routing decision: COLLECT - documents missing: {missing_docs}")
             
             # Update state with routing decision
             state.routing_decision = routing_decision
             
+            node_time = time.time() - node_start_time
+            self.logger.info(f"Routing decision completed in {node_time:.2f}s")
+            
+            # Track performance
+            if state.node_performance is None:
+                state.node_performance = {}
+            state.node_performance['route_decision'] = node_time
+            
             return state
             
         except Exception as e:
-            self.logger.error(f"Error in routing decision node: {e}")
+            node_time = time.time() - node_start_time
+            self.logger.error(f"Error in routing decision node after {node_time:.2f}s: {e}")
             state.error_message = f"Routing decision failed: {str(e)}"
             # Default to COLLECT on error
             state.routing_decision = "COLLECT"
+            
+            # Track error performance
+            if state.node_performance is None:
+                state.node_performance = {}
+            state.node_performance['route_decision'] = node_time
+            
             return state
     
     async def execute(self, input_data: SupervisorWorkflowInput) -> SupervisorWorkflowOutput:
@@ -244,17 +294,16 @@ class SupervisorWorkflow:
             SupervisorWorkflowOutput with results
         """
         # Extract prescription results
-        prescribed_workflows = state.prescribed_workflows or []
-        workflow_prescription = None
+        prescribed_workflows = state.prescribed_workflows or [WorkflowType.INFORMATION_RETRIEVAL]  # Default fallback
         
-        if prescribed_workflows:
-            # Create workflow prescription result (simplified for MVP)
-            workflow_prescription = {
-                "prescribed_workflows": prescribed_workflows,
-                "confidence_score": 0.8,  # Default confidence
-                "reasoning": "Workflow prescription completed",
-                "execution_order": prescribed_workflows  # Simple order for MVP
-            }
+        # Create workflow prescription result
+        from .models import WorkflowPrescriptionResult
+        workflow_prescription = WorkflowPrescriptionResult(
+            prescribed_workflows=prescribed_workflows,
+            confidence_score=0.8,  # Default confidence
+            reasoning="Workflow prescription completed",
+            execution_order=prescribed_workflows  # Simple order for MVP
+        )
         
         # Extract document availability
         document_availability = state.document_availability or DocumentAvailabilityResult(

@@ -30,11 +30,16 @@ class WorkflowPrescriptionAgent(BaseAgent):
             use_mock: If True, use mock responses for testing
             **kwargs: Additional arguments passed to BaseAgent
         """
+        # Load prompt and examples from files
+        prompt_path = "agents/patient_navigator/supervisor/workflow_prescription/prompts/system_prompt.md"
+        examples_path = "agents/patient_navigator/supervisor/workflow_prescription/prompts/examples.md"
+        
         super().__init__(
             name="workflow_prescription",
-            prompt="",  # Will be loaded from file
+            prompt=prompt_path,
             output_schema=WorkflowPrescriptionResult,
             mock=use_mock,
+            examples=examples_path,
             **kwargs
         )
         
@@ -236,8 +241,20 @@ class WorkflowPrescriptionAgent(BaseAgent):
             raise ValueError("LLM not configured for WorkflowPrescriptionAgent")
         
         try:
-            response = await self.llm(prompt)
+            # Handle both sync and async LLM callables
+            if asyncio.iscoroutinefunction(self.llm):
+                response = await self.llm(prompt)
+            else:
+                # For sync LLM callables, run in executor
+                loop = asyncio.get_event_loop()
+                response = await loop.run_in_executor(None, self.llm, prompt)
+            
+            if not response:
+                raise ValueError("Empty response from LLM")
+            
+            self.logger.debug(f"LLM response: {response[:200]}...")
             return response
+            
         except Exception as e:
             self.logger.error(f"LLM call failed: {e}")
             raise

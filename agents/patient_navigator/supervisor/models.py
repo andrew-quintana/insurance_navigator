@@ -139,6 +139,12 @@ class SupervisorState(BaseModel):
         description="Total processing time in seconds"
     )
     
+    # Node-level performance tracking
+    node_performance: Optional[Dict[str, float]] = Field(
+        default=None,
+        description="Performance tracking for individual workflow nodes"
+    )
+    
     # Error handling
     error_message: Optional[str] = Field(
         default=None,
