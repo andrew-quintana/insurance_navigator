@@ -197,8 +197,12 @@ class SupervisorWorkflow:
         try:
             self.logger.info("Executing routing decision node")
             
+            # Check for error state first - default to COLLECT on any error
+            if state.error_message:
+                routing_decision = "COLLECT"
+                self.logger.info(f"Routing decision: COLLECT - error occurred: {state.error_message}")
             # Determine routing decision based on prescription and document availability
-            if state.document_availability and state.document_availability.is_ready:
+            elif state.document_availability and state.document_availability.is_ready:
                 routing_decision = "PROCEED"
                 self.logger.info("Routing decision: PROCEED - documents ready")
             else:
@@ -293,8 +297,12 @@ class SupervisorWorkflow:
         Returns:
             SupervisorWorkflowOutput with results
         """
-        # Extract prescription results
-        prescribed_workflows = state.prescribed_workflows or [WorkflowType.INFORMATION_RETRIEVAL]  # Default fallback
+        # Extract prescription results - handle both SupervisorState and AddableValuesDict
+        if hasattr(state, 'prescribed_workflows'):
+            prescribed_workflows = state.prescribed_workflows or [WorkflowType.INFORMATION_RETRIEVAL]
+        else:
+            # Handle AddableValuesDict case
+            prescribed_workflows = state.get('prescribed_workflows', [WorkflowType.INFORMATION_RETRIEVAL])
         
         # Create workflow prescription result
         from .models import WorkflowPrescriptionResult
@@ -305,13 +313,28 @@ class SupervisorWorkflow:
             execution_order=prescribed_workflows  # Simple order for MVP
         )
         
-        # Extract document availability
-        document_availability = state.document_availability or DocumentAvailabilityResult(
-            is_ready=False,
-            available_documents=[],
-            missing_documents=[],
-            document_status={}
-        )
+        # Extract document availability - handle both SupervisorState and AddableValuesDict
+        if hasattr(state, 'document_availability'):
+            document_availability = state.document_availability
+        else:
+            # Handle AddableValuesDict case
+            doc_avail = state.get('document_availability')
+            if doc_avail is None:
+                document_availability = DocumentAvailabilityResult(
+                    is_ready=False,
+                    available_documents=[],
+                    missing_documents=[],
+                    document_status={}
+                )
+            else:
+                document_availability = doc_avail
+        
+        # Extract routing decision - handle both SupervisorState and AddableValuesDict
+        if hasattr(state, 'routing_decision'):
+            routing_decision = state.routing_decision or "COLLECT"
+        else:
+            # Handle AddableValuesDict case
+            routing_decision = state.get('routing_decision', "COLLECT")
         
         # Determine next steps
         next_steps = self._determine_next_steps(state)
@@ -320,7 +343,7 @@ class SupervisorWorkflow:
         confidence_score = self._calculate_confidence_score(state)
         
         return SupervisorWorkflowOutput(
-            routing_decision=state.routing_decision or "COLLECT",
+            routing_decision=routing_decision,
             prescribed_workflows=prescribed_workflows,
             execution_order=prescribed_workflows,  # Same as prescribed for MVP
             document_availability=document_availability,
@@ -340,10 +363,22 @@ class SupervisorWorkflow:
         Returns:
             List of next steps for the user
         """
-        if state.routing_decision == "PROCEED":
+        # Extract routing decision - handle both SupervisorState and AddableValuesDict
+        if hasattr(state, 'routing_decision'):
+            routing_decision = state.routing_decision
+        else:
+            routing_decision = state.get('routing_decision', "COLLECT")
+        
+        if routing_decision == "PROCEED":
             return ["Proceeding with prescribed workflows"]
         else:
-            missing_docs = state.document_availability.missing_documents if state.document_availability else []
+            # Extract document availability - handle both SupervisorState and AddableValuesDict
+            if hasattr(state, 'document_availability'):
+                doc_avail = state.document_availability
+            else:
+                doc_avail = state.get('document_availability')
+            
+            missing_docs = doc_avail.missing_documents if doc_avail else []
             if missing_docs:
                 return [f"Please upload the following documents: {', '.join(missing_docs)}"]
             else:
@@ -360,10 +395,18 @@ class SupervisorWorkflow:
             Confidence score (0.0-1.0)
         """
         # Simple confidence calculation for MVP
-        if state.error_message:
+        if hasattr(state, 'error_message') and state.error_message:
+            return 0.3  # Low confidence if there were errors
+        elif not hasattr(state, 'error_message') and state.get('error_message'):
             return 0.3  # Low confidence if there were errors
         
-        if state.document_availability and state.document_availability.is_ready:
+        # Extract document availability - handle both SupervisorState and AddableValuesDict
+        if hasattr(state, 'document_availability'):
+            doc_avail = state.document_availability
+        else:
+            doc_avail = state.get('document_availability')
+        
+        if doc_avail and doc_avail.is_ready:
             return 0.9  # High confidence if documents are ready
         
         return 0.7  # Medium confidence for COLLECT decisions 
