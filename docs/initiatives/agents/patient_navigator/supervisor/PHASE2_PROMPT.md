@@ -13,16 +13,16 @@
 ## Objective
 Implement core functionality for:
 - WorkflowPrescriptionAgent with LLM-based few-shot learning
-- DocumentAvailabilityChecker with Supabase integration
-- SupervisorWorkflowAgent orchestration logic
-- Error handling and performance tracking
+- DocumentAvailabilityChecker with Supabase integration for LangGraph nodes
+- LangGraph workflow node implementations with orchestration logic
+- Error handling and performance tracking in workflow state management
 
 ## Key Requirements
-- Implement LLM-based workflow prescription with few-shot examples
-- Create deterministic document availability checking (not agent-based)
-- Build orchestration logic coordinating prescription and document checking
+- Implement LLM-based workflow prescription with few-shot examples in WorkflowPrescriptionAgent
+- Create deterministic document availability checking as LangGraph node (not agent-based)
+- Build LangGraph node methods coordinating prescription and document checking
 - Meet performance targets: <2 second execution, <500ms document checking
-- Support information_retrieval → strategy execution order
+- Support agent → check → route execution flow in LangGraph workflow
 
 ## Expected Outputs
 Save phase completion documentation:
@@ -32,7 +32,8 @@ Save phase completion documentation:
 
 ## Success Criteria
 - All Phase 2 checklist items completed
-- Workflow prescription works with sample queries
-- Document availability checking integrates with Supabase
-- Orchestration logic coordinates all components
-- Error handling and graceful degradation implemented
+- WorkflowPrescriptionAgent works with sample queries
+- DocumentAvailabilityChecker integrates with Supabase
+- LangGraph workflow nodes coordinate all components
+- LangGraph workflow executes end-to-end successfully
+- Error handling and graceful degradation implemented in workflow state

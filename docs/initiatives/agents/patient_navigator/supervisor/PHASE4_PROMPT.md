@@ -12,16 +12,16 @@
 - Tested supervisor components from Phase 3
 
 ## Objective
-Integrate supervisor workflow with existing components and perform system testing:
-- Integration with InformationRetrievalAgent and StrategyWorkflowOrchestrator
+Integrate LangGraph supervisor workflow with existing components and perform system testing:
+- Integration with InformationRetrievalAgent and StrategyWorkflowOrchestrator via LangGraph nodes
 - Supabase database integration with Row Level Security
-- End-to-end system testing with realistic scenarios
+- End-to-end LangGraph workflow testing with realistic scenarios
 - Performance optimization to meet <2 second execution target
 
 ## Key Requirements
-- Integrate with existing workflow agents using established interfaces
+- Integrate with existing workflow agents using LangGraph workflow execution nodes
 - Configure Supabase client with proper RLS integration
-- End-to-end testing covering complete supervisor → workflow execution flow
+- End-to-end testing covering complete LangGraph supervisor → workflow execution flow
 - System optimization to meet all performance benchmarks
 - HIPAA compliance and security validation
 
@@ -33,7 +33,7 @@ Save phase completion documentation:
 
 ## Success Criteria
 - All Phase 4 checklist items completed
-- Integration with existing workflows works seamlessly
-- End-to-end system testing passes
+- LangGraph workflow integration with existing workflows works seamlessly
+- End-to-end LangGraph system testing passes
 - Performance requirements met under load
 - Security and compliance requirements satisfied
