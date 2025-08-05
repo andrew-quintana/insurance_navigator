@@ -131,8 +131,8 @@ class StrategyMemoryLiteWorkflow:
     
     def get_status(self) -> Dict[str, Any]:
         """Get status of the memory workflow."""
-            return {
+        return {
             "using_mock": self.use_mock,
             "database_status": self.database_integration.get_database_status(),
             "performance_metrics": self.get_performance_metrics()
-            } 
+        } 
