@@ -43,15 +43,26 @@ class DocumentAvailabilityChecker:
         self.supabase_client: Optional[Client] = None
         if not use_mock:
             try:
-                supabase_url = supabase_url or os.getenv("SUPABASE_URL")
-                supabase_key = supabase_key or os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+                # Use project's environment variable patterns
+                supabase_url = supabase_url or os.getenv("SUPABASE_URL") or os.getenv("SUPABASE_DB_URL")
+                supabase_key = supabase_key or os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY")
                 
                 if not supabase_url or not supabase_key:
                     self.logger.warning("Supabase credentials not provided, falling back to mock mode")
                     self.use_mock = True
                 else:
+                    # Create Supabase client with proper configuration
                     self.supabase_client = create_client(supabase_url, supabase_key)
-                    self.logger.info("Initialized Supabase client for document availability checking")
+                    
+                    # Test connection
+                    try:
+                        # Simple test query to verify connection
+                        test_response = self.supabase_client.table("documents").select("count").limit(1).execute()
+                        self.logger.info("Successfully connected to Supabase for document availability checking")
+                    except Exception as test_error:
+                        self.logger.warning(f"Supabase connection test failed: {test_error}, falling back to mock mode")
+                        self.use_mock = True
+                        
             except Exception as e:
                 self.logger.error(f"Failed to initialize Supabase client: {e}")
                 self.use_mock = True
@@ -76,8 +87,7 @@ class DocumentAvailabilityChecker:
             # Determine required documents for prescribed workflows
             required_docs = self._get_required_documents(workflows)
             
-            # Check document availability in Supabase (placeholder for Phase 2)
-            # For MVP, we'll use mock checking
+            # Check document availability in Supabase
             available_docs = await self._check_documents_in_supabase(required_docs, user_id)
             missing_docs = [doc for doc in required_docs if doc not in available_docs]
             
@@ -86,6 +96,8 @@ class DocumentAvailabilityChecker:
             
             # Determine overall readiness
             is_ready = len(missing_docs) == 0
+            
+            self.logger.info(f"Document availability check completed for user {user_id}: {len(available_docs)} available, {len(missing_docs)} missing")
             
             return DocumentAvailabilityResult(
                 is_ready=is_ready,
@@ -139,24 +151,25 @@ class DocumentAvailabilityChecker:
         try:
             self.logger.info(f"Checking documents in Supabase for user {user_id}")
             
-            # Query documents table for user's documents
+            # Query documents table for user's documents with proper filtering
             response = self.supabase_client.table("documents").select(
-                "document_type, status"
-            ).eq("user_id", user_id).execute()
+                "document_type, status, created_at"
+            ).eq("user_id", user_id).in_("document_type", required_docs).execute()
             
             if not response.data:
                 self.logger.info(f"No documents found for user {user_id}")
                 return []
             
-            # Filter for available documents
+            # Filter for available documents with valid status
             available_docs = []
             for doc in response.data:
                 doc_type = doc.get("document_type")
                 status = doc.get("status", "unknown")
                 
                 # Consider document available if it's in required list and has valid status
-                if doc_type in required_docs and status in ["processed", "available", "active"]:
+                if doc_type in required_docs and status in ["processed", "available", "active", "completed"]:
                     available_docs.append(doc_type)
+                    self.logger.debug(f"Found available document: {doc_type} with status: {status}")
             
             self.logger.info(f"Found {len(available_docs)} available documents for user {user_id}")
             return available_docs
@@ -177,12 +190,16 @@ class DocumentAvailabilityChecker:
         Returns:
             List of available document types
         """
-        # Simple mock logic - assume some documents are available
+        # Enhanced mock logic for Phase 4 testing
         available_docs = []
+        
+        # Mock logic: assume some documents are available based on user_id
         for doc in required_docs:
-            # Mock logic: assume policy and benefits documents are available
+            # For testing: assume information_retrieval docs are available for most users
             if "policy" in doc or "benefits" in doc:
-                available_docs.append(doc)
+                # Make some users have documents, others don't
+                if user_id.endswith("123") or user_id.endswith("456"):
+                    available_docs.append(doc)
         
         return available_docs
     
@@ -199,15 +216,27 @@ class DocumentAvailabilityChecker:
         """
         required_docs = self._get_required_documents(workflows)
         
-        # Mock logic: assume information_retrieval docs are available, strategy docs are missing
+        # Enhanced mock logic for Phase 4 testing
         available_docs = []
         missing_docs = []
         
         for doc in required_docs:
-            if WorkflowType.INFORMATION_RETRIEVAL in workflows and doc in ["insurance_policy", "benefits_summary"]:
-                available_docs.append(doc)
+            # Mock logic: vary availability based on user_id and workflow type
+            if WorkflowType.INFORMATION_RETRIEVAL in workflows:
+                # Information retrieval users typically have basic documents
+                if doc in ["insurance_policy", "benefits_summary"]:
+                    if user_id.endswith("123") or user_id.endswith("456"):
+                        available_docs.append(doc)
+                    else:
+                        missing_docs.append(doc)
+                else:
+                    missing_docs.append(doc)
             else:
-                missing_docs.append(doc)
+                # Strategy users need more documents
+                if user_id.endswith("789"):
+                    available_docs.append(doc)
+                else:
+                    missing_docs.append(doc)
         
         document_status = {doc: doc in available_docs for doc in required_docs}
         is_ready = len(missing_docs) == 0

@@ -139,6 +139,12 @@ class SupervisorState(BaseModel):
         description="Results from workflow execution nodes"
     )
     
+    # Workflow execution tracking
+    executed_workflows: Optional[List[WorkflowType]] = Field(
+        default=None,
+        description="List of workflows that have been executed during this workflow run"
+    )
+    
     # Performance tracking
     processing_time: Optional[float] = Field(
         default=None,
@@ -214,4 +220,26 @@ class SupervisorWorkflowOutput(BaseModel):
     processing_time: float = Field(
         description="Total processing time in seconds",
         examples=[1.2, 0.8, 1.5]
+    )
+    
+    # Workflow execution results
+    information_retrieval_result: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Results from InformationRetrievalAgent workflow execution"
+    )
+    
+    strategy_result: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Results from StrategyWorkflowOrchestrator workflow execution"
+    )
+    
+    workflow_results: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Complete workflow execution results from all executed workflows"
+    )
+    
+    # Audit fields
+    user_id: str = Field(
+        description="User identifier for audit logging",
+        examples=["user_123", "test_user_456"]
     ) 

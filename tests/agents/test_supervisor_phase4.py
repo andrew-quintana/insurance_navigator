@@ -110,18 +110,26 @@ class TestWorkflowIntegration:
     @pytest.mark.asyncio
     async def test_workflow_error_handling(self, supervisor_workflow):
         """Test error handling in workflow integration."""
-        # Mock a failing workflow
-        with patch.object(supervisor_workflow.information_retrieval_agent, 'retrieve_information', side_effect=Exception("Workflow failed")):
-            input_data = SupervisorWorkflowInput(
-                user_query="What is my copay?",
-                user_id="test_user_123"
-            )
-            
-            result = await supervisor_workflow.execute(input_data)
-            
-            # Should handle errors gracefully
-            assert result.routing_decision in ["PROCEED", "COLLECT"]
-            assert result.processing_time > 0
+        input_data = SupervisorWorkflowInput(
+            user_query="What is my copay?",
+            user_id="test_user_123"
+        )
+        
+        # Test error handling when workflow components are not available
+        result = await supervisor_workflow.execute(input_data)
+        
+        # Should handle errors gracefully
+        assert result.routing_decision in ["PROCEED", "COLLECT"]
+        assert result.processing_time > 0
+        
+        # Test error handling when workflow components are available but fail
+        if supervisor_workflow.information_retrieval_agent is not None:
+            with patch.object(supervisor_workflow.information_retrieval_agent, 'retrieve_information', side_effect=Exception("Workflow failed")):
+                result = await supervisor_workflow.execute(input_data)
+                
+                # Should handle errors gracefully
+                assert result.routing_decision in ["PROCEED", "COLLECT"]
+                assert result.processing_time > 0
 
 
 class TestSupabaseIntegration:

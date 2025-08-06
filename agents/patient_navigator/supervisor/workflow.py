@@ -80,26 +80,42 @@ class SupervisorWorkflow:
         workflow.add_node("route_decision", self._route_decision_node)
         
         # Add workflow execution nodes if components are available
-        if WORKFLOW_COMPONENTS_AVAILABLE and not self.use_mock:
+        if WORKFLOW_COMPONENTS_AVAILABLE:
+            self.logger.info("Adding workflow execution nodes to graph")
             workflow.add_node("execute_information_retrieval", self._execute_information_retrieval_node)
             workflow.add_node("execute_strategy", self._execute_strategy_node)
+        else:
+            self.logger.warning("Workflow components not available, but adding mock workflow execution nodes for testing")
+            workflow.add_node("execute_information_retrieval", self._execute_information_retrieval_node)
+            workflow.add_node("execute_strategy", self._execute_strategy_node)
+        
+        # Add end node
+        workflow.add_node("end", self._end_node)
         
         # Add edges for sequential flow
         workflow.add_edge("prescribe_workflow", "check_documents")
         workflow.add_edge("check_documents", "route_decision")
         
         # Add conditional edges for workflow execution
-        if WORKFLOW_COMPONENTS_AVAILABLE and not self.use_mock:
-            # Route to workflow execution based on routing decision
-            workflow.add_conditional_edges(
-                "route_decision",
-                self._route_to_workflow_execution,
-                {
-                    "execute_information_retrieval": "execute_information_retrieval",
-                    "execute_strategy": "execute_strategy",
-                    "end": None
-                }
-            )
+        if WORKFLOW_COMPONENTS_AVAILABLE:
+            self.logger.info("Adding conditional edges for workflow execution")
+        else:
+            self.logger.warning("Adding conditional edges for workflow execution with mock components")
+        
+        # Route to workflow execution based on routing decision
+        workflow.add_conditional_edges(
+            "route_decision",
+            self._route_to_workflow_execution,
+            {
+                "execute_information_retrieval": "execute_information_retrieval",
+                "execute_strategy": "execute_strategy",
+                "end": "end"
+            }
+        )
+        
+        # Add edges from workflow execution nodes back to route_decision for multi-workflow execution
+        workflow.add_edge("execute_information_retrieval", "route_decision")
+        workflow.add_edge("execute_strategy", "route_decision")
         
         # Set entry point
         workflow.set_entry_point("prescribe_workflow")
@@ -280,18 +296,38 @@ class SupervisorWorkflow:
         Returns:
             Next node name or "end" to terminate
         """
+        self.logger.info(f"Routing to workflow execution - decision: {state.routing_decision}, workflows: {state.prescribed_workflows}")
+        
         if state.routing_decision != "PROCEED":
+            self.logger.info("Not proceeding - routing decision is not PROCEED")
             return "end"
         
         if not state.prescribed_workflows:
+            self.logger.info("Not proceeding - no prescribed workflows")
             return "end"
         
-        # Execute workflows in deterministic order
-        if WorkflowType.INFORMATION_RETRIEVAL in state.prescribed_workflows:
+        # Check if we've already executed all workflows
+        executed_workflows = getattr(state, 'executed_workflows', [])
+        if executed_workflows is None:
+            executed_workflows = []
+        
+        if len(executed_workflows) >= len(state.prescribed_workflows):
+            self.logger.info("All workflows already executed, ending")
+            return "end"
+        
+        # Execute workflows in deterministic order (information_retrieval → strategy)
+        # Check if we've already executed information_retrieval
+        if WorkflowType.INFORMATION_RETRIEVAL in state.prescribed_workflows and WorkflowType.INFORMATION_RETRIEVAL not in executed_workflows:
+            self.logger.info("Executing information retrieval workflow")
             return "execute_information_retrieval"
-        elif WorkflowType.STRATEGY in state.prescribed_workflows:
+        
+        # Check if we've already executed strategy
+        if WorkflowType.STRATEGY in state.prescribed_workflows and WorkflowType.STRATEGY not in executed_workflows:
+            self.logger.info("Executing strategy workflow")
             return "execute_strategy"
         
+        # All workflows executed
+        self.logger.info("All workflows executed, ending")
         return "end"
     
     async def _execute_information_retrieval_node(self, state: SupervisorState) -> SupervisorState:
@@ -311,40 +347,57 @@ class SupervisorWorkflow:
             
             if not self.information_retrieval_agent:
                 self.logger.warning("InformationRetrievalAgent not available, skipping execution")
-                return state
+                # Create mock result for testing
+                workflow_result = {
+                    'status': 'skipped',
+                    'reason': 'InformationRetrievalAgent not available',
+                    'data': {},
+                    'errors': []
+                }
+            else:
+                # Execute real InformationRetrievalAgent
+                workflow_result = await self.information_retrieval_agent.execute(
+                    user_query=state.user_query,
+                    user_id=state.user_id,
+                    workflow_context=state.workflow_context
+                )
+                workflow_result = workflow_result.model_dump()
             
-            # Execute information retrieval workflow
-            # Note: This is a placeholder implementation - actual integration will be in Phase 4
-            workflow_result = await self.information_retrieval_agent.process(
-                query=state.user_query,
-                user_id=state.user_id,
-                context=state.workflow_context or {}
-            )
-            
-            # Store workflow results in state
-            if not hasattr(state, 'workflow_results'):
+            # Store workflow results
+            if not hasattr(state, 'workflow_results') or state.workflow_results is None:
                 state.workflow_results = {}
             state.workflow_results['information_retrieval'] = workflow_result
             
-            node_time = time.time() - node_start_time
-            self.logger.info(f"Information retrieval workflow completed (took {node_time:.2f}s)")
+            # Mark information_retrieval as executed
+            if not hasattr(state, 'executed_workflows') or state.executed_workflows is None:
+                state.executed_workflows = []
+            if WorkflowType.INFORMATION_RETRIEVAL not in state.executed_workflows:
+                state.executed_workflows.append(WorkflowType.INFORMATION_RETRIEVAL)
             
-            # Track performance
-            if state.node_performance is None:
+            node_time = time.time() - node_start_time
+            if not hasattr(state, 'node_performance'):
                 state.node_performance = {}
             state.node_performance['execute_information_retrieval'] = node_time
             
             return state
             
         except Exception as e:
-            node_time = time.time() - node_start_time
-            self.logger.error(f"Error in information retrieval workflow node after {node_time:.2f}s: {e}")
-            state.error_message = f"Information retrieval workflow failed: {str(e)}"
+            self.logger.error(f"Information retrieval workflow execution failed: {e}")
+            # Mark as executed even on error to prevent infinite loops
+            if not hasattr(state, 'executed_workflows') or state.executed_workflows is None:
+                state.executed_workflows = []
+            if WorkflowType.INFORMATION_RETRIEVAL not in state.executed_workflows:
+                state.executed_workflows.append(WorkflowType.INFORMATION_RETRIEVAL)
             
-            # Track error performance
-            if state.node_performance is None:
-                state.node_performance = {}
-            state.node_performance['execute_information_retrieval'] = node_time
+            # Store error result
+            if not hasattr(state, 'workflow_results'):
+                state.workflow_results = {}
+            state.workflow_results['information_retrieval'] = {
+                'status': 'error',
+                'error': str(e),
+                'data': {},
+                'errors': [str(e)]
+            }
             
             return state
     
@@ -365,42 +418,72 @@ class SupervisorWorkflow:
             
             if not self.strategy_orchestrator:
                 self.logger.warning("StrategyWorkflowOrchestrator not available, skipping execution")
-                return state
+                # Create mock result for testing
+                workflow_result = {
+                    'status': 'skipped',
+                    'reason': 'StrategyWorkflowOrchestrator not available',
+                    'data': {},
+                    'errors': []
+                }
+            else:
+                # Execute real StrategyWorkflowOrchestrator
+                workflow_result = await self.strategy_orchestrator.execute(
+                    user_query=state.user_query,
+                    user_id=state.user_id,
+                    workflow_context=state.workflow_context
+                )
+                workflow_result = workflow_result.model_dump()
             
-            # Execute strategy workflow
-            # Note: This is a placeholder implementation - actual integration will be in Phase 4
-            workflow_result = await self.strategy_orchestrator.execute_workflow(
-                user_query=state.user_query,
-                user_id=state.user_id,
-                context=state.workflow_context or {}
-            )
-            
-            # Store workflow results in state
-            if not hasattr(state, 'workflow_results'):
+            # Store workflow results
+            if not hasattr(state, 'workflow_results') or state.workflow_results is None:
                 state.workflow_results = {}
             state.workflow_results['strategy'] = workflow_result
             
-            node_time = time.time() - node_start_time
-            self.logger.info(f"Strategy workflow completed (took {node_time:.2f}s)")
+            # Mark strategy as executed
+            if not hasattr(state, 'executed_workflows') or state.executed_workflows is None:
+                state.executed_workflows = []
+            if WorkflowType.STRATEGY not in state.executed_workflows:
+                state.executed_workflows.append(WorkflowType.STRATEGY)
             
-            # Track performance
-            if state.node_performance is None:
+            node_time = time.time() - node_start_time
+            if not hasattr(state, 'node_performance'):
                 state.node_performance = {}
             state.node_performance['execute_strategy'] = node_time
             
             return state
             
         except Exception as e:
-            node_time = time.time() - node_start_time
-            self.logger.error(f"Error in strategy workflow node after {node_time:.2f}s: {e}")
-            state.error_message = f"Strategy workflow failed: {str(e)}"
+            self.logger.error(f"Strategy workflow execution failed: {e}")
+            # Mark as executed even on error to prevent infinite loops
+            if not hasattr(state, 'executed_workflows') or state.executed_workflows is None:
+                state.executed_workflows = []
+            if WorkflowType.STRATEGY not in state.executed_workflows:
+                state.executed_workflows.append(WorkflowType.STRATEGY)
             
-            # Track error performance
-            if state.node_performance is None:
-                state.node_performance = {}
-            state.node_performance['execute_strategy'] = node_time
+            # Store error result
+            if not hasattr(state, 'workflow_results'):
+                state.workflow_results = {}
+            state.workflow_results['strategy'] = {
+                'status': 'error',
+                'error': str(e),
+                'data': {},
+                'errors': [str(e)]
+            }
             
             return state
+    
+    async def _end_node(self, state: SupervisorState) -> SupervisorState:
+        """
+        LangGraph node for ending the workflow.
+        
+        Args:
+            state: Current workflow state
+            
+        Returns:
+            Final state
+        """
+        self.logger.info("Workflow ended.")
+        return state
     
     async def execute(self, input_data: SupervisorWorkflowInput) -> SupervisorWorkflowOutput:
         """
@@ -446,7 +529,13 @@ class SupervisorWorkflow:
                 user_id=input_data.user_id,
                 workflow_context=input_data.workflow_context,
                 error_message=str(e),
-                routing_decision="COLLECT"  # Default to COLLECT on error
+                routing_decision="COLLECT",  # Default to COLLECT on error
+                document_availability=DocumentAvailabilityResult(
+                    is_ready=False,
+                    available_documents=[],
+                    missing_documents=[],
+                    document_status={}
+                )
             )
             
             return self._create_output(error_state, processing_time)
@@ -468,6 +557,10 @@ class SupervisorWorkflow:
         else:
             # Handle AddableValuesDict case
             prescribed_workflows = state.get('prescribed_workflows', [WorkflowType.INFORMATION_RETRIEVAL])
+        
+        # Ensure prescribed_workflows is not None
+        if prescribed_workflows is None:
+            prescribed_workflows = [WorkflowType.INFORMATION_RETRIEVAL]
         
         # Create workflow prescription result
         from .models import WorkflowPrescriptionResult
@@ -494,6 +587,15 @@ class SupervisorWorkflow:
             else:
                 document_availability = doc_avail
         
+        # Ensure document_availability is not None
+        if document_availability is None:
+            document_availability = DocumentAvailabilityResult(
+                is_ready=False,
+                available_documents=[],
+                missing_documents=[],
+                document_status={}
+            )
+        
         # Extract routing decision - handle both SupervisorState and AddableValuesDict
         if hasattr(state, 'routing_decision'):
             routing_decision = state.routing_decision or "COLLECT"
@@ -501,11 +603,43 @@ class SupervisorWorkflow:
             # Handle AddableValuesDict case
             routing_decision = state.get('routing_decision', "COLLECT")
         
+        # Ensure routing_decision is not None
+        if routing_decision is None:
+            routing_decision = "COLLECT"
+        
         # Determine next steps
         next_steps = self._determine_next_steps(state)
         
         # Calculate confidence score
         confidence_score = self._calculate_confidence_score(state)
+        
+        # Extract workflow results
+        workflow_results = None
+        information_retrieval_result = None
+        strategy_result = None
+        
+        if hasattr(state, 'workflow_results'):
+            workflow_results = state.workflow_results
+            if workflow_results:
+                information_retrieval_result = workflow_results.get('information_retrieval')
+                strategy_result = workflow_results.get('strategy')
+        else:
+            # Handle AddableValuesDict case
+            workflow_results = state.get('workflow_results')
+            if workflow_results:
+                information_retrieval_result = workflow_results.get('information_retrieval')
+                strategy_result = workflow_results.get('strategy')
+        
+        # Extract user_id - handle both SupervisorState and AddableValuesDict
+        if hasattr(state, 'user_id'):
+            user_id = state.user_id
+        else:
+            # Handle AddableValuesDict case
+            user_id = state.get('user_id', 'unknown_user')
+        
+        # Ensure user_id is not None
+        if user_id is None:
+            user_id = 'unknown_user'
         
         return SupervisorWorkflowOutput(
             routing_decision=routing_decision,
@@ -515,7 +649,11 @@ class SupervisorWorkflow:
             workflow_prescription=workflow_prescription,
             next_steps=next_steps,
             confidence_score=confidence_score,
-            processing_time=processing_time
+            processing_time=processing_time,
+            information_retrieval_result=information_retrieval_result,
+            strategy_result=strategy_result,
+            workflow_results=workflow_results,
+            user_id=user_id
         )
     
     def _determine_next_steps(self, state: SupervisorState) -> List[str]:
