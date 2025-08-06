@@ -652,7 +652,7 @@ You are implementing Phase 4 of the Patient Navigator Supervisor Workflow MVP. P
 **Phase 4 Focus:**
 - Integration of modular LangGraph nodes with existing workflow components
 - Supabase database integration with Row Level Security
-- End-to-end LangGraph workflow system testing with realistic scenarios
+- End-to-end LangGraph workflow system testing with realistic scenarios stored under /agents/patient_navigator/orchestration
 - Performance optimization to meet <2 second execution target with node-level profiling
 - System validation under load and stress conditions for node interoperability
 
