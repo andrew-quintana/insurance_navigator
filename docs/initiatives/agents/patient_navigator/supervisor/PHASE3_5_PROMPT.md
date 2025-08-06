@@ -1,30 +1,28 @@
-# Phase 3.5: LangGraph Workflow Integration & Node Composition - Implementation Prompt
+# Phase 3.5: Complete LangGraph Architecture Implementation - Implementation Prompt
 
-**Context**: Implement Phase 3.5 of Patient Navigator Supervisor Workflow MVP - LangGraph workflow integration and node composition before full system testing.
+**Context**: Implement Phase 3.5 of Patient Navigator Supervisor Workflow MVP - complete any missing LangGraph architecture implementation from Phases 1-3.
 
 ## Required Reading
 - `@docs/initiatives/agents/patient_navigator/supervisor/TODO001_phase3_notes.md`
 - `@docs/initiatives/agents/patient_navigator/supervisor/TODO001_phase3_decisions.md`
 - `@docs/initiatives/agents/patient_navigator/supervisor/TODO001_phase3_handoff.md`
 - `@docs/initiatives/agents/patient_navigator/supervisor/TODO001.md` (Phase 3.5 section)
-- Tested individual components from Phase 3
-- LangGraph workflow structure from Phase 1
-- Workflow execution node implementations from Phase 2
+- Implemented components from Phases 1-3
+- Any incomplete LangGraph workflow architecture components from previous phases
 
 ## Objective
-Complete LangGraph workflow integration and validate workflow orchestration:
-- Integrate all workflow nodes into complete LangGraph StateGraph
-- Test end-to-end LangGraph workflow execution with mocked external dependencies
-- Validate workflow state management and node transitions
-- Prepare for full system integration with real workflow components in Phase 4
+Complete any missing LangGraph architecture implementation before system integration:
+- Complete any missing LangGraph workflow architecture from Phases 1-3
+- Ensure all LangGraph node implementations are complete and tested individually
+- Finalize SupervisorState model and workflow node methods
+- Complete any missing mock implementations and basic workflow composition
 
 ## Key Requirements
-- Complete LangGraph StateGraph composition with all workflow nodes
-- Implement workflow execution nodes for external workflow integration
-- Test complete workflow orchestration flow with mocked dependencies
-- Validate workflow state persistence and recovery across node boundaries
-- Optimize workflow node performance and transitions for <2 second execution target
-- Prepare interfaces for real workflow integration in Phase 4
+- Complete SupervisorWorkflow class with LangGraph StateGraph implementation
+- Finalize SupervisorState model and all LangGraph node method implementations
+- Complete individual LangGraph component testing that may have been missed
+- Ensure LangGraph StateGraph compiles and basic workflow execution works
+- Complete missing mock implementations for all LangGraph components
 
 ## Expected Outputs
 Save phase completion documentation:
@@ -34,8 +32,9 @@ Save phase completion documentation:
 
 ## Success Criteria
 - All Phase 3.5 checklist items completed
-- Complete LangGraph workflow executes end-to-end with mocked dependencies
-- All workflow nodes integrate properly with validated state transitions
-- Workflow state management works correctly across all node boundaries
-- Performance optimization meets targets for workflow orchestration
-- Integration interfaces prepared and validated for Phase 4 system testing
+- LangGraph StateGraph compiles without errors
+- All LangGraph node methods are implemented and tested individually
+- SupervisorState model works with LangGraph state management
+- Basic workflow execution works with placeholder logic
+- Mock mode functionality works for all LangGraph components
+- Architecture is ready for system integration in Phase 4
