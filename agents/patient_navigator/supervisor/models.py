@@ -133,6 +133,12 @@ class SupervisorState(BaseModel):
         description="Final routing decision based on prescription and document availability"
     )
     
+    # Workflow execution results
+    workflow_results: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Results from workflow execution nodes"
+    )
+    
     # Performance tracking
     processing_time: Optional[float] = Field(
         default=None,
@@ -148,7 +154,7 @@ class SupervisorState(BaseModel):
     # Error handling
     error_message: Optional[str] = Field(
         default=None,
-        description="Error message if workflow execution fails"
+        description="Error message if any step failed"
     )
 
 

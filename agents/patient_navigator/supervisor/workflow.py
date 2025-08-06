@@ -20,8 +20,15 @@ from .models import (
 from .workflow_prescription import WorkflowPrescriptionAgent
 from .document_availability import DocumentAvailabilityChecker
 
-
-
+# Import existing workflow components for integration
+try:
+    from agents.patient_navigator.information_retrieval.agent import InformationRetrievalAgent
+    from agents.patient_navigator.strategy.workflow.orchestrator import StrategyWorkflowOrchestrator
+    WORKFLOW_COMPONENTS_AVAILABLE = True
+except ImportError:
+    WORKFLOW_COMPONENTS_AVAILABLE = False
+    InformationRetrievalAgent = None
+    StrategyWorkflowOrchestrator = None
 
 
 class SupervisorWorkflow:
@@ -46,6 +53,14 @@ class SupervisorWorkflow:
         self.workflow_agent = WorkflowPrescriptionAgent(use_mock=use_mock)
         self.document_checker = DocumentAvailabilityChecker(use_mock=use_mock)
         
+        # Initialize workflow execution components if available
+        if WORKFLOW_COMPONENTS_AVAILABLE and not use_mock:
+            self.information_retrieval_agent = InformationRetrievalAgent(use_mock=use_mock)
+            self.strategy_orchestrator = StrategyWorkflowOrchestrator(use_mock=use_mock)
+        else:
+            self.information_retrieval_agent = None
+            self.strategy_orchestrator = None
+        
         # Build LangGraph workflow
         self.graph = self._build_workflow_graph()
     
@@ -64,9 +79,27 @@ class SupervisorWorkflow:
         workflow.add_node("check_documents", self._check_documents_node)
         workflow.add_node("route_decision", self._route_decision_node)
         
+        # Add workflow execution nodes if components are available
+        if WORKFLOW_COMPONENTS_AVAILABLE and not self.use_mock:
+            workflow.add_node("execute_information_retrieval", self._execute_information_retrieval_node)
+            workflow.add_node("execute_strategy", self._execute_strategy_node)
+        
         # Add edges for sequential flow
         workflow.add_edge("prescribe_workflow", "check_documents")
         workflow.add_edge("check_documents", "route_decision")
+        
+        # Add conditional edges for workflow execution
+        if WORKFLOW_COMPONENTS_AVAILABLE and not self.use_mock:
+            # Route to workflow execution based on routing decision
+            workflow.add_conditional_edges(
+                "route_decision",
+                self._route_to_workflow_execution,
+                {
+                    "execute_information_retrieval": "execute_information_retrieval",
+                    "execute_strategy": "execute_strategy",
+                    "end": None
+                }
+            )
         
         # Set entry point
         workflow.set_entry_point("prescribe_workflow")
@@ -234,6 +267,138 @@ class SupervisorWorkflow:
             if state.node_performance is None:
                 state.node_performance = {}
             state.node_performance['route_decision'] = node_time
+            
+            return state
+    
+    async def _route_to_workflow_execution(self, state: SupervisorState) -> str:
+        """
+        Route to appropriate workflow execution based on routing decision and prescribed workflows.
+        
+        Args:
+            state: Current workflow state
+            
+        Returns:
+            Next node name or "end" to terminate
+        """
+        if state.routing_decision != "PROCEED":
+            return "end"
+        
+        if not state.prescribed_workflows:
+            return "end"
+        
+        # Execute workflows in deterministic order
+        if WorkflowType.INFORMATION_RETRIEVAL in state.prescribed_workflows:
+            return "execute_information_retrieval"
+        elif WorkflowType.STRATEGY in state.prescribed_workflows:
+            return "execute_strategy"
+        
+        return "end"
+    
+    async def _execute_information_retrieval_node(self, state: SupervisorState) -> SupervisorState:
+        """
+        LangGraph node for InformationRetrievalAgent workflow execution.
+        
+        Args:
+            state: Current workflow state
+            
+        Returns:
+            Updated state with workflow execution results
+        """
+        node_start_time = time.time()
+        
+        try:
+            self.logger.info("Executing information retrieval workflow node")
+            
+            if not self.information_retrieval_agent:
+                self.logger.warning("InformationRetrievalAgent not available, skipping execution")
+                return state
+            
+            # Execute information retrieval workflow
+            # Note: This is a placeholder implementation - actual integration will be in Phase 4
+            workflow_result = await self.information_retrieval_agent.process(
+                query=state.user_query,
+                user_id=state.user_id,
+                context=state.workflow_context or {}
+            )
+            
+            # Store workflow results in state
+            if not hasattr(state, 'workflow_results'):
+                state.workflow_results = {}
+            state.workflow_results['information_retrieval'] = workflow_result
+            
+            node_time = time.time() - node_start_time
+            self.logger.info(f"Information retrieval workflow completed (took {node_time:.2f}s)")
+            
+            # Track performance
+            if state.node_performance is None:
+                state.node_performance = {}
+            state.node_performance['execute_information_retrieval'] = node_time
+            
+            return state
+            
+        except Exception as e:
+            node_time = time.time() - node_start_time
+            self.logger.error(f"Error in information retrieval workflow node after {node_time:.2f}s: {e}")
+            state.error_message = f"Information retrieval workflow failed: {str(e)}"
+            
+            # Track error performance
+            if state.node_performance is None:
+                state.node_performance = {}
+            state.node_performance['execute_information_retrieval'] = node_time
+            
+            return state
+    
+    async def _execute_strategy_node(self, state: SupervisorState) -> SupervisorState:
+        """
+        LangGraph node for StrategyWorkflowOrchestrator workflow execution.
+        
+        Args:
+            state: Current workflow state
+            
+        Returns:
+            Updated state with workflow execution results
+        """
+        node_start_time = time.time()
+        
+        try:
+            self.logger.info("Executing strategy workflow node")
+            
+            if not self.strategy_orchestrator:
+                self.logger.warning("StrategyWorkflowOrchestrator not available, skipping execution")
+                return state
+            
+            # Execute strategy workflow
+            # Note: This is a placeholder implementation - actual integration will be in Phase 4
+            workflow_result = await self.strategy_orchestrator.execute_workflow(
+                user_query=state.user_query,
+                user_id=state.user_id,
+                context=state.workflow_context or {}
+            )
+            
+            # Store workflow results in state
+            if not hasattr(state, 'workflow_results'):
+                state.workflow_results = {}
+            state.workflow_results['strategy'] = workflow_result
+            
+            node_time = time.time() - node_start_time
+            self.logger.info(f"Strategy workflow completed (took {node_time:.2f}s)")
+            
+            # Track performance
+            if state.node_performance is None:
+                state.node_performance = {}
+            state.node_performance['execute_strategy'] = node_time
+            
+            return state
+            
+        except Exception as e:
+            node_time = time.time() - node_start_time
+            self.logger.error(f"Error in strategy workflow node after {node_time:.2f}s: {e}")
+            state.error_message = f"Strategy workflow failed: {str(e)}"
+            
+            # Track error performance
+            if state.node_performance is None:
+                state.node_performance = {}
+            state.node_performance['execute_strategy'] = node_time
             
             return state
     
