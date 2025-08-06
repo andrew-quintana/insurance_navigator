@@ -186,16 +186,16 @@ You are implementing Phase 1 of the Patient Navigator Supervisor Workflow MVP. T
 You are implementing Phase 2 of the Patient Navigator Supervisor Workflow MVP. Phase 1 completed the basic structure and Pydantic models. Now implement the core workflow prescription and document availability checking functionality.
 
 **Phase 2 Focus:**
-- Implement LLM-based workflow prescription with few-shot learning in WorkflowPrescriptionAgent
-- Create deterministic document availability checker with Supabase integration as LangGraph node
-- Build LangGraph workflow node implementations with error handling
+- Implement LLM-based workflow prescription with few-shot learning to inform downstream workflow invocations
+- Create deterministic document availability checker as workflow-level operation in LangGraph node
+- Build LangGraph workflow execution nodes that wrap complete workflows as callable units
 - Follow performance requirements: <2 second total execution, <500ms document checking
 
 **Key Components to Implement:**
-1. WorkflowPrescriptionAgent with few-shot learning system prompt
-2. DocumentAvailabilityChecker with Supabase integration for LangGraph node
-3. LangGraph node implementations for workflow orchestration
-4. Error handling and graceful degradation in workflow state management
+1. WorkflowPrescriptionAgent with few-shot learning to determine which full workflows to invoke
+2. DocumentAvailabilityChecker as workflow-level operation for LangGraph node integration
+3. LangGraph workflow execution nodes that wrap InformationRetrievalAgent and StrategyWorkflowOrchestrator
+4. Error handling and graceful degradation in workflow-level state management
 
 ### Tasks
 
@@ -220,11 +220,11 @@ You are implementing Phase 2 of the Patient Navigator Supervisor Workflow MVP. P
 14. Add comprehensive error handling and graceful degradation in node methods
 15. Implement performance tracking and logging in workflow state
 
-#### Integration Points
-16. Create integration interfaces with InformationRetrievalAgent
-17. Create integration interfaces with StrategyWorkflowOrchestrator
-18. Add proper async/await handling for all components
-19. Implement structured output generation
+#### Workflow Execution Node Implementation
+16. Create LangGraph workflow execution node for InformationRetrievalAgent workflow invocation
+17. Create LangGraph workflow execution node for StrategyWorkflowOrchestrator workflow invocation
+18. Add proper async/await handling for workflow-level operations
+19. Implement structured output generation from workflow execution results
 
 ### Expected Outputs
 - Save implementation notes to: `@TODO001_phase2_notes.md`
@@ -293,26 +293,27 @@ You are implementing Phase 2 of the Patient Navigator Supervisor Workflow MVP. P
   - [ ] Track individual node performance
   - [ ] Add performance logging and alerting
 
-#### Integration Layer Implementation
-- [ ] Create workflow execution interfaces
-  - [ ] Interface with InformationRetrievalAgent.process()
-  - [ ] Interface with StrategyWorkflowOrchestrator.execute_workflow()
-  - [ ] Handle async execution patterns
-- [ ] Add structured output handling
-  - [ ] Convert between internal and external data formats
-  - [ ] Handle serialization/deserialization
-  - [ ] Validate output schemas
-- [ ] Implement mock mode support
+#### Workflow Execution Node Implementation
+- [ ] Create LangGraph workflow execution nodes
+  - [ ] Wrap InformationRetrievalAgent as complete workflow invocation
+  - [ ] Wrap StrategyWorkflowOrchestrator as complete workflow invocation
+  - [ ] Handle async workflow-level execution patterns
+  - [ ] Ensure workflows are invoked as complete units, not individual agent methods
+- [ ] Add structured workflow output handling
+  - [ ] Convert between workflow outputs and LangGraph state formats
+  - [ ] Handle workflow-level serialization/deserialization
+  - [ ] Validate workflow execution output schemas
+- [ ] Implement mock mode support for workflow-level operations
   - [ ] Mock responses for workflow prescription
-  - [ ] Mock responses for document availability
-  - [ ] Mock responses for workflow execution
+  - [ ] Mock responses for document availability checking
+  - [ ] Mock responses for complete workflow executions
 
 #### Validation
-- [ ] Test workflow prescription accuracy with sample queries
-- [ ] Test document availability checking with mock data
-- [ ] Validate error handling and graceful degradation
-- [ ] Test performance requirements (<2 seconds total)
-- [ ] Verify integration with existing agent patterns
+- [ ] Test workflow prescription accuracy with sample queries for downstream workflow selection
+- [ ] Test document availability checking with mock data as workflow-level operation
+- [ ] Validate error handling and graceful degradation across workflow boundaries
+- [ ] Test performance requirements (<2 seconds total) for complete workflow invocations
+- [ ] Verify LangGraph workflow execution node composition and interoperability
 
 #### Documentation
 - [ ] Save `@TODO001_phase2_notes.md` with implementation details
@@ -510,38 +511,201 @@ You are implementing Phase 3 of the Patient Navigator Supervisor Workflow MVP. P
 
 ---
 
-## Phase 4: Integration & System Testing
+## Phase 3.5: LangGraph Workflow Integration & Node Composition
 
 ### Prerequisites
 - Files/documents to read:
   - Previous phase outputs: `@TODO001_phase3_notes.md`, `@TODO001_phase3_decisions.md`, `@TODO001_phase3_handoff.md`
-  - Tested supervisor workflow components from Phase 3
-  - `@agents/patient_navigator/information_retrieval/agent.py`
-  - `@agents/patient_navigator/strategy/workflow/orchestrator.py`
-  - Any identified issues or performance concerns from isolated testing
+  - Tested individual components from Phase 3
+  - LangGraph workflow structure from Phase 1
+  - Workflow execution node implementations from Phase 2
 - Previous phase outputs: All phase 1-3 documentation
 - Session setup: Run `/clear` to start fresh
 
 ### Context for Claude
 **IMPORTANT**: This is a new session. Use only the inputs provided below, do not rely on prior conversation history.
 
-You are implementing Phase 4 of the Patient Navigator Supervisor Workflow MVP. Phase 3 completed isolated component testing. Now integrate with existing workflow components and perform comprehensive system testing.
+You are implementing Phase 3.5 of the Patient Navigator Supervisor Workflow MVP. Phase 3 completed isolated component testing. Now integrate the LangGraph workflow nodes and validate the complete workflow orchestration before full system testing.
 
-**Phase 4 Focus:**
-- Integration with InformationRetrievalAgent and StrategyWorkflowOrchestrator
-- Supabase database integration with Row Level Security
-- End-to-end system testing with realistic scenarios
-- Performance optimization to meet <2 second execution target
-- System validation under load and stress conditions
+**Phase 3.5 Focus:**
+- Complete LangGraph workflow node integration and composition
+- Test end-to-end LangGraph workflow execution with mocked external dependencies
+- Validate workflow state management and node transitions
+- Prepare for full system integration with real workflow components in Phase 4
 
 ### Tasks
 
-#### Workflow Integration
-1. Integrate SupervisorWorkflowAgent with InformationRetrievalAgent
-2. Integrate SupervisorWorkflowAgent with StrategyWorkflowOrchestrator
-3. Test deterministic execution order (information_retrieval → strategy)
-4. Validate data flow and interface compatibility
-5. Implement error propagation and handling
+#### LangGraph Workflow Node Integration
+1. Integrate all workflow nodes into complete LangGraph workflow graph
+2. Implement workflow state transitions and data flow between nodes
+3. Test complete LangGraph workflow execution with mock workflow invocations
+4. Validate error handling and state management across node boundaries
+5. Optimize workflow node performance and transitions
+
+#### Workflow Execution Node Implementation
+6. Complete implementation of workflow execution nodes for external workflow integration
+7. Create mock workflow execution interfaces for development and testing
+8. Implement workflow result processing and state updates
+9. Add comprehensive error handling for workflow execution failures
+10. Test workflow execution node composition and sequencing
+
+#### End-to-End LangGraph Workflow Testing
+11. Create comprehensive LangGraph workflow integration tests
+12. Test complete workflow orchestration flow with mocked dependencies
+13. Validate workflow state persistence and recovery
+14. Test concurrent workflow execution handling
+15. Performance testing for complete LangGraph workflow execution
+
+#### Workflow State Management Validation
+16. Test SupervisorState model across all workflow transitions
+17. Validate state serialization and deserialization between nodes
+18. Test error state handling and recovery mechanisms
+19. Validate workflow context preservation across node boundaries
+20. Test workflow completion and result aggregation
+
+### Expected Outputs
+- Save implementation notes to: `@TODO001_phase3_5_notes.md`
+- Document any architectural decisions in: `@TODO001_phase3_5_decisions.md`
+- List system integration requirements for next phase in: `@TODO001_phase3_5_handoff.md`
+
+### Progress Checklist
+
+#### LangGraph Workflow Graph Composition
+- [ ] Complete LangGraph StateGraph composition
+  - [ ] Add all workflow nodes to StateGraph
+  - [ ] Configure node transitions and edges
+  - [ ] Set proper entry and exit points
+  - [ ] Validate graph compilation and structure
+- [ ] Test workflow node integration
+  - [ ] Test prescription node → document check node transition
+  - [ ] Test document check node → routing decision node transition
+  - [ ] Test routing decision node → workflow execution node transition
+  - [ ] Validate conditional edges and routing logic
+- [ ] Implement workflow state management
+  - [ ] Test SupervisorState updates across all nodes
+  - [ ] Validate state persistence between node transitions
+  - [ ] Test state error handling and recovery
+  - [ ] Ensure proper state cleanup on workflow completion
+
+#### Workflow Execution Node Implementation
+- [ ] Complete workflow execution node implementation
+  - [ ] Implement InformationRetrievalAgent workflow execution node
+  - [ ] Implement StrategyWorkflowOrchestrator workflow execution node
+  - [ ] Add proper async/await handling for workflow invocations
+  - [ ] Implement workflow result processing and state updates
+- [ ] Create mock workflow execution interfaces
+  - [ ] Mock InformationRetrievalAgent complete workflow execution
+  - [ ] Mock StrategyWorkflowOrchestrator complete workflow execution
+  - [ ] Implement realistic mock response generation
+  - [ ] Test mock mode consistency with expected real behavior
+- [ ] Test workflow execution node composition
+  - [ ] Test single workflow execution scenarios
+  - [ ] Test multi-workflow execution scenarios
+  - [ ] Validate workflow execution ordering and sequencing
+  - [ ] Test workflow execution error handling and recovery
+
+#### End-to-End LangGraph Workflow Testing
+- [ ] Create comprehensive workflow integration tests
+  - [ ] Test complete LangGraph workflow execution from start to finish
+  - [ ] Validate all node transitions and state updates
+  - [ ] Test error scenarios and graceful degradation across nodes
+  - [ ] Test workflow completion and result generation
+- [ ] Test workflow orchestration scenarios
+  - [ ] Single workflow prescription and execution
+  - [ ] Multi-workflow prescription and execution
+  - [ ] Document availability variations affecting workflow routing
+  - [ ] Error recovery and fallback scenarios across workflow boundaries
+- [ ] Performance testing for LangGraph workflow
+  - [ ] Measure end-to-end workflow execution time
+  - [ ] Test node transition overhead and optimization
+  - [ ] Validate <2 second total execution time target
+  - [ ] Test concurrent workflow execution capacity
+- [ ] Validate workflow extensibility patterns
+  - [ ] Test adding new workflow nodes to existing graph
+  - [ ] Validate node composition and reusability
+  - [ ] Test workflow graph modification and updates
+  - [ ] Ensure extensibility for future workflow additions
+
+#### Workflow State Management & Error Handling
+- [ ] Test comprehensive state management
+  - [ ] SupervisorState validation across all workflow transitions
+  - [ ] State serialization/deserialization between nodes
+  - [ ] State persistence during workflow execution
+  - [ ] State cleanup on workflow completion or failure
+- [ ] Test error handling across workflow boundaries
+  - [ ] Node-level error handling and propagation
+  - [ ] Workflow execution failure recovery
+  - [ ] State corruption detection and recovery
+  - [ ] Graceful degradation strategies across nodes
+- [ ] Test workflow context preservation
+  - [ ] User context maintenance across workflow execution
+  - [ ] Workflow context passing between nodes
+  - [ ] Context validation and sanitization
+  - [ ] Context-based routing and decision making
+
+#### Integration Preparation for Phase 4
+- [ ] Validate interfaces for real workflow integration
+  - [ ] Test workflow execution node interfaces
+  - [ ] Validate input/output formats for real workflow components
+  - [ ] Test error handling for real workflow failures
+  - [ ] Ensure compatibility with existing workflow APIs
+- [ ] Performance optimization for system integration
+  - [ ] Optimize node transition performance
+  - [ ] Minimize workflow state overhead
+  - [ ] Optimize memory usage during workflow execution
+  - [ ] Prepare for high-concurrency workflow execution
+- [ ] Documentation and handoff preparation
+  - [ ] Document LangGraph workflow architecture decisions
+  - [ ] Create integration guide for Phase 4 system testing
+  - [ ] Document any discovered limitations or issues
+  - [ ] Prepare requirements for full system integration
+
+#### Validation & Documentation
+- [ ] Validate all LangGraph workflow components work together
+- [ ] Test complete workflow orchestration with realistic scenarios
+- [ ] Document workflow performance characteristics and bottlenecks
+- [ ] Validate readiness for full system integration in Phase 4
+- [ ] Prepare comprehensive handoff documentation
+
+#### Documentation
+- [ ] Save `@TODO001_phase3_5_notes.md` with workflow integration details
+- [ ] Save `@TODO001_phase3_5_decisions.md` with architectural decisions
+- [ ] Save `@TODO001_phase3_5_handoff.md` with Phase 4 integration requirements
+
+---
+
+## Phase 4: Integration & System Testing
+
+### Prerequisites
+- Files/documents to read:
+  - Previous phase outputs: `@TODO001_phase3_5_notes.md`, `@TODO001_phase3_5_decisions.md`, `@TODO001_phase3_5_handoff.md`
+  - Integrated LangGraph workflow components from Phase 3.5
+  - `@agents/patient_navigator/information_retrieval/agent.py`
+  - `@agents/patient_navigator/strategy/workflow/orchestrator.py`
+  - Any identified issues or performance concerns from workflow integration testing
+- Previous phase outputs: All phase 1-3.5 documentation
+- Session setup: Run `/clear` to start fresh
+
+### Context for Claude
+**IMPORTANT**: This is a new session. Use only the inputs provided below, do not rely on prior conversation history.
+
+You are implementing Phase 4 of the Patient Navigator Supervisor Workflow MVP. Phase 3.5 completed LangGraph workflow integration and node composition. Now integrate with real external workflow components and perform comprehensive system testing.
+
+**Phase 4 Focus:**
+- Integration of modular LangGraph nodes with existing workflow components
+- Supabase database integration with Row Level Security
+- End-to-end LangGraph workflow system testing with realistic scenarios
+- Performance optimization to meet <2 second execution target with node-level profiling
+- System validation under load and stress conditions for node interoperability
+
+### Tasks
+
+#### Modular Node Integration
+1. Create workflow execution nodes for InformationRetrievalAgent integration
+2. Create workflow execution nodes for StrategyWorkflowOrchestrator integration
+3. Test deterministic node sequencing (prescription → document check → workflow execution)
+4. Validate data flow and interface compatibility between composable nodes
+5. Implement error propagation and handling across node boundaries
 
 #### Supabase Integration
 6. Set up Supabase client configuration for document queries
@@ -550,19 +714,19 @@ You are implementing Phase 4 of the Patient Navigator Supervisor Workflow MVP. P
 9. Add connection pooling and error handling
 10. Test document availability scenarios with real database structure
 
-#### End-to-End System Testing
-11. Create comprehensive integration test suite
-12. Test realistic user scenarios and workflows
-13. Validate complete supervisor → workflow execution flow
-14. Test error scenarios across the entire system
-15. Performance validation under various load conditions
+#### End-to-End LangGraph System Testing
+11. Create comprehensive node integration test suite
+12. Test realistic user scenarios with modular workflow composition
+13. Validate complete LangGraph workflow execution flow across nodes
+14. Test error scenarios and recovery across modular node boundaries
+15. Performance validation with node-level latency measurement
 
-#### System Optimization
-16. Profile end-to-end execution performance
-17. Optimize critical paths for <2 second requirement
-18. Implement system-level error recovery
-19. Add comprehensive monitoring and alerting
-20. Validate scalability and concurrent request handling
+#### Modular System Optimization
+16. Profile node-level execution performance and interoperability overhead
+17. Optimize critical node paths and transitions for <2 second requirement
+18. Implement node-level error recovery and circuit breaker patterns
+19. Add comprehensive monitoring and alerting for node performance
+20. Validate scalability and concurrent request handling across composable nodes
 
 ### Expected Outputs
 - Save implementation notes to: `@TODO001_phase4_notes.md`
@@ -571,25 +735,25 @@ You are implementing Phase 4 of the Patient Navigator Supervisor Workflow MVP. P
 
 ### Progress Checklist
 
-#### Workflow Integration Testing
-- [ ] Test SupervisorWorkflowAgent with InformationRetrievalAgent
-  - [ ] Verify process() method integration
-  - [ ] Test input/output data format compatibility
-  - [ ] Validate error handling and propagation
-  - [ ] Test mock mode compatibility
-- [ ] Test SupervisorWorkflowAgent with StrategyWorkflowOrchestrator
-  - [ ] Verify execute_workflow() method integration
-  - [ ] Test PlanConstraints input format
-  - [ ] Validate StrategyWorkflowState output handling
-  - [ ] Test error scenarios and graceful degradation
-- [ ] Validate deterministic execution order
-  - [ ] Test information_retrieval → strategy sequencing
-  - [ ] Verify single-workflow execution paths
-  - [ ] Test multi-workflow coordination
-- [ ] End-to-end integration testing
-  - [ ] Test complete supervisor workflow execution
-  - [ ] Validate data flow between all components
-  - [ ] Test error propagation across the system
+#### LangGraph Workflow Integration Testing
+- [ ] Test LangGraph workflow execution node for InformationRetrievalAgent
+  - [ ] Verify complete workflow invocation as callable unit
+  - [ ] Test workflow-level input/output data format compatibility
+  - [ ] Validate error handling and propagation across workflow boundaries
+  - [ ] Test mock mode compatibility for complete workflow execution
+- [ ] Test LangGraph workflow execution node for StrategyWorkflowOrchestrator
+  - [ ] Verify complete workflow invocation as callable unit
+  - [ ] Test workflow-level input format and execution
+  - [ ] Validate workflow output handling in LangGraph state
+  - [ ] Test error scenarios and graceful degradation at workflow level
+- [ ] Validate LangGraph node composition and sequencing
+  - [ ] Test prescription → document check → workflow execution flow
+  - [ ] Verify single-workflow execution paths through LangGraph nodes
+  - [ ] Test multi-workflow coordination via node composition
+- [ ] End-to-end LangGraph workflow integration testing
+  - [ ] Test complete LangGraph subgraph execution
+  - [ ] Validate data flow between workflow execution nodes
+  - [ ] Test error propagation across modular workflow boundaries
 
 #### Supabase Database Integration
 - [ ] Configure Supabase client for document queries
@@ -612,72 +776,72 @@ You are implementing Phase 4 of the Patient Navigator Supervisor Workflow MVP. P
   - [ ] Test Row Level Security enforcement
   - [ ] Validate secure error message handling
 
-#### Comprehensive System Testing
-- [ ] End-to-End Test Scenarios
-  - [ ] Single workflow requests (information_retrieval only)
-  - [ ] Single workflow requests (strategy only)
-  - [ ] Multi-workflow requests requiring both workflows
-  - [ ] Document availability variations for each scenario
-  - [ ] Error recovery and graceful degradation scenarios
-- [ ] Realistic User Journey Testing
-  - [ ] New user with no documents (COLLECT routing)
-  - [ ] User with partial documents (workflow-specific routing)
-  - [ ] User with all documents (PROCEED routing)
-  - [ ] Complex queries requiring multiple workflows
-  - [ ] Edge cases and unusual query patterns
-- [ ] Error Scenario Testing
+#### Comprehensive LangGraph Workflow System Testing
+- [ ] End-to-End Workflow Execution Scenarios
+  - [ ] Single workflow execution requests (information_retrieval workflow only)
+  - [ ] Single workflow execution requests (strategy workflow only)
+  - [ ] Multi-workflow execution requests requiring both complete workflows
+  - [ ] Document availability variations affecting workflow routing decisions
+  - [ ] Error recovery and graceful degradation across workflow boundaries
+- [ ] Realistic User Journey Testing with Workflow Orchestration
+  - [ ] New user with no documents (COLLECT routing, no workflow execution)
+  - [ ] User with partial documents (workflow-specific routing and execution)
+  - [ ] User with all documents (PROCEED routing, full workflow execution)
+  - [ ] Complex queries requiring multiple complete workflow invocations
+  - [ ] Edge cases and unusual query patterns affecting workflow selection
+- [ ] Error Scenario Testing for Workflow-Level Operations
   - [ ] LLM service failures during workflow prescription
-  - [ ] Database connectivity issues during document checking
-  - [ ] Workflow execution failures in downstream components
-  - [ ] Timeout scenarios and resource constraints
-  - [ ] Concurrent request handling under stress
-- [ ] Performance Integration Testing
-  - [ ] End-to-end execution time measurement
-  - [ ] Component-level performance in integrated environment
-  - [ ] Memory usage and resource consumption
-  - [ ] Concurrent request processing capacity
-  - [ ] Performance degradation under load
+  - [ ] Database connectivity issues during document checking workflow operations
+  - [ ] Complete workflow execution failures in downstream workflow components
+  - [ ] Timeout scenarios and resource constraints during workflow invocations
+  - [ ] Concurrent workflow execution handling under stress
+- [ ] Performance Integration Testing for Workflow Orchestration
+  - [ ] End-to-end workflow execution time measurement
+  - [ ] Workflow-level performance in LangGraph node composition
+  - [ ] Memory usage and resource consumption during workflow invocations
+  - [ ] Concurrent workflow processing capacity across nodes
+  - [ ] Performance degradation under workflow execution load
 
-#### System Optimization & Performance
-- [ ] Profile end-to-end system performance
-  - [ ] Identify performance bottlenecks in integrated system
-  - [ ] Measure component interaction overhead
-  - [ ] Optimize critical execution paths
-  - [ ] Validate <2 second total execution requirement
-- [ ] Implement system-level optimizations
-  - [ ] Parallel processing where beneficial
-  - [ ] Caching strategies for repeated operations
-  - [ ] Connection pooling and resource management
-  - [ ] Query optimization and database tuning
-- [ ] Load testing and scalability validation
-  - [ ] Test with 100+ concurrent requests
-  - [ ] Measure resource consumption under load
-  - [ ] Test error handling under stress conditions
-  - [ ] Validate horizontal scaling capabilities
-- [ ] Monitoring and observability
-  - [ ] System-level performance monitoring
-  - [ ] Error tracking and alerting
-  - [ ] Usage analytics and pattern detection
-  - [ ] Health checks and system status monitoring
+#### Workflow Orchestration System Optimization & Performance
+- [ ] Profile end-to-end LangGraph workflow performance
+  - [ ] Identify performance bottlenecks in workflow orchestration system
+  - [ ] Measure workflow-level interaction overhead between nodes
+  - [ ] Optimize critical workflow execution paths
+  - [ ] Validate <2 second total execution requirement for complete workflow invocations
+- [ ] Implement workflow-level system optimizations
+  - [ ] Parallel workflow processing where beneficial
+  - [ ] Caching strategies for repeated workflow operations
+  - [ ] Connection pooling and resource management for workflow execution
+  - [ ] Query optimization and database tuning for workflow operations
+- [ ] Load testing and scalability validation for workflow orchestration
+  - [ ] Test with 100+ concurrent workflow execution requests
+  - [ ] Measure resource consumption under workflow execution load
+  - [ ] Test error handling under stress conditions across workflow boundaries
+  - [ ] Validate horizontal scaling capabilities for workflow orchestration
+- [ ] Monitoring and observability for workflow-level operations
+  - [ ] Workflow-level performance monitoring across LangGraph nodes
+  - [ ] Error tracking and alerting for workflow execution failures
+  - [ ] Usage analytics and pattern detection for workflow orchestration
+  - [ ] Health checks and system status monitoring for workflow components
 
-#### Security & Compliance Validation
-- [ ] HIPAA compliance verification
-  - [ ] Audit logging for all supervisor decisions
-  - [ ] Secure document access and authorization
-  - [ ] Data privacy and protection validation
-  - [ ] Secure error handling without information leakage
-- [ ] Security testing
-  - [ ] Authentication and authorization testing
-  - [ ] Input validation and sanitization
-  - [ ] SQL injection and security vulnerability testing
-  - [ ] Rate limiting and abuse prevention
+#### Security & Compliance Validation for Workflow Orchestration
+- [ ] HIPAA compliance verification for workflow-level operations
+  - [ ] Audit logging for all LangGraph workflow orchestration decisions
+  - [ ] Secure document access and authorization across workflow boundaries
+  - [ ] Data privacy and protection validation during workflow execution
+  - [ ] Secure error handling without information leakage across workflow nodes
+- [ ] Security testing for workflow orchestration
+  - [ ] Authentication and authorization testing for workflow invocations
+  - [ ] Input validation and sanitization for workflow-level operations
+  - [ ] SQL injection and security vulnerability testing across workflow components
+  - [ ] Rate limiting and abuse prevention for workflow execution requests
 
-#### Validation & Documentation
-- [ ] Verify all acceptance criteria from PRD001.md
-- [ ] Test performance benchmarks from RFC001.md
-- [ ] Validate MVP functionality demonstrates extensibility patterns
-- [ ] Verify integration with existing patient navigator architecture
-- [ ] Document any discovered issues or limitations
+#### Validation & Documentation for Workflow Orchestration Architecture
+- [ ] Verify all acceptance criteria from PRD001.md for workflow-level operations
+- [ ] Test performance benchmarks from RFC001.md for LangGraph workflow orchestration
+- [ ] Validate MVP functionality demonstrates workflow extensibility patterns via node composition
+- [ ] Verify LangGraph workflow integration with existing patient navigator architecture
+- [ ] Document any discovered issues or limitations in workflow orchestration approach
 
 #### Documentation
 - [ ] Save `@TODO001_phase4_notes.md` with integration details and results
@@ -703,41 +867,41 @@ You are implementing Phase 4 of the Patient Navigator Supervisor Workflow MVP. P
 You are implementing Phase 5 of the Patient Navigator Supervisor Workflow MVP. Phase 4 completed integration and system testing. Now finalize documentation, deployment preparation, and production readiness validation.
 
 **Phase 5 Focus:**
-- Complete code documentation and API documentation
-- Create deployment guides and operational documentation
-- Final performance validation and security review
+- Complete code documentation and API documentation for LangGraph workflow orchestration
+- Create deployment guides and operational documentation for workflow-level operations
+- Final performance validation and security review for workflow orchestration
 - Production readiness checklist and stakeholder handoff
-- MVP demonstration and extensibility documentation
+- MVP demonstration and workflow extensibility documentation
 
 ### Tasks
 
-#### Code Documentation
-1. Add comprehensive docstrings to all classes and methods
-2. Create inline code comments for complex logic
-3. Generate API documentation for all public interfaces
-4. Document configuration options and environment variables
-5. Create troubleshooting guides for common issues
+#### Code Documentation for Workflow Orchestration
+1. Add comprehensive docstrings to all LangGraph workflow classes and node methods
+2. Create inline code comments for complex workflow orchestration logic
+3. Generate API documentation for all workflow execution interfaces
+4. Document configuration options and environment variables for workflow operations
+5. Create troubleshooting guides for common workflow orchestration issues
 
-#### Deployment Documentation
-6. Create deployment guide for supervisor workflow
-7. Document environment setup and dependencies
-8. Create configuration management documentation
-9. Document monitoring and alerting setup
-10. Create rollback procedures and disaster recovery plans
+#### Deployment Documentation for Workflow Architecture
+6. Create deployment guide for LangGraph workflow orchestration system
+7. Document environment setup and dependencies for workflow execution
+8. Create configuration management documentation for workflow-level operations
+9. Document monitoring and alerting setup for workflow orchestration
+10. Create rollback procedures and disaster recovery plans for workflow systems
 
-#### Production Readiness Validation
-11. Conduct final security review and HIPAA compliance check
-12. Perform final performance validation against all benchmarks
-13. Complete stakeholder demonstration of MVP functionality
-14. Validate extensibility patterns for future workflow additions
-15. Create production deployment checklist
+#### Production Readiness Validation for Workflow Orchestration
+11. Conduct final security review and HIPAA compliance check for workflow operations
+12. Perform final performance validation against all benchmarks for workflow execution
+13. Complete stakeholder demonstration of MVP workflow orchestration functionality
+14. Validate workflow extensibility patterns for adding new workflow nodes
+15. Create production deployment checklist for workflow orchestration system
 
-#### Knowledge Transfer
-16. Create operational runbook for supervisor workflow
-17. Document architecture decisions and rationale
-18. Create extension guide for adding new workflows
-19. Document integration patterns for future development
-20. Create stakeholder handoff documentation
+#### Knowledge Transfer for Workflow Architecture
+16. Create operational runbook for LangGraph workflow orchestration
+17. Document workflow architecture decisions and rationale
+18. Create extension guide for adding new workflows as LangGraph nodes
+19. Document workflow integration patterns for future development
+20. Create stakeholder handoff documentation for workflow orchestration system
 
 ### Expected Outputs
 - Save implementation notes to: `@TODO001_phase5_notes.md`
@@ -746,72 +910,72 @@ You are implementing Phase 5 of the Patient Navigator Supervisor Workflow MVP. P
 
 ### Progress Checklist
 
-#### Code Documentation
+#### Code Documentation for Workflow Orchestration
 - [ ] Add comprehensive docstrings
-  - [ ] SupervisorWorkflowAgent class and methods
+  - [ ] LangGraph SupervisorWorkflow class and workflow execution node methods
   - [ ] WorkflowPrescriptionAgent class and methods  
-  - [ ] DocumentAvailabilityChecker class and methods
-  - [ ] All Pydantic models with field descriptions
-  - [ ] All utility functions and helpers
+  - [ ] DocumentAvailabilityChecker class and workflow-level operation methods
+  - [ ] All Pydantic models with field descriptions for workflow state management
+  - [ ] All workflow execution utility functions and helpers
 - [ ] Add inline code comments
-  - [ ] Complex orchestration logic
-  - [ ] Performance-critical sections
-  - [ ] Error handling strategies
-  - [ ] Integration points with existing systems
+  - [ ] Complex LangGraph workflow orchestration logic
+  - [ ] Performance-critical sections in workflow execution paths
+  - [ ] Error handling strategies across workflow boundaries
+  - [ ] Integration points with existing workflow systems
 - [ ] Generate API documentation
-  - [ ] Public method signatures and parameters
-  - [ ] Input/output schema documentation
-  - [ ] Error codes and handling
-  - [ ] Usage examples and code samples
+  - [ ] Public workflow execution method signatures and parameters
+  - [ ] Workflow-level input/output schema documentation
+  - [ ] Error codes and handling for workflow operations
+  - [ ] Usage examples and code samples for workflow orchestration
 - [ ] Create configuration documentation
-  - [ ] Environment variables and settings
-  - [ ] Mock mode configuration
-  - [ ] Performance tuning options
-  - [ ] Security and compliance settings
+  - [ ] Environment variables and settings for workflow operations
+  - [ ] Mock mode configuration for workflow execution
+  - [ ] Performance tuning options for workflow orchestration
+  - [ ] Security and compliance settings for workflow-level operations
 
-#### Deployment Documentation
-- [ ] Create deployment guide
-  - [ ] Step-by-step installation instructions
-  - [ ] Dependency management and version requirements
-  - [ ] Database setup and migration steps
-  - [ ] Configuration file templates
-- [ ] Document operational procedures
-  - [ ] Monitoring and health check setup
-  - [ ] Log aggregation and alerting configuration
-  - [ ] Performance monitoring dashboards
-  - [ ] Security audit and compliance checking
-- [ ] Create maintenance documentation
-  - [ ] Backup and recovery procedures
-  - [ ] Update and patching processes
-  - [ ] Scaling and load balancing guidance
-  - [ ] Troubleshooting common issues
-- [ ] Document integration requirements
-  - [ ] Supabase database requirements
-  - [ ] Authentication and authorization setup
-  - [ ] External API dependencies
-  - [ ] Network and security requirements
+#### Deployment Documentation for Workflow Architecture
+- [ ] Create LangGraph workflow deployment guide
+  - [ ] Step-by-step installation instructions for workflow orchestration system
+  - [ ] Dependency management and version requirements for workflow execution
+  - [ ] Database setup and migration steps for workflow operations
+  - [ ] Configuration file templates for workflow orchestration
+- [ ] Document operational procedures for workflow systems
+  - [ ] Monitoring and health check setup for workflow execution
+  - [ ] Log aggregation and alerting configuration for workflow operations
+  - [ ] Performance monitoring dashboards for workflow orchestration
+  - [ ] Security audit and compliance checking for workflow-level operations
+- [ ] Create maintenance documentation for workflow architecture
+  - [ ] Backup and recovery procedures for workflow systems
+  - [ ] Update and patching processes for workflow components
+  - [ ] Scaling and load balancing guidance for workflow orchestration
+  - [ ] Troubleshooting common workflow execution issues
+- [ ] Document workflow integration requirements
+  - [ ] Supabase database requirements for workflow operations
+  - [ ] Authentication and authorization setup for workflow execution
+  - [ ] External API dependencies for workflow orchestration
+  - [ ] Network and security requirements for workflow systems
 
-#### Production Readiness Validation
-- [ ] Security and compliance review
-  - [ ] HIPAA compliance validation
-  - [ ] Data privacy and protection verification
-  - [ ] Audit logging and monitoring validation
-  - [ ] Access control and authentication testing
-- [ ] Performance validation
-  - [ ] Verify <2 second total execution time requirement
-  - [ ] Verify <500ms document checking requirement
-  - [ ] Validate >90% workflow success rate
-  - [ ] Validate >95% routing accuracy requirement
-- [ ] MVP functionality demonstration
-  - [ ] Demonstrate workflow prescription for various queries
-  - [ ] Show document availability checking and routing decisions
-  - [ ] Present error handling and graceful degradation
-  - [ ] Highlight extensibility patterns for future workflows
-- [ ] Stakeholder acceptance validation
-  - [ ] Review all acceptance criteria from PRD001.md
-  - [ ] Validate technical architecture from RFC001.md
-  - [ ] Confirm MVP scope and extensibility demonstration
-  - [ ] Obtain stakeholder sign-off for production deployment
+#### Production Readiness Validation for Workflow Orchestration
+- [ ] Security and compliance review for workflow operations
+  - [ ] HIPAA compliance validation for workflow-level operations
+  - [ ] Data privacy and protection verification across workflow boundaries
+  - [ ] Audit logging and monitoring validation for workflow orchestration
+  - [ ] Access control and authentication testing for workflow execution
+- [ ] Performance validation for workflow orchestration
+  - [ ] Verify <2 second total execution time requirement for complete workflow invocations
+  - [ ] Verify <500ms document checking requirement for workflow operations
+  - [ ] Validate >90% workflow success rate for workflow orchestration
+  - [ ] Validate >95% routing accuracy requirement for workflow selection
+- [ ] MVP workflow orchestration functionality demonstration
+  - [ ] Demonstrate workflow prescription for various queries leading to workflow execution
+  - [ ] Show document availability checking and workflow routing decisions
+  - [ ] Present error handling and graceful degradation across workflow boundaries
+  - [ ] Highlight workflow extensibility patterns for adding new workflow nodes
+- [ ] Stakeholder acceptance validation for workflow architecture
+  - [ ] Review all acceptance criteria from PRD001.md for workflow-level operations
+  - [ ] Validate technical architecture from RFC001.md for LangGraph workflow orchestration
+  - [ ] Confirm MVP scope and workflow extensibility demonstration
+  - [ ] Obtain stakeholder sign-off for production deployment of workflow orchestration system
 
 #### Knowledge Transfer & Extension Documentation
 - [ ] Create operational runbook
@@ -884,20 +1048,28 @@ You are implementing Phase 5 of the Patient Navigator Supervisor Workflow MVP. P
 - [ ] Mock-based testing completed
 - [ ] Phase 3 documentation saved (`@TODO001_phase3_notes.md`, `@TODO001_phase3_decisions.md`, `@TODO001_phase3_handoff.md`)
 
+### Phase 3.5: LangGraph Workflow Integration & Node Composition
+- [ ] Complete LangGraph StateGraph composition and node integration
+- [ ] Workflow execution node implementation for external workflow integration
+- [ ] End-to-end LangGraph workflow testing with mocked dependencies
+- [ ] Workflow state management validation across all node transitions
+- [ ] Performance optimization for workflow node transitions
+- [ ] Phase 3.5 documentation saved (`@TODO001_phase3_5_notes.md`, `@TODO001_phase3_5_decisions.md`, `@TODO001_phase3_5_handoff.md`)
+
 ### Phase 4: Integration & System Testing
-- [ ] Integration with InformationRetrievalAgent completed
-- [ ] Integration with StrategyWorkflowOrchestrator completed
-- [ ] End-to-end system testing completed
-- [ ] Performance optimization completed (<2s execution, <500ms document checking)
-- [ ] Supabase integration with RLS completed
+- [ ] LangGraph workflow execution node integration with InformationRetrievalAgent completed
+- [ ] LangGraph workflow execution node integration with StrategyWorkflowOrchestrator completed
+- [ ] End-to-end LangGraph workflow system testing completed
+- [ ] Performance optimization completed for workflow orchestration (<2s execution, <500ms document checking)
+- [ ] Supabase integration with RLS completed for workflow operations
 - [ ] Phase 4 documentation saved (`@TODO001_phase4_notes.md`, `@TODO001_phase4_decisions.md`, `@TODO001_phase4_handoff.md`)
 
 ### Phase 5: Documentation & Production Readiness
-- [ ] Complete code documentation and API reference
-- [ ] Deployment guides and operational documentation
-- [ ] Security review and HIPAA compliance validation
-- [ ] Final performance validation and benchmarking
-- [ ] Stakeholder demonstration and acceptance
+- [ ] Complete code documentation and API reference for LangGraph workflow orchestration
+- [ ] Deployment guides and operational documentation for workflow architecture
+- [ ] Security review and HIPAA compliance validation for workflow operations
+- [ ] Final performance validation and benchmarking for workflow orchestration
+- [ ] Stakeholder demonstration and acceptance of workflow architecture
 - [ ] Phase 5 documentation saved (`@TODO001_phase5_notes.md`, `@TODO001_phase5_decisions.md`, `@TODO001_final_summary.md`)
 
 ### MVP Success Criteria (from PRD001.md)
@@ -909,33 +1081,34 @@ You are implementing Phase 5 of the Patient Navigator Supervisor Workflow MVP. P
 - [ ] Support for 100+ concurrent requests validated
 
 ### Technical Architecture Validation (from RFC001.md)
-- [ ] BaseAgent inheritance pattern followed consistently
-- [ ] LLM-based workflow prescription with few-shot learning implemented
-- [ ] Deterministic document availability checking (not agent-based)
-- [ ] Deterministic execution order (information_retrieval → strategy)
-- [ ] Supabase integration with Row Level Security
-- [ ] Comprehensive error handling and graceful degradation
-- [ ] Mock mode support for development and testing
+- [ ] LangGraph workflow orchestration with node-based architecture implemented
+- [ ] BaseAgent inheritance pattern followed consistently for WorkflowPrescriptionAgent
+- [ ] LLM-based workflow prescription with few-shot learning implemented for workflow selection
+- [ ] Deterministic document availability checking as workflow-level operation (not agent-based)
+- [ ] Deterministic LangGraph node execution flow (prescription → document check → workflow execution)
+- [ ] Supabase integration with Row Level Security for workflow operations
+- [ ] Comprehensive error handling and graceful degradation across workflow boundaries
+- [ ] Mock mode support for development and testing of workflow orchestration
 
-### MVP Extensibility Demonstration
-- [ ] Architecture supports adding new workflow types beyond information_retrieval and strategy
-- [ ] Document availability checking can be extended to new document types
-- [ ] Routing decision logic can be modified for complex scenarios
-- [ ] Integration patterns established for future workflow components
-- [ ] Testing patterns documented for extending the system
+### MVP Workflow Extensibility Demonstration
+- [ ] LangGraph workflow architecture supports adding new workflow execution nodes beyond information_retrieval and strategy
+- [ ] Document availability checking can be extended to new document types for workflow operations
+- [ ] Workflow routing decision logic can be modified for complex scenarios
+- [ ] Integration patterns established for future workflow components as LangGraph nodes
+- [ ] Testing patterns documented for extending the workflow orchestration system
 
-### Production Deployment Readiness
-- [ ] Security and HIPAA compliance requirements satisfied
-- [ ] Performance benchmarks consistently met under load
-- [ ] Monitoring and alerting systems configured
-- [ ] Deployment procedures documented and tested
-- [ ] Rollback and disaster recovery procedures established
-- [ ] Operational runbooks and troubleshooting guides complete
+### Production Deployment Readiness for Workflow Orchestration
+- [ ] Security and HIPAA compliance requirements satisfied for workflow operations
+- [ ] Performance benchmarks consistently met under load for workflow orchestration
+- [ ] Monitoring and alerting systems configured for workflow execution
+- [ ] Deployment procedures documented and tested for LangGraph workflow system
+- [ ] Rollback and disaster recovery procedures established for workflow operations
+- [ ] Operational runbooks and troubleshooting guides complete for workflow orchestration
 
-### Project Sign-off
-- [ ] All acceptance criteria met (from PRD001.md)
-- [ ] All technical requirements satisfied (from RFC001.md)
-- [ ] MVP functionality demonstrates full supervisor orchestration patterns
+### Project Sign-off for Workflow Architecture
+- [ ] All acceptance criteria met (from PRD001.md) for workflow-level operations
+- [ ] All technical requirements satisfied (from RFC001.md) for LangGraph workflow orchestration
+- [ ] MVP functionality demonstrates full LangGraph workflow orchestration patterns
 - [ ] Extensibility proven for scaling to additional workflows
 - [ ] Stakeholder approval received for production deployment
 - [ ] Project ready for production with post-MVP enhancement roadmap
