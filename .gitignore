@@ -6,6 +6,8 @@ vibe_coding_directive.md
 .cursorignore
 .cursorrules
 .cursor/
+.claude/
+.github/
 z_prompt_sops/
 
 # Environment files
