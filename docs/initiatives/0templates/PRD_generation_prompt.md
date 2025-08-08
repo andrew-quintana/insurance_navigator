@@ -18,6 +18,11 @@ Create a comprehensive PRD.md file for [PROJECT/FEATURE NAME].
 - Compliance/security: [Any regulatory or security requirements]
 - Resource limitations: [Team size, budget, etc.]
 
+**ASSUMPTIONS & TESTABILITY:**
+- Initial assumptions: [List key product/technical assumptions]
+- Validation approach: [How each assumption will be validated]
+- Evidence needed: [Metrics, tests, experiments]
+
 **REFERENCE MATERIALS:**
 Consider these existing files/docs when creating the PRD:
 - [List relevant codebase files/directories]

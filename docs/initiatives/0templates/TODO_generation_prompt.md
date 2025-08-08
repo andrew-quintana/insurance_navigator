@@ -69,6 +69,7 @@ For each phase, include:
 - Save implementation notes to: @TODO001_phase[X]_notes.md
 - Document any architectural decisions in: @TODO001_phase[X]_decisions.md
 - List any issues/blockers for next phase in: @TODO001_phase[X]_handoff.md
+ - Save testing update in: @TODO001_phase[X]_test_update.md (include: tests executed, results, coverage deltas, assumptions validated, assumptions remaining, new risks/debt)
 
 ### Progress Checklist
 #### Setup
@@ -84,11 +85,13 @@ For each phase, include:
 #### Validation
 - [ ] Task 5
 - [ ] Task 6
+ - [ ] Save @TODO001_phase[X]_test_update.md (tests run, results, assumptions validated/remaining)
 
 #### Documentation
 - [ ] Save @TODO001_phase[X]_notes.md
 - [ ] Save @TODO001_phase[X]_decisions.md
 - [ ] Save @TODO001_phase[X]_handoff.md
+ - [ ] Save @TODO001_phase[X]_test_update.md
 ```
 
 **FINAL PROJECT CHECKLIST:**
@@ -120,6 +123,7 @@ At the end of the TODO.md, include a comprehensive project completion checklist:
 - [ ] Code documentation complete
 - [ ] Deployment process verified
 - [ ] Final validation complete
+ - [ ] Technical debt summary saved as DEBT001.md (outstanding assumptions, known debt, mitigation plan)
 
 ### Project Sign-off
 - [ ] All acceptance criteria met (from PRD)

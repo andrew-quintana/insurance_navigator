@@ -17,6 +17,7 @@ Create a comprehensive RFC001.md file for [PROJECT/FEATURE NAME], using the comp
 - Primary technical challenges: [What are the hard problems to solve]
 - Alternative approaches considered: [Other ways you might implement this]
 - Architecture decisions needed: [Key technical choices to make]
+ - Assumptions and validation plan: [Explicit technical assumptions, how/when they will be tested]
 
 **REFERENCE MATERIALS:**
 Consider these when designing the technical solution:
@@ -29,6 +30,7 @@ Consider these when designing the technical solution:
 - Phased rollout strategy: [How to implement incrementally]
 - Risk mitigation: [Technical risks and how to handle them]
 - Testing strategy: [How to validate the solution]
+ - Per-phase testing updates: Save `@TODO001_phaseX_test_update.md` after each phase detailing tests run, assumptions validated/remaining, and newly discovered debt
 
 Generate a detailed RFC001.md that defines the technical architecture, key decisions with rationale, implementation phases, and testing strategy - all aligned with the PRD requirements.
 
