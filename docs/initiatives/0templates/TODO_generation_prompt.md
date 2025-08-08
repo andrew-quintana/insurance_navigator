@@ -38,6 +38,7 @@ Generate a detailed TODO.md organized into distinct phases. Each phase should:
 3. **Specify outputs** - Define what documentation/notes should be saved for future phases
 4. **Reference previous phases** - Use saved outputs from earlier phases (e.g., @TODO001_phase1_notes.md)
 5. **Include session reset instructions** - Remind to run `/clear` or restart before beginning each new phase
+6. **Discrete, appropriately sized phases** - Phase scope should be limited to reduce potential for overwhelming the coding agent and developer reviewing the code
 
 **PHASE STRUCTURE:**
 Organize tasks into logical phases such as:
