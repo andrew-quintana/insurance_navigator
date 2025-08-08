@@ -36,6 +36,7 @@ from db.services.user_service import get_user_service, UserService
 from db.services.conversation_service import get_conversation_service, ConversationService
 from db.services.storage_service import get_storage_service, StorageService
 from db.services.document_service import DocumentService
+from db.services.memory_service import get_memory_service, MemoryService
 
 # Set up logging with more detailed format
 logging.basicConfig(
@@ -118,6 +119,70 @@ app.add_middleware(
 
 # Health check cache with type hints
 _health_cache: Dict[str, Any] = {"result": None, "timestamp": 0}
+
+# ---------------------------------
+# Simple per-user rate limiting (MVP)
+# ---------------------------------
+class RateLimiter:
+    """In-memory sliding-window rate limiter per user.
+
+    Note: This is process-local and sufficient for MVP. For multi-replica
+    deployments, replace with Redis-backed shared limiter.
+    """
+
+    def __init__(self, max_requests_per_minute: int = 100) -> None:
+        self.max_requests_per_minute = max_requests_per_minute
+        self.user_request_times: Dict[str, List[float]] = {}
+
+    def check_and_update(self, user_id: str) -> Dict[str, int]:
+        now = time.time()
+        window_start = now - 60
+        times = self.user_request_times.get(user_id, [])
+        # prune old
+        times = [t for t in times if t >= window_start]
+        if len(times) >= self.max_requests_per_minute:
+            # No update to list to preserve state
+            remaining = 0
+            reset_in = int(60 - (now - times[0])) if times else 60
+            return {"allowed": 0, "remaining": remaining, "reset": reset_in}
+        times.append(now)
+        self.user_request_times[user_id] = times
+        remaining = max(self.max_requests_per_minute - len(times), 0)
+        reset_in = int(60 - (now - times[0])) if times else 60
+        return {"allowed": 1, "remaining": remaining, "reset": reset_in}
+
+rate_limiter = RateLimiter(max_requests_per_minute=int(os.getenv("API_RATE_LIMIT_PER_MIN", "100")))
+
+async def enforce_rate_limit(current_user: Dict[str, Any]) -> Dict[str, Any]:
+    result = rate_limiter.check_and_update(str(current_user["id"]))
+    if not result.get("allowed"):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again later.")
+    return result
+
+# ------------------------
+# Input sanitization helpers
+# ------------------------
+def sanitize_context_snippet(value: str, max_len: int = 8000) -> str:
+    if not isinstance(value, str):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="context_snippet must be string")
+    # Strip control chars that could cause issues
+    sanitized = ''.join(ch for ch in value if ch >= ' ' or ch in ('\n', '\r', '\t'))
+    sanitized = sanitized.strip()
+    if not sanitized:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="context_snippet must be non-empty string")
+    if len(sanitized) > max_len:
+        sanitized = sanitized[:max_len]
+    return sanitized
+
+async def validate_chat_exists(chat_id: str) -> None:
+    """Validate that the conversation exists.
+
+    Note: Per Phase 1, conversation IDs are TEXT in `conversations` table.
+    """
+    convo_service = await get_conversation_service()
+    convo = await convo_service.get_conversation(chat_id)
+    if not convo:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="chat_id not found")
 
 @app.head("/")
 async def root_head():
@@ -558,6 +623,79 @@ async def preflight_handler(request: Request, rest_of_path: str):
         logger.error(f"Error in preflight handler: {str(e)}")
         return Response(status_code=500, content="Internal server error")
 
+# =============================
+# Short-Term Memory API (Phase 2)
+# =============================
+
+class MemoryUpdateRequest(BaseModel):
+    chat_id: str = Field(..., description="Conversation id (TEXT)")
+    context_snippet: str = Field(..., description="New context snippet to enqueue")
+    trigger_source: str = Field(..., pattern="^(manual|api|test)$", description="Trigger source enum")
+
+@app.post("/api/v1/memory/update", status_code=status.HTTP_201_CREATED)
+async def memory_update(
+    payload: MemoryUpdateRequest,
+    request: Request,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    # Rate limit per user
+    rl = await enforce_rate_limit(current_user)
+
+    # Basic headers for rate limit visibility
+    # Will be attached to response via JSONResponse
+
+    # Validate chat existence
+    await validate_chat_exists(payload.chat_id)
+
+    # Sanitize snippet
+    snippet = sanitize_context_snippet(payload.context_snippet)
+
+    # Enqueue using MemoryService
+    memory_service: MemoryService = await get_memory_service()
+    record = await memory_service.enqueue_context(chat_id=payload.chat_id, snippet=snippet, status_value="pending_summarization")
+
+    est_completion = (datetime.utcnow().timestamp() + 2)
+    est_iso = datetime.utcfromtimestamp(est_completion).isoformat() + "Z"
+
+    content = {
+        "queue_id": record.get("id"),
+        "status": record.get("status", "pending_summarization"),
+        "estimated_completion": est_iso
+    }
+
+    response = JSONResponse(status_code=status.HTTP_201_CREATED, content=content)
+    response.headers["X-RateLimit-Limit"] = str(rate_limiter.max_requests_per_minute)
+    response.headers["X-RateLimit-Remaining"] = str(max(rl.get("remaining", 0), 0))
+    response.headers["X-RateLimit-Reset"] = str(rl.get("reset", 60))
+    return response
+
+@app.get("/api/v1/memory/{chat_id}")
+async def memory_get(
+    chat_id: str,
+    request: Request,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    # Rate limit per user
+    rl = await enforce_rate_limit(current_user)
+
+    # Validate chat existence (TEXT id expected)
+    await validate_chat_exists(chat_id)
+
+    memory_service: MemoryService = await get_memory_service()
+    data = await memory_service.get_memory(chat_id)
+
+    response = JSONResponse(status_code=status.HTTP_200_OK, content={
+        "chat_id": data.get("chat_id", chat_id),
+        "user_confirmed": data.get("user_confirmed", {}),
+        "llm_inferred": data.get("llm_inferred", {}),
+        "general_summary": data.get("general_summary", ""),
+        "last_updated": data.get("last_updated")
+    })
+    response.headers["X-RateLimit-Limit"] = str(rate_limiter.max_requests_per_minute)
+    response.headers["X-RateLimit-Remaining"] = str(max(rl.get("remaining", 0), 0))
+    response.headers["X-RateLimit-Reset"] = str(rl.get("reset", 60))
+    return response
+
 # Add middleware to ensure CORS headers on all responses
 @app.middleware("http")
 async def add_cors_headers(request: Request, call_next):
@@ -763,6 +901,24 @@ async def get_current_user(request: Request):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
+
+# Add a minimal endpoint to create a conversation and return its id.
+class CreateConversationRequest(BaseModel):
+    metadata: Optional[Dict[str, Any]] = None
+
+@app.post("/conversations")
+async def create_conversation_route(
+    payload: CreateConversationRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    convo_service = await get_conversation_service()
+    convo = await convo_service.create_conversation(
+        user_id=str(current_user["id"]),
+        metadata=payload.metadata or {}
+    )
+    if not convo:
+        raise HTTPException(status_code=500, detail="Failed to create conversation")
+    return {"conversation_id": convo["id"], "metadata": convo.get("metadata", {})}
 
 if __name__ == "__main__":
     import uvicorn

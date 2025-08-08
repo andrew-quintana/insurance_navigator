@@ -309,17 +309,21 @@ You are implementing Phase 2 of the Short-Term Chat Memory MVP. This phase focus
   - [ ] Simple form or script for testing memory update endpoint
   - [ ] Script for testing memory retrieval endpoint
   - [ ] Test various error scenarios (invalid IDs, missing data)
+  - [ ] Include conversation creation step or helper to obtain `chat_id` (e.g., `POST /conversations`) so tests are self-contained
 - [ ] Add comprehensive API tests
   - [ ] Test successful memory update request
   - [ ] Test successful memory retrieval request  
   - [ ] Test input validation error cases
   - [ ] Test authentication and rate limiting
   - [ ] Test concurrent API requests
+  - [ ] End-to-end smoke test: create conversation → `POST /api/v1/memory/update` → `GET /api/v1/memory/{chat_id}` returns defaults then updated fields
+  - [ ] 404 on `chat_id` that does not exist in `public.conversations`
 - [ ] Create API documentation
   - [ ] Document request/response formats with examples
   - [ ] Document error codes and messages
   - [ ] Include authentication requirements
   - [ ] Add usage examples and integration guides
+  - [ ] Document conversation lifecycle prerequisite and how to obtain a `chat_id` (e.g., `POST /conversations` or seed helpers)
 
 #### Documentation
 - [ ] Save `@TODO001_phase2_notes.md` with:
