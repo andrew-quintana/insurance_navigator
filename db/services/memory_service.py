@@ -27,10 +27,10 @@ class MemoryService:
     # ------------------------------
     # Memory (chat_metadata) methods
     # ------------------------------
-    async def get_memory(self, chat_id: str) -> Dict[str, Any]:
+    def get_memory(self, chat_id: str) -> Dict[str, Any]:
         """Retrieve memory for a chat. Returns defaults if missing."""
         try:
-            response = await self.db.table(self.metadata_table).select("*").eq("chat_id", chat_id).execute()
+            response = self.db.table(self.metadata_table).select("*").eq("chat_id", chat_id).execute()
             if getattr(response, "error", None):
                 logger.error(f"Error retrieving memory for chat {chat_id}: {response.error}")
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
@@ -53,7 +53,7 @@ class MemoryService:
             logger.error(f"Unexpected error retrieving memory for chat {chat_id}: {exc}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
-    async def upsert_memory(
+    def upsert_memory(
         self,
         chat_id: str,
         user_confirmed: Optional[Dict[str, Any]] = None,
@@ -82,7 +82,7 @@ class MemoryService:
 
         try:
             # Use upsert if available in supabase-py v2, else emulate with insert+on conflict
-            response = await self.db.table(self.metadata_table).upsert(payload, on_conflict="chat_id").execute()
+            response = self.db.table(self.metadata_table).upsert(payload, on_conflict="chat_id").execute()
             if getattr(response, "error", None):
                 logger.error(f"Error upserting memory for chat {chat_id}: {response.error}")
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
@@ -90,10 +90,10 @@ class MemoryService:
         except AttributeError:
             # Fallback: insert; if conflict, update
             try:
-                insert_resp = await self.db.table(self.metadata_table).insert(payload).execute()
+                insert_resp = self.db.table(self.metadata_table).insert(payload).execute()
                 if getattr(insert_resp, "error", None):
                     # Try update if conflict error
-                    update_resp = await self.db.table(self.metadata_table).update(payload).eq("chat_id", chat_id).execute()
+                    update_resp = self.db.table(self.metadata_table).update(payload).eq("chat_id", chat_id).execute()
                     if getattr(update_resp, "error", None):
                         logger.error(f"Error updating memory for chat {chat_id}: {update_resp.error}")
                         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
@@ -111,7 +111,7 @@ class MemoryService:
     # ------------------------------
     # Queue (chat_context_queue) methods
     # ------------------------------
-    async def enqueue_context(self, chat_id: str, snippet: str, status_value: str = "pending_summarization") -> Dict[str, Any]:
+    def enqueue_context(self, chat_id: str, snippet: str, status_value: str = "pending_summarization") -> Dict[str, Any]:
         if not snippet or not isinstance(snippet, str):
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="context_snippet must be non-empty string")
 
@@ -121,7 +121,7 @@ class MemoryService:
             "status": status_value,
         }
         try:
-            response = await self.db.table(self.queue_table).insert(payload).execute()
+            response = self.db.table(self.queue_table).insert(payload).execute()
             if getattr(response, "error", None):
                 logger.error(f"Error enqueuing context for chat {chat_id}: {response.error}")
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
@@ -132,14 +132,14 @@ class MemoryService:
             logger.error(f"Unexpected error enqueuing context for chat {chat_id}: {exc}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
-    async def update_queue_status(self, queue_id: str, status_value: str, error_message: Optional[str] = None, retry_increment: int = 0) -> bool:
+    def update_queue_status(self, queue_id: str, status_value: str, error_message: Optional[str] = None, retry_increment: int = 0) -> bool:
         update_fields: Dict[str, Any] = {"status": status_value}
         if error_message is not None:
             update_fields["error_message"] = error_message
         if retry_increment:
             update_fields["retry_count"] = retry_increment  # caller responsible for computing next value if needed
         try:
-            response = await self.db.table(self.queue_table).update(update_fields).eq("id", queue_id).execute()
+            response = self.db.table(self.queue_table).update(update_fields).eq("id", queue_id).execute()
             if getattr(response, "error", None):
                 logger.error(f"Error updating queue {queue_id} status: {response.error}")
                 return False
@@ -148,9 +148,9 @@ class MemoryService:
             logger.error(f"Unexpected error updating queue {queue_id} status: {exc}")
             return False
 
-    async def get_pending_queue(self, limit: int = 50) -> List[Dict[str, Any]]:
+    def get_pending_queue(self, limit: int = 50) -> List[Dict[str, Any]]:
         try:
-            response = await self.db.table(self.queue_table).select("*").eq("status", "pending_summarization").order("created_at", desc=False).limit(limit).execute()
+            response = self.db.table(self.queue_table).select("*").eq("status", "pending_summarization").order("created_at", desc=False).limit(limit).execute()
             if getattr(response, "error", None):
                 logger.error(f"Error querying pending queue: {response.error}")
                 return []
@@ -160,10 +160,10 @@ class MemoryService:
             return []
 
 
-async def get_memory_service() -> MemoryService:
+def get_memory_service() -> MemoryService:
     """Factory for MemoryService matching existing service patterns."""
     try:
-        client = await get_base_client()
+        client = get_base_client()
         return MemoryService(client)
     except Exception as exc:
         logger.error(f"Error creating memory service: {exc}")

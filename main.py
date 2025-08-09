@@ -27,6 +27,10 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import hashlib
 from utils.cors_config import get_cors_config, get_cors_headers
 import re
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path=".env.development")
+
 try:
     import psycopg2  # optional for local health checks
 except Exception:  # noqa: BLE001
