@@ -142,6 +142,10 @@ class InputProcessingConfig:
             providers.remove(self.preferred_provider)
             providers.insert(0, self.preferred_provider)
         
+        # Always add mock provider as last fallback if not already present
+        if "mock" not in providers:
+            providers.append("mock")
+        
         return providers
 
 

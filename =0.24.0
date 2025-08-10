@@ -1,0 +1,26 @@
+Collecting PyAudio
+  Downloading PyAudio-0.2.14.tar.gz (47 kB)
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Collecting SpeechRecognition
+  Downloading speechrecognition-3.14.3-py3-none-any.whl.metadata (30 kB)
+Requirement already satisfied: scipy in ./.venv/lib/python3.11/site-packages (1.15.3)
+Requirement already satisfied: httpx in ./.venv/lib/python3.11/site-packages (0.27.0)
+Requirement already satisfied: typing-extensions in ./.venv/lib/python3.11/site-packages (from SpeechRecognition) (4.14.0)
+Requirement already satisfied: numpy<2.5,>=1.23.5 in ./.venv/lib/python3.11/site-packages (from scipy) (1.26.4)
+Requirement already satisfied: anyio in ./.venv/lib/python3.11/site-packages (from httpx) (4.9.0)
+Requirement already satisfied: certifi in ./.venv/lib/python3.11/site-packages (from httpx) (2025.4.26)
+Requirement already satisfied: httpcore==1.* in ./.venv/lib/python3.11/site-packages (from httpx) (1.0.9)
+Requirement already satisfied: idna in ./.venv/lib/python3.11/site-packages (from httpx) (3.10)
+Requirement already satisfied: sniffio in ./.venv/lib/python3.11/site-packages (from httpx) (1.3.1)
+Requirement already satisfied: h11>=0.16 in ./.venv/lib/python3.11/site-packages (from httpcore==1.*->httpx) (0.16.0)
+Downloading speechrecognition-3.14.3-py3-none-any.whl (32.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 32.9/32.9 MB 36.7 MB/s eta 0:00:00
+Building wheels for collected packages: PyAudio
+  Building wheel for PyAudio (pyproject.toml): started
+  Building wheel for PyAudio (pyproject.toml): finished with status 'error'
+Failed to build PyAudio

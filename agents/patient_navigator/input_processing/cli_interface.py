@@ -46,6 +46,8 @@ class InputProcessingCLI:
         try:
             # Step 1: Capture voice input
             print("🎤 Listening for voice input... (Press Ctrl+C to cancel)")
+            print("💡 Speak clearly in Spanish. Recording will stop automatically after silence.")
+            
             audio_data = await self.input_handler.capture_voice_input(
                 timeout=self.config.voice_timeout
             )
@@ -54,19 +56,39 @@ class InputProcessingCLI:
             quality = self.input_handler.validate_input_quality(audio_data)
             print(f"🔍 Audio quality score: {quality.score:.2f}")
             
+            if quality.issues:
+                print(f"⚠️  Audio issues detected: {', '.join(quality.issues)}")
+            
             if quality.score < self.config.min_audio_quality_score:
-                print(f"⚠️  Audio quality too low (issues: {', '.join(quality.issues)})")
+                print(f"❌ Audio quality too low for processing")
                 return "Audio quality insufficient for processing"
             
-            # For Phase 1, audio processing is not implemented
-            print("⚠️  Voice processing not yet implemented. Please use text input mode.")
-            return "Voice processing not available in Phase 1"
+            # Step 2: Convert speech to text
+            print("🔤 Converting speech to text...")
+            try:
+                if hasattr(self.input_handler, 'convert_speech_to_text'):
+                    input_text = self.input_handler.convert_speech_to_text(audio_data)
+                    print(f"📝 Recognized text: '{input_text}'")
+                else:
+                    print("⚠️  Speech-to-text conversion not available")
+                    return "Speech recognition not implemented"
+            except Exception as e:
+                print(f"❌ Speech recognition failed: {e}")
+                return f"Speech recognition error: {e}"
+            
+            if not input_text or not input_text.strip():
+                print("❌ No text recognized from speech")
+                return "No speech recognized"
+            
+            # Step 3: Continue with text processing pipeline
+            return await self._process_text_through_pipeline(input_text)
             
         except KeyboardInterrupt:
             print("\n👋 Voice input cancelled by user")
             return "Input cancelled"
         except Exception as e:
             logger.error(f"Voice input processing failed: {e}")
+            print(f"❌ Error: {e}")
             return f"Error: {e}"
     
     async def process_text_input(self, text: Optional[str] = None) -> str:
@@ -101,48 +123,8 @@ class InputProcessingCLI:
             if quality.issues:
                 print(f"⚠️  Quality issues: {', '.join(quality.issues)}")
             
-            # Create user context
-            user_context = UserContext(
-                user_id="cli_user",
-                conversation_history=[],
-                language_preference=self.config.default_language,
-                domain_context=self.config.domain_context
-            )
-            
-            # Step 2: Translation
-            print(f"🌍 Translating from {self.config.default_language} to {self.config.target_language}...")
-            translation_result = await self.translation_router.route(
-                input_text, 
-                self.config.default_language
-            )
-            
-            print(f"✅ Translation complete (confidence: {translation_result.confidence:.2f}, provider: {translation_result.provider})")
-            print(f"📄 Translated text: {translation_result.text}")
-            
-            # Step 3: Sanitization
-            print("🧹 Sanitizing and structuring text...")
-            sanitized_output = await self.sanitizer.sanitize(
-                translation_result.text,
-                user_context
-            )
-            
-            print(f"✅ Sanitization complete (confidence: {sanitized_output.confidence:.2f})")
-            print(f"🔧 Modifications applied: {len(sanitized_output.modifications)}")
-            for mod in sanitized_output.modifications:
-                print(f"   - {mod}")
-            
-            # Step 4: Integration
-            print("🔗 Formatting for downstream workflow...")
-            agent_prompt = await self.integration.format_for_downstream(
-                sanitized_output,
-                user_context
-            )
-            
-            print("✅ Processing complete!")
-            print(f"📋 Final structured prompt: {agent_prompt.prompt_text}")
-            print(f"🎯 Overall confidence: {agent_prompt.confidence:.2f}")
-            
-            return agent_prompt.prompt_text
+            # Continue with shared processing pipeline
+            return await self._process_text_through_pipeline(input_text)
             
         except KeyboardInterrupt:
             print("\n👋 Text input cancelled by user")
@@ -151,6 +133,65 @@ class InputProcessingCLI:
             logger.error(f"Text input processing failed: {e}")
             print(f"❌ Error: {e}")
             return f"Error: {e}"
+    
+    async def _process_text_through_pipeline(self, input_text: str) -> str:
+        """Process text through translation, sanitization, and integration pipeline.
+        
+        Args:
+            input_text: Text to process through the pipeline
+            
+        Returns:
+            Structured prompt for downstream agents
+        """
+        # Create user context
+        user_context = UserContext(
+            user_id="cli_user",
+            conversation_history=[],
+            language_preference=self.config.default_language,
+            domain_context=self.config.domain_context
+        )
+        
+        # Step 1: Translation
+        print(f"🌍 Translating from {self.config.default_language} to {self.config.target_language}...")
+        translation_result = await self.translation_router.route(
+            input_text, 
+            self.config.default_language
+        )
+        
+        print(f"✅ Translation complete (confidence: {translation_result.confidence:.2f}, provider: {translation_result.provider})")
+        if translation_result.cost_estimate > 0:
+            print(f"💰 Estimated cost: ${translation_result.cost_estimate:.4f}")
+        print(f"📄 Translated text: {translation_result.text}")
+        
+        # Display cache statistics
+        cache_stats = self.translation_router.get_cache_stats()
+        if cache_stats['hits'] > 0 or cache_stats['misses'] > 0:
+            print(f"📊 Cache stats: {cache_stats['hits']} hits, {cache_stats['misses']} misses (hit rate: {cache_stats['hit_rate']:.1%})")
+        
+        # Step 2: Sanitization
+        print("🧹 Sanitizing and structuring text...")
+        sanitized_output = await self.sanitizer.sanitize(
+            translation_result.text,
+            user_context
+        )
+        
+        print(f"✅ Sanitization complete (confidence: {sanitized_output.confidence:.2f})")
+        print(f"🔧 Modifications applied: {len(sanitized_output.modifications)}")
+        for mod in sanitized_output.modifications:
+            print(f"   - {mod}")
+        
+        # Step 3: Integration
+        print("🔗 Formatting for downstream workflow...")
+        agent_prompt = await self.integration.format_for_downstream(
+            sanitized_output,
+            user_context
+        )
+        
+        print("✅ Processing complete!")
+        print(f"📋 Final structured prompt: {agent_prompt.prompt_text}")
+        print(f"🎯 Overall confidence: {agent_prompt.confidence:.2f}")
+        
+        return agent_prompt.prompt_text
     
     async def run_interactive_mode(self):
         """Run interactive CLI mode for testing."""

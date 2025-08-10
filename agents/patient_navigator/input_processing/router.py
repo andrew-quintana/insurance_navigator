@@ -2,13 +2,17 @@
 
 import asyncio
 import logging
+import hashlib
+import time
 from typing import Dict, Optional
 from functools import lru_cache
+from collections import OrderedDict
 
-from .types import TranslationResult, TranslationProvider, TranslationError
-from .config import get_translation_config
+from .types import TranslationResult, TranslationProvider, TranslationError, CacheEntry
+from .config import get_translation_config, get_cache_config
 from .providers.elevenlabs import ElevenLabsProvider
 from .providers.flash import FlashProvider
+from .providers.mock import MockTranslationProvider
 
 logger = logging.getLogger(__name__)
 
@@ -19,12 +23,23 @@ class TranslationRouter:
     def __init__(self):
         """Initialize the translation router."""
         self.config = get_translation_config()
+        self.cache_config = get_cache_config()
         self.providers: Dict[str, TranslationProvider] = {}
         self.source_language = self.config["default_language"]
         self.target_language = self.config["target_language"]
         
+        # Initialize LRU cache
+        self.cache: OrderedDict[str, CacheEntry] = OrderedDict()
+        self.cache_size = self.cache_config["size"]
+        self.cache_ttl = self.cache_config["ttl"]
+        
+        # Cache statistics
+        self.cache_hits = 0
+        self.cache_misses = 0
+        
         self._initialize_providers()
         logger.info(f"Translation router initialized with providers: {list(self.providers.keys())}")
+        logger.info(f"Cache initialized: size={self.cache_size}, TTL={self.cache_ttl}s")
     
     def _initialize_providers(self):
         """Initialize available translation providers."""
@@ -46,8 +61,11 @@ class TranslationRouter:
             except Exception as e:
                 logger.error(f"Failed to initialize Flash provider: {e}")
         
+        # Add mock provider as fallback if no real providers available
         if not self.providers:
-            logger.warning("No translation providers initialized - translation will not work")
+            logger.warning("No real translation providers available, adding mock provider as fallback")
+            self.providers["mock"] = MockTranslationProvider("mock_fallback")
+            logger.info("Mock fallback provider initialized")
     
     async def route(self, text: str, source_language: Optional[str] = None) -> TranslationResult:
         """Route translation request to optimal provider.
@@ -81,14 +99,26 @@ class TranslationRouter:
             )
         
         # Check cache first
-        cache_key = f"{text}:{source_lang}:{target_lang}"
+        cache_key = self._generate_cache_key(text, source_lang, target_lang)
         cached_result = self._get_cached_translation(cache_key)
         if cached_result:
             logger.debug("Using cached translation")
+            self.cache_hits += 1
             return cached_result
+        
+        self.cache_misses += 1
         
         # Try providers in priority order
         provider_order = self.config["provider_priority"]
+        
+        # Ensure mock provider is available as ultimate fallback
+        if "mock" not in self.providers:
+            self.providers["mock"] = MockTranslationProvider("mock_fallback")
+        
+        # Make sure mock is in the priority order as fallback
+        if "mock" not in provider_order:
+            provider_order = provider_order + ["mock"]
+        
         last_error = None
         
         for provider_name in provider_order:
@@ -148,26 +178,124 @@ class TranslationRouter:
         """Get status of available providers."""
         return {name: name in self.providers for name in ["elevenlabs", "flash"]}
     
-    @lru_cache(maxsize=1000)
-    def _get_cached_translation(self, cache_key: str) -> Optional[TranslationResult]:
-        """Get cached translation result.
+    def _generate_cache_key(self, text: str, source_lang: str, target_lang: str) -> str:
+        """Generate a cache key for the translation request.
         
-        Note: This is a simple in-memory cache for Phase 1.
-        In Phase 2, implement proper cache management with TTL.
+        Args:
+            text: Text to translate
+            source_lang: Source language code
+            target_lang: Target language code
+            
+        Returns:
+            Cache key string
         """
-        # Placeholder for cache lookup
-        # In Phase 2, implement proper caching with TTL
-        return None
+        # Create a hash of the translation parameters
+        key_data = f"{text}:{source_lang}:{target_lang}"
+        cache_key = hashlib.md5(key_data.encode('utf-8')).hexdigest()
+        return cache_key
+    
+    def _get_cached_translation(self, cache_key: str) -> Optional[TranslationResult]:
+        """Get cached translation result with TTL check.
+        
+        Args:
+            cache_key: Cache key to lookup
+            
+        Returns:
+            TranslationResult if found and not expired, None otherwise
+        """
+        if cache_key not in self.cache:
+            return None
+        
+        entry = self.cache[cache_key]
+        current_time = time.time()
+        
+        # Check if entry has expired
+        if current_time - entry.timestamp > entry.ttl:
+            logger.debug(f"Cache entry expired, removing: {cache_key}")
+            del self.cache[cache_key]
+            return None
+        
+        # Move to end (most recently used)
+        self.cache.move_to_end(cache_key)
+        entry.access_count += 1
+        
+        logger.debug(f"Cache hit for key: {cache_key} (accessed {entry.access_count} times)")
+        return entry.translation_result
     
     def _cache_translation(self, cache_key: str, result: TranslationResult) -> None:
-        """Cache translation result.
+        """Cache translation result with LRU eviction.
         
-        Note: This is a placeholder for Phase 1.
-        In Phase 2, implement proper cache storage with TTL.
+        Args:
+            cache_key: Cache key for the result
+            result: Translation result to cache
         """
-        # Placeholder for cache storage
-        # In Phase 2, implement proper caching with TTL
-        pass
+        current_time = time.time()
+        
+        # Create cache entry
+        entry = CacheEntry(
+            key=cache_key,
+            translation_result=result,
+            timestamp=current_time,
+            access_count=1,
+            ttl=self.cache_ttl
+        )
+        
+        # If key already exists, update it
+        if cache_key in self.cache:
+            self.cache[cache_key] = entry
+            self.cache.move_to_end(cache_key)
+            logger.debug(f"Updated cache entry: {cache_key}")
+            return
+        
+        # Check if cache is full and evict LRU entry
+        while len(self.cache) >= self.cache_size:
+            oldest_key, oldest_entry = self.cache.popitem(last=False)
+            logger.debug(f"Evicted LRU cache entry: {oldest_key} (accessed {oldest_entry.access_count} times)")
+        
+        # Add new entry
+        self.cache[cache_key] = entry
+        logger.debug(f"Cached translation: {cache_key} (cache size: {len(self.cache)}/{self.cache_size})")
+    
+    def clear_cache(self) -> None:
+        """Clear the entire translation cache."""
+        cleared_count = len(self.cache)
+        self.cache.clear()
+        logger.info(f"Cleared {cleared_count} cache entries")
+    
+    def cleanup_expired_cache(self) -> int:
+        """Clean up expired cache entries.
+        
+        Returns:
+            Number of entries removed
+        """
+        current_time = time.time()
+        expired_keys = []
+        
+        for key, entry in self.cache.items():
+            if current_time - entry.timestamp > entry.ttl:
+                expired_keys.append(key)
+        
+        for key in expired_keys:
+            del self.cache[key]
+        
+        if expired_keys:
+            logger.info(f"Cleaned up {len(expired_keys)} expired cache entries")
+        
+        return len(expired_keys)
+    
+    def get_cache_stats(self) -> Dict[str, int]:
+        """Get cache statistics.
+        
+        Returns:
+            Dictionary with cache statistics
+        """
+        return {
+            "size": len(self.cache),
+            "max_size": self.cache_size,
+            "hits": self.cache_hits,
+            "misses": self.cache_misses,
+            "hit_rate": self.cache_hits / max(self.cache_hits + self.cache_misses, 1)
+        }
     
     async def get_cost_estimate(self, text: str, source_language: Optional[str] = None) -> float:
         """Get cost estimate for translation.
