@@ -9,7 +9,7 @@ from typing import Optional, Dict, Any, List, Tuple
 import logging
 from fastapi import HTTPException, status
 from supabase import Client as SupabaseClient
-from config.database import get_supabase_client as get_base_client
+from config.database import get_supabase_client_sync as get_base_client
 
 
 logging.basicConfig(level=logging.INFO)

@@ -8,7 +8,7 @@ import os
 import logging
 import json
 from datetime import datetime
-from config.database import get_supabase_client as get_base_client
+from config.database import get_supabase_client_sync as get_base_client
 import uuid
 
 # Configure logging
@@ -408,10 +408,10 @@ class UserService:
             
             return False
 
-async def get_user_service() -> UserService:
+def get_user_service() -> UserService:
     """Get configured user service instance."""
     try:
-        client = await get_base_client()
+        client = get_base_client()
         return UserService(client)
     except Exception as e:
         logger.error(f"Error creating user service: {str(e)}")

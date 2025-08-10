@@ -181,13 +181,13 @@ def sanitize_context_snippet(value: str, max_len: int = 8000) -> str:
         sanitized = sanitized[:max_len]
     return sanitized
 
-async def validate_chat_exists(chat_id: str) -> None:
+def validate_chat_exists(chat_id: str) -> None:
     """Validate that the conversation exists.
 
     Note: Per Phase 1, conversation IDs are TEXT in `conversations` table.
     """
-    convo_service = await get_conversation_service()
-    convo = await convo_service.get_conversation(chat_id)
+    convo_service = get_conversation_service()
+    convo = convo_service.get_conversation(chat_id)
     if not convo:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="chat_id not found")
 
@@ -282,7 +282,7 @@ async def get_current_user(request: Request) -> Dict[str, Any]:
     global user_service_instance
     
     if not user_service_instance:
-        user_service_instance = await get_user_service()
+        user_service_instance = get_user_service()
     
     # Get tokens from Authorization and Refresh-Token headers
     auth_header = request.headers.get("authorization")
@@ -371,7 +371,7 @@ async def upload_document_backend(
         logger.info(f"✅ File size validated: {file_size} bytes")
         
         # Get storage service
-        storage_service = await get_storage_service()
+        storage_service = get_storage_service()
         
         # Upload document
         logger.info(f"🔄 Starting document upload for {file.filename}")
@@ -491,13 +491,13 @@ async def startup_event():
         logger.info("✅ Database pool initialized")
         
         # Initialize other services
-        user_service_instance = await get_user_service()
+        user_service_instance = get_user_service()
         logger.info("✅ User service initialized")
         
-        conversation_service_instance = await get_conversation_service()
+        conversation_service_instance = get_conversation_service()
         logger.info("✅ Conversation service initialized")
         
-        storage_service_instance = await get_storage_service()
+        storage_service_instance = get_storage_service()
         logger.info("✅ Storage service initialized")
         
         # Verify environment variables
@@ -551,7 +551,7 @@ async def login(request: Request, response: Response):
             )
         
         # Get user service
-        user_service = await get_user_service()
+        user_service = get_user_service()
         
         # Authenticate user
         auth_result = await user_service.authenticate_user(email, password)
@@ -590,7 +590,7 @@ async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_curre
     """Get current user information."""
     try:
         # Get user service
-        user_service = await get_user_service()
+        user_service = get_user_service()
         
         # Get fresh user data
         user_data = await user_service.get_user_by_id(current_user["id"])
@@ -652,14 +652,14 @@ async def memory_update(
     # Will be attached to response via JSONResponse
 
     # Validate chat existence
-    await validate_chat_exists(payload.chat_id)
+    validate_chat_exists(payload.chat_id)
 
     # Sanitize snippet
     snippet = sanitize_context_snippet(payload.context_snippet)
 
     # Enqueue using MemoryService
-    memory_service: MemoryService = await get_memory_service()
-    record = await memory_service.enqueue_context(chat_id=payload.chat_id, snippet=snippet, status_value="pending_summarization")
+    memory_service: MemoryService = get_memory_service()
+    record = memory_service.enqueue_context(chat_id=payload.chat_id, snippet=snippet, status_value="pending_summarization")
 
     est_completion = (datetime.utcnow().timestamp() + 2)
     est_iso = datetime.utcfromtimestamp(est_completion).isoformat() + "Z"
@@ -686,10 +686,10 @@ async def memory_get(
     rl = await enforce_rate_limit(current_user)
 
     # Validate chat existence (TEXT id expected)
-    await validate_chat_exists(chat_id)
+    validate_chat_exists(chat_id)
 
-    memory_service: MemoryService = await get_memory_service()
-    data = await memory_service.get_memory(chat_id)
+    memory_service: MemoryService = get_memory_service()
+    data = memory_service.get_memory(chat_id)
 
     response = JSONResponse(status_code=status.HTTP_200_OK, content={
         "chat_id": data.get("chat_id", chat_id),
@@ -727,7 +727,7 @@ async def register(request: Dict[str, Any]):
     """Register a new user with database persistence."""
     try:
         # Get user service
-        user_service = await get_user_service()
+        user_service = get_user_service()
         
         # Create user in database
         user_data = await user_service.create_user(
@@ -809,7 +809,7 @@ async def signup(request: SignupRequest):
     """
     try:
         # Get user service
-        user_service = await get_user_service()
+        user_service = get_user_service()
         
         # Create user
         user_data = await user_service.create_user(
@@ -843,7 +843,7 @@ async def login(request: LoginRequest):
     """
     try:
         # Get user service
-        user_service = await get_user_service()
+        user_service = get_user_service()
         
         # Authenticate user
         auth_data = await user_service.authenticate_user(
@@ -887,7 +887,7 @@ async def get_current_user(request: Request):
         token = authorization.split(" ")[1]
         
         # Get user service
-        user_service = await get_user_service()
+        user_service = get_user_service()
         
         # Get user data
         user_data = await user_service.get_user_from_token(token)
@@ -918,8 +918,8 @@ async def create_conversation_route(
     payload: CreateConversationRequest,
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    convo_service = await get_conversation_service()
-    convo = await convo_service.create_conversation(
+    convo_service = get_conversation_service()
+    convo = convo_service.create_conversation(
         user_id=str(current_user["id"]),
         metadata=payload.metadata or {}
     )

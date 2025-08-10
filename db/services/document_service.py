@@ -9,7 +9,7 @@ import logging
 import os
 from datetime import datetime
 from cryptography.fernet import Fernet
-from config.database import get_supabase_client as get_base_client
+from config.database import get_supabase_client_sync as get_base_client
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -277,7 +277,7 @@ class DocumentService:
             logger.error(f"Error deleting document: {str(e)}")
             return False
 
-async def get_document_service() -> DocumentService:
+def get_document_service() -> DocumentService:
     """Get configured document service instance."""
     try:
         client = get_base_client()

@@ -12,6 +12,8 @@ os.environ.update(env_vars)
 # Map legacy .env keys to expected SUPABASE_* keys for tests
 if "URL" in os.environ:
     os.environ["SUPABASE_URL"] = os.environ["URL"]
+if "SUPABASE_KEY" in os.environ:
+    os.environ["SUPABASE_ANON_KEY"] = os.environ["SUPABASE_KEY"]
 if "ANON_KEY" in os.environ:
     os.environ["SUPABASE_ANON_KEY"] = os.environ["ANON_KEY"]
 if "SERVICE_ROLE_KEY" in os.environ:

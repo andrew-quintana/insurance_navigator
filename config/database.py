@@ -146,6 +146,25 @@ async def get_supabase_client() -> Client:
         logger.warning(f"Database connection error: {str(e)}")
         raise
 
+def get_supabase_client_sync() -> Client:
+    """Get a Supabase client synchronously (for services that don't need async)"""
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_key = os.getenv("SUPABASE_KEY")
+    
+    if not supabase_url or not supabase_key:
+        raise ValueError("SUPABASE_URL and SUPABASE_KEY environment variables must be set")
+    
+    try:
+        # Create client without custom options - let the library handle defaults
+        client = create_client(
+            supabase_url,
+            supabase_key
+        )
+        return client
+    except Exception as e:
+        logger.warning(f"Database connection error: {str(e)}")
+        raise
+
 @asynccontextmanager
 async def get_db() -> AsyncGenerator[Client, None]:
     """Async context manager for database access"""

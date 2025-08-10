@@ -6,7 +6,7 @@ from fastapi import HTTPException, status
 from supabase import Client as SupabaseClient
 import logging
 from datetime import datetime
-from config.database import get_supabase_client as get_base_client
+from config.database import get_supabase_client_sync as get_base_client
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -235,7 +235,7 @@ class TransactionService:
             )
             raise
 
-async def get_transaction_service() -> TransactionService:
+def get_transaction_service() -> TransactionService:
     """Get configured transaction service instance."""
     try:
         client = get_base_client()

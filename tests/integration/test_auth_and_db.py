@@ -34,7 +34,7 @@ TEST_USER_NAME = "Auth Test User"
 async def user_service():
     """Get a configured user service for testing."""
     client = await get_supabase_client()
-    service = await get_user_service()
+    service = get_user_service()
     return service
 
 @pytest.fixture

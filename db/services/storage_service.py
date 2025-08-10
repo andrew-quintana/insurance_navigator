@@ -8,7 +8,7 @@ import logging
 import os
 from datetime import datetime
 from cryptography.fernet import Fernet
-from config.database import get_supabase_client as get_base_client
+from config.database import get_supabase_client_sync as get_base_client
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -159,10 +159,10 @@ class StorageService:
             logger.error(f"Error deleting file: {str(e)}")
             return False
 
-async def get_storage_service() -> StorageService:
+def get_storage_service() -> StorageService:
     """Get configured storage service instance."""
     try:
-        client = await get_base_client()
+        client = get_base_client()
         return StorageService(client)
     except Exception as e:
         logger.error(f"Error creating storage service: {str(e)}")

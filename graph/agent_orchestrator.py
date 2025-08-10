@@ -95,7 +95,7 @@ class AgentOrchestrator:
         """Ensure conversation service is initialized."""
         if not self._conversation_service_initialized:
             try:
-                self.conversation_service = await get_conversation_service()
+                self.conversation_service = get_conversation_service()
                 self._conversation_service_initialized = True
                 logger.info("Conversation service initialized in orchestrator")
             except Exception as e:
