@@ -927,6 +927,109 @@ async def create_conversation_route(
         raise HTTPException(status_code=500, detail="Failed to create conversation")
     return {"conversation_id": convo["id"], "metadata": convo.get("metadata", {})}
 
+# =============================
+# Input Processing Workflow Endpoints
+# =============================
+
+from agents.patient_navigator.input_processing.cli_interface import InputProcessingCLI
+from agents.patient_navigator.input_processing.types import UserContext
+
+class InputProcessingRequest(BaseModel):
+    """Request model for input processing."""
+    input_type: str = Field(..., description="Type of input: 'text' or 'voice'")
+    text: Optional[str] = Field(None, description="Text input (required for text type)")
+    language: Optional[str] = Field(None, description="Source language (defaults to configured default)")
+    
+class InputProcessingResponse(BaseModel):
+    """Response model for input processing."""
+    success: bool
+    processed_text: str
+    confidence: float
+    provider_used: Optional[str] = None
+    processing_time: float
+    modifications_applied: List[str] = []
+
+@app.post("/api/v1/input/process", response_model=InputProcessingResponse)
+async def process_input(
+    request: InputProcessingRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Process multilingual input through translation and sanitization pipeline."""
+    start_time = time.time()
+    
+    try:
+        # Initialize CLI processor
+        cli = InputProcessingCLI()
+        
+        # Validate input type
+        if request.input_type not in ["text", "voice"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="input_type must be 'text' or 'voice'"
+            )
+        
+        # For text input, validate text is provided
+        if request.input_type == "text" and not request.text:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="text field is required for text input type"
+            )
+        
+        # Process input based on type
+        if request.input_type == "text":
+            result = await cli.process_text_input(request.text)
+        else:  # voice
+            result = await cli.process_voice_input()
+        
+        processing_time = time.time() - start_time
+        
+        # For Phase 1, extract basic response info
+        # In Phase 2, enhance with detailed metrics
+        return InputProcessingResponse(
+            success=True,
+            processed_text=result,
+            confidence=0.85,  # Placeholder for Phase 1
+            provider_used="elevenlabs",  # Placeholder for Phase 1
+            processing_time=processing_time,
+            modifications_applied=["translation", "sanitization", "structuring"]
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        processing_time = time.time() - start_time
+        logger.error(f"Input processing failed: {e}")
+        
+        return InputProcessingResponse(
+            success=False,
+            processed_text=f"Error: {str(e)}",
+            confidence=0.0,
+            provider_used=None,
+            processing_time=processing_time,
+            modifications_applied=[]
+        )
+
+@app.get("/api/v1/input/status")
+async def get_input_processing_status():
+    """Get status of the input processing system."""
+    try:
+        cli = InputProcessingCLI()
+        status = cli.get_status()
+        
+        return {
+            "system_status": "operational" if status["config_valid"] else "degraded",
+            "components": status,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting input processing status: {e}")
+        return {
+            "system_status": "error",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(

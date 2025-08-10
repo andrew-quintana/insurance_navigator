@@ -80,3 +80,18 @@ llama-parse>=0.1.1
 
 # Added from the code block
 backoff>=2.2.1
+
+# ========== INPUT PROCESSING WORKFLOW DEPENDENCIES ==========
+# Audio processing
+PyAudio>=0.2.11
+SpeechRecognition>=3.10.0
+scipy>=1.11.0
+
+# HTTP client with async support
+httpx>=0.24.0
+
+# Translation services
+elevenlabs>=1.0.0
+
+# Data validation and parsing
+dataclasses-json>=0.6.0

@@ -3,7 +3,10 @@
     "allow": [
       "Bash(psql:*)",
       "Bash(find:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(ELEVENLABS_API_KEY=test_key python -m agents.patient_navigator.input_processing.cli_interface --status)",
+      "Bash(ELEVENLABS_API_KEY=test_key python -m agents.patient_navigator.input_processing.cli_interface --text \"Necesito ayuda con mi seguro médico\")"
     ],
     "deny": []
   }
