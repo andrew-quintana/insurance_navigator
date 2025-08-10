@@ -35,41 +35,35 @@ This implementation is organized into **4 discrete phases**, each designed to be
 ### Tasks
 
 #### Project Structure Setup
-1. Create directory structure for input processing workflow:
+1. Create directory structure for input processing workflow in existing `agents/patient_navigator/input_processing/`:
    ```
-   src/
-   ├── services/
-   │   ├── input/
-   │   │   └── handler.ts
-   │   ├── translation/
-   │   │   ├── router.ts
-   │   │   ├── providers/
-   │   │   │   ├── elevenlabs.ts
-   │   │   │   └── flash.ts
-   │   │   └── cache.ts
-   │   ├── sanitization/
-   │   │   └── agent.ts
-   │   └── integration/
-   │       └── handoff.ts
-   ├── types/
-   │   └── workflow.ts
-   └── cli/
-       └── main.ts
+   agents/patient_navigator/input_processing/
+   ├── __init__.py
+   ├── handler.py
+   ├── router.py
+   ├── providers/
+   │   ├── __init__.py
+   │   ├── elevenlabs.py
+   │   └── flash.py
+   ├── sanitizer.py
+   ├── integration.py
+   ├── cli_interface.py
+   └── types.py
    ```
 
-2. Set up basic TypeScript configuration and dependencies
-3. Create shared interfaces and types for the workflow pipeline
-4. Initialize basic error handling and logging utilities (non-persistent)
+2. Set up Python dependencies in existing requirements files
+3. Create shared dataclasses and protocols for the workflow pipeline  
+4. Initialize basic error handling and logging utilities (integrate with existing logging)
 
 #### Environment Configuration
-5. Configure environment variables for API keys (ElevenLabs, Flash)
-6. Set up hardcoded language configuration system for MVP
-7. Create basic CLI argument parsing for voice vs text input modes
+5. Configure environment variables for API keys (ElevenLabs, Flash) in existing .env files
+6. Set up hardcoded Spanish language configuration system for MVP
+7. Create basic CLI argument parsing using argparse for voice vs text input modes
 
 #### Core Type Definitions
-8. Define interfaces for InputHandler, TranslationRouter, SanitizationAgent, WorkflowHandoff
-9. Create types for pipeline data flow (AudioBuffer, TranslationResult, SanitizedOutput, AgentPrompt)
-10. Implement error types and quality scoring interfaces
+8. Define protocols for InputHandler, TranslationRouter, SanitizationAgent, WorkflowHandoff in types.py
+9. Create dataclasses for pipeline data flow (TranslationResult, SanitizedOutput, AgentPrompt, UserContext)
+10. Implement error types and quality scoring interfaces using Python dataclasses
 
 ### Expected Outputs
 - Save implementation notes to: `@TODO001_phase1_notes.md`
@@ -80,23 +74,23 @@ This implementation is organized into **4 discrete phases**, each designed to be
 ### Progress Checklist
 
 #### Setup
-- [ ] Create src/services directory structure with input/, translation/, sanitization/, integration/
-- [ ] Create src/types/workflow.ts for shared interfaces
-- [ ] Create src/cli/main.ts for CLI entry point
-- [ ] Initialize package.json with TypeScript dependencies
-- [ ] Set up tsconfig.json with appropriate compiler options
+- [ ] Create agents/patient_navigator/input_processing/ directory structure
+- [ ] Create types.py for shared protocols and dataclasses
+- [ ] Create cli_interface.py for CLI entry point
+- [ ] Add Python dependencies to existing requirements files (PyAudio, SpeechRecognition, requests, etc.)
+- [ ] Set up integration with existing logging system
 
 #### Implementation
-- [ ] Define core interfaces in workflow.ts (InputHandler, TranslationRouter, etc.)
-- [ ] Create error handling types and quality scoring interfaces
-- [ ] Implement basic environment configuration loading
-- [ ] Set up hardcoded language configuration (Spanish for MVP)
-- [ ] Create CLI argument parsing for voice/text input selection
+- [ ] Define core protocols in types.py (InputHandler, TranslationRouter, etc.)
+- [ ] Create error handling types and quality scoring dataclasses
+- [ ] Implement basic environment configuration loading (integrate with existing config)
+- [ ] Set up hardcoded Spanish language configuration for MVP
+- [ ] Create CLI argument parsing using argparse for voice/text input selection
 
 #### Validation
-- [ ] Verify TypeScript compilation succeeds
+- [ ] Verify Python modules import successfully without errors
 - [ ] Test basic CLI argument parsing functionality
-- [ ] Validate environment variable loading
+- [ ] Validate environment variable loading works with existing .env setup
 - [ ] Check directory structure matches RFC architecture
 - [ ] Save @TODO001_phase1_test_update.md (tests run, results, assumptions validated/remaining)
 
@@ -127,13 +121,13 @@ This implementation is organized into **4 discrete phases**, each designed to be
 
 #### Input Handler Implementation
 1. Implement voice input capture via CLI microphone access
-   - Use Web Audio API or Node.js audio capture libraries
-   - Handle 30-second timeout for voice input
-   - Implement basic audio quality validation
-   - Convert audio to text using browser Speech Recognition API
+   - Use PyAudio for audio capture from system microphone
+   - Handle 30-second timeout for voice input using asyncio
+   - Implement basic audio quality validation using scipy/numpy
+   - Convert audio to text using SpeechRecognition library with Google Speech API
 
 2. Implement text input capture via CLI
-   - Standard stdin interface with UTF-8 support
+   - Standard input() interface with UTF-8 support
    - Handle copy-paste and direct typing workflows
    - Basic text length and character validation
 
@@ -144,13 +138,13 @@ This implementation is organized into **4 discrete phases**, each designed to be
    - Create provider interface for ElevenLabs integration
 
 4. Implement ElevenLabs translation provider
-   - Direct REST API integration (not SDK)
+   - Direct REST API integration using requests/httpx (not SDK)
    - Handle authentication and request formatting
    - Implement basic error handling and response parsing
    - Add cost estimation method for usage tracking
 
 5. Implement basic translation caching
-   - Session-level in-memory cache (LRU with 1000 entry limit)  
+   - Session-level in-memory cache using functools.lru_cache (1000 entry limit)  
    - Cache key generation based on source text + language
    - Cache hit/miss metrics for optimization
 

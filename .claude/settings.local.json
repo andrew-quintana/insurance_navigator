@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(psql:*)"
+      "Bash(psql:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }
