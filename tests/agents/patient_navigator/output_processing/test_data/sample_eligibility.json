@@ -1,0 +1,39 @@
+{
+  "eligibility_checker": {
+    "agent_id": "eligibility_checker",
+    "content": "Eligibility confirmed. Active coverage until 12/31/2024. No pre-existing condition exclusions apply. Member since 01/01/2020. Dependents covered: spouse and 2 children. Plan type: PPO. Network: Blue Cross Blue Shield.",
+    "metadata": {
+      "status": "active",
+      "effective_date": "2024-01-01",
+      "member_count": 4,
+      "pre_existing_exclusions": false,
+      "plan_type": "PPO",
+      "network": "BCBS"
+    }
+  },
+  "member_services": {
+    "agent_id": "member_services",
+    "content": "Member ID: 123456789. Group number: 987654. Primary care physician: Dr. Sarah Johnson. Specialist referral required: No. Prior authorization required for: MRI, CT scans, surgery. Emergency coverage: Worldwide.",
+    "metadata": {
+      "member_id": "123456789",
+      "group_number": "987654",
+      "pcp_assigned": true,
+      "pcp_name": "Dr. Sarah Johnson",
+      "referral_required": false,
+      "prior_auth_required": ["MRI", "CT_scan", "surgery"],
+      "emergency_coverage": "worldwide"
+    }
+  },
+  "network_analyzer": {
+    "agent_id": "network_analyzer",
+    "content": "In-network providers: 15,000+ doctors, 200+ hospitals, 500+ specialists. Out-of-network benefits available with higher cost sharing. Urgent care: 100% covered in-network, $50 copay out-of-network.",
+    "metadata": {
+      "in_network_providers": 15000,
+      "hospitals": 200,
+      "specialists": 500,
+      "out_of_network_available": true,
+      "urgent_care_in_network": "100%_covered",
+      "urgent_care_out_network": "50_copay"
+    }
+  }
+}

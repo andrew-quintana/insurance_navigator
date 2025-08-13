@@ -1,0 +1,35 @@
+{
+  "claims_processor": {
+    "agent_id": "claims_processor",
+    "content": "Claim denied. Policy exclusion 3.2 applies. Coverage not available for pre-existing conditions. Treatment date: 03/15/2024. Diagnosis: Chronic back pain. Policy effective date: 01/01/2024. Condition documented in medical records prior to policy start.",
+    "metadata": {
+      "denial_reason": "pre_existing_condition",
+      "exclusion_code": "3.2",
+      "treatment_date": "2024-03-15",
+      "diagnosis": "chronic_back_pain",
+      "policy_effective": "2024-01-01",
+      "appeal_deadline": "2024-06-15"
+    }
+  },
+  "policy_analyzer": {
+    "agent_id": "policy_analyzer",
+    "content": "Policy exclusion 3.2 states: 'No coverage for conditions documented in medical records within 12 months prior to policy effective date.' Medical records show diagnosis and treatment for chronic back pain on 08/15/2023, 4.5 months before policy start.",
+    "metadata": {
+      "exclusion_analysis": "pre_existing_condition",
+      "medical_record_date": "2023-08-15",
+      "months_before_policy": 4.5,
+      "exclusion_period": "12_months",
+      "analysis_confidence": 0.95
+    }
+  },
+  "appeals_specialist": {
+    "agent_id": "appeals_specialist",
+    "content": "Appeal options available: 1) Internal review within 30 days, 2) External review by independent organization, 3) State insurance department complaint. Success rate for similar appeals: 15-20%. Required documentation: medical records, doctor's letter, treatment history.",
+    "metadata": {
+      "appeal_options": ["internal", "external", "state_complaint"],
+      "internal_deadline": "30_days",
+      "success_rate": "15-20%",
+      "required_docs": ["medical_records", "doctor_letter", "treatment_history"]
+    }
+  }
+}

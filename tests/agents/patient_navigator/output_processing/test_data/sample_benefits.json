@@ -1,0 +1,31 @@
+{
+  "benefits_analyzer": {
+    "agent_id": "benefits_analyzer",
+    "content": "Your plan covers 80% of in-network costs after $500 deductible. Out-of-network coverage is 60% after $1000 deductible. Prescription drugs are covered at 90% with $10/$25/$50 copays. Mental health services have 80% coverage after deductible. Physical therapy is limited to 20 visits per year.",
+    "metadata": {
+      "coverage_type": "medical",
+      "deductible_met": false,
+      "plan_tier": "silver",
+      "network_status": "in_network_preferred"
+    }
+  },
+  "eligibility_checker": {
+    "agent_id": "eligibility_checker",
+    "content": "Eligibility confirmed. Active coverage until 12/31/2024. No pre-existing condition exclusions apply. Member since 01/01/2020. Dependents covered: spouse and 2 children.",
+    "metadata": {
+      "status": "active",
+      "effective_date": "2024-01-01",
+      "member_count": 4,
+      "pre_existing_exclusions": false
+    }
+  },
+  "cost_estimator": {
+    "agent_id": "cost_estimator",
+    "content": "Estimated annual out-of-pocket maximum: $6,350 for in-network, $12,700 for out-of-network. Based on typical usage patterns, you can expect to pay approximately $2,100 annually for covered services.",
+    "metadata": {
+      "calculation_method": "usage_based",
+      "confidence_score": 0.85,
+      "data_points_analyzed": 150
+    }
+  }
+}

@@ -87,11 +87,14 @@ For each phase, include:
 - [ ] Task 6
  - [ ] Save @TODO001_phase[X]_test_update.md (tests run, results, assumptions validated/remaining)
 
+#### Final Check
+- [ ] Review @TODO001 to ensure that all steps for the phase have been taken. If not, complete the tasks that are left then repeat this step until all tasks are complete.
+
 #### Documentation
 - [ ] Save @TODO001_phase[X]_notes.md
 - [ ] Save @TODO001_phase[X]_decisions.md
 - [ ] Save @TODO001_phase[X]_handoff.md
- - [ ] Save @TODO001_phase[X]_test_update.md
+- [ ] Save @TODO001_phase[X]_test_update.md
 ```
 
 **FINAL PROJECT CHECKLIST:**
