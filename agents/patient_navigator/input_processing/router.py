@@ -63,13 +63,48 @@ class RoutingDecision:
 
 
 class IntelligentTranslationRouter:
-    """Intelligent translation router with fallback chain and optimization."""
+    """Intelligent translation router with fallback chain and optimization.
+    
+    This class provides intelligent routing decisions for translation requests,
+    automatically selecting the best provider based on text complexity, language
+    pairs, cost considerations, and provider health. It implements a robust
+    fallback chain to ensure translation reliability.
+    
+    The router analyzes multiple factors to make optimal routing decisions:
+    - Text complexity and language pair difficulty
+    - Provider performance and health status
+    - Cost optimization based on user preferences
+    - Quality requirements and fallback strategies
+    
+    Attributes:
+        config: Router configuration with provider settings
+        performance_monitor: Performance monitoring instance
+        providers: Dictionary of configured translation providers
+        router_circuit_breaker: Circuit breaker for router-level protection
+        routing_decisions: History of routing decisions made
+        fallback_usage_stats: Statistics on fallback provider usage
+        total_cost_tracked: Total cost tracked across all providers
+        cost_by_provider: Cost breakdown by provider
+    """
     
     def __init__(self, config: Dict[str, Any]):
-        """Initialize the intelligent router.
+        """Initialize the intelligent translation router.
+        
+        Sets up all translation providers, configures circuit breakers,
+        and initializes performance tracking and cost monitoring.
         
         Args:
-            config: Router configuration including provider settings
+            config: Router configuration dictionary containing:
+                - elevenlabs: ElevenLabs provider configuration
+                - flash: Flash v2.5 provider configuration
+                - preferred_provider: User's preferred provider
+                - enable_fallback: Whether fallback is enabled
+                - default_language: Default source language
+                - target_language: Target language for translations
+                
+        Raises:
+            ValueError: If no translation providers are available
+            ConfigurationError: If provider configuration is invalid
         """
         self.config = config
         self.performance_monitor = get_performance_monitor()

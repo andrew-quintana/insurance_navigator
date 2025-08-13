@@ -26,10 +26,31 @@ logger = logging.getLogger(__name__)
 
 
 class EnhancedCLIInterface:
-    """Enhanced CLI interface with performance monitoring and workflow orchestration."""
+    """Enhanced CLI interface with performance monitoring and workflow orchestration.
+    
+    This class provides a comprehensive command-line interface for the Input Processing
+    Workflow, orchestrating all components from input capture through quality validation.
+    It includes performance monitoring, error handling, and user-friendly output formatting.
+    
+    Attributes:
+        config: Input processing configuration
+        performance_monitor: Performance monitoring instance
+        input_handler: Voice and text input capture handler
+        translation_router: Intelligent translation routing with fallback
+        sanitization_agent: Content sanitization and structuring
+        integration_layer: Downstream workflow integration
+        quality_validator: Quality assessment and validation
+        workflow_start_time: Timestamp when workflow started
+        workflow_metrics: Performance metrics collection
+    """
     
     def __init__(self):
-        """Initialize the enhanced CLI interface."""
+        """Initialize the enhanced CLI interface with all workflow components.
+        
+        Initializes configuration, performance monitoring, and all core workflow
+        components including input handling, translation routing, sanitization,
+        integration, and quality validation.
+        """
         self.config = get_config()
         self.performance_monitor = get_performance_monitor()
         
@@ -60,20 +81,56 @@ class EnhancedCLIInterface:
         show_performance: bool = True,
         export_metrics: bool = False
     ) -> Dict[str, Any]:
-        """Run the complete input processing workflow.
+        """Run the complete input processing workflow from start to finish.
+        
+        This method orchestrates the entire input processing pipeline including:
+        1. Input capture (voice/text/file)
+        2. Translation with intelligent fallback routing
+        3. Content sanitization and structuring
+        4. Quality validation and assessment
+        5. Performance monitoring and metrics collection
+        6. Integration layer preparation
+        
+        The workflow supports multiple input types and provides comprehensive
+        error handling, performance tracking, and user feedback throughout
+        the process.
         
         Args:
-            input_text: Direct text input
-            input_file: Path to input file
-            voice_input: Whether to use voice input
-            source_language: Source language code
-            target_language: Target language code
-            user_preferences: User preferences for cost/quality trade-offs
-            show_performance: Whether to display performance metrics
-            export_metrics: Whether to export metrics to file
+            input_text: Direct text input string (mutually exclusive with input_file)
+            input_file: Path to input file for batch processing
+            voice_input: Whether to capture voice input from microphone
+            source_language: Source language ISO code (e.g., 'es', 'fr', 'de')
+            target_language: Target language ISO code (default: 'en')
+            user_preferences: Dictionary of user preferences for cost/quality trade-offs
+            show_performance: Whether to display real-time performance metrics
+            export_metrics: Whether to export performance data to file
             
         Returns:
-            Complete workflow results
+            Dictionary containing complete workflow results including:
+            - success: Boolean indicating overall workflow success
+            - input_data: Captured and processed input information
+            - translation_result: Translation details and provider information
+            - sanitization_result: Sanitized output and modifications
+            - quality_validation: Quality assessment scores and feedback
+            - performance_metrics: Detailed performance data
+            - integration_data: Downstream workflow preparation data
+            
+        Raises:
+            InputProcessingError: If any workflow stage fails irrecoverably
+            ConfigurationError: If system configuration is invalid
+            TranslationError: If all translation providers fail
+            SanitizationError: If content sanitization fails
+            
+        Example:
+            >>> cli = EnhancedCLIInterface()
+            >>> result = await cli.run_complete_workflow(
+            ...     input_text="¿Necesito ayuda con mi seguro?",
+            ...     source_language="es",
+            ...     target_language="en",
+            ...     show_performance=True
+            ... )
+            >>> print(f"Success: {result['success']}")
+            >>> print(f"Quality Score: {result['quality_validation']['overall_score']}")
         """
         self.workflow_start_time = time.time()
         
