@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv()
+load_dotenv('.env.development')
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +147,48 @@ class InputProcessingConfig:
             providers.append("mock")
         
         return providers
+
+    def get_input_config(self) -> Dict[str, Any]:
+        """Get input processing configuration as dictionary."""
+        return {
+            "voice_timeout": self.voice_timeout,
+            "max_text_length": self.max_text_length,
+            "max_concurrent_requests": self.max_concurrent_requests,
+            "request_timeout": self.request_timeout,
+            "retry_attempts": self.retry_attempts,
+            "retry_delay": self.retry_delay,
+            "min_audio_quality_score": self.min_audio_quality_score,
+            "min_translation_confidence": self.min_translation_confidence,
+            "min_sanitization_confidence": self.min_sanitization_confidence,
+            "domain_context": self.domain_context,
+            "enable_context_validation": self.enable_context_validation
+        }
+    
+    def to_router_config(self) -> Dict[str, Any]:
+        """Convert config to router-compatible format."""
+        router_config = {
+            "elevenlabs": {
+                "enabled": bool(self.elevenlabs_api_key),
+                "api_key": self.elevenlabs_api_key,
+                "max_retries": self.retry_attempts,
+                "timeout": self.request_timeout,
+                "cost_per_char": 0.0001,  # ElevenLabs pricing
+                "performance_weight": 1.0
+            },
+            "flash": {
+                "enabled": bool(self.flash_api_key),
+                "api_key": self.flash_api_key,
+                "max_retries": self.retry_attempts,
+                "timeout": self.request_timeout,
+                "cost_per_char": 0.00005,  # Flash pricing (cheaper)
+                "performance_weight": 0.8
+            },
+            "preferred_provider": self.preferred_provider,
+            "enable_fallback": self.enable_fallback,
+            "default_language": self.default_language,
+            "target_language": self.target_language
+        }
+        return router_config
 
 
 # Global configuration instance

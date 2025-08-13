@@ -95,3 +95,15 @@ elevenlabs>=1.0.0
 
 # Data validation and parsing
 dataclasses-json>=0.6.0
+
+# ========== PHASE 3 DEPENDENCIES ==========
+# Circuit breaker pattern
+pybreaker>=1.4.0
+
+# Performance monitoring
+psutil>=5.9.0
+timeit>=1.0.0
+
+# Advanced HTTP client features
+aiohttp>=3.8.0
+requests>=2.31.0

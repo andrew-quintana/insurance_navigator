@@ -16,10 +16,11 @@ from .types import (
 )
 
 from .handler import DefaultInputHandler
-from .router import TranslationRouter
+from .router import IntelligentTranslationRouter
 from .sanitizer import SanitizationAgent
 from .integration import DefaultWorkflowHandoff
-from .cli_interface import InputProcessingCLI
+from .cli_interface import EnhancedCLIInterface
+from .config import get_config
 
 __all__ = [
     "InputHandler",
@@ -31,8 +32,9 @@ __all__ = [
     "AgentPrompt",
     "WorkflowHandoff",
     "DefaultInputHandler",
-    "TranslationRouter",
+    "IntelligentTranslationRouter",
     "SanitizationAgent",
     "DefaultWorkflowHandoff",
-    "InputProcessingCLI"
+    "EnhancedCLIInterface",
+    "get_config"
 ]
