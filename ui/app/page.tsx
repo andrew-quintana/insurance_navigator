@@ -106,7 +106,7 @@ export default function Home() {
       {/* Navigation */}
       <nav className="container mx-auto py-4 px-4 flex justify-between items-center">
         <div className="font-semibold text-xl text-teal-700">
-          <span className="text-terracotta">Accessa</span> Medicare Navigator
+          <span className="text-terracotta">Insurance Navigator</span> Medicare Navigator
         </div>
         <div className="flex items-center space-x-3">
           {isLoading ? (
@@ -350,7 +350,7 @@ export default function Home() {
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center mb-8">
             <div className="text-xl font-semibold mb-4 md:mb-0">
-              <span className="text-terracotta-300">Accessa</span>
+              <span className="text-terracotta-300">Insurance Navigator</span>
             </div>
             <div className="flex space-x-6">
               <Link href="/terms" target="_blank" className="text-cream-200 hover:text-white transition-colors">
@@ -362,7 +362,7 @@ export default function Home() {
             </div>
           </div>
           <div className="text-center text-teal-200 text-sm">
-            Medicare Navigator is a platform built by Accessa to support better healthcare navigation.
+            Medicare Navigator is a platform built by Insurance Navigator to support better healthcare navigation.
           </div>
         </div>
       </footer>

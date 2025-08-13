@@ -9,8 +9,8 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: {
-    default: "Medicare Navigator by Accessa",
-    template: "%s | Medicare Navigator by Accessa"
+    default: "Medicare Navigator by Insurance Navigator",
+    template: "%s | Medicare Navigator by Insurance Navigator"
   },
   description:
     "Navigate Medicare with confidence. Get personalized questions to ask your doctor, understand your insurance plan, and feel more in control.",
@@ -21,11 +21,11 @@ export const metadata: Metadata = {
     "Navigation",
     "Medical Questions",
     "Healthcare Planning",
-    "Accessa"
+    "Insurance Navigator"
   ],
-  authors: [{ name: "Accessa" }],
-  creator: "Accessa",
-  publisher: "Accessa",
+  authors: [{ name: "Insurance Navigator" }],
+  creator: "Insurance Navigator",
+  publisher: "Insurance Navigator",
   formatDetection: {
     email: false,
     address: false,
@@ -39,21 +39,21 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-    title: 'Medicare Navigator by Accessa',
+    title: 'Medicare Navigator by Insurance Navigator',
     description: 'Navigate Medicare with confidence. Get personalized questions to ask your doctor, understand your insurance plan, and feel more in control.',
-    siteName: 'Medicare Navigator by Accessa',
+    siteName: 'Medicare Navigator by Insurance Navigator',
     images: [
       {
         url: '/images/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Medicare Navigator by Accessa',
+        alt: 'Medicare Navigator by Insurance Navigator',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Medicare Navigator by Accessa',
+    title: 'Medicare Navigator by Insurance Navigator',
     description: 'Navigate Medicare with confidence. Get personalized questions to ask your doctor, understand your insurance plan, and feel more in control.',
     images: ['/images/twitter-image.png'],
     creator: '@accessa',

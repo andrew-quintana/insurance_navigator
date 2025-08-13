@@ -12,9 +12,9 @@ You are implementing **Phase 3** of the Short-Term Chat Memory MVP. This phase f
 ## Required Reading
 
 Before starting, read these files for complete context:
-- `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/tooling/memory/short/initial_implementation/RFC001.md` (MCP agent specification)
-- `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/tooling/memory/short/initial_implementation/PRD001.md` (memory field requirements)
-- `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/tooling/memory/short/initial_implementation/TODO001.md` (complete implementation plan)
+- `./RFC001.md` (MCP agent specification)
+- `./PRD001.md` (memory field requirements)
+- `./TODO001.md` (complete implementation plan)
 - `@TODO001_phase1_notes.md` (database functions from Phase 1)
 - `@TODO001_phase2_notes.md` (API implementation details from Phase 2)
 - `@TODO001_phase1_handoff.md` (database interface from Phase 1)

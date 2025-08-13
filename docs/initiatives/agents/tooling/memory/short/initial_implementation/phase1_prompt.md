@@ -12,9 +12,9 @@ You are implementing **Phase 1** of the Short-Term Chat Memory MVP. This phase f
 ## Required Reading
 
 Before starting, read these files for complete context:
-- `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/tooling/memory/short/initial_implementation/RFC001.md` (database schema specifications)
-- `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/tooling/memory/short/initial_implementation/PRD001.md` (requirements)
-- `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/tooling/memory/short/initial_implementation/TODO001.md` (complete implementation plan)
+- `./RFC001.md` (database schema specifications)
+- `./PRD001.md` (requirements)
+- `./TODO001.md` (complete implementation plan)
 
 ## Database Requirements
 

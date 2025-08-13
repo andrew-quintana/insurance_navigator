@@ -39,8 +39,8 @@ Each phase produces documentation files that serve as inputs for subsequent phas
 
 ### Prerequisites
 - Files/documents to read: 
-  - `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/tooling/memory/short/initial_implementation/RFC001.md` (database schema)
-  - `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/tooling/memory/short/initial_implementation/PRD001.md` (requirements)
+  - `./RFC001.md` (database schema)
+- `./PRD001.md` (requirements)
 - Previous phase outputs: None (first phase)
 - Session setup: Run `/clear` to start fresh
 
@@ -182,7 +182,7 @@ You are implementing Phase 1 of the Short-Term Chat Memory MVP. This phase focus
 
 ### Prerequisites
 - Files/documents to read:
-  - `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/tooling/memory/short/initial_implementation/RFC001.md` (API specification)
+  - `./RFC001.md` (API specification)
   - `@TODO001_phase1_notes.md` (database implementation details)
   - `@TODO001_phase1_decisions.md` (database design context)
   - `@TODO001_phase1_handoff.md` (available database functions)
@@ -348,8 +348,8 @@ You are implementing Phase 2 of the Short-Term Chat Memory MVP. This phase focus
 
 ### Prerequisites  
 - Files/documents to read:
-  - `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/tooling/memory/short/initial_implementation/RFC001.md` (MCP agent specification)
-  - `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/tooling/memory/short/initial_implementation/PRD001.md` (memory field requirements)
+  - `./RFC001.md` (MCP agent specification)
+  - `./PRD001.md` (memory field requirements)
   - `@TODO001_phase1_notes.md` (database functions)
   - `@TODO001_phase2_notes.md` (API implementation details)
   - `@TODO001_phase1_handoff.md` (database interface)
@@ -517,8 +517,8 @@ You are implementing Phase 3 of the Short-Term Chat Memory MVP. This phase focus
 
 ### Prerequisites
 - Files/documents to read:
-  - `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/tooling/memory/short/initial_implementation/PRD001.md` (acceptance criteria)
-  - `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/tooling/memory/short/initial_implementation/RFC001.md` (performance requirements)
+  - `./PRD001.md` (acceptance criteria)
+  - `./RFC001.md` (performance requirements)
   - `@TODO001_phase1_notes.md` (database implementation)
   - `@TODO001_phase2_notes.md` (API implementation)
   - `@TODO001_phase3_notes.md` (processing implementation)

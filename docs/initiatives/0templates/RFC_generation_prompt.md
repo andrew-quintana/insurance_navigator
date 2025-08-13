@@ -1,6 +1,6 @@
 # RFC Generation Prompt Template
 
-Create a comprehensive RFC001.md file for [PROJECT/FEATURE NAME], using the completed PRD001.md as foundational context.
+Create a comprehensive RFC001.md file for [PROJECT/FEATURE NAME], using the completed PRD001.md as foundational context, for a coding agent to reference in making more documentation and implementing the initiative.
 
 **REFERENCE THE PRD:**
 - PRD file location: [Path to your PRD001.md]

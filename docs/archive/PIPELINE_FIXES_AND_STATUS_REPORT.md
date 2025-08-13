@@ -12,7 +12,7 @@ Following comprehensive analysis of the upload pipeline failures, I have success
 ### ✅ FIXED: Main.py IndentationError
 **Issue:** IndentationError in main.py preventing local server startup
 ```
-File "/Users/aq_home/1Projects/accessa/insurance_navigator/main.py", line 198
+File "main.py", line 198
 if method.upper() == 'POST':
 ^^
 IndentationError: expected an indented block after 'try' statement on line 197

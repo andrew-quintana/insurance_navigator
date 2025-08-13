@@ -12,8 +12,8 @@ You are implementing **Phase 2** of the Short-Term Chat Memory MVP. This phase f
 ## Required Reading
 
 Before starting, read these files for complete context:
-- `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/tooling/memory/short/initial_implementation/RFC001.md` (API specification)
-- `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/tooling/memory/short/initial_implementation/TODO001.md` (complete implementation plan)
+- `./RFC001.md` (API specification)
+- `./TODO001.md` (complete implementation plan)
 - `@TODO001_phase1_notes.md` (database implementation details from Phase 1)
 - `@TODO001_phase1_decisions.md` (database design context from Phase 1)  
 - `@TODO001_phase1_handoff.md` (available database functions from Phase 1)

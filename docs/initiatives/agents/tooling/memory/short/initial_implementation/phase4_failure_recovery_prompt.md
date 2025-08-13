@@ -12,9 +12,9 @@ You are implementing **Phase 4** of the Short-Term Chat Memory MVP with the **se
 ## Required Reading
 
 Before starting, read these files for complete context:
-- `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/tooling/memory/short/initial_implementation/PRD001.md` (acceptance criteria)
-- `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/tooling/memory/short/initial_implementation/RFC001.md` (performance requirements)
-- `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/tooling/memory/short/initial_implementation/TODO001.md` (implementation status - note Phase 4 blocking issues)
+- `./PRD001.md` (acceptance criteria)
+- `./RFC001.md` (performance requirements)
+- `./TODO001.md` (implementation status - note Phase 4 blocking issues)
 - `@TODO001_phase1_notes.md`, `@TODO001_phase2_notes.md`, `@TODO001_phase3_notes.md` (component implementations)
 - `@TODO001_phase1_handoff.md`, `@TODO001_phase2_handoff.md`, `@TODO001_phase3_handoff.md` (component interfaces)
 

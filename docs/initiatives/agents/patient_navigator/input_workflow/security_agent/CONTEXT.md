@@ -7,7 +7,7 @@ Security Agent – Prompt Injection Flagging (MVP)
 
 ## 🧭 Core Product Context
 
-This agent is part of the **Accessa Insurance Navigator** system. It operates within the **input processing workflow**, sitting between the initial user message and the downstream agents.
+This agent is part of the **Insurance Navigator Insurance Navigator** system. It operates within the **input processing workflow**, sitting between the initial user message and the downstream agents.
 
 **Purpose:**  
 To detect prompt injection attempts in user input **before** they’re passed into sensitive system prompts or LLM contexts. This should act as a prompt injection classifier.

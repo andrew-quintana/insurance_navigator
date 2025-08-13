@@ -30,7 +30,7 @@ Core pipeline implemented in Phase 2:
 
 Before starting implementation, read these files for complete context:
 
-1. `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/patient_navigator/input_workflow/RFC001.md` - Technical architecture and fallback strategy
+1. `./RFC001.md` - Technical architecture and fallback strategy
 2. `@/docs/initiatives/agents/patient_navigator/input_workflow/TODO001_phase2_notes.md` - Phase 2 implementation details and architecture decisions
 3. `@/docs/initiatives/agents/patient_navigator/input_workflow/TODO001_phase2_handoff.md` - Known issues and Phase 3 requirements from Phase 2
 4. `@/docs/initiatives/agents/patient_navigator/input_workflow/TODO001_phase2_test_update.md` - Performance baselines and testing results from Phase 2

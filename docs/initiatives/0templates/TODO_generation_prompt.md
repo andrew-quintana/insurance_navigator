@@ -1,6 +1,6 @@
 # Phased TODO Generation Prompt Template
 
-Create a comprehensive TODO001.md implementation breakdown for [PROJECT/FEATURE NAME], using both the PRD001.md and RFC001.md as context. This TODO will be organized into phases designed for execution in separate Claude Code sessions.
+Create a comprehensive TODO001.md implementation breakdown for [PROJECT/FEATURE NAME], using both the PRD001.md and RFC001.md as context. This TODO will be organized into phases designed for execution in separate coding agent sessions, optimized for Cursor's coding agent in 'auto-select model' mode.
 
 **REFERENCE DOCUMENTS:**
 - PRD file: [Path to PRD001.md] - for requirements and acceptance criteria

@@ -1,6 +1,6 @@
 # PRD Generation Prompt Template
 
-Create a comprehensive PRD.md file for [PROJECT/FEATURE NAME].
+Create a comprehensive PRD.md file for [PROJECT/FEATURE NAME] for a coding agent to reference in making more documentation and implementing the initiative.
 
 **PROJECT CONTEXT:**
 - Project: [Your project name and brief description]

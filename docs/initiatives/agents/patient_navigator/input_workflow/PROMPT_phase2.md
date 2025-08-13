@@ -28,7 +28,7 @@ Foundation completed in Phase 1:
 
 Before starting implementation, read these files for complete context:
 
-1. `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/patient_navigator/input_workflow/RFC001.md` - Technical architecture and component specifications
+1. `./RFC001.md` - Technical architecture and component specifications
 2. `@TODO001_phase1_notes.md` - Phase 1 implementation details
 3. `@TODO001_phase1_handoff.md` - Phase 1 handoff notes and dependencies
 

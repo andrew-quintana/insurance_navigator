@@ -22,8 +22,8 @@ You are implementing **Phase 1: Setup & Foundation** for the Insurance Navigator
 
 Before starting implementation, read these files for complete context:
 
-1. `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/patient_navigator/input_workflow/PRD001.md` - Product requirements and acceptance criteria
-2. `/Users/aq_home/1Projects/accessa/insurance_navigator/docs/initiatives/agents/patient_navigator/input_workflow/RFC001.md` - Technical architecture and component specifications
+1. `./PRD001.md` - Product requirements and acceptance criteria
+2. `./RFC001.md` - Technical architecture and component specifications
 
 ## Phase 1 Tasks
 

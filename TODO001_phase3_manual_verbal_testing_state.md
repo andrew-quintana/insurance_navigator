@@ -97,7 +97,7 @@ async for chunk in response:
 ## Environment Setup
 - **API Key**: `ELEVENLABS_API_KEY` in `.env.development`
 - **Python Dependencies**: `elevenlabs`, `httpx`, `python-dotenv`
-- **Working Directory**: `/Users/aq_home/1Projects/accessa/insurance_navigator`
+- **Working Directory**: Project root directory
 
 ## Test Results Summary
 - **Last Test Run**: `python test_elevenlabs_stt.py` (exit code: 0)

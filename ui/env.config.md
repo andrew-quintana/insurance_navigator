@@ -42,7 +42,7 @@ NEXT_PUBLIC_ALLOWED_ORIGINS=http://localhost:3000
 
 # Theme and UI
 NEXT_PUBLIC_DEFAULT_THEME=light
-NEXT_PUBLIC_BRAND_NAME="Medicare Navigator by Accessa"
+NEXT_PUBLIC_BRAND_NAME="Medicare Navigator by Insurance Navigator"
 
 # Rate Limiting
 NEXT_PUBLIC_RATE_LIMIT_ENABLED=true
