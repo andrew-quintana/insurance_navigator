@@ -3,7 +3,7 @@ Pydantic models for the upload pipeline API.
 """
 
 from typing import Optional, Dict, Any
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 import uuid
 
@@ -14,10 +14,11 @@ class UploadRequest(BaseModel):
     filename: str = Field(..., max_length=120, description="Document filename")
     bytes_len: int = Field(..., gt=0, le=26214400, description="File size in bytes (max 25MB)")
     mime: str = Field(..., description="MIME type")
-    sha256: str = Field(..., regex=r'^[a-f0-9]{64}$', description="SHA256 hash of file content")
+    sha256: str = Field(..., pattern=r'^[a-f0-9]{64}$', description="SHA256 hash of file content")
     ocr: bool = Field(False, description="Whether OCR processing is requested")
     
-    @validator('filename')
+    @field_validator('filename')
+    @classmethod
     def validate_filename(cls, v):
         # Strip control characters per CONTEXT.md §9
         cleaned = ''.join(char for char in v if ord(char) >= 32)
@@ -25,7 +26,8 @@ class UploadRequest(BaseModel):
             raise ValueError('Filename cannot be empty after cleaning')
         return cleaned
     
-    @validator('mime')
+    @field_validator('mime')
+    @classmethod
     def validate_mime(cls, v):
         if v != 'application/pdf':
             raise ValueError('Only application/pdf MIME type is supported')
@@ -54,14 +56,16 @@ class JobStatusResponse(BaseModel):
     last_error: Optional[Dict[str, Any]] = Field(None, description="Last error details")
     updated_at: datetime = Field(..., description="Last update timestamp")
     
-    @validator('stage')
+    @field_validator('stage')
+    @classmethod
     def validate_stage(cls, v):
         valid_stages = {'queued', 'job_validated', 'parsing', 'parsed', 'parse_validated', 'chunking', 'chunks_buffered', 'chunked', 'embedding', 'embeddings_buffered', 'embedded'}
         if v not in valid_stages:
             raise ValueError(f'Invalid stage: {v}')
         return v
     
-    @validator('state')
+    @field_validator('state')
+    @classmethod
     def validate_state(cls, v):
         valid_states = {'queued', 'working', 'retryable', 'done', 'deadletter'}
         if v not in valid_states:

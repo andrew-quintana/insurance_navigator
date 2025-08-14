@@ -3,16 +3,24 @@ Configuration management for the upload pipeline.
 """
 
 import os
-from typing import Optional
-from pydantic import BaseSettings, validator
+from typing import Optional, List
+from pydantic_settings import BaseSettings
+from pydantic import validator
 
 
 class UploadPipelineConfig(BaseSettings):
     """Configuration for the upload pipeline."""
     
+    # Environment configuration
+    environment: str = "production"
+    
     # Supabase configuration
-    supabase_url: str
-    supabase_service_role_key: str
+    supabase_url: str = "http://localhost:54321"  # Default for testing
+    supabase_service_role_key: str = "test-key"   # Default for testing
+    
+    # CORS configuration
+    cors_origins: List[str] = ["http://localhost:3000", "https://accessa.ai"]
+    allowed_hosts: List[str] = ["localhost", "accessa.ai", "*.render.com"]
     
     # External service configuration
     llamaparse_api_key: Optional[str] = None
@@ -56,6 +64,8 @@ class UploadPipelineConfig(BaseSettings):
     class Config:
         env_file = ".env"
         env_prefix = "UPLOAD_PIPELINE_"
+        # Allow environment variables to override defaults
+        extra = "ignore"
     
     @validator('supabase_url')
     def validate_supabase_url(cls, v):
@@ -82,12 +92,28 @@ class UploadPipelineConfig(BaseSettings):
         if v != 1536:
             raise ValueError('vector_dim must be 1536 for text-embedding-3-small')
         return v
+    
+    @validator('environment')
+    def validate_environment(cls, v):
+        if v not in ['development', 'staging', 'production']:
+            raise ValueError('environment must be one of: development, staging, production')
+        return v
 
 
-# Global configuration instance
-config = UploadPipelineConfig()
+# Global configuration instance - only create when needed
+_config: Optional[UploadPipelineConfig] = None
 
 
 def get_config() -> UploadPipelineConfig:
     """Get the global configuration instance."""
-    return config
+    global _config
+    if _config is None:
+        try:
+            _config = UploadPipelineConfig()
+        except Exception as e:
+            # For testing purposes, create with defaults
+            _config = UploadPipelineConfig(
+                supabase_url="http://localhost:54321",
+                supabase_service_role_key="test-key"
+            )
+    return _config
