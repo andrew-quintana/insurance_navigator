@@ -279,7 +279,7 @@ RETURNING u.*;
 
 **Stage rules** (always check idempotency first):
 - **Job validation**: dedupe via `(user_id, file_sha256)` unique; if hit → advance to `job_validated`.
-- **Parse**: if `parsed_path` present and `parsed_sha256` set → advance to `parsed`; else request parse and poll until stored; compute `parsed_sha256` → advance to `parse_validated`.
+- **Parse**: if `parsed_path` present and `parsed_sha256` set → advance to `parsed`; else request parse and poll until stored; compute `parsed_sha256` → advance to `parse_validated`. Process document appropriately if `parsed_sha256` found to not be unique, including quarantine and deletion. Skip to next step if a duplicate is found as future steps will also confirm idempotence and therefore will address this issue.
 - **Chunk**: if chunks exist for `(document_id, chunker_name, chunker_version)` and counts match → advance to `chunked`; else re-chunk to buffer → advance to `chunks_buffered`, then commit → advance to `chunked`.
 - **Embed**: if `document_chunks` rows have matching `embed_model/version` populated (count check) → advance to `embedded`; else write vectors to buffer → advance to `embeddings_buffered`, **advisory lock by `document_id`**, copy buffer→final columns (`embedding`, `embed_model`, `embed_version`, `vector_dim`, `embed_updated_at`), delete buffer rows → advance to `embedded`.
 - **Complete**: mark `done`; set derived status in `documents.processing_status`.

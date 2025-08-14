@@ -85,9 +85,11 @@ For each phase, include:
 - [ ] Task 6
 
 #### Documentation
+- [ ] Go through @TODO001 or the current TODO version and check off boxes
 - [ ] Save @TODO001_phase[X]_notes.md
 - [ ] Save @TODO001_phase[X]_decisions.md
 - [ ] Save @TODO001_phase[X]_handoff.md
+- [ ] Save @TODO001_phase[x]_testing_summary.md
 ```
 
 **FINAL PROJECT CHECKLIST:**
@@ -119,6 +121,7 @@ At the end of the TODO.md, include a comprehensive project completion checklist:
 - [ ] Code documentation complete
 - [ ] Deployment process verified
 - [ ] Final validation complete
+- [ ] Produce a DEBT001.md document to communicate the technical debt from the effort
 
 ### Project Sign-off
 - [ ] All acceptance criteria met (from PRD)
