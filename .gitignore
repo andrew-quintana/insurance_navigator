@@ -90,3 +90,7 @@ out/
 .DS_Store
 Thumbs.db
 graph/sandbox/
+
+# Vibe Coding docs
+docs/initiatives/0templates/
+docs/initiatives/documentation_generation_agent_prompt.md
