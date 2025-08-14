@@ -43,7 +43,7 @@ Your update had the bucket/key order flipped. We keep **fixed private buckets** 
 - **Source of truth**: `upload_jobs.stage` + `upload_jobs.state`.  
 - **`documents.processing_status`**: **derived** view of job progress (not authoritative).
 
-**Stages** (sequential): `upload_validated → parsing → chunking → embedding → finalizing`  
+**Stages** (sequential): `queued → job_validated → parsing → parsed → parse_validated → chunking → chunks_buffered → chunked → embedding → embeddings_buffered → embedded`  
 **State**: `queued | working | retryable | done | deadletter`
 
 Legal transitions and error branches are enforced by worker logic (see §8).
@@ -211,7 +211,7 @@ Response:
 ```
 
 ### `upload_jobs.payload` by stage (examples)
-- `upload_validated`:
+- `job_validated`:
 ```json
 {
   "user_id":"uuid",
@@ -278,11 +278,11 @@ RETURNING u.*;
 ```
 
 **Stage rules** (always check idempotency first):
-- **Upload validation**: dedupe via `(user_id, file_sha256)` unique; if hit → advance.
-- **Parse**: if `parsed_path` present and `parsed_sha256` set → advance; else request parse and poll until stored; compute `parsed_sha256`.
-- **Chunk**: if chunks exist for `(document_id, chunker_name, chunker_version)` and counts match → advance; else re-chunk to buffer, then commit.
-- **Embed**: if `document_chunks` rows have matching `embed_model/version` populated (count check) → advance; else write vectors to buffer, **advisory lock by `document_id`**, copy buffer→final columns (`embedding`, `embed_model`, `embed_version`, `vector_dim`, `embed_updated_at`), delete buffer rows.
-- **Finalize**: mark `done`; set derived status in `documents.processing_status`.
+- **Job validation**: dedupe via `(user_id, file_sha256)` unique; if hit → advance to `job_validated`.
+- **Parse**: if `parsed_path` present and `parsed_sha256` set → advance to `parsed`; else request parse and poll until stored; compute `parsed_sha256` → advance to `parse_validated`.
+- **Chunk**: if chunks exist for `(document_id, chunker_name, chunker_version)` and counts match → advance to `chunked`; else re-chunk to buffer → advance to `chunks_buffered`, then commit → advance to `chunked`.
+- **Embed**: if `document_chunks` rows have matching `embed_model/version` populated (count check) → advance to `embedded`; else write vectors to buffer → advance to `embeddings_buffered`, **advisory lock by `document_id`**, copy buffer→final columns (`embedding`, `embed_model`, `embed_version`, `vector_dim`, `embed_updated_at`), delete buffer rows → advance to `embedded`.
+- **Complete**: mark `done`; set derived status in `documents.processing_status`.
 
 **Retries/backoff**:
 - Transient error → `state='retryable'`, `retry_count++`, schedule with exponential backoff (2^n * base). A poller moves `retryable→queued` when delay elapses. Max retries → `deadletter`.
