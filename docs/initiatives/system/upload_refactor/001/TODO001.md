@@ -22,9 +22,9 @@ This TODO builds upon **PRD001.md** and **RFC001.md** to provide detailed implem
 
 ### Prerequisites
 - Files/documents to read: 
-  - `@docs/initiatives/db/upload-refactor/PRD001.md`
-  - `@docs/initiatives/db/upload-refactor/RFC001.md`
-  - `@docs/initiatives/db/upload-refactor/CONTEXT.md`
+  - `@docs/initiatives/db/upload_refactor/PRD001.md`
+  - `@docs/initiatives/db/upload_refactor/RFC001.md`
+  - `@docs/initiatives/db/upload_refactor/CONTEXT.md`
 - Previous phase outputs: None (initial phase)
 - Session setup: Run `/clear` to start fresh
 
@@ -73,70 +73,71 @@ The implementation must follow the RFC001 technical specifications and retire ex
 ### Progress Checklist
 
 #### Setup
-- [ ] Set up development environment with Python 3.11+
-- [ ] Install required dependencies (FastAPI, asyncpg, httpx, etc.)
-- [ ] Configure Supabase connection and test service-role access
-- [ ] Verify external service credentials (LlamaIndex, OpenAI)
+- [x] Set up development environment with Python 3.11+
+- [x] Install required dependencies (FastAPI, asyncpg, httpx, etc.)
+- [x] Configure Supabase connection and test service-role access
+- [x] Verify external service credentials (LlamaIndex, OpenAI)
 
 #### Legacy System Analysis
-- [ ] Complete dependency audit of `db.services` usage
-  - [ ] Search entire codebase for imports
-  - [ ] Document current agent integrations
-  - [ ] Map frontend API calls
-- [ ] Analyze current Supabase Edge Functions
-  - [ ] Document upload-handler patterns
-  - [ ] Analyze doc-parser integration
-  - [ ] Review chunker and embedder logic
-- [ ] Create legacy system retirement plan
-  - [ ] Define migration timeline
-  - [ ] Identify rollback requirements
+- [x] Complete dependency audit of `db.services` usage
+  - [x] Search entire codebase for imports
+  - [x] Document current agent integrations
+  - [x] Map frontend API calls
+- [x] Analyze current Supabase Edge Functions
+  - [x] Document upload-handler patterns
+  - [x] Analyze doc-parser integration
+  - [x] Review chunker and embedder logic
+- [x] Create legacy system retirement plan
+  - [x] Define migration timeline
+  - [x] Identify rollback requirements
 
 #### Database Schema
-- [ ] Create migration file: `20250814000000_init_upload_pipeline.sql`
-  - [ ] documents table with proper constraints
-  - [ ] upload_jobs table with stage/state management
-  - [ ] document_chunks table with co-located embeddings
-  - [ ] document_vector_buffer table for atomic updates
-  - [ ] events table for comprehensive logging
-- [ ] Add required indexes and constraints
-  - [ ] Unique index on (user_id, file_sha256) for deduplication
-  - [ ] Job queue indexes for efficient polling
-  - [ ] HNSW index for vector similarity search
-- [ ] Implement RLS policies
-  - [ ] User-scoped access for documents and chunks
-  - [ ] Optional job visibility for debugging
+- [x] Create migration file: `20250814000000_init_upload_pipeline.sql`
+  - [x] documents table with proper constraints
+  - [x] upload_jobs table with stage/state management
+  - [x] document_chunks table with co-located embeddings
+  - [x] document_vector_buffer table for atomic updates
+  - [x] events table for comprehensive logging
+- [x] Add required indexes and constraints
+  - [x] Unique index on (user_id, file_sha256) for deduplication
+  - [x] Job queue indexes for efficient polling
+  - [x] HNSW index for vector similarity search
+- [x] Implement RLS policies
+  - [x] User-scoped access for documents and chunks
+  - [x] Optional job visibility for debugging
 
 #### Shared Utilities
-- [ ] Implement UUID generation utilities
-  - [ ] UUIDv5 with namespace `6c8a1e6e-1f0b-4aa8-9f0a-1a7c2e6f2b42`
-  - [ ] Canonical string normalization (lowercase, colon-separated)
-  - [ ] Unit tests for deterministic behavior
-- [ ] Create logging framework
-  - [ ] `log_event()` function with proper taxonomy
-  - [ ] Event code enumeration and validation
-  - [ ] Correlation ID management
-- [ ] Develop markdown normalization
-  - [ ] Line ending normalization
-  - [ ] Heading and formatting standardization
-  - [ ] SHA256 computation for content verification
+- [x] Implement UUID generation utilities
+  - [x] UUIDv5 with namespace `6c8a1e6e-1f0b-4aa8-9f0a-1a7c2e6f2b42`
+  - [x] Canonical string normalization (lowercase, colon-separated)
+  - [x] Unit tests for deterministic behavior
+- [x] Create logging framework
+  - [x] `log_event()` function with proper taxonomy
+  - [x] Event code enumeration and validation
+  - [x] Correlation ID management
+- [x] Develop markdown normalization
+  - [x] Line ending normalization
+  - [x] Heading and formatting standardization
+  - [x] SHA256 computation for content verification
 
 #### Configuration Management
-- [ ] Create FastAPI project structure
-  - [ ] API endpoints module structure
-  - [ ] Worker process organization
-  - [ ] Shared configuration and utilities
-- [ ] Environment configuration
-  - [ ] Supabase connection settings
-  - [ ] External service API keys
-  - [ ] Rate limiting and timeout configurations
-- [ ] Validation schemas
-  - [ ] API request/response validation
-  - [ ] Job payload validation by stage
+- [x] Create FastAPI project structure
+  - [x] API endpoints module structure
+  - [x] Worker process organization
+  - [x] Shared configuration and utilities
+- [x] Environment configuration
+  - [x] Supabase connection settings
+  - [x] External service API keys
+  - [x] Rate limiting and timeout configurations
+- [x] Validation schemas
+  - [x] API request/response validation
+  - [x] Job payload validation by stage
 
 #### Documentation
-- [ ] Save `@TODO001_phase1_notes.md` with implementation details
-- [ ] Save `@TODO001_phase1_decisions.md` with architectural choices
-- [ ] Save `@TODO001_phase1_handoff.md` with next phase requirements
+- [x] Save `@TODO001_phase1_notes.md` with implementation details
+- [x] Save `@TODO001_phase1_decisions.md` with architectural choices
+- [x] Save `@TODO001_phase1_handoff.md` with next phase requirements
+- [x] Save `@TODO001_phase1_testing_summary.md` with testing activities and results
 
 ---
 
@@ -147,7 +148,7 @@ The implementation must follow the RFC001 technical specifications and retire ex
   - `@TODO001_phase1_notes.md`
   - `@TODO001_phase1_decisions.md`
   - `@TODO001_phase1_handoff.md`
-  - `@docs/initiatives/db/upload-refactor/CONTEXT.md`
+  - `@docs/initiatives/db/upload_refactor/CONTEXT.md`
 - Previous phase outputs: Database schema, shared utilities, environment setup
 - Session setup: Run `/clear` to start fresh
 
@@ -186,85 +187,87 @@ You are implementing the core API endpoints and job queue system. This phase bui
 - Save implementation notes to: `@TODO001_phase2_notes.md`
 - Document API decisions and patterns in: `@TODO001_phase2_decisions.md`
 - List worker implementation requirements in: `@TODO001_phase2_handoff.md`
+- Save testing summary to: `@TODO001_phase2_testing_summary.md`
 
 ### Progress Checklist
 
 #### FastAPI Application
-- [ ] Create main application with FastAPI
-  - [ ] Configure middleware for CORS, authentication
-  - [ ] Set up exception handlers and logging
-  - [ ] Add health check endpoints
-- [ ] Database integration
-  - [ ] Connection pool configuration
-  - [ ] Transaction management utilities
-  - [ ] Database health monitoring
-- [ ] Authentication middleware
-  - [ ] Supabase JWT validation
-  - [ ] User context extraction
-  - [ ] Rate limiting by user
+- [x] Create main application with FastAPI
+  - [x] Configure middleware for CORS, authentication
+  - [x] Set up exception handlers and logging
+  - [x] Add health check endpoints
+- [x] Database integration
+  - [x] Connection pool configuration
+  - [x] Transaction management utilities
+  - [x] Database health monitoring
+- [x] Authentication middleware
+  - [x] Supabase JWT validation
+  - [x] User context extraction
+  - [x] Rate limiting by user
 
 #### Upload Endpoint Implementation
-- [ ] Implement `POST /upload` endpoint
-  - [ ] Request validation using Pydantic models
-  - [ ] File metadata validation (size, MIME, filename)
-  - [ ] SHA256 hash verification
-- [ ] Deduplication logic
-  - [ ] Check `(user_id, file_sha256)` uniqueness
-  - [ ] Return existing document if duplicate found
-  - [ ] Handle concurrent upload conflicts
-- [ ] Storage integration
-  - [ ] Generate signed URLs for file uploads
-  - [ ] Configure upload expiration (30 minutes)
-  - [ ] Validate storage bucket permissions
-- [ ] Job creation
-  - [ ] Create document record with deterministic ID
-  - [ ] Initialize upload_validated job
-  - [ ] Set proper payload and stage information
+- [x] Implement `POST /upload` endpoint
+  - [x] Request validation using Pydantic models
+  - [x] File metadata validation (size, MIME, filename)
+  - [x] SHA256 hash verification
+- [x] Deduplication logic
+  - [x] Check `(user_id, file_sha256)` uniqueness
+  - [x] Return existing document if duplicate found
+  - [x] Handle concurrent upload conflicts
+- [x] Storage integration
+  - [x] Generate signed URLs for file uploads
+  - [x] Configure upload expiration (30 minutes)
+  - [x] Validate storage bucket permissions
+- [x] Job creation
+  - [x] Create document record with deterministic ID
+  - [x] Initialize upload_validated job
+  - [x] Set proper payload and stage information
 
 #### Job Status Endpoint
-- [ ] Implement `GET /job/{job_id}` endpoint
-  - [ ] Job lookup with user authorization
-  - [ ] Stage and state reporting
-  - [ ] Progress percentage calculation
-- [ ] Error reporting
-  - [ ] Last error information formatting
-  - [ ] Retry count and next retry scheduling
-  - [ ] Correlation ID for debugging
-- [ ] Real-time updates consideration
-  - [ ] Polling frequency optimization
-  - [ ] Caching strategy for frequently queried jobs
+- [x] Implement `GET /job/{job_id}` endpoint
+  - [x] Job lookup with user authorization
+  - [x] Stage and state reporting
+  - [x] Progress percentage calculation
+- [x] Error reporting
+  - [x] Last error information formatting
+  - [x] Retry count and next retry scheduling
+  - [x] Correlation ID for debugging
+- [x] Real-time updates consideration
+  - [x] Polling frequency optimization
+  - [x] Caching strategy for frequently queried jobs
 
 #### Job Queue System
-- [ ] Job state management
-  - [ ] State transition validation
-  - [ ] Timestamp tracking (created, started, finished)
-  - [ ] Worker claim and release logic
-- [ ] Idempotency framework
-  - [ ] Duplicate job prevention
-  - [ ] Resume capability validation
-  - [ ] Stage completion verification
-- [ ] Queue operations
-  - [ ] Efficient job dequeuing
-  - [ ] Priority handling for retries
-  - [ ] Dead letter queue preparation
+- [x] Job state management
+  - [x] State transition validation
+  - [x] Timestamp tracking (created, started, finished)
+  - [x] Worker claim and release logic
+- [x] Idempotency framework
+  - [x] Duplicate job prevention
+  - [x] Resume capability validation
+  - [x] Stage completion verification
+- [x] Queue operations
+  - [x] Efficient job dequeuing
+  - [x] Priority handling for retries
+  - [x] Dead letter queue preparation
 
 #### Testing & Validation
-- [ ] Unit tests for API endpoints
-  - [ ] Upload validation edge cases
-  - [ ] Deduplication scenarios
-  - [ ] Error handling paths
-- [ ] Integration tests
-  - [ ] Database operations
-  - [ ] Storage integration
-  - [ ] Authentication flows
-- [ ] Performance testing
-  - [ ] Concurrent upload handling
-  - [ ] Database query optimization
+- [x] Unit tests for API endpoints
+  - [x] Upload validation edge cases
+  - [x] Deduplication scenarios
+  - [x] Error handling paths
+- [x] Integration tests
+  - [x] Database operations
+  - [x] Storage integration
+  - [x] Authentication flows
+- [x] Performance testing
+  - [x] Concurrent upload handling
+  - [x] Database query optimization
 
 #### Documentation
-- [ ] Save `@TODO001_phase2_notes.md` with implementation details
-- [ ] Save `@TODO001_phase2_decisions.md` with API design choices
-- [ ] Save `@TODO001_phase2_handoff.md` with worker requirements
+- [x] Save `@TODO001_phase2_notes.md` with implementation details
+- [x] Save `@TODO001_phase2_decisions.md` with API design choices
+- [x] Save `@TODO001_phase2_handoff.md` with worker requirements
+- [x] Save `@TODO001_phase2_testing_summary.md` with testing activities and results
 
 ---
 
@@ -275,7 +278,7 @@ You are implementing the core API endpoints and job queue system. This phase bui
   - `@TODO001_phase2_notes.md`
   - `@TODO001_phase2_decisions.md`
   - `@TODO001_phase2_handoff.md`
-  - `@docs/initiatives/db/upload-refactor/CONTEXT.md`
+  - `@docs/initiatives/db/upload_refactor/CONTEXT.md`
 - Previous phase outputs: API endpoints, job queue system, database schema
 - Session setup: Run `/clear` to start fresh
 
@@ -320,6 +323,7 @@ You are implementing the worker processing pipeline that handles each stage: par
 - Save implementation notes to: `@TODO001_phase3_notes.md`
 - Document worker patterns and decisions in: `@TODO001_phase3_decisions.md`
 - List integration testing requirements in: `@TODO001_phase3_handoff.md`
+- Save testing summary to: `@TODO001_phase3_testing_summary.md`
 
 ### Progress Checklist
 
@@ -427,6 +431,7 @@ You are implementing the worker processing pipeline that handles each stage: par
 - [ ] Save `@TODO001_phase3_notes.md` with worker implementation details
 - [ ] Save `@TODO001_phase3_decisions.md` with processing patterns
 - [ ] Save `@TODO001_phase3_handoff.md` with integration test requirements
+- [ ] Save `@TODO001_phase3_testing_summary.md` with testing activities and results
 
 ---
 
@@ -482,6 +487,7 @@ You are implementing the integration testing and legacy system migration. This p
 - Save implementation notes to: `@TODO001_phase4_notes.md`
 - Document migration outcomes in: `@TODO001_phase4_decisions.md`
 - Create deployment checklist in: `@TODO001_phase4_handoff.md`
+- Save testing summary to: `@TODO001_phase4_testing_summary.md`
 
 ### Progress Checklist
 
@@ -577,6 +583,7 @@ You are implementing the integration testing and legacy system migration. This p
 - [ ] Save `@TODO001_phase4_notes.md` with integration outcomes
 - [ ] Save `@TODO001_phase4_decisions.md` with migration patterns
 - [ ] Save `@TODO001_phase4_handoff.md` with deployment checklist
+- [ ] Save `@TODO001_phase4_testing_summary.md` with testing activities and results
 
 ---
 
@@ -632,6 +639,7 @@ You are implementing the production deployment and final validation. This phase 
 - Save implementation notes to: `@TODO001_phase5_notes.md`
 - Document production configuration in: `@TODO001_phase5_decisions.md`
 - Create operational guide in: `@TODO001_phase5_handoff.md`
+- Save testing summary to: `@TODO001_phase5_testing_summary.md`
 
 ### Progress Checklist
 
@@ -731,24 +739,27 @@ You are implementing the production deployment and final validation. This phase 
 - [ ] Save `@TODO001_phase5_notes.md` with production deployment details
 - [ ] Save `@TODO001_phase5_decisions.md` with operational configuration
 - [ ] Save `@TODO001_phase5_handoff.md` with maintenance procedures
+- [ ] Save `@TODO001_phase5_testing_summary.md` with testing activities and results
 
 ---
 
 ## Project Completion Checklist
 
 ### Phase 1: Foundation & Legacy Assessment
-- [ ] Legacy dependency mapping completed
-- [ ] Database schema deployed and validated
-- [ ] Shared utilities implemented and tested
-- [ ] Environment configuration established
-- [ ] Phase 1 documentation saved
+- [x] Legacy dependency mapping completed
+- [x] Database schema deployed and validated
+- [x] Shared utilities implemented and tested
+- [x] Environment configuration established
+- [x] Phase 1 documentation saved
+- [x] Phase 1 testing summary saved
 
 ### Phase 2: Core API & Job Queue Implementation
-- [ ] FastAPI application deployed with proper middleware
-- [ ] Upload endpoint with validation and deduplication
-- [ ] Job status endpoint with progress tracking
-- [ ] Job queue system with idempotency
-- [ ] Phase 2 documentation saved
+- [x] FastAPI application deployed with proper middleware
+- [x] Upload endpoint with validation and deduplication
+- [x] Job status endpoint with progress tracking
+- [x] Job queue system with idempotency
+- [x] Phase 2 documentation saved
+- [x] Phase 2 testing summary saved
 
 ### Phase 3: Worker Processing Pipeline
 - [ ] Worker framework with polling and state management
@@ -757,6 +768,7 @@ You are implementing the production deployment and final validation. This phase 
 - [ ] Embedding stage with buffer-based updates
 - [ ] Comprehensive error handling and retry logic
 - [ ] Phase 3 documentation saved
+- [ ] Phase 3 testing summary saved
 
 ### Phase 4: Integration & Legacy Migration
 - [ ] End-to-end integration testing completed
@@ -765,6 +777,7 @@ You are implementing the production deployment and final validation. This phase 
 - [ ] Data migration completed and validated
 - [ ] Legacy systems safely retired
 - [ ] Phase 4 documentation saved
+- [ ] Phase 4 testing summary saved
 
 ### Phase 5: Production Deployment & Validation
 - [ ] Production deployment completed
@@ -773,6 +786,7 @@ You are implementing the production deployment and final validation. This phase 
 - [ ] Monitoring and alerting operational
 - [ ] Final validation and stakeholder approval
 - [ ] Phase 5 documentation saved
+- [ ] Phase 5 testing summary saved
 
 ### Project Sign-off
 - [ ] All PRD acceptance criteria met
@@ -783,6 +797,7 @@ You are implementing the production deployment and final validation. This phase 
 - [ ] Legacy systems successfully retired
 - [ ] Stakeholder approval received
 - [ ] Project ready for production operation
+- [ ] Technical debt documented in DEBT001.md
 
 ### Success Metrics Achieved
 - [ ] Document processing success rate: >95%
@@ -810,6 +825,8 @@ This TODO is designed for execution across 5 separate Claude Code sessions, with
 - Validation checklists ensure nothing is missed
 - Documentation requirements maintain project continuity
 - Final validation confirms all PRD/RFC requirements are met
+- Testing summary documents required for each phase
+- Technical debt must be documented in DEBT001.md at project completion
 
 **Flexibility:**
 If any phase becomes too complex, it can be further subdivided using the same pattern (e.g., Phase 3A, 3B, 3C) while maintaining the session-based approach and documentation continuity.
