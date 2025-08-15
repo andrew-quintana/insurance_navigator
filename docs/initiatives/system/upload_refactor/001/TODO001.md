@@ -22,9 +22,9 @@ This TODO builds upon **PRD001.md** and **RFC001.md** to provide detailed implem
 
 ### Prerequisites
 - Files/documents to read: 
-  - `@docs/initiatives/db/upload-refactor/PRD001.md`
-  - `@docs/initiatives/db/upload-refactor/RFC001.md`
-  - `@docs/initiatives/db/upload-refactor/CONTEXT.md`
+  - `@docs/initiatives/db/upload_refactor/PRD001.md`
+  - `@docs/initiatives/db/upload_refactor/RFC001.md`
+  - `@docs/initiatives/db/upload_refactor/CONTEXT.md`
 - Previous phase outputs: None (initial phase)
 - Session setup: Run `/clear` to start fresh
 
@@ -148,7 +148,7 @@ The implementation must follow the RFC001 technical specifications and retire ex
   - `@TODO001_phase1_notes.md`
   - `@TODO001_phase1_decisions.md`
   - `@TODO001_phase1_handoff.md`
-  - `@docs/initiatives/db/upload-refactor/CONTEXT.md`
+  - `@docs/initiatives/db/upload_refactor/CONTEXT.md`
 - Previous phase outputs: Database schema, shared utilities, environment setup
 - Session setup: Run `/clear` to start fresh
 
@@ -278,7 +278,7 @@ You are implementing the core API endpoints and job queue system. This phase bui
   - `@TODO001_phase2_notes.md`
   - `@TODO001_phase2_decisions.md`
   - `@TODO001_phase2_handoff.md`
-  - `@docs/initiatives/db/upload-refactor/CONTEXT.md`
+  - `@docs/initiatives/db/upload_refactor/CONTEXT.md`
 - Previous phase outputs: API endpoints, job queue system, database schema
 - Session setup: Run `/clear` to start fresh
 
