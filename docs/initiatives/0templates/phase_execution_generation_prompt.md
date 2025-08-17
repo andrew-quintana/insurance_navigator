@@ -1,3 +1,0 @@
-prepare a prompt for the first phase of @docs/initiatives/db/upload_refactor/ for cursor's coding agent in auto-select model mode, having it lean on the documentation rather than the prompt for information to avoid the risk of leaving out details
-
-prepare a prompt for the next phase of @docs/initiatives/db/upload_refactor/ for cursor's coding agent in auto-select model mode, having it lean on the documentation rather than the prompt for information to avoid the risk of leaving out details
