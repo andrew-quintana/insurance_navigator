@@ -5,24 +5,24 @@ You are implementing Phase 5 of the 003 Worker Refactor iteration. This phase im
 
 ## Documentation References
 Please review these documents before starting implementation:
-- `@docs/initiatives/system/upload_refactor/003/CONTEXT003.md` - Infrastructure deployment strategy and validation framework
-- `@docs/initiatives/system/upload_refactor/003/TODO003.md` - Detailed implementation checklist (Phase 5 section)
-- `@docs/initiatives/system/upload_refactor/003/RFC003.md` - Technical design for infrastructure deployment and validation
-- `@TODO003_phase4_notes.md` - Phase 4 comprehensive testing results and baseline validation
-- `@TODO003_phase4_decisions.md` - Testing strategies and deployment preparation decisions
-- `@TODO003_phase4_handoff.md` - Deployment preparation requirements from Phase 4
-- `@TODO003_phase2_notes.md` - Infrastructure validation framework implementation
-- `@docs/initiatives/system/upload_refactor/002/POSTMORTEM002.md` - Infrastructure failures to prevent
+- `docs/initiatives/system/upload_refactor/003/CONTEXT003.md` - Infrastructure deployment strategy and validation framework
+- `docs/initiatives/system/upload_refactor/003/TODO003.md` - Detailed implementation checklist (Phase 5 section)
+- `docs/initiatives/system/upload_refactor/003/RFC003.md` - Technical design for infrastructure deployment and validation
+- `TODO003_phase4_notes.md` - Phase 4 comprehensive testing results and baseline validation
+- `TODO003_phase4_decisions.md` - Testing strategies and deployment preparation decisions
+- `TODO003_phase4_handoff.md` - Deployment preparation requirements from Phase 4
+- `TODO003_phase2_notes.md` - Infrastructure validation framework implementation
+- `docs/initiatives/system/upload_refactor/002/POSTMORTEM002.md` - Infrastructure failures to prevent
 
 ## Primary Objective
 **IMPLEMENT** infrastructure deployment with automated validation against local environment baseline. All implementation requirements, technical specifications, and detailed checklists are defined in the referenced documents.
 
 ## Expected Outputs
 Document your work in these files:
-- `@TODO003_phase5_notes.md` - Infrastructure deployment details and configuration decisions
-- `@TODO003_phase5_decisions.md` - Infrastructure architecture choices and trade-offs
-- `@TODO003_phase5_handoff.md` - Application deployment requirements for Phase 6
-- `@TODO003_phase5_testing_summary.md` - Infrastructure validation results and performance benchmarks
+- `TODO003_phase5_notes.md` - Infrastructure deployment details and configuration decisions
+- `TODO003_phase5_decisions.md` - Infrastructure architecture choices and trade-offs
+- `TODO003_phase5_handoff.md` - Application deployment requirements for Phase 6
+- `TODO003_phase5_testing_summary.md` - Infrastructure validation results and performance benchmarks
 
 ## Implementation Approach
 1. **Read all documentation thoroughly** - Review CONTEXT003.md deployment strategy, RFC003.md infrastructure sections, TODO003.md Phase 5, POSTMORTEM002.md, and all previous phase outputs
