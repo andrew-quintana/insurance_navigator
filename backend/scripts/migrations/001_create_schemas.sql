@@ -1,3 +1,6 @@
+-- Enable pgvector extension for vector operations
+CREATE EXTENSION IF NOT EXISTS vector;
+
 -- Create upload_pipeline schema
 CREATE SCHEMA IF NOT EXISTS upload_pipeline;
 

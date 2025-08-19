@@ -3,6 +3,11 @@ asyncpg>=0.28.0
 httpx>=0.24.0
 psycopg2-binary>=2.9.0
 
+# Database dependencies
+sqlalchemy>=2.0.0
+alembic>=1.11.0
+pgvector>=0.2.0
+
 # Logging and monitoring
 structlog>=23.0.0
 
