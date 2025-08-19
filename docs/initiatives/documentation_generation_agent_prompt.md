@@ -35,6 +35,8 @@ Generate these documents **sequentially**, using each as foundational context fo
 - **Documentation Tasks**: Code comments, user docs, deployment guides
 - **Validation Tasks**: Performance testing, security review, stakeholder approval
 
+Note: You can deviate from the 4 phase structure if more or less is more ideal for breaking up the effort.
+
 ## Document Serial Number System
 
 **Agnostic Serial Numbers**: All documents use `{serial}` placeholders that can be:
