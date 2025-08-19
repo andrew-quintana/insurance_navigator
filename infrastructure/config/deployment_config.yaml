@@ -1,0 +1,243 @@
+# 003 Worker Refactor - Deployment Configuration
+# This file defines the infrastructure configuration for validation
+
+environment: local
+deployment_type: docker_compose
+
+# Database Configuration
+database:
+  host: localhost
+  port: 5432
+  database: accessa_dev
+  user: postgres
+  password: postgres
+  connection_pool_size: 5
+  timeout_seconds: 30
+
+# Service Configuration
+services:
+  postgres:
+    host: localhost
+    port: 5432
+    health_endpoint: /health
+    expected_status: running
+    startup_timeout_seconds: 60
+    
+  supabase_storage:
+    host: localhost
+    port: 5000
+    health_endpoint: /health
+    expected_status: running
+    startup_timeout_seconds: 30
+    
+  api_server:
+    host: localhost
+    port: 8000
+    health_endpoint: /health
+    expected_status: running
+    startup_timeout_seconds: 45
+    endpoints:
+      - /health
+      - /api/v2/upload
+      - /api/v2/jobs
+      - /webhooks/llamaparse
+    
+  base_worker:
+    host: localhost
+    port: 8000
+    health_endpoint: /health
+    expected_status: running
+    startup_timeout_seconds: 45
+    health_check_type: import_success
+    
+  mock_llamaparse:
+    host: localhost
+    port: 8001
+    health_endpoint: /health
+    expected_status: running
+    startup_timeout_seconds: 30
+    endpoints:
+      - /health
+      - /parse
+      - /webhook
+    
+  mock_openai:
+    host: localhost
+    port: 8002
+    health_endpoint: /health
+    expected_status: running
+    startup_timeout_seconds: 30
+    endpoints:
+      - /health
+      - /embeddings
+      - /models
+    
+  monitoring:
+    host: localhost
+    port: 3000
+    health_endpoint: /health
+    expected_status: running
+    startup_timeout_seconds: 30
+    endpoints:
+      - /health
+      - /ws/metrics
+      - /dashboard
+
+# Storage Configuration
+storage:
+  buckets:
+    - name: raw
+      access: private
+      max_file_size_mb: 25
+    - name: parsed
+      access: private
+      max_file_size_mb: 10
+  
+  access_patterns:
+    - pattern: "storage://raw/{user_id}/{document_id}.pdf"
+      description: "Raw PDF storage path"
+    - pattern: "storage://parsed/{user_id}/{document_id}.md"
+      description: "Parsed markdown storage path"
+
+# External Service Configuration
+external_services:
+  llamaparse:
+    api_url: "http://localhost:8001"
+    webhook_url: "http://localhost:8000/webhooks/llamaparse"
+    timeout_seconds: 120
+    max_retries: 3
+    
+  openai:
+    api_url: "http://localhost:8002"
+    model: "text-embedding-3-small"
+    batch_size: 256
+    timeout_seconds: 60
+    max_retries: 3
+
+# Performance Baselines
+performance_baselines:
+  api_response_time_ms: 100
+  database_query_time_ms: 50
+  worker_startup_time_seconds: 30
+  document_processing_time_seconds: 300
+  
+  # Allowable degradation in deployed environment
+  deployed_degradation_multiplier: 2.0
+  database_degradation_multiplier: 3.0
+
+# Security Configuration
+security:
+  cors:
+    allowed_origins:
+      - "http://localhost:3000"
+      - "https://accessa.ai"
+    allowed_methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+    allowed_headers:
+      - "Content-Type"
+      - "Authorization"
+      - "X-Requested-With"
+  
+  authentication:
+    required_keys:
+      - "SUPABASE_SERVICE_ROLE_KEY"
+      - "SUPABASE_ANON_KEY"
+    optional_keys:
+      - "LLAMAPARSE_API_KEY"
+      - "OPENAI_API_KEY"
+  
+  network:
+    allowed_hosts:
+      - "localhost"
+      - "127.0.0.1"
+      - "accessa.ai"
+    blocked_ports:
+      - 22
+      - 3306
+      - 6379
+
+# Validation Configuration
+validation:
+  health_check_interval_seconds: 30
+  validation_timeout_seconds: 300
+  max_concurrent_checks: 5
+  
+  # Rollback triggers
+  rollback_triggers:
+    health_check_failure_threshold: 3
+    performance_degradation_threshold: 5.0
+    security_validation_failure: true
+    database_connection_failure: true
+  
+  # Retry configuration
+  retry:
+    max_attempts: 3
+    backoff_multiplier: 2.0
+    initial_delay_seconds: 5
+
+# Monitoring Configuration
+monitoring:
+  metrics_collection_interval_seconds: 10
+  alert_thresholds:
+    cpu_usage_percent: 80
+    memory_usage_percent: 80
+    disk_usage_percent: 90
+    response_time_ms: 1000
+  
+  log_levels:
+    default: "INFO"
+    validation: "DEBUG"
+    health_checks: "INFO"
+    performance: "DEBUG"
+
+# Deployment Phases
+deployment_phases:
+  phase_1:
+    name: "Local Environment Setup"
+    description: "Complete Docker environment with all services"
+    validation_required: true
+    rollback_enabled: false
+    
+  phase_2:
+    name: "Infrastructure Validation"
+    description: "Validate infrastructure against local baseline"
+    validation_required: true
+    rollback_enabled: true
+    
+  phase_3:
+    name: "BaseWorker Implementation"
+    description: "Enhanced worker with comprehensive monitoring"
+    validation_required: true
+    rollback_enabled: true
+    
+  phase_4:
+    name: "Integration Testing"
+    description: "End-to-end testing and validation"
+    validation_required: true
+    rollback_enabled: true
+    
+  phase_5:
+    name: "Production Deployment"
+    description: "Production deployment with verification"
+    validation_required: true
+    rollback_enabled: true
+
+# Success Criteria
+success_criteria:
+  local_environment:
+    setup_time_minutes: 30
+    service_health_rate: 99.0
+    startup_time_seconds: 300
+    
+  infrastructure_validation:
+    validation_success_rate: 100.0
+    performance_degradation_percent: 20.0
+    configuration_consistency: 100.0
+    
+  production_deployment:
+    deployment_success_rate: 98.0
+    rollback_time_minutes: 5
+    monitoring_coverage: 100.0
