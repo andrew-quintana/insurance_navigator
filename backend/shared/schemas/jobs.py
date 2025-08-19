@@ -8,7 +8,7 @@ class UploadRequest(BaseModel):
     filename: str = Field(..., max_length=120, description="Document filename")
     bytes_len: int = Field(..., gt=0, le=25*1024*1024, description="File size in bytes (max 25MB)")
     mime: str = Field(..., description="MIME type")
-    sha256: str = Field(..., regex=r'^[a-fA-F0-9]{64}$', description="SHA256 hash of file content")
+    sha256: str = Field(..., pattern=r'^[a-fA-F0-9]{64}$', description="SHA256 hash of file content")
     ocr: bool = Field(False, description="Whether OCR processing is required")
     
     @validator('filename')

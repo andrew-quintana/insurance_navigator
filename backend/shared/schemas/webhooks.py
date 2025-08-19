@@ -7,7 +7,7 @@ class LlamaParseArtifact(BaseModel):
     """LlamaParse artifact model"""
     type: str = Field(..., description="Artifact type (e.g., 'markdown')")
     content: str = Field(..., description="Parsed content")
-    sha256: str = Field(..., regex=r'^[a-fA-F0-9]{64}$', description="SHA256 hash of content")
+    sha256: str = Field(..., pattern=r'^[a-fA-F0-9]{64}$', description="SHA256 hash of content")
     bytes: int = Field(..., gt=0, description="Content size in bytes")
 
 class LlamaParseMeta(BaseModel):
