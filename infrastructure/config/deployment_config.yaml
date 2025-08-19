@@ -241,3 +241,4 @@ success_criteria:
     deployment_success_rate: 98.0
     rollback_time_minutes: 5
     monitoring_coverage: 100.0
+

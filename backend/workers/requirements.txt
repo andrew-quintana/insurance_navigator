@@ -1,7 +1,14 @@
-fastapi==0.104.1
-asyncpg==0.29.0
-sqlalchemy==2.0.23
-pydantic==2.5.0
-httpx==0.25.2
-numpy==1.24.3
-asyncio-mqtt==0.16.1
+# Enhanced BaseWorker dependencies
+asyncpg>=0.28.0
+httpx>=0.24.0
+psycopg2-binary>=2.9.0
+
+# Logging and monitoring
+structlog>=23.0.0
+
+# Configuration and validation
+pydantic>=2.0.0
+
+# Development and testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0

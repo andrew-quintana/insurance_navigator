@@ -1,6 +1,7 @@
 from sqlalchemy import Column, String, Integer, DateTime, Text, JSON, ForeignKey, CheckConstraint
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.dialects.postgresql import UUID, VECTOR
+from sqlalchemy.dialects.postgresql import UUID
+from pgvector.sqlalchemy import VECTOR
 from sqlalchemy.sql import func
 import uuid
 

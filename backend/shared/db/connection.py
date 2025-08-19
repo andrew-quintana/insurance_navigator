@@ -23,8 +23,7 @@ class DatabaseManager:
                 self.database_url,
                 min_size=self.min_size,
                 max_size=self.max_size,
-                command_timeout=60,
-                statement_timeout=30000
+                command_timeout=60
             )
             logger.info(f"Database pool initialized with {self.min_size}-{self.max_size} connections")
             

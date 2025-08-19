@@ -9,9 +9,11 @@ pydantic-settings==2.1.0
 supabase==2.0.2
 asyncpg==0.29.0
 psycopg2-binary==2.9.9
+sqlalchemy==2.0.23
+pgvector==0.1.8
 
 # HTTP client for external services
-httpx==0.25.2
+httpx==0.24.1
 aiohttp==3.9.1
 
 # Utilities
@@ -27,7 +29,7 @@ prometheus-client==0.19.0
 pytest==7.4.3
 pytest-asyncio==0.21.1
 pytest-cov==4.1.0
-httpx==0.25.2
+httpx==0.24.1
 
 # Development
 black==23.11.0
