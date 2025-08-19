@@ -1,0 +1,74 @@
+# Local Environment Configuration for 003 Worker Refactor
+# This serves as the baseline for deployment validation
+
+database:
+  url: "postgresql://postgres:postgres@localhost:5432/accessa_dev"
+  name: "accessa_dev"
+  pool_size: 5
+  max_overflow: 10
+  pool_timeout: 30
+  pool_recycle: 3600
+
+api:
+  url: "http://localhost:8000"
+  port: 8000
+  workers: 1
+  timeout: 30
+  max_requests: 100
+  max_requests_jitter: 10
+
+worker:
+  health_url: "http://localhost:8000/worker/health"
+  max_concurrent_jobs: 3
+  poll_interval: 5
+  timeout: 300
+  retry_attempts: 3
+  retry_delay: 10
+
+storage:
+  url: "http://localhost:5000"
+  service_role_key: "local-dev-key"
+  bucket_name: "accessa-documents-local"
+  max_file_size: "100MB"
+  allowed_types: ["pdf", "docx", "txt", "md"]
+
+external:
+  llamaparse:
+    url: "http://localhost:8001"
+    api_key: "local-llamaparse-key"
+    timeout: 60
+    max_retries: 3
+  
+  openai:
+    url: "http://localhost:8002"
+    api_key: "local-openai-key"
+    timeout: 30
+    max_retries: 3
+    rate_limit: 1000
+
+monitoring:
+  enabled: true
+  metrics_endpoint: "/metrics"
+  health_check_interval: 30
+  alerting:
+    enabled: false  # Disabled for local development
+    webhook_url: ""
+
+security:
+  cors_origins: ["http://localhost:3000", "http://localhost:3001"]
+  rate_limiting:
+    enabled: false  # Disabled for local development
+    requests_per_minute: 1000
+  webhook_validation:
+    enabled: false  # Disabled for local development
+    secret_header: "X-Webhook-Secret"
+
+deployment:
+  platform: "docker-compose"
+  region: "local"
+  environment: "development"
+  auto_scaling:
+    enabled: false
+    min_instances: 1
+    max_instances: 1
+    target_cpu_utilization: 70

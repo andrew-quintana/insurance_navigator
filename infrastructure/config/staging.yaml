@@ -1,0 +1,74 @@
+# Staging Deployment Configuration for 003 Worker Refactor
+# This configuration mirrors production but with test credentials and reduced resources
+
+database:
+  url: "${STAGING_DATABASE_URL}"
+  name: "accessa_staging"
+  pool_size: 10
+  max_overflow: 15
+  pool_timeout: 30
+  pool_recycle: 3600
+
+api:
+  url: "${STAGING_API_BASE_URL}"
+  port: 8000
+  workers: 2
+  timeout: 30
+  max_requests: 500
+  max_requests_jitter: 50
+
+worker:
+  health_url: "${STAGING_WORKER_HEALTH_URL}"
+  max_concurrent_jobs: 5
+  poll_interval: 5
+  timeout: 300
+  retry_attempts: 3
+  retry_delay: 10
+
+storage:
+  url: "${STAGING_SUPABASE_URL}"
+  service_role_key: "${STAGING_SUPABASE_SERVICE_ROLE_KEY}"
+  bucket_name: "accessa-documents-staging"
+  max_file_size: "50MB"
+  allowed_types: ["pdf", "docx", "txt", "md"]
+
+external:
+  llamaparse:
+    url: "${STAGING_LLAMAPARSE_API_URL}"
+    api_key: "${STAGING_LLAMAPARSE_API_KEY}"
+    timeout: 60
+    max_retries: 3
+  
+  openai:
+    url: "https://api.openai.com"
+    api_key: "${STAGING_OPENAI_API_KEY}"
+    timeout: 30
+    max_retries: 3
+    rate_limit: 1000  # Reduced rate limit for staging
+
+monitoring:
+  enabled: true
+  metrics_endpoint: "/metrics"
+  health_check_interval: 30
+  alerting:
+    enabled: true
+    webhook_url: "${STAGING_ALERTING_WEBHOOK_URL}"
+
+security:
+  cors_origins: ["${STAGING_ALLOWED_ORIGINS}"]
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 50
+  webhook_validation:
+    enabled: true
+    secret_header: "X-Webhook-Secret"
+
+deployment:
+  platform: "render"
+  region: "us-east-1"
+  environment: "staging"
+  auto_scaling:
+    enabled: false  # Disabled for staging
+    min_instances: 1
+    max_instances: 2
+    target_cpu_utilization: 70
