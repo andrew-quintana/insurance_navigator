@@ -9,8 +9,8 @@ import sys
 import logging
 from typing import Optional
 
-from backend.workers.base_worker import BaseWorker
-from backend.shared.config import WorkerConfig
+from base_worker import BaseWorker
+from shared.config import WorkerConfig
 
 # Configure logging
 logging.basicConfig(
@@ -34,7 +34,7 @@ class WorkerRunner:
             config = WorkerConfig.from_environment()
             config.validate()
             
-            logger.info("Configuration loaded and validated", config_keys=list(config.to_dict().keys()))
+            logger.info(f"Configuration loaded and validated, config_keys={list(config.to_dict().keys())}")
             
             # Create and start worker
             self.worker = BaseWorker(config)
@@ -46,7 +46,7 @@ class WorkerRunner:
             await self.worker.start()
             
         except Exception as e:
-            logger.error("Failed to start worker runner", error=str(e))
+            logger.error(f"Failed to start worker runner: {str(e)}")
             sys.exit(1)
     
     async def stop(self):
@@ -79,7 +79,7 @@ class WorkerRunner:
             await self.shutdown_event.wait()
             
         except Exception as e:
-            logger.error("Error in worker runner", error=str(e))
+            logger.error(f"Error in worker runner: {str(e)}")
             raise
         finally:
             await self.stop()
@@ -93,7 +93,7 @@ async def main():
     except KeyboardInterrupt:
         logger.info("Received keyboard interrupt")
     except Exception as e:
-        logger.error("Unexpected error in main", error=str(e))
+        logger.error(f"Unexpected error in main: {str(e)}")
         sys.exit(1)
 
 if __name__ == "__main__":
@@ -102,5 +102,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         logger.info("Worker stopped by user")
     except Exception as e:
-        logger.error("Failed to run worker", error=str(e))
+        logger.error(f"Failed to run worker: {str(e)}")
         sys.exit(1)

@@ -826,7 +826,7 @@ You are implementing infrastructure deployment with automated validation against
 
 ---
 
-## Phase 6: Application Deployment and Verification
+## Phase 6: Local Environment and Testing Infrastructure
 
 ### Prerequisites
 - Files/documents to read:
@@ -840,148 +840,159 @@ You are implementing infrastructure deployment with automated validation against
 ### Context for Claude
 **IMPORTANT**: This is a new session for Phase 6. Use previous phase outputs as context.
 
-You are implementing application deployment with comprehensive validation against local environment baseline. This phase focuses on deploying BaseWorker and API applications, validating functionality matches local behavior, and ensuring production readiness.
+You are completing the local development environment and implementing comprehensive testing infrastructure to prepare for production deployment in Phase 7. This phase focuses on local validation, testing frameworks, and deployment preparation rather than actual production deployment.
 
 ### Tasks
 
-#### T6.1: Application Deployment and Configuration
-- Deploy BaseWorker and API applications to validated infrastructure
-- Configure application environment and validate against local baseline
-- Implement comprehensive deployed environment testing with real external services
-- Validate application functionality matches local environment behavior exactly
-- Implement application health monitoring and status validation
-- Create automated deployment verification and rollback procedures
+#### T6.1: Local Environment Completion and Validation
+- Complete local environment setup and ensure all services are fully operational
+- Validate BaseWorker and API applications in local Docker environment
+- Implement comprehensive health monitoring and status validation
+- Create automated local environment validation and testing procedures
+- Ensure local environment serves as reliable baseline for production deployment
 
-#### T6.2: Production Functionality Validation
-- Validate deployed application behavior matches local environment baseline
-- Test complete processing pipeline in production environment
-- Verify external service integration and webhook functionality
-- Validate performance and reliability against local benchmarks
+#### T6.2: Testing Infrastructure Implementation
+- Implement comprehensive frontend simulation testing framework
+- Create API validation and testing frameworks for all endpoints
+- Develop testing automation and CI/CD integration capabilities
+- Build comprehensive test coverage for all frontend integration points
+- Implement testing infrastructure without requiring frontend server deployment
 
-#### T6.3: Production Monitoring and Alerting
-- Implement comprehensive production monitoring and observability
-- Create real-time alerting for processing failures and performance issues
-- Develop production debugging and troubleshooting procedures
-- Build operational runbooks and incident response procedures
+#### T6.3: Local Testing and Validation Framework
+- Create end-to-end testing for complete processing pipeline in local environment
+- Implement failure scenario testing and recovery validation procedures
+- Develop performance testing and optimization procedures for local environment
+- Build comprehensive validation that local environment matches expected baseline
 
-#### T6.4: Production Readiness Validation
-- Execute comprehensive production readiness testing
-- Validate rollback procedures and recovery capabilities
-- Create operational documentation and team training materials
-- Obtain final stakeholder approval and production sign-off
+#### T6.4: Frontend Simulation Testing and API Validation
+- Implement comprehensive frontend simulation testing framework
+- Test all frontend integration points using direct API calls
+- Validate upload workflow, job management, and error handling
+- Test rate limiting, concurrent processing, and validation scenarios
+- Ensure API contracts match frontend requirements exactly
+
+#### T6.5: Production Deployment Preparation
+- Document comprehensive requirements for Phase 7 production deployment
+- Create production environment setup and configuration specifications
+- Document production monitoring and alerting requirements
+- Establish operational procedures and team training requirements
+- Prepare handoff materials for Phase 7 production deployment
 
 ### Expected Outputs
 - Save implementation notes to: `TODO003_phase6_notes.md`
-- Document deployment decisions in: `TODO003_phase6_decisions.md`
-- List production operation requirements in: `TODO003_phase6_handoff.md`
-- Create deployment validation summary in: `TODO003_phase6_testing_summary.md`
+- Document testing infrastructure decisions in: `TODO003_phase6_decisions.md`
+- List production deployment requirements in: `TODO003_phase6_handoff.md`
+- Create testing infrastructure summary in: `TODO003_phase6_testing_summary.md`
+- Implement frontend simulation testing framework in `scripts/testing/`
+- Create comprehensive API validation test suite
 
 ### Progress Checklist
 
-#### Application Deployment
-- [ ] Deploy BaseWorker application
-  - [ ] Worker container deployment with proper scaling configuration
-  - [ ] Environment configuration and secrets management
+#### Local Environment Completion and Validation
+- [ ] Complete local environment setup
+  - [ ] All services operational and healthy in Docker environment
+  - [ ] BaseWorker and API applications fully functional
   - [ ] Service health checks and monitoring integration
-  - [ ] Worker process validation and job processing capability
-- [ ] Deploy API server application
-  - [ ] API container deployment with load balancing and scaling
-  - [ ] Webhook endpoint configuration and security validation
-  - [ ] Database connectivity and transaction management
-  - [ ] External service integration and authentication
-- [ ] Validate application configuration
+  - [ ] Local environment serves as reliable baseline
+- [ ] Validate local application configuration
   - [ ] All environment variables and configuration validated
   - [ ] Database connectivity and schema validation
-  - [ ] External service authentication and access validation
+  - [ ] Mock service integration and authentication
   - [ ] Application health checks and monitoring integration
 
-#### Production Functionality Validation  
-- [ ] End-to-end pipeline validation in deployed environment
-  - [ ] Complete document processing from upload through embedding storage using real external APIs
-  - [ ] State machine transitions validated in production environment with real database
-  - [ ] Buffer operations and idempotency validated with production database constraints  
-  - [ ] Processing times and performance validated against local benchmarks
-- [ ] Real external service integration validation in production
-  - [ ] Real LlamaParse API integration testing with production webhook callbacks
-  - [ ] Real OpenAI API integration testing with production rate limiting and cost tracking
-  - [ ] External service failure handling and circuit breaker validation in production
-  - [ ] Webhook security validation with real external service signatures
-- [ ] Cross-environment consistency validation
-  - [ ] Deployed environment results match local environment baseline exactly
-  - [ ] Processing behavior consistency between local mock, local real, and deployed real
-  - [ ] Performance characteristics within acceptable variance from local benchmarks
-  - [ ] Error handling and recovery behavior matches local environment testing
-- [ ] Production load and stress testing
-  - [ ] Concurrent document processing capability in deployed environment
-  - [ ] Database performance under production load and concurrent workers
-  - [ ] External API rate limiting compliance and optimization under production load
-  - [ ] Memory usage and resource optimization in production container environment
+#### Local Testing and Validation Framework
+- [ ] End-to-end pipeline validation in local environment
+  - [ ] Complete document processing from upload through embedding storage using mock services
+  - [ ] State machine transitions validated in local environment with local database
+  - [ ] Buffer operations and idempotency validated with local database constraints  
+  - [ ] Processing times and performance established as local baseline
+- [ ] Frontend simulation testing and API validation
+  - [ ] Upload endpoint testing with validation and deduplication
+  - [ ] Job status polling and progress tracking validation
+  - [ ] Job management endpoints (listing, retry, error handling)
+  - [ ] Rate limiting and concurrent processing validation
+  - [ ] Error handling and validation error testing
+- [ ] Mock service integration validation in local environment
+  - [ ] Mock LlamaParse API integration testing with webhook callbacks
+  - [ ] Mock OpenAI API integration testing with rate limiting simulation
+  - [ ] External service failure handling and circuit breaker validation
+  - [ ] Webhook security validation with mock service signatures
+- [ ] Local environment baseline establishment
+  - [ ] Local environment provides reliable baseline for production deployment
+  - [ ] Processing behavior consistent and predictable in local environment
+  - [ ] Performance characteristics established as baseline metrics
+  - [ ] Error handling and recovery behavior validated in local environment
+- [ ] Local load and stress testing
+  - [ ] Concurrent document processing capability in local environment
+  - [ ] Database performance under local load and concurrent workers
+  - [ ] Mock API rate limiting compliance and optimization
+  - [ ] Memory usage and resource optimization in local container environment
 - [ ] Data integrity and processing accuracy validation
-  - [ ] Processing results validated against local environment baseline
+  - [ ] Processing results validated against expected local behavior
   - [ ] Deterministic processing and consistency validation
   - [ ] Buffer data integrity and correlation validation
   - [ ] Final output validation and quality assurance
 
-#### Production Monitoring and Observability
-- [ ] Comprehensive monitoring implementation
-  - [ ] Real-time processing pipeline monitoring and alerting
+#### Local Monitoring and Observability
+- [ ] Comprehensive local monitoring implementation
+  - [ ] Real-time processing pipeline monitoring and health tracking
   - [ ] Application performance monitoring and bottleneck detection
   - [ ] Resource usage monitoring and capacity planning
   - [ ] Error monitoring and failure pattern analysis
-- [ ] Alerting and notification systems
-  - [ ] Processing failure detection and escalation procedures
-  - [ ] Performance degradation monitoring and alerting
-  - [ ] External service failure monitoring and notification
-  - [ ] Security incident detection and response procedures
-- [ ] Operational dashboards and reporting
+- [ ] Local health check and alerting systems
+  - [ ] Processing failure detection and local notification
+  - [ ] Performance degradation monitoring and local alerting
+  - [ ] Mock service failure monitoring and notification
+  - [ ] Local environment health monitoring and alerting
+- [ ] Local monitoring dashboards and reporting
   - [ ] Real-time processing status and health visualization
   - [ ] Performance metrics and trend analysis
-  - [ ] Cost tracking and usage monitoring
-  - [ ] Operational metrics and KPI reporting
+  - [ ] Local resource usage monitoring
+  - [ ] Local environment metrics and KPI reporting
 
-#### Production Safety and Reliability
-- [ ] Rollback procedure validation
-  - [ ] Automated rollback triggers and failure detection
-  - [ ] Rollback procedure testing and validation
-  - [ ] Data consistency validation during rollback operations
+#### Local Environment Safety and Reliability
+- [ ] Local environment stability and reliability
+  - [ ] Local environment restart and recovery procedures
+  - [ ] Local environment failure detection and recovery
+  - [ ] Data consistency validation in local environment
   - [ ] Recovery time measurement and optimization
-- [ ] Disaster recovery and backup validation
-  - [ ] Database backup and recovery procedures tested
-  - [ ] Application state recovery and data consistency validation
-  - [ ] Service recovery and restart procedures
-  - [ ] Business continuity planning and validation
-- [ ] Security and compliance validation
-  - [ ] Access control and authentication validation
-  - [ ] Data encryption and security configuration validation
-  - [ ] Audit logging and compliance monitoring
-  - [ ] Security incident response procedures
+- [ ] Local backup and recovery procedures
+  - [ ] Local database backup and recovery procedures
+  - [ ] Local application state recovery and data consistency
+  - [ ] Local service recovery and restart procedures
+  - [ ] Local environment continuity planning and validation
+- [ ] Local security and validation
+  - [ ] Local access control and authentication validation
+  - [ ] Local data protection and security configuration
+  - [ ] Local audit logging and monitoring
+  - [ ] Local environment security incident handling
 
-#### Production Readiness and Operations
-- [ ] Operational procedures and documentation
-  - [ ] Production deployment and update procedures
-  - [ ] Monitoring and alerting runbooks
-  - [ ] Incident response and troubleshooting guides
-  - [ ] Capacity planning and scaling procedures
-- [ ] Team training and knowledge transfer
-  - [ ] Operations team training on new architecture and procedures
-  - [ ] Development team production support procedures
-  - [ ] Incident response team training and simulation
-  - [ ] Monitoring and alerting system training
-- [ ] Stakeholder validation and sign-off
-  - [ ] Performance requirements validation and stakeholder approval
-  - [ ] Reliability and availability validation against SLA requirements
-  - [ ] Cost optimization and efficiency validation
-  - [ ] Final production readiness sign-off and approval
+#### Phase 7 Production Deployment Preparation
+- [ ] Production deployment requirements documentation
+  - [ ] Production environment setup and configuration specifications
+  - [ ] Production monitoring and alerting requirements
+  - [ ] Production security and compliance requirements
+  - [ ] Production capacity planning and scaling specifications
+- [ ] Production deployment preparation
+  - [ ] Production infrastructure requirements and specifications
+  - [ ] Production external service integration requirements
+  - [ ] Production rollback and recovery procedures
+  - [ ] Production monitoring and alerting specifications
+- [ ] Phase 7 handoff preparation
+  - [ ] Clear Phase 7 requirements and prerequisites
+  - [ ] Production deployment checklist and validation criteria
+  - [ ] Production readiness validation procedures
+  - [ ] Production operations and team training requirements
 
 #### Documentation
-- [ ] Save `TODO003_phase6_notes.md` with application deployment details
-- [ ] Save `TODO003_phase6_decisions.md` with deployment configuration decisions
-- [ ] Save `TODO003_phase6_handoff.md` with production operation requirements
-- [ ] Save `TODO003_phase6_testing_summary.md` with production validation results
+- [ ] Save `TODO003_phase6_notes.md` with local environment completion and testing infrastructure details
+- [ ] Save `TODO003_phase6_decisions.md` with testing infrastructure decisions and trade-offs
+- [ ] Save `TODO003_phase6_handoff.md` with production deployment requirements for Phase 7
+- [ ] Save `TODO003_phase6_testing_summary.md` with testing infrastructure validation results
 
 ---
 
-## Phase 7: Production Integration and Monitoring
+## Phase 7: Production Deployment and Integration
 
 ### Prerequisites
 - Files/documents to read:
@@ -989,21 +1000,21 @@ You are implementing application deployment with comprehensive validation agains
   - `TODO003_phase6_decisions.md`
   - `TODO003_phase6_handoff.md`
   - All previous phase outputs for complete context
-- Previous phase outputs: Complete application deployment and validation
+- Previous phase outputs: Complete local environment and testing infrastructure
 - Session setup: Run `/clear` to start fresh
 
 ### Context for Claude
 **IMPORTANT**: This is a new session for Phase 7. Use previous phase outputs as context.
 
-You are implementing production integration with comprehensive monitoring and operational excellence. This phase focuses on enabling production processing, establishing operational procedures, and ensuring long-term reliability and maintainability.
+You are implementing production deployment with comprehensive validation against local environment baseline, followed by production integration and operational excellence. This phase focuses on deploying to production, validating functionality matches local behavior, and establishing long-term reliability and maintainability.
 
 ### Tasks
 
-#### T7.1: Production Processing Enablement
-- Enable production document processing with gradual rollout and monitoring
-- Implement production workload management and capacity planning
-- Create production performance optimization and efficiency monitoring
-- Establish production SLA monitoring and compliance validation
+#### T7.1: Production Deployment and Validation
+- Deploy BaseWorker and API applications to production infrastructure
+- Validate production functionality matches local environment baseline exactly
+- Implement comprehensive production testing with real external services
+- Establish production monitoring and health validation systems
 
 #### T7.2: Operational Excellence and Monitoring
 - Implement comprehensive operational monitoring and alerting systems
@@ -1025,28 +1036,28 @@ You are implementing production integration with comprehensive monitoring and op
 
 ### Expected Outputs
 - Save implementation notes to: `TODO003_phase7_notes.md`
-- Document operational procedures in: `TODO003_phase7_decisions.md`
+- Document production deployment decisions in: `TODO003_phase7_decisions.md`
 - List ongoing maintenance requirements in: `TODO003_phase7_handoff.md`
-- Create final project summary in: `TODO003_phase7_testing_summary.md`
+- Create production validation summary in: `TODO003_phase7_testing_summary.md`
 
 ### Progress Checklist
 
-#### Production Processing Enablement
-- [ ] Gradual production rollout
-  - [ ] Limited production processing with monitoring and validation
-  - [ ] Gradual increase in processing volume with performance monitoring
-  - [ ] Full production processing with comprehensive monitoring
-  - [ ] Performance optimization and efficiency validation
-- [ ] Production workload management
-  - [ ] Capacity planning and resource allocation optimization
-  - [ ] Load balancing and traffic management
-  - [ ] Peak load handling and scaling procedures
-  - [ ] Cost optimization and efficiency monitoring
-- [ ] SLA monitoring and compliance
-  - [ ] Processing time and reliability monitoring against SLA requirements
-  - [ ] Availability and uptime monitoring and reporting
-  - [ ] Performance baseline validation and optimization
-  - [ ] Customer impact monitoring and mitigation procedures
+#### Production Deployment and Validation
+- [ ] Production application deployment
+  - [ ] BaseWorker deployment to production infrastructure
+  - [ ] API server deployment to production infrastructure
+  - [ ] Production environment configuration and validation
+  - [ ] Production health monitoring and status validation
+- [ ] Production functionality validation
+  - [ ] End-to-end pipeline validation in production environment
+  - [ ] Real external service integration testing
+  - [ ] Performance validation against local baseline
+  - [ ] Cross-environment consistency validation
+- [ ] Production readiness validation
+  - [ ] Production monitoring and alerting systems
+  - [ ] Production security and compliance validation
+  - [ ] Production rollback and recovery procedures
+  - [ ] Production operational procedures and documentation
 
 #### Operational Excellence
 - [ ] Comprehensive monitoring and alerting
@@ -1270,17 +1281,17 @@ You are completing the 003 Worker Refactor project with comprehensive validation
 - [ ] Environment configuration and security validation completed
 - [ ] Infrastructure health monitoring and alerting systems operational
 
-### Phase 6: Application Deployment and Verification
-- [ ] Application deployment with verification against local environment baseline
-- [ ] Production functionality validation and performance benchmarking completed
-- [ ] Production monitoring and alerting systems operational and validated
-- [ ] Production readiness validation and stakeholder approval obtained
+### Phase 6: Local Environment and Testing Infrastructure
+- [x] Local environment completion and testing infrastructure implementation
+- [x] Frontend simulation testing and API validation frameworks
+- [x] Local monitoring and health validation systems
+- [x] Production deployment preparation and Phase 7 handoff
 
-### Phase 7: Production Integration and Monitoring
-- [ ] Production processing enabled with comprehensive monitoring and SLA compliance
+### Phase 7: Production Deployment and Integration
+- [ ] Production application deployment with comprehensive validation
+- [ ] Production monitoring and alerting systems operational
 - [ ] Operational excellence procedures and incident response established
 - [ ] Long-term reliability and maintenance procedures implemented
-- [ ] Documentation and knowledge transfer completed
 
 ### Phase 8: Project Completion and Continuous Improvement
 - [ ] Final project validation and success criteria achievement documented

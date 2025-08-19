@@ -7,11 +7,11 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime, timedelta
 import traceback
 
-from backend.shared.db import DatabaseManager
-from backend.shared.storage import StorageManager
-from backend.shared.external import LlamaParseClient, OpenAIClient
-from backend.shared.logging import StructuredLogger
-from backend.shared.config import WorkerConfig
+from shared.db import DatabaseManager
+from shared.storage import StorageManager
+from shared.external import LlamaParseClient, OpenAIClient
+from shared.logging import StructuredLogger
+from shared.config import WorkerConfig
 
 logger = logging.getLogger(__name__)
 
