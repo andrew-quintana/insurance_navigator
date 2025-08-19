@@ -52,19 +52,27 @@ You are implementing the foundation for local-first development with Docker-base
 - Set up Supabase local storage simulation
 - Configure local API server and BaseWorker containers
 
-#### T1.2: Mock Service Implementation
+#### T1.2: Directory Restructuring and Backend Organization
+- Reorganize codebase into backend/api/, backend/workers/, backend/shared/ structure
+- Create new directory structure matching RFC003.md specification
+- Add infrastructure/, testing/, monitoring/ directories for 003 enhancements
+- Move existing worker code to new backend/workers/ structure
+- Create shared utilities in backend/shared/ for database, storage, and external service clients
+- Update import statements throughout codebase for new structure
+
+#### T1.3: Mock Service Implementation
 - Create mock LlamaParse service with webhook callback simulation
 - Implement mock OpenAI service with deterministic embedding generation
 - Develop mock service coordination and realistic timing simulation
 - Build external service integration testing framework
 
-#### T1.3: Local Environment Scripts
+#### T1.4: Local Environment Scripts
 - Develop automated setup script for complete environment initialization
 - Create health check validation for all local services
 - Implement local testing script for end-to-end pipeline validation
 - Build troubleshooting and debugging utilities
 
-#### T1.4: Local Monitoring and Observability
+#### T1.5: Local Monitoring and Observability
 - Set up local monitoring dashboard for processing pipeline health
 - Implement real-time logging and metrics collection
 - Create alerting system for local development failures
@@ -96,6 +104,32 @@ You are implementing the foundation for local-first development with Docker-base
   - [ ] Development database configuration with test data
   - [ ] Local storage paths and volume mounting
   - [ ] Debug logging and development tools integration
+
+#### Directory Restructuring and Backend Organization
+- [ ] Create new directory structure matching RFC003.md specification
+  - [ ] backend/api/ for FastAPI application and endpoints
+  - [ ] backend/workers/ for BaseWorker and processing logic
+  - [ ] backend/shared/ for common utilities and clients
+  - [ ] backend/scripts/ for migrations and operational scripts
+  - [ ] backend/tests/ for comprehensive testing framework
+  - [ ] infrastructure/ for validation, config, monitoring, and scripts
+  - [ ] testing/ for mock services and test fixtures
+  - [ ] monitoring/ for local monitoring dashboard
+  - [ ] scripts/ for root-level environment and deployment scripts
+- [ ] Move existing worker code to new structure
+  - [ ] Preserve existing functionality during transition
+  - [ ] Update import statements throughout codebase
+  - [ ] Maintain backward compatibility where needed
+- [ ] Create shared utility modules
+  - [ ] Database connection and transaction management in backend/shared/db/
+  - [ ] Storage client for Supabase operations in backend/shared/storage/
+  - [ ] External service clients (LlamaParse, OpenAI) in backend/shared/external/
+  - [ ] Enhanced logging, rate limiting, and schema validation in backend/shared/
+- [ ] Implement infrastructure components
+  - [ ] Infrastructure validation framework in infrastructure/validation/
+  - [ ] Configuration management in infrastructure/config/
+  - [ ] Monitoring and alerting in infrastructure/monitoring/
+  - [ ] Deployment scripts in infrastructure/scripts/
 
 #### Local Database Implementation
 - [ ] Set up Postgres with vector extension
@@ -616,12 +650,40 @@ You are implementing comprehensive local integration testing to validate complet
   - [ ] Configuration management and validation
   - [ ] Documentation and user guides for local development
 
+#### Comprehensive Testing Framework Implementation
+- [ ] Local Development Testing (Mock Services)
+  - [ ] Unit testing with mock external services for isolated component validation
+  - [ ] Integration testing using Docker compose mock services (LlamaParse, OpenAI)
+  - [ ] State machine testing with mock service responses and timing simulation
+  - [ ] Buffer operations testing with deterministic mock data
+  - [ ] Error injection testing with configurable mock service failures
+- [ ] Local Development Testing (Real APIs)
+  - [ ] Real LlamaParse API integration testing with actual webhooks and processing
+  - [ ] Real OpenAI API integration testing with actual embedding generation
+  - [ ] Rate limiting validation with real service quotas and timing
+  - [ ] Cost tracking and optimization testing with actual API usage
+  - [ ] Service failure recovery testing with real external service outages
+- [ ] Deployed Environment Testing (Render Platform)
+  - [ ] Health check validation on deployed infrastructure
+  - [ ] End-to-end processing validation in deployed environment
+  - [ ] Performance benchmarking comparison between local and deployed
+  - [ ] Configuration validation ensuring deployed services match local baseline
+  - [ ] Database performance validation under deployed constraints
+  - [ ] External service integration validation in production environment
+- [ ] Hybrid Testing (Mock + Real + Deployed)
+  - [ ] Cross-environment consistency validation (local mock vs real vs deployed)
+  - [ ] Gradual transition testing from mock to real services
+  - [ ] Fallback mechanism testing when real services unavailable
+  - [ ] A/B testing framework for comparing local and deployed performance
+  - [ ] Migration testing from development to production configurations
+
 #### Documentation and Deployment Preparation
 - [ ] Create comprehensive testing documentation
-  - [ ] Complete test coverage and validation procedures
-  - [ ] Performance benchmarks and optimization recommendations
-  - [ ] Failure scenarios and recovery procedures documentation
-  - [ ] Local environment setup and troubleshooting guides
+  - [ ] Complete test coverage matrix (local mock, local real, deployed real)
+  - [ ] Performance benchmarks for all testing environments
+  - [ ] Failure scenarios and recovery procedures for each environment
+  - [ ] Testing environment setup and configuration guides
+  - [ ] Cross-environment validation procedures and criteria
 - [ ] Develop deployment preparation materials
   - [ ] Infrastructure requirements and configuration specifications
   - [ ] Deployment validation criteria and success metrics
@@ -785,6 +847,8 @@ You are implementing application deployment with comprehensive validation agains
 #### T6.1: Application Deployment and Configuration
 - Deploy BaseWorker and API applications to validated infrastructure
 - Configure application environment and validate against local baseline
+- Implement comprehensive deployed environment testing with real external services
+- Validate application functionality matches local environment behavior exactly
 - Implement application health monitoring and status validation
 - Create automated deployment verification and rollback procedures
 
@@ -831,17 +895,27 @@ You are implementing application deployment with comprehensive validation agains
   - [ ] External service authentication and access validation
   - [ ] Application health checks and monitoring integration
 
-#### Production Functionality Validation
-- [ ] End-to-end pipeline validation
-  - [ ] Complete document processing from upload through embedding storage
-  - [ ] State machine transitions validated in production environment
-  - [ ] Buffer operations and idempotency validated with production database
+#### Production Functionality Validation  
+- [ ] End-to-end pipeline validation in deployed environment
+  - [ ] Complete document processing from upload through embedding storage using real external APIs
+  - [ ] State machine transitions validated in production environment with real database
+  - [ ] Buffer operations and idempotency validated with production database constraints  
   - [ ] Processing times and performance validated against local benchmarks
-- [ ] External service integration validation
-  - [ ] LlamaParse integration with real API and production webhook handling
-  - [ ] OpenAI integration with production API keys and rate limiting
-  - [ ] Webhook security and callback validation in production
-  - [ ] External service monitoring and failure handling validation
+- [ ] Real external service integration validation in production
+  - [ ] Real LlamaParse API integration testing with production webhook callbacks
+  - [ ] Real OpenAI API integration testing with production rate limiting and cost tracking
+  - [ ] External service failure handling and circuit breaker validation in production
+  - [ ] Webhook security validation with real external service signatures
+- [ ] Cross-environment consistency validation
+  - [ ] Deployed environment results match local environment baseline exactly
+  - [ ] Processing behavior consistency between local mock, local real, and deployed real
+  - [ ] Performance characteristics within acceptable variance from local benchmarks
+  - [ ] Error handling and recovery behavior matches local environment testing
+- [ ] Production load and stress testing
+  - [ ] Concurrent document processing capability in deployed environment
+  - [ ] Database performance under production load and concurrent workers
+  - [ ] External API rate limiting compliance and optimization under production load
+  - [ ] Memory usage and resource optimization in production container environment
 - [ ] Data integrity and processing accuracy validation
   - [ ] Processing results validated against local environment baseline
   - [ ] Deterministic processing and consistency validation

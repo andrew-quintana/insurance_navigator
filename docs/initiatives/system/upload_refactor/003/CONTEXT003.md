@@ -329,10 +329,25 @@ python backend/tests/performance/test_database_load.py
 ```
 
 ### Testing Requirements
-- **100% State Machine Coverage**: Every transition tested in local environment
-- **Realistic Workloads**: Testing with actual document sizes and complexities
-- **Failure Scenarios**: External service outages, database failures, network issues
-- **Performance Baselines**: Establishes benchmarks for production comparison
+
+**Multi-Environment Testing Strategy:**
+- **Local Mock Services**: 100% state machine coverage with deterministic responses
+- **Local Real APIs**: Core functionality validation with cost-controlled testing
+- **Deployed Environment**: Infrastructure and application validation with real services
+- **Cross-Environment**: Consistency validation between all environments
+
+**Testing Coverage Matrix:**
+- **100% State Machine Coverage**: Every transition tested in local and deployed environments
+- **Realistic Workloads**: Testing with actual document sizes and complexities across environments
+- **Failure Scenarios**: External service outages, database failures, network issues in all environments
+- **Performance Baselines**: Establishes benchmarks for local-to-production comparison
+
+**Deployed Environment Testing Requirements:**
+- Complete end-to-end pipeline validation using real external APIs in production environment
+- Performance benchmarking comparison between local and deployed environments
+- Cross-environment consistency validation ensuring deployed results match local baseline
+- Production load testing with concurrent processing and real database constraints
+- Real external service integration testing with production webhooks and rate limiting
 
 ---
 
