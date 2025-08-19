@@ -1,0 +1,31 @@
+# Infrastructure Validation Framework Requirements
+# 003 Worker Refactor - Phase 2
+
+# Core dependencies
+pyyaml>=6.0.1
+httpx>=0.24.1
+psycopg2-binary>=2.9.7
+
+# Async support
+asyncio-mqtt>=0.16.1
+
+# Data validation and serialization
+pydantic>=2.0.0
+dataclasses-json>=0.6.0
+
+# Monitoring and metrics
+prometheus-client>=0.17.0
+
+# Testing and validation
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+
+# Development tools
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.5.0
+
+# Optional: For enhanced monitoring
+# grafana-api>=1.0.3
+# influxdb-client>=1.36.0
