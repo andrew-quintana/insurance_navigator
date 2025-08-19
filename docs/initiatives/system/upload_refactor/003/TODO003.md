@@ -28,10 +28,10 @@ This TODO provides detailed implementation tasks for the 003 Worker Refactor ite
 
 ### Prerequisites
 - Files/documents to read:
-  - `@docs/initiatives/system/upload_refactor/003/PRD003.md`
-  - `@docs/initiatives/system/upload_refactor/003/RFC003.md`
-  - `@docs/initiatives/system/upload_refactor/002/POSTMORTEM002.md`
-  - `@docs/initiatives/system/upload_refactor/002/CONTEXT002.md`
+  - `docs/initiatives/system/upload_refactor/003/PRD003.md`
+  - `docs/initiatives/system/upload_refactor/003/RFC003.md`
+  - `docs/initiatives/system/upload_refactor/002/POSTMORTEM002.md`
+  - `docs/initiatives/system/upload_refactor/002/CONTEXT002.md`
 - Previous work: Understanding of 002 failures and architectural foundation
 - Session setup: Run `/clear` to start fresh
 
@@ -79,10 +79,10 @@ You are implementing the foundation for local-first development with Docker-base
 - Develop performance monitoring and bottleneck detection
 
 ### Expected Outputs
-- Save implementation notes to: `@TODO003_phase1_notes.md`
-- Document environment decisions in: `@TODO003_phase1_decisions.md`
-- List infrastructure validation requirements in: `@TODO003_phase1_handoff.md`
-- Create local testing summary in: `@TODO003_phase1_testing_summary.md`
+- Save implementation notes to: `TODO003_phase1_notes.md`
+- Document environment decisions in: `TODO003_phase1_decisions.md`
+- List infrastructure validation requirements in: `TODO003_phase1_handoff.md`
+- Create local testing summary in: `TODO003_phase1_testing_summary.md`
 
 ### Progress Checklist
 
@@ -212,10 +212,10 @@ You are implementing the foundation for local-first development with Docker-base
   - [ ] Resource usage monitoring and optimization
 
 #### Documentation
-- [ ] Save `@TODO003_phase1_notes.md` with environment implementation details
-- [ ] Save `@TODO003_phase1_decisions.md` with technical choices and trade-offs
-- [ ] Save `@TODO003_phase1_handoff.md` with infrastructure validation requirements
-- [ ] Save `@TODO003_phase1_testing_summary.md` with local testing results
+- [ ] Save `TODO003_phase1_notes.md` with environment implementation details
+- [ ] Save `TODO003_phase1_decisions.md` with technical choices and trade-offs
+- [ ] Save `TODO003_phase1_handoff.md` with infrastructure validation requirements
+- [ ] Save `TODO003_phase1_testing_summary.md` with local testing results
 
 ---
 
@@ -223,10 +223,10 @@ You are implementing the foundation for local-first development with Docker-base
 
 ### Prerequisites
 - Files/documents to read:
-  - `@TODO003_phase1_notes.md`
-  - `@TODO003_phase1_decisions.md`
-  - `@TODO003_phase1_handoff.md`
-  - `@docs/initiatives/system/upload_refactor/003/RFC003.md`
+  - `TODO003_phase1_notes.md`
+  - `TODO003_phase1_decisions.md`
+  - `TODO003_phase1_handoff.md`
+  - `docs/initiatives/system/upload_refactor/003/RFC003.md`
 - Previous phase outputs: Complete local development environment
 - Session setup: Run `/clear` to start fresh
 
@@ -262,10 +262,10 @@ You are implementing infrastructure validation framework to prevent the deployme
 - Develop automated rollback triggers and recovery procedures
 
 ### Expected Outputs
-- Save implementation notes to: `@TODO003_phase2_notes.md`
-- Document validation strategies in: `@TODO003_phase2_decisions.md`
-- List BaseWorker implementation requirements in: `@TODO003_phase2_handoff.md`
-- Create infrastructure testing summary in: `@TODO003_phase2_testing_summary.md`
+- Save implementation notes to: `TODO003_phase2_notes.md`
+- Document validation strategies in: `TODO003_phase2_decisions.md`
+- List BaseWorker implementation requirements in: `TODO003_phase2_handoff.md`
+- Create infrastructure testing summary in: `TODO003_phase2_testing_summary.md`
 
 ### Progress Checklist
 
@@ -350,10 +350,10 @@ You are implementing infrastructure validation framework to prevent the deployme
   - [ ] Documentation and runbook validation
 
 #### Documentation
-- [ ] Save `@TODO003_phase2_notes.md` with infrastructure validation implementation
-- [ ] Save `@TODO003_phase2_decisions.md` with validation strategy decisions
-- [ ] Save `@TODO003_phase2_handoff.md` with BaseWorker implementation requirements
-- [ ] Save `@TODO003_phase2_testing_summary.md` with infrastructure testing results
+- [ ] Save `TODO003_phase2_notes.md` with infrastructure validation implementation
+- [ ] Save `TODO003_phase2_decisions.md` with validation strategy decisions
+- [ ] Save `TODO003_phase2_handoff.md` with BaseWorker implementation requirements
+- [ ] Save `TODO003_phase2_testing_summary.md` with infrastructure testing results
 
 ---
 
@@ -361,10 +361,10 @@ You are implementing infrastructure validation framework to prevent the deployme
 
 ### Prerequisites
 - Files/documents to read:
-  - `@TODO003_phase2_notes.md`
-  - `@TODO003_phase2_decisions.md`
-  - `@TODO003_phase2_handoff.md`
-  - `@docs/initiatives/system/upload_refactor/003/RFC003.md`
+  - `TODO003_phase2_notes.md`
+  - `TODO003_phase2_decisions.md`
+  - `TODO003_phase2_handoff.md`
+  - `docs/initiatives/system/upload_refactor/003/RFC003.md`
 - Previous phase outputs: Local environment and infrastructure validation framework
 - Session setup: Run `/clear` to start fresh
 
@@ -400,10 +400,10 @@ You are implementing the enhanced BaseWorker with comprehensive monitoring, logg
 - Build end-to-end validation testing with realistic document processing
 
 ### Expected Outputs
-- Save implementation notes to: `@TODO003_phase3_notes.md`
-- Document processing patterns in: `@TODO003_phase3_decisions.md`
-- List local validation requirements in: `@TODO003_phase3_handoff.md`
-- Create performance testing summary in: `@TODO003_phase3_testing_summary.md`
+- Save implementation notes to: `TODO003_phase3_notes.md`
+- Document processing patterns in: `TODO003_phase3_decisions.md`
+- List local validation requirements in: `TODO003_phase3_handoff.md`
+- Create performance testing summary in: `TODO003_phase3_testing_summary.md`
 
 ### Progress Checklist
 
@@ -508,10 +508,10 @@ You are implementing the enhanced BaseWorker with comprehensive monitoring, logg
   - [ ] Resource usage monitoring and capacity planning
 
 #### Documentation and Handoff
-- [ ] Save `@TODO003_phase3_notes.md` with BaseWorker implementation details
-- [ ] Save `@TODO003_phase3_decisions.md` with processing patterns and trade-offs
-- [ ] Save `@TODO003_phase3_handoff.md` with local validation requirements
-- [ ] Save `@TODO003_phase3_testing_summary.md` with performance and testing results
+- [ ] Save `TODO003_phase3_notes.md` with BaseWorker implementation details
+- [ ] Save `TODO003_phase3_decisions.md` with processing patterns and trade-offs
+- [ ] Save `TODO003_phase3_handoff.md` with local validation requirements
+- [ ] Save `TODO003_phase3_testing_summary.md` with performance and testing results
 
 ---
 
@@ -519,9 +519,9 @@ You are implementing the enhanced BaseWorker with comprehensive monitoring, logg
 
 ### Prerequisites
 - Files/documents to read:
-  - `@TODO003_phase3_notes.md`
-  - `@TODO003_phase3_decisions.md`
-  - `@TODO003_phase3_handoff.md`
+  - `TODO003_phase3_notes.md`
+  - `TODO003_phase3_decisions.md`
+  - `TODO003_phase3_handoff.md`
   - All previous phase outputs and documentation
 - Previous phase outputs: Complete BaseWorker implementation and local validation
 - Session setup: Run `/clear` to start fresh
@@ -558,10 +558,10 @@ You are implementing comprehensive local integration testing to validate complet
 - Build complete documentation and handoff materials for deployment preparation
 
 ### Expected Outputs
-- Save implementation notes to: `@TODO003_phase4_notes.md`
-- Document testing strategies in: `@TODO003_phase4_decisions.md`
-- List deployment preparation requirements in: `@TODO003_phase4_handoff.md`
-- Create comprehensive testing summary in: `@TODO003_phase4_testing_summary.md`
+- Save implementation notes to: `TODO003_phase4_notes.md`
+- Document testing strategies in: `TODO003_phase4_decisions.md`
+- List deployment preparation requirements in: `TODO003_phase4_handoff.md`
+- Create comprehensive testing summary in: `TODO003_phase4_testing_summary.md`
 
 ### Progress Checklist
 
@@ -703,10 +703,10 @@ You are implementing comprehensive local integration testing to validate complet
   - [ ] Monitoring and alerting systems ready for production
 
 #### Documentation
-- [ ] Save `@TODO003_phase4_notes.md` with comprehensive testing results
-- [ ] Save `@TODO003_phase4_decisions.md` with testing strategies and outcomes
-- [ ] Save `@TODO003_phase4_handoff.md` with deployment preparation requirements
-- [ ] Save `@TODO003_phase4_testing_summary.md` with final validation results
+- [ ] Save `TODO003_phase4_notes.md` with comprehensive testing results
+- [ ] Save `TODO003_phase4_decisions.md` with testing strategies and outcomes
+- [ ] Save `TODO003_phase4_handoff.md` with deployment preparation requirements
+- [ ] Save `TODO003_phase4_testing_summary.md` with final validation results
 
 ---
 
@@ -714,10 +714,10 @@ You are implementing comprehensive local integration testing to validate complet
 
 ### Prerequisites
 - Files/documents to read:
-  - `@TODO003_phase4_notes.md`
-  - `@TODO003_phase4_decisions.md`
-  - `@TODO003_phase4_handoff.md`
-  - `@TODO003_phase2_notes.md` (Infrastructure validation framework)
+  - `TODO003_phase4_notes.md`
+  - `TODO003_phase4_decisions.md`
+  - `TODO003_phase4_handoff.md`
+  - `TODO003_phase2_notes.md` (Infrastructure validation framework)
 - Previous phase outputs: Complete local validation and testing
 - Session setup: Run `/clear` to start fresh
 
@@ -753,10 +753,10 @@ You are implementing infrastructure deployment with automated validation against
 - Build infrastructure documentation and operational procedures
 
 ### Expected Outputs
-- Save implementation notes to: `@TODO003_phase5_notes.md`
-- Document infrastructure decisions in: `@TODO003_phase5_decisions.md`
-- List application deployment requirements in: `@TODO003_phase5_handoff.md`
-- Create infrastructure validation summary in: `@TODO003_phase5_testing_summary.md`
+- Save implementation notes to: `TODO003_phase5_notes.md`
+- Document infrastructure decisions in: `TODO003_phase5_decisions.md`
+- List application deployment requirements in: `TODO003_phase5_handoff.md`
+- Create infrastructure validation summary in: `TODO003_phase5_testing_summary.md`
 
 ### Progress Checklist
 
@@ -819,10 +819,10 @@ You are implementing infrastructure deployment with automated validation against
   - [ ] Capacity planning and scaling automation
 
 #### Documentation
-- [ ] Save `@TODO003_phase5_notes.md` with infrastructure deployment details
-- [ ] Save `@TODO003_phase5_decisions.md` with infrastructure configuration decisions
-- [ ] Save `@TODO003_phase5_handoff.md` with application deployment requirements
-- [ ] Save `@TODO003_phase5_testing_summary.md` with infrastructure validation results
+- [ ] Save `TODO003_phase5_notes.md` with infrastructure deployment details
+- [ ] Save `TODO003_phase5_decisions.md` with infrastructure configuration decisions
+- [ ] Save `TODO003_phase5_handoff.md` with application deployment requirements
+- [ ] Save `TODO003_phase5_testing_summary.md` with infrastructure validation results
 
 ---
 
@@ -830,9 +830,9 @@ You are implementing infrastructure deployment with automated validation against
 
 ### Prerequisites
 - Files/documents to read:
-  - `@TODO003_phase5_notes.md`
-  - `@TODO003_phase5_decisions.md`
-  - `@TODO003_phase5_handoff.md`
+  - `TODO003_phase5_notes.md`
+  - `TODO003_phase5_decisions.md`
+  - `TODO003_phase5_handoff.md`
   - All previous phase outputs for complete context
 - Previous phase outputs: Validated infrastructure deployment
 - Session setup: Run `/clear` to start fresh
@@ -871,10 +871,10 @@ You are implementing application deployment with comprehensive validation agains
 - Obtain final stakeholder approval and production sign-off
 
 ### Expected Outputs
-- Save implementation notes to: `@TODO003_phase6_notes.md`
-- Document deployment decisions in: `@TODO003_phase6_decisions.md`
-- List production operation requirements in: `@TODO003_phase6_handoff.md`
-- Create deployment validation summary in: `@TODO003_phase6_testing_summary.md`
+- Save implementation notes to: `TODO003_phase6_notes.md`
+- Document deployment decisions in: `TODO003_phase6_decisions.md`
+- List production operation requirements in: `TODO003_phase6_handoff.md`
+- Create deployment validation summary in: `TODO003_phase6_testing_summary.md`
 
 ### Progress Checklist
 
@@ -974,10 +974,10 @@ You are implementing application deployment with comprehensive validation agains
   - [ ] Final production readiness sign-off and approval
 
 #### Documentation
-- [ ] Save `@TODO003_phase6_notes.md` with application deployment details
-- [ ] Save `@TODO003_phase6_decisions.md` with deployment configuration decisions
-- [ ] Save `@TODO003_phase6_handoff.md` with production operation requirements
-- [ ] Save `@TODO003_phase6_testing_summary.md` with production validation results
+- [ ] Save `TODO003_phase6_notes.md` with application deployment details
+- [ ] Save `TODO003_phase6_decisions.md` with deployment configuration decisions
+- [ ] Save `TODO003_phase6_handoff.md` with production operation requirements
+- [ ] Save `TODO003_phase6_testing_summary.md` with production validation results
 
 ---
 
@@ -985,9 +985,9 @@ You are implementing application deployment with comprehensive validation agains
 
 ### Prerequisites
 - Files/documents to read:
-  - `@TODO003_phase6_notes.md`
-  - `@TODO003_phase6_decisions.md`
-  - `@TODO003_phase6_handoff.md`
+  - `TODO003_phase6_notes.md`
+  - `TODO003_phase6_decisions.md`
+  - `TODO003_phase6_handoff.md`
   - All previous phase outputs for complete context
 - Previous phase outputs: Complete application deployment and validation
 - Session setup: Run `/clear` to start fresh
@@ -1024,10 +1024,10 @@ You are implementing production integration with comprehensive monitoring and op
 - Document lessons learned and best practices for future iterations
 
 ### Expected Outputs
-- Save implementation notes to: `@TODO003_phase7_notes.md`
-- Document operational procedures in: `@TODO003_phase7_decisions.md`
-- List ongoing maintenance requirements in: `@TODO003_phase7_handoff.md`
-- Create final project summary in: `@TODO003_phase7_testing_summary.md`
+- Save implementation notes to: `TODO003_phase7_notes.md`
+- Document operational procedures in: `TODO003_phase7_decisions.md`
+- List ongoing maintenance requirements in: `TODO003_phase7_handoff.md`
+- Create final project summary in: `TODO003_phase7_testing_summary.md`
 
 ### Progress Checklist
 
@@ -1100,10 +1100,10 @@ You are implementing production integration with comprehensive monitoring and op
   - [ ] Project lessons learned and best practices documentation
 
 #### Documentation
-- [ ] Save `@TODO003_phase7_notes.md` with production integration details
-- [ ] Save `@TODO003_phase7_decisions.md` with operational procedures and decisions
-- [ ] Save `@TODO003_phase7_handoff.md` with ongoing maintenance and support requirements
-- [ ] Save `@TODO003_phase7_testing_summary.md` with final project validation and success metrics
+- [ ] Save `TODO003_phase7_notes.md` with production integration details
+- [ ] Save `TODO003_phase7_decisions.md` with operational procedures and decisions
+- [ ] Save `TODO003_phase7_handoff.md` with ongoing maintenance and support requirements
+- [ ] Save `TODO003_phase7_testing_summary.md` with final project validation and success metrics
 
 ---
 
@@ -1111,9 +1111,9 @@ You are implementing production integration with comprehensive monitoring and op
 
 ### Prerequisites
 - Files/documents to read:
-  - `@TODO003_phase7_notes.md`
-  - `@TODO003_phase7_decisions.md`
-  - `@TODO003_phase7_handoff.md`
+  - `TODO003_phase7_notes.md`
+  - `TODO003_phase7_decisions.md`
+  - `TODO003_phase7_handoff.md`
   - All previous phase outputs for complete project context
 - Previous phase outputs: Complete production integration and operational excellence
 - Session setup: Run `/clear` to start fresh
@@ -1150,10 +1150,10 @@ You are completing the 003 Worker Refactor project with comprehensive validation
 - Execute final project closure and celebration procedures
 
 ### Expected Outputs
-- Save implementation notes to: `@TODO003_phase8_notes.md`
-- Document project outcomes in: `@TODO003_phase8_decisions.md`
-- List future recommendations in: `@TODO003_phase8_handoff.md`
-- Create final project report in: `@TODO003_phase8_testing_summary.md`
+- Save implementation notes to: `TODO003_phase8_notes.md`
+- Document project outcomes in: `TODO003_phase8_decisions.md`
+- List future recommendations in: `TODO003_phase8_handoff.md`
+- Create final project report in: `TODO003_phase8_testing_summary.md`
 
 ### Progress Checklist
 
@@ -1226,10 +1226,10 @@ You are completing the 003 Worker Refactor project with comprehensive validation
   - [ ] Future iteration planning and execution framework
 
 #### Documentation
-- [ ] Save `@TODO003_phase8_notes.md` with project completion details
-- [ ] Save `@TODO003_phase8_decisions.md` with final project outcomes and decisions
-- [ ] Save `@TODO003_phase8_handoff.md` with future recommendations and continuous improvement procedures
-- [ ] Save `@TODO003_phase8_testing_summary.md` with final project success report and metrics
+- [ ] Save `TODO003_phase8_notes.md` with project completion details
+- [ ] Save `TODO003_phase8_decisions.md` with final project outcomes and decisions
+- [ ] Save `TODO003_phase8_handoff.md` with future recommendations and continuous improvement procedures
+- [ ] Save `TODO003_phase8_testing_summary.md` with final project success report and metrics
 
 ---
 
@@ -1317,7 +1317,7 @@ The 8-phase structure provides proper validation and testing at each stage, prev
 - Always run `/clear` before starting a new phase
 - Each phase includes complete context for fresh Claude sessions
 - Save all specified output files for continuity between phases
-- Reference previous phase outputs using `@filename.md` syntax
+- Reference previous phase outputs using `filename.md` syntax
 
 **Quality Assurance:**
 - Each phase includes comprehensive testing and validation requirements

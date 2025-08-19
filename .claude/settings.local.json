@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(psql:*)"
+      "Bash(psql:*)",
+      "Bash(for:*)",
+      "Bash(do sed -i '' 's/@docs\\/initiatives\\//docs\\/initiatives\\//g' \"$file\")",
+      "Bash(done)",
+      "Bash(do sed -i '' 's/@TODO003_/TODO003_/g' \"$file\")"
     ],
     "deny": []
   }
