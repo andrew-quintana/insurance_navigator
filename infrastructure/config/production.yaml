@@ -1,0 +1,74 @@
+# Production Deployment Configuration for 003 Worker Refactor
+# This configuration should match the local environment baseline
+
+database:
+  url: "${DATABASE_URL}"
+  name: "accessa_production"
+  pool_size: 20
+  max_overflow: 30
+  pool_timeout: 30
+  pool_recycle: 3600
+
+api:
+  url: "${API_BASE_URL}"
+  port: 8000
+  workers: 4
+  timeout: 30
+  max_requests: 1000
+  max_requests_jitter: 100
+
+worker:
+  health_url: "${WORKER_HEALTH_URL}"
+  max_concurrent_jobs: 10
+  poll_interval: 5
+  timeout: 300
+  retry_attempts: 3
+  retry_delay: 10
+
+storage:
+  url: "${SUPABASE_URL}"
+  service_role_key: "${SUPABASE_SERVICE_ROLE_KEY}"
+  bucket_name: "accessa-documents"
+  max_file_size: "100MB"
+  allowed_types: ["pdf", "docx", "txt", "md"]
+
+external:
+  llamaparse:
+    url: "${LLAMAPARSE_API_URL}"
+    api_key: "${LLAMAPARSE_API_KEY}"
+    timeout: 60
+    max_retries: 3
+  
+  openai:
+    url: "https://api.openai.com"
+    api_key: "${OPENAI_API_KEY}"
+    timeout: 30
+    max_retries: 3
+    rate_limit: 3500  # requests per minute
+
+monitoring:
+  enabled: true
+  metrics_endpoint: "/metrics"
+  health_check_interval: 30
+  alerting:
+    enabled: true
+    webhook_url: "${ALERTING_WEBHOOK_URL}"
+
+security:
+  cors_origins: ["${ALLOWED_ORIGINS}"]
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 100
+  webhook_validation:
+    enabled: true
+    secret_header: "X-Webhook-Secret"
+
+deployment:
+  platform: "render"
+  region: "us-east-1"
+  environment: "production"
+  auto_scaling:
+    enabled: true
+    min_instances: 1
+    max_instances: 10
+    target_cpu_utilization: 70

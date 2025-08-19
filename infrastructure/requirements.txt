@@ -1,0 +1,26 @@
+# Infrastructure Validation Framework Requirements
+# Python dependencies for the 003 Worker Refactor infrastructure validation
+
+# Core dependencies
+PyYAML>=6.0
+httpx>=0.24.0
+psycopg2-binary>=2.9.0
+
+# Async support
+asyncio-compat>=0.1.2
+
+# Logging and monitoring
+structlog>=23.0.0
+
+# Testing and validation
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+
+# Development dependencies
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.0.0
+
+# Optional: Additional monitoring
+prometheus-client>=0.17.0
+grafana-api>=1.0.0
