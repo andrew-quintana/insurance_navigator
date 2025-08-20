@@ -1,18 +1,18 @@
 """
-Database connection management for the upload pipeline.
+Database management for the upload pipeline.
 """
 
-import asyncio
-import logging
-from typing import Optional, AsyncGenerator
-from contextlib import asynccontextmanager
 import os
+import logging
+import asyncio
+from contextlib import asynccontextmanager
+from typing import Optional, AsyncGenerator, List, Dict, Any
 
 import asyncpg
 from asyncpg import Pool, Connection
 from asyncpg.pool import create_pool
 
-from .config import get_config
+from config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,6 @@ class DatabaseManager:
                 command_timeout=60,
                 statement_cache_size=0,
                 max_cached_statement_lifetime=0,
-                max_cached_statement_size=0,
                 setup=self._setup_connection
             )
             
@@ -102,6 +101,11 @@ class DatabaseManager:
     
     def _parse_supabase_url(self) -> str:
         """Parse Supabase URL to extract database connection details."""
+        # For local development, use DATABASE_URL directly
+        db_url = os.getenv("DATABASE_URL")
+        if db_url:
+            return db_url
+            
         # Extract database connection string from environment
         # This would typically be set as SUPABASE_DB_URL or similar
         db_url = os.getenv("SUPABASE_DB_URL")

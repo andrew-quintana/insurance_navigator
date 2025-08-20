@@ -10,11 +10,11 @@ from uuid import uuid4
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.responses import JSONResponse
 
-from ..models import UploadRequest, UploadResponse, JobPayloadJobValidated
-from ..auth import require_user, User
-from ..database import get_database
-from ..config import get_config
-from ...utils.upload_pipeline_utils import generate_document_id, log_event, generate_storage_path
+from models import UploadRequest, UploadResponse, JobPayloadJobValidated
+from auth import require_user, User
+from database import get_database
+from config import get_config
+from utils.upload_pipeline_utils import generate_document_id, log_event, generate_storage_path
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ router = APIRouter()
 @router.post("/upload", response_model=UploadResponse)
 async def upload_document(
     request: UploadRequest,
-    current_user: User = Depends(require_user)
+    current_user: User = Depends(require_user())
 ):
     """
     Upload a new document for processing.
