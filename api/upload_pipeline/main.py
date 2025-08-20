@@ -16,12 +16,12 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
 
-from .config import get_config
-from .database import get_database
-from .auth import get_current_user, User
-from .rate_limiter import RateLimiter
-from .endpoints.upload import router as upload_router
-from .endpoints.jobs import router as jobs_router
+from config import get_config
+from database import get_database
+from auth import get_current_user, User
+from rate_limiter import RateLimiter
+from endpoints.upload import router as upload_router
+from endpoints.jobs import router as jobs_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -70,11 +70,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         
         # Log request
         logger.info(
-            "Request started",
-            method=request.method,
-            url=str(request.url),
-            user_agent=request.headers.get("user-agent"),
-            client_ip=request.client.host if request.client else None
+            f"Request started: {request.method} {request.url} - User-Agent: {request.headers.get('user-agent')} - Client IP: {request.client.host if request.client else 'unknown'}"
         )
         
         response = await call_next(request)
@@ -82,11 +78,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         # Log response
         process_time = time.time() - start_time
         logger.info(
-            "Request completed",
-            method=request.method,
-            url=str(request.url),
-            status_code=response.status_code,
-            process_time=process_time
+            f"Request completed: {request.method} {request.url} - Status: {response.status_code} - Process Time: {process_time:.3f}s"
         )
         
         return response
@@ -145,10 +137,8 @@ app.add_middleware(RateLimitMiddleware)
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler for unhandled errors."""
     logger.error(
-        "Unhandled exception",
-        exc_info=True,
-        method=request.method,
-        url=str(request.url)
+        f"Unhandled exception: {request.method} {request.url}",
+        exc_info=True
     )
     
     return JSONResponse(
@@ -158,6 +148,41 @@ async def global_exception_handler(request: Request, exc: Exception):
             "message": "An unexpected error occurred. Please try again later."
         }
     )
+
+
+# Test endpoint for Phase 9 validation (no authentication required)
+@app.post("/test/upload", response_model=dict)
+async def test_upload_endpoint(request: dict):
+    """Test endpoint for Phase 9 validation without authentication."""
+    try:
+        # Simulate basic validation
+        if not request.get("filename"):
+            raise HTTPException(status_code=400, detail="Filename is required")
+        
+        return {
+            "status": "success",
+            "message": "Test upload endpoint working",
+            "received_data": request,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Test endpoint error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/test/jobs/{job_id}", response_model=dict)
+async def test_jobs_endpoint(job_id: str):
+    """Test jobs endpoint for Phase 9 validation without authentication."""
+    try:
+        return {
+            "status": "success",
+            "message": "Test jobs endpoint working",
+            "job_id": job_id,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Test jobs endpoint error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Health check endpoint

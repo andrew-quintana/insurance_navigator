@@ -154,22 +154,23 @@ class BaseWorker:
         """Get next job from queue using FOR UPDATE SKIP LOCKED"""
         try:
             async with self.db.get_db_connection() as conn:
-                # Query for next available job
+                # Query for next available job with user_id from documents table
                 job = await conn.fetchrow("""
                     WITH next_job AS (
-                        SELECT job_id, document_id, user_id, status, raw_path, parsed_path,
-                               parsed_sha256, chunks_version, embed_model, embed_version,
-                               progress, retry_count, last_error, correlation_id
-                        FROM upload_pipeline.upload_jobs
-                        WHERE status IN (
-                            'parsed', 'parse_validated', 'chunking', 'chunks_stored',
-                            'embedding_queued', 'embedding_in_progress'
+                        SELECT uj.job_id, uj.document_id, d.user_id, uj.stage, uj.state,
+                               uj.payload, uj.retry_count, uj.last_error, uj.created_at
+                        FROM upload_pipeline.upload_jobs uj
+                        JOIN upload_pipeline.documents d ON uj.document_id = d.document_id
+                        WHERE uj.stage IN (
+                            'parsed', 'parse_validated', 'chunking', 'chunks_buffered',
+                            'embedding', 'embeddings_buffered'
                         )
+                        AND uj.state IN ('queued', 'working', 'retryable')
                         AND (
-                            last_error IS NULL 
-                            OR (last_error->>'retry_at')::timestamp <= now()
+                            uj.last_error IS NULL 
+                            OR (uj.last_error->>'retry_at')::timestamp <= now()
                         )
-                        ORDER BY created_at
+                        ORDER BY uj.created_at
                         FOR UPDATE SKIP LOCKED
                         LIMIT 1
                     )
@@ -181,7 +182,7 @@ class BaseWorker:
                     self.logger.info(
                         "Retrieved job for processing",
                         job_id=str(job_dict["job_id"]),
-                        status=job_dict["status"],
+                        stage=job_dict["stage"],
                         document_id=str(job_dict["document_id"])
                     )
                     return job_dict
@@ -195,7 +196,7 @@ class BaseWorker:
     async def _process_single_job_with_monitoring(self, job: Dict[str, Any]):
         """Process a single job with comprehensive monitoring"""
         job_id = job["job_id"]
-        status = job["status"]
+        status = job["stage"] # Changed from job["status"] to job["stage"]
         correlation_id = job.get("correlation_id") or self.logger.get_correlation_id()
         
         start_time = datetime.utcnow()
@@ -207,19 +208,19 @@ class BaseWorker:
                 correlation_id=correlation_id
             )
             
-            # Route to appropriate processor based on status
+            # Route to appropriate processor based on stage
             if status == "parsed":
                 await self._validate_parsed(job, correlation_id)
             elif status == "parse_validated":
                 await self._process_chunks(job, correlation_id)
-            elif status == "chunks_stored":
+            elif status == "chunks_buffered":
                 await self._queue_embeddings(job, correlation_id)
-            elif status in ["embedding_queued", "embedding_in_progress"]:
+            elif status in ["embedding", "embeddings_buffered"]:
                 await self._process_embeddings(job, correlation_id)
-            elif status == "embeddings_stored":
+            elif status == "embedded":
                 await self._finalize_job(job, correlation_id)
             else:
-                raise ValueError(f"Unexpected job status: {status}")
+                raise ValueError(f"Unexpected job stage: {status}")
             
             # Record successful processing metrics
             duration = (datetime.utcnow() - start_time).total_seconds()
@@ -704,7 +705,7 @@ class BaseWorker:
     async def _mark_job_failed(self, job: Dict[str, Any], error: Exception, correlation_id: str):
         """Mark job as permanently failed"""
         job_id = job["job_id"]
-        status = job["status"]
+        status = job["stage"] # Changed from job["status"] to job["stage"]
         
         # Determine failure status based on current stage
         if status == "parsed":

@@ -8,7 +8,7 @@ from typing import Dict, Optional, Tuple
 from collections import defaultdict, deque
 from dataclasses import dataclass
 
-from .config import get_config
+from config import get_config
 
 logger = logging.getLogger(__name__)
 

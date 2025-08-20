@@ -11,7 +11,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from pydantic import BaseModel
 
-from .config import get_config
+from config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +155,7 @@ async def get_optional_user(request: Request) -> Optional[User]:
         return None
 
 
-def require_user() -> User:
+def require_user():
     """
     Dependency for endpoints that require authentication.
     
@@ -168,10 +168,10 @@ def require_user() -> User:
     async def _require_user(request: Request) -> User:
         return await get_current_user(request)
     
-    return Depends(_require_user)
+    return _require_user
 
 
-def optional_user() -> Optional[User]:
+def optional_user():
     """
     Dependency for endpoints that optionally use authentication.
     
@@ -181,4 +181,4 @@ def optional_user() -> Optional[User]:
     async def _optional_user(request: Request) -> Optional[User]:
         return await get_optional_user(request)
     
-    return Depends(_optional_user)
+    return _optional_user
