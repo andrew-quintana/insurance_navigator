@@ -154,4 +154,14 @@ class WorkerConfig:
             "anon_key": self.supabase_anon_key,
             "service_role_key": self.supabase_service_role_key
         }
+    
+    def get_service_router_config(self) -> Dict[str, Any]:
+        """Get service router configuration"""
+        return {
+            "mode": "HYBRID",  # Default to hybrid mode
+            "llamaparse_config": self.get_llamaparse_config(),
+            "openai_config": self.get_openai_config(),
+            "fallback_enabled": True,
+            "fallback_timeout": 10
+        }
 

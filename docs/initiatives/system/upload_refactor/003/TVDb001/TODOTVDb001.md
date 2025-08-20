@@ -70,7 +70,7 @@ This implementation uses an 8-phase structure designed for systematic validation
 #### Setup Tasks
 
 **S1.1: Environment Configuration Enhancement**
-- Create `.env.tvdb001.example` with real service configuration variables
+- Use the existing `.env.development` which has real service configuration variables (check with `cat .env.development`)
 - Add SERVICE_MODE variable for mock/real/hybrid switching
 - Include API key placeholders and cost limit settings
 - Document configuration options and security practices
