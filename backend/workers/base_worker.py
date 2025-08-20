@@ -10,6 +10,7 @@ import traceback
 from shared.db import DatabaseManager
 from shared.storage import StorageManager
 from shared.external import LlamaParseClient, OpenAIClient
+from shared.external.service_router import ServiceRouter, ServiceMode
 from shared.logging import StructuredLogger
 from shared.config import WorkerConfig
 
@@ -28,8 +29,7 @@ class BaseWorker:
         # Initialize components
         self.db = None
         self.storage = None
-        self.llamaparse = None
-        self.openai = None
+        self.service_router = None
         
         # Processing configuration from config
         self.poll_interval = config.poll_interval
@@ -86,15 +86,10 @@ class BaseWorker:
             self.storage = StorageManager(storage_config)
             self.logger.info("Storage manager initialized")
             
-            # Initialize LlamaParse client
-            llamaparse_config = self.config.get_llamaparse_config()
-            self.llamaparse = LlamaParseClient(llamaparse_config)
-            self.logger.info("LlamaParse client initialized")
-            
-            # Initialize OpenAI client
-            openai_config = self.config.get_openai_config()
-            self.openai = OpenAIClient(openai_config)
-            self.logger.info("OpenAI client initialized")
+            # Initialize ServiceRouter
+            service_router_config = self.config.get_service_router_config()
+            self.service_router = ServiceRouter(service_router_config)
+            self.logger.info("ServiceRouter initialized")
             
         except Exception as e:
             self.logger.error("Failed to initialize components", error=str(e))
@@ -107,10 +102,8 @@ class BaseWorker:
                 await self.db.close()
             if self.storage:
                 await self.storage.close()
-            if self.llamaparse:
-                await self.llamaparse.close()
-            if self.openai:
-                await self.openai.close()
+            if self.service_router:
+                await self.service_router.close()
             
             self.logger.info("Components cleaned up")
             
@@ -486,7 +479,7 @@ class BaseWorker:
             
             # Generate embeddings with micro-batching
             start_time = datetime.utcnow()
-            embeddings = await self.openai.generate_embeddings(texts, str(job_id))
+            embeddings = await self.service_router.generate_embeddings(texts, str(job_id))
             duration = (datetime.utcnow() - start_time).total_seconds()
             
             # Validate embeddings
@@ -832,8 +825,7 @@ class BaseWorker:
             # Check component health
             db_health = await self.db.health_check() if self.db else {"status": "unknown"}
             storage_health = await self.storage.health_check() if self.storage else {"status": "unknown"}
-            llamaparse_health = await self.llamaparse.health_check() if self.llamaparse else {"status": "unknown"}
-            openai_health = await self.openai.health_check() if self.openai else {"status": "unknown"}
+            service_router_health = await self.service_router.health_check() if self.service_router else {"status": "unknown"}
             
             return {
                 "status": "healthy" if self.running else "stopped",
@@ -845,8 +837,7 @@ class BaseWorker:
                 "components": {
                     "database": db_health,
                     "storage": storage_health,
-                    "llamaparse": llamaparse_health,
-                    "openai": openai_health
+                    "service_router": service_router_health
                 }
             }
             
