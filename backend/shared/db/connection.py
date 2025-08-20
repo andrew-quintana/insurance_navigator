@@ -98,7 +98,7 @@ class DatabaseManager:
                     return {
                         "status": "healthy",
                         "pool_size": self.pool.get_size(),
-                        "free_size": self.pool.get_free_size()
+                        "free_size": self.pool.get_size()  # asyncpg.Pool doesn't have get_free_size
                     }
                 else:
                     return {"status": "unhealthy", "error": "Basic query failed"}
