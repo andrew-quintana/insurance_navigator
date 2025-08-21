@@ -200,7 +200,7 @@ class ServiceRouter:
         try:
             # Import here to avoid circular imports
             from .llamaparse_client import LlamaParseClient
-            from .openai_client import OpenAIClient
+            from .openai_real import RealOpenAIService
             
             # Register LlamaParse service
             if "llamaparse_config" in config:
@@ -213,7 +213,14 @@ class ServiceRouter:
             if "openai_config" in config:
                 openai_config = config["openai_config"]
                 mock_openai = MockOpenAIService()
-                real_openai = OpenAIClient(openai_config)
+                real_openai = RealOpenAIService(
+                    api_key=openai_config["api_key"],
+                    base_url=openai_config["api_url"],
+                    rate_limit_per_minute=openai_config.get("requests_per_minute", 3500),
+                    timeout_seconds=openai_config.get("timeout_seconds", 30),
+                    max_retries=openai_config.get("max_retries", 3),
+                    max_batch_size=openai_config.get("max_batch_size", 256)
+                )
                 self.register_service("openai", mock_openai, real_openai)
                 
         except ImportError as e:
@@ -439,10 +446,19 @@ class ServiceRouter:
     async def generate_embeddings(self, texts: List[str], correlation_id: str = None) -> List[List[float]]:
         """Generate embeddings using the OpenAI service."""
         service = await self.get_service("openai")
+        
+        # Try generate_embeddings first (for compatibility with OpenAIClient)
         if hasattr(service, 'generate_embeddings'):
             return await service.generate_embeddings(texts, correlation_id)
+        
+        # Try create_embeddings (for RealOpenAIService)
+        elif hasattr(service, 'create_embeddings'):
+            response = await service.create_embeddings(texts, correlation_id=correlation_id)
+            # Extract embeddings from the response
+            return [item["embedding"] for item in response.data]
+        
         else:
-            raise ServiceExecutionError("OpenAI service does not support generate_embeddings")
+            raise ServiceExecutionError("OpenAI service does not support embedding generation")
     
     async def parse_document(self, file_path: str, correlation_id: str = None) -> Dict[str, Any]:
         """Parse document using the LlamaParse service."""

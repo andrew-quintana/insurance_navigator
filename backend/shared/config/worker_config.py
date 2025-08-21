@@ -2,6 +2,17 @@ import os
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 
+# Load environment variables from .env files
+try:
+    from dotenv import load_dotenv
+    # Load .env.development first, then .env.base as fallback
+    # Use relative paths from the backend directory
+    load_dotenv('../.env.development')
+    load_dotenv('../.env.base', override=False)
+except ImportError:
+    # dotenv not available, continue without it
+    pass
+
 @dataclass
 class WorkerConfig:
     """Configuration for BaseWorker with environment variable support"""
