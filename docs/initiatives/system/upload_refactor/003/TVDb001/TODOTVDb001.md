@@ -835,6 +835,154 @@ This implementation uses an 8-phase structure designed for systematic validation
 
 ---
 
+## Phase 3.5: Job State Integration and End-to-End Testing
+
+### Prerequisites
+- Files/documents to read:
+  - `TODOTVDb001_phase3_notes.md` and `TODOTVDb001_phase3_handoff.md`
+  - `TODOTVDb001_phase3_decisions.md` and `TODOTVDb001_phase3_testing_summary.md`
+  - `docs/initiatives/system/upload_refactor/003/CONTEXT003.md` (003 job state management patterns)
+  - `backend/api/routes/webhooks.py` (existing webhook implementation with TODOs)
+- Previous phase outputs: Complete webhook endpoint implementation with HMAC security
+- Session setup: Run `/clear` to start fresh, then review Phase 3 outputs
+
+### Context for Claude
+
+**IMPORTANT**: This is Phase 3.5 of TVDb001 Real API Integration Testing. Phase 3 completed webhook endpoint implementation with security controls. Now implementing job state integration and end-to-end webhook flow testing.
+
+**Phase 3.5 Objectives:**
+1. Implement 003 job state management integration for webhook callbacks
+2. Test complete webhook flow with real LlamaParse API
+3. Validate database integration for job updates
+4. Implement pipeline stage triggering from webhook callbacks
+
+**Key Requirements from Phase 3:**
+- Webhook endpoints fully implemented with HMAC verification
+- Service router integration complete and tested
+- Cost tracking system operational
+- Security implementation production-ready
+
+### Tasks
+
+#### Core Implementation Tasks
+
+**C3.5.1: Job State Management Integration**
+- Implement TODO items in `backend/api/routes/webhooks.py`:
+  - `_handle_parsed_status` function for successful parsing
+  - `_handle_failed_status` function for parsing failures
+- Integrate with existing 003 job state management patterns
+- Add database operations for job status updates
+- Implement pipeline stage triggering logic
+
+**C3.5.2: Database Integration**
+- Create job state update methods for webhook processing
+- Implement transaction management for job updates
+- Add error handling for database operation failures
+- Integrate with existing 003 buffer table operations
+
+**C3.5.3: Pipeline Integration**
+- Connect webhook callbacks to next processing stages
+- Implement job progression logic based on webhook status
+- Add correlation ID tracking throughout pipeline
+- Implement retry logic for failed webhook processing
+
+#### Testing Tasks
+
+**T3.5.1: End-to-End Webhook Flow Testing**
+- Test complete webhook flow with real LlamaParse API
+- Use real API with test documents (cost-controlled)
+- Monitor database state changes during processing
+- Verify webhook signature verification in real scenarios
+
+**T3.5.2: Job State Management Testing**
+- Test job status updates from webhook callbacks
+- Validate database transaction integrity
+- Test error handling and recovery scenarios
+- Verify correlation ID tracking accuracy
+
+**T3.5.3: Pipeline Integration Testing**
+- Test pipeline stage triggering from webhooks
+- Validate job progression through all stages
+- Test error handling and retry mechanisms
+- Verify cost tracking integration accuracy
+
+#### Integration Tasks
+
+**I3.5.1: 003 Integration Validation**
+- Ensure webhook processing integrates with existing 003 patterns
+- Validate job state management consistency
+- Test buffer table operations integration
+- Verify monitoring and logging integration
+
+**I3.5.2: Real API Integration Testing**
+- Test with real LlamaParse API using small documents
+- Validate webhook delivery and processing timing
+- Test error scenarios with real API responses
+- Verify cost tracking accuracy with real usage
+
+### Expected Outputs
+- Save implementation notes to: `TODOTVDb001_phase3.5_notes.md`
+- Document technical decisions in: `TODOTVDb001_phase3.5_decisions.md`
+- List any issues/blockers for Phase 4 in: `TODOTVDb001_phase3.5_handoff.md`
+- Create testing summary in: `TODOTVDb001_phase3.5_testing_summary.md`
+
+### Progress Checklist
+
+#### Core Implementation
+- [ ] Implement job state management integration
+  - [ ] Complete `_handle_parsed_status` function
+  - [ ] Complete `_handle_failed_status` function
+  - [ ] Integrate with 003 job state patterns
+  - [ ] Add database transaction management
+- [ ] Implement database integration
+  - [ ] Create job state update methods
+  - [ ] Add transaction rollback handling
+  - [ ] Integrate with buffer table operations
+  - [ ] Add error handling for database failures
+- [ ] Implement pipeline integration
+  - [ ] Connect webhook callbacks to next stages
+  - [ ] Implement job progression logic
+  - [ ] Add correlation ID tracking
+  - [ ] Implement retry mechanisms
+
+#### Testing
+- [ ] Test end-to-end webhook flow
+  - [ ] Real LlamaParse API integration
+  - [ ] Webhook signature verification
+  - [ ] Database state changes
+  - [ ] Cost tracking accuracy
+- [ ] Test job state management
+  - [ ] Status update accuracy
+  - [ ] Transaction integrity
+  - [ ] Error handling scenarios
+  - [ ] Recovery mechanisms
+- [ ] Test pipeline integration
+  - [ ] Stage triggering accuracy
+  - [ ] Job progression logic
+  - [ ] Error handling and retry
+  - [ ] Monitoring integration
+
+#### Integration Validation
+- [ ] Validate 003 integration
+  - [ ] Job state management consistency
+  - [ ] Buffer operations integration
+  - [ ] Monitoring and logging
+  - [ ] Error handling patterns
+- [ ] Validate real API integration
+  - [ ] Webhook delivery reliability
+  - [ ] Processing timing accuracy
+  - [ ] Error scenario handling
+  - [ ] Cost tracking validation
+
+#### Documentation
+- [ ] Go through TODOTVDb001 Phase 3.5 checklist and mark completed items
+- [ ] Save `TODOTVDb001_phase3.5_notes.md` with implementation details
+- [ ] Save `TODOTVDb001_phase3.5_decisions.md` with technical decisions
+- [ ] Save `TODOTVDb001_phase3.5_handoff.md` with Phase 4 requirements
+- [ ] Save `TODOTVDb001_phase3.5_testing_summary.md` with comprehensive test results
+
+---
+
 ## Phase 4: OpenAI Real Integration
 
 ### Prerequisites
