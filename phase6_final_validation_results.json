@@ -1,0 +1,17 @@
+{
+  "environment_override": true,
+  "configuration_working": true,
+  "jwt_authentication": {
+    "token_generated": true,
+    "user_id": "e40a6f2f-bd23-43df-85a8-24c38e8f2704",
+    "email": "test@example.com",
+    "role": "user"
+  },
+  "production_endpoints": {
+    "upload": {
+      "success": false,
+      "error": "Server error"
+    }
+  },
+  "overall_status": "PARTIALLY_COMPLETED"
+}
