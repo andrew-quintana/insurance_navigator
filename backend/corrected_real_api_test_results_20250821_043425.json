@@ -1,0 +1,45 @@
+{
+  "overall_success": true,
+  "success_rate_percent": 100.0,
+  "total_tests": 3,
+  "passed_tests": 3,
+  "test_results": {
+    "api_structure": {
+      "success": true,
+      "success_rate_percent": 100.0,
+      "total_tests": 4,
+      "passed_tests": 4,
+      "results": {
+        "jobs_endpoint": {
+          "success": true,
+          "job_count": 239
+        },
+        "files_endpoint": {
+          "success": true,
+          "file_count": 0
+        },
+        "file_upload_endpoint": {
+          "success": true,
+          "status": "endpoint_exists"
+        },
+        "file_parse_endpoint": {
+          "success": true,
+          "status": "endpoint_exists"
+        }
+      }
+    },
+    "webhook_signature": {
+      "success": true
+    },
+    "service_integration": {
+      "success": true,
+      "config_test": {
+        "success": true
+      },
+      "signature_test": {
+        "success": true
+      }
+    }
+  },
+  "timestamp": "2025-08-21T04:34:25.902043"
+}
