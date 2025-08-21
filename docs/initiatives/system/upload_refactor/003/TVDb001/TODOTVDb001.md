@@ -23,6 +23,7 @@ This implementation uses an 8-phase structure designed for systematic validation
 |-------|------------|----------|------------------|
 | Phase 1 | Environment Setup & Service Router | 1-2 days | Service router, configuration management, cost tracking |
 | Phase 2 | Upload Initiation & Flow Validation | 1-2 days | Upload triggering, signed URL flow, pipeline initialization |
+| **Phase 2.5** | **Real Integration Testing** | **2-3 days** | **Supabase storage, LlamaParse API, OpenAI API integration** |
 | Phase 3 | LlamaParse Real Integration | 2-3 days | Real LlamaParse client, webhook handling, rate limiting |
 | Phase 4 | OpenAI Real Integration | 2-3 days | Real OpenAI client, batch processing, token optimization |
 | Phase 5 | Enhanced BaseWorker Integration | 1-2 days | Service integration, error handling, fallback logic |
@@ -395,6 +396,271 @@ This implementation uses an 8-phase structure designed for systematic validation
 
 ---
 
+## Phase 2.5: Real Integration Testing
+
+### Prerequisites
+- Files/documents to read:
+  - `TODOTVDb001_phase2_notes.md` and `TODOTVDb001_phase2_testing_summary.md`
+  - `docs/initiatives/system/upload_refactor/003/CONTEXT003.md`
+  - `docs/initiatives/system/upload_refactor/003/RFC003.md`
+  - `docs/initiatives/system/upload_refactor/003/TESTING_INFRASTRUCTURE.md`
+- Previous phase outputs: Phase 2 upload flow validation with mock services
+- Session setup: Run `/clear` to start fresh, then review Phase 2 real integration gaps
+
+### Context for Claude
+
+**IMPORTANT**: This is Phase 2.5 of TVDb001 Real API Integration Testing. Phase 2 completed upload flow validation with mock services, but critical gaps exist in real service integration testing. This phase addresses those gaps before proceeding to Phase 3.
+
+**Critical Gap Analysis from Phase 2:**
+- ❌ **No real Supabase storage testing** - Only mock storage operations
+- ❌ **No real signed URL validation** - No actual blob upload confirmation
+- ❌ **No real edge function execution** - No actual edge function testing
+- ❌ **No real database RLS validation** - Only local database testing
+- ❌ **No real API cost validation** - Only mock cost tracking
+
+**Phase 2.5 Objectives:**
+1. **Real Supabase Integration**: Test actual storage operations, signed URLs, and edge functions
+2. **Real API Integration**: Test actual LlamaParse and OpenAI API calls with cost validation
+3. **Real Database Operations**: Test with actual Supabase database and RLS policies
+4. **Production Readiness**: Validate real service integration before Phase 3
+
+**Key Constraints:**
+- Must use real API keys and services (cost-controlled)
+- Must validate actual production infrastructure
+- Must maintain backward compatibility with mock services
+- Must implement proper cost controls and budget limits
+
+### Tasks
+
+#### Setup Tasks
+
+**S2.5.1: Real Service Configuration**
+- Configure real Supabase project credentials and API keys
+- Set up real LlamaParse API key and account
+- Configure real OpenAI API key with usage limits
+- Implement cost controls and budget monitoring
+- Create test environment with real service isolation
+
+**S2.5.2: Testing Environment Preparation**
+- Set up isolated testing environment for real service validation
+- Create test documents and data for real API testing
+- Implement cost monitoring and alerting for test runs
+- Prepare rollback procedures for failed real service tests
+- Set up comprehensive logging for real service operations
+
+#### Core Implementation Tasks
+
+**C2.5.1: Real Supabase Storage Integration**
+- Implement real Supabase storage client with signed URL generation
+- Test actual file uploads to Supabase storage buckets
+- Validate blob storage operations and metadata
+- Test edge function execution and webhook handling
+- Implement storage bucket management and cleanup
+
+**C2.5.2: Real LlamaParse API Integration**
+- Implement real LlamaParse client with API key authentication
+- Test actual document parsing with real PDFs
+- Validate webhook callback handling and response processing
+- Test rate limiting and error handling with real API
+- Implement cost tracking for actual API usage
+
+**C2.5.3: Real OpenAI API Integration**
+- Implement real OpenAI client with API key authentication
+- Test actual embedding generation with real text
+- Validate batch processing and token optimization
+- Test rate limiting and cost controls with real API
+- Implement usage monitoring and cost tracking
+
+**C2.5.4: Real Database Integration**
+- Test with actual Supabase database and RLS policies
+- Validate real user authentication and authorization
+- Test database constraints and performance under load
+- Implement real-time database monitoring and health checks
+- Validate data consistency and integrity with real operations
+
+#### Testing Tasks
+
+**T2.5.1: Real Supabase Storage Testing**
+- Test signed URL generation and validation
+- Test actual file uploads to storage buckets
+- Test edge function execution and webhook delivery
+- Test storage bucket permissions and access controls
+- Test file metadata and content validation
+
+**T2.5.2: Real API Integration Testing**
+- Test LlamaParse API with real PDF documents
+- Test OpenAI API with real text content
+- Test rate limiting and error handling
+- Test webhook delivery and response processing
+- Test cost tracking and budget enforcement
+
+**T2.5.3: Real Database Testing**
+- Test RLS policies with real user authentication
+- Test database performance under real load
+- Test data consistency and integrity
+- Test concurrent operations and locking
+- Test backup and recovery procedures
+
+**T2.5.4: End-to-End Real Integration Testing**
+- Test complete upload flow with real services
+- Test document processing pipeline with real APIs
+- Test error handling and recovery with real failures
+- Test performance and scalability with real workloads
+- Test cost optimization and budget management
+
+#### Integration Tasks
+
+**I2.5.1: Service Router Real Integration**
+- Test service router with real service availability
+- Validate fallback mechanisms with real service failures
+- Test cost-aware service selection with real usage
+- Implement real service health monitoring
+- Test service switching with real service states
+
+**I2.5.2: Cost Tracking Real Integration**
+- Test cost tracking with real API usage
+- Validate budget enforcement with real costs
+- Test cost optimization with real usage patterns
+- Implement real-time cost monitoring and alerting
+- Test cost forecasting with real usage data
+
+**I2.5.3: Monitoring Real Integration**
+- Test monitoring with real service metrics
+- Validate alerting with real service failures
+- Test performance monitoring with real workloads
+- Implement real-time service health monitoring
+- Test dashboard with real service data
+
+### Expected Outputs
+- Save implementation notes to: `TODOTVDb001_phase2.5_notes.md`
+- Document real integration decisions in: `TODOTVDb001_phase2.5_decisions.md`
+- List real integration requirements for Phase 3 in: `TODOTVDb001_phase2.5_handoff.md`
+- Create real integration testing summary in: `TODOTVDb001_phase2.5_testing_summary.md`
+
+### Progress Checklist
+
+#### Setup
+- [ ] Configure real Supabase project credentials and API keys
+- [ ] Set up real LlamaParse API key and account
+- [ ] Configure real OpenAI API key with usage limits
+- [ ] Implement cost controls and budget monitoring
+- [ ] Create isolated testing environment for real services
+
+#### Real Supabase Integration
+- [ ] Implement real Supabase storage client
+  - [ ] Signed URL generation and validation
+  - [ ] File upload to storage buckets
+  - [ ] Blob storage operations and metadata
+  - [ ] Edge function execution and webhooks
+  - [ ] Storage bucket management and cleanup
+- [ ] Test real storage operations
+  - [ ] Upload test documents to real storage
+  - [ ] Validate signed URL functionality
+  - [ ] Test edge function execution
+  - [ ] Validate webhook delivery and processing
+  - [ ] Test storage permissions and access controls
+
+#### Real API Integration
+- [ ] Implement real LlamaParse client
+  - [ ] API key authentication and validation
+  - [ ] Document parsing with real PDFs
+  - [ ] Webhook callback handling
+  - [ ] Rate limiting and error handling
+  - [ ] Cost tracking for API usage
+- [ ] Implement real OpenAI client
+  - [ ] API key authentication and validation
+  - [ ] Embedding generation with real text
+  - [ ] Batch processing and optimization
+  - [ ] Rate limiting and cost controls
+  - [ ] Usage monitoring and cost tracking
+- [ ] Test real API operations
+  - [ ] Parse real PDF documents with LlamaParse
+  - [ ] Generate real embeddings with OpenAI
+  - [ ] Test rate limiting and error scenarios
+  - [ ] Validate cost tracking accuracy
+  - [ ] Test webhook delivery and processing
+
+#### Real Database Integration
+- [ ] Test with actual Supabase database
+  - [ ] RLS policies with real user authentication
+  - [ ] Database performance under real load
+  - [ ] Data consistency and integrity
+  - [ ] Concurrent operations and locking
+  - [ ] Backup and recovery procedures
+- [ ] Validate real database operations
+  - [ ] User authentication and authorization
+  - [ ] Data access controls and permissions
+  - [ ] Database constraints and validation
+  - [ ] Performance monitoring and optimization
+  - [ ] Data backup and recovery
+
+#### End-to-End Real Integration
+- [ ] Test complete upload flow with real services
+  - [ ] Document upload to real storage
+  - [ ] Real API processing and webhooks
+  - [ ] Real database operations and validation
+  - [ ] Complete pipeline execution
+  - [ ] Error handling and recovery
+- [ ] Test performance and scalability
+  - [ ] Real workload processing
+  - [ ] Performance benchmarking
+  - [ ] Scalability testing
+  - [ ] Resource utilization monitoring
+  - [ ] Cost optimization validation
+
+#### Service Integration
+- [ ] Test service router with real services
+  - [ ] Real service availability checking
+  - [ ] Fallback mechanisms with real failures
+  - [ ] Cost-aware service selection
+  - [ ] Service health monitoring
+  - [ ] Service switching with real states
+- [ ] Test cost tracking with real usage
+  - [ ] Real API cost tracking
+  - [ ] Budget enforcement validation
+  - [ ] Cost optimization testing
+  - [ ] Real-time monitoring and alerting
+  - [ ] Cost forecasting with real data
+
+#### Testing and Validation
+- [ ] Comprehensive real service testing
+  - [ ] All real service operations validated
+  - [ ] Error handling and recovery tested
+  - [ ] Performance and scalability validated
+  - [ ] Cost tracking and optimization confirmed
+  - [ ] Security and access controls validated
+- [ ] Integration testing with real services
+  - [ ] Service router integration validated
+  - [ ] Cost tracking integration confirmed
+  - [ ] Monitoring integration tested
+  - [ ] Error handling integration validated
+  - [ ] Performance integration confirmed
+
+#### Documentation and Handoff
+- [ ] Document real integration implementation
+- [ ] Create real integration testing procedures
+- [ ] Document real service configuration
+- [ ] Create real integration troubleshooting guide
+- [ ] Prepare handoff requirements for Phase 3
+- [ ] Validate production readiness for real services
+
+### Success Criteria
+- ✅ **Real Supabase Integration**: All storage operations, signed URLs, and edge functions working
+- ✅ **Real API Integration**: LlamaParse and OpenAI APIs fully functional with cost tracking
+- ✅ **Real Database Integration**: Supabase database with RLS policies fully operational
+- ✅ **End-to-End Validation**: Complete pipeline working with real services
+- ✅ **Cost Control**: Real cost tracking and budget enforcement operational
+- ✅ **Production Readiness**: All real services ready for production use
+
+### Risk Mitigation
+- **Cost Control**: Implement strict budget limits and monitoring
+- **Service Isolation**: Use isolated testing environment for real service validation
+- **Rollback Procedures**: Maintain ability to revert to mock services if needed
+- **Error Handling**: Comprehensive error handling for real service failures
+- **Monitoring**: Real-time monitoring and alerting for all real services
+
+---
+
 ## Phase 3: LlamaParse Real Integration
 
 ### Prerequisites
@@ -569,7 +835,7 @@ This implementation uses an 8-phase structure designed for systematic validation
 
 ---
 
-## Phase 3: OpenAI Real Integration
+## Phase 4: OpenAI Real Integration
 
 ### Prerequisites
 - Files/documents to read:
@@ -776,7 +1042,7 @@ This implementation uses an 8-phase structure designed for systematic validation
 
 ---
 
-## Phase 4: Enhanced BaseWorker Integration
+## Phase 5: Enhanced BaseWorker Integration
 
 ### Prerequisites
 - Files/documents to read:
@@ -982,7 +1248,7 @@ This implementation uses an 8-phase structure designed for systematic validation
 
 ---
 
-## Phase 5: End-to-End Pipeline Validation
+## Phase 6: End-to-End Pipeline Validation
 
 ### Prerequisites
 - Files/documents to read:
@@ -1225,271 +1491,6 @@ This implementation uses an 8-phase structure designed for systematic validation
 - [ ] Save `TODOTVDb001_phase5_validation_report.md` with comprehensive results
 - [ ] Save `TODOTVDb001_phase5_handoff.md` with Phase 6 requirements
 - [ ] Save `TODOTVDb001_phase5_testing_summary.md` with complete test results
-
----
-
-## Phase 6: Monitoring & Cost Control Enhancement
-
-### Prerequisites
-- Files/documents to read:
-  - `TODOTVDb001_phase5_validation_report.md` and `TODOTVDb001_phase5_handoff.md`
-  - `docs/initiatives/system/upload_refactor/003/TESTING_INFRASTRUCTURE.md`
-  - Existing monitoring dashboard code from 003
-- Previous phase outputs: Validated end-to-end pipeline with performance benchmarks
-- Session setup: Run `/clear` to start fresh, then review Phase 5 validation results
-
-### Context for Claude
-
-**IMPORTANT**: This is Phase 6 of TVDb001 Real API Integration Testing. Phase 5 completed comprehensive pipeline validation with real services. Now enhancing monitoring and cost control systems based on validation results.
-
-**Phase 6 Objectives:**
-1. Enhance monitoring dashboard with real service metrics and cost tracking
-2. Implement advanced alerting for cost limits and service availability
-3. Create usage analytics and optimization recommendations
-4. Develop operational procedures for real service management
-
-**Validation Results from Phase 5:**
-- Complete pipeline validation with real services successful
-- Performance benchmarking and cost tracking accuracy confirmed
-- Error handling and resilience mechanisms validated
-- Integration with 003 Docker environment verified
-
-### Tasks
-
-#### Setup Tasks
-
-**S6.1: Monitoring Enhancement Planning**
-- Review Phase 5 validation results and performance metrics
-- Plan dashboard enhancements for real service monitoring
-- Design advanced alerting system for cost and availability
-- Plan usage analytics and optimization reporting
-
-**S6.2: Operational Procedures Planning**
-- Design operational procedures for real service management
-- Plan cost budgeting and monitoring workflows
-- Design incident response procedures for service failures
-- Plan regular maintenance and optimization procedures
-
-#### Core Implementation Tasks
-
-**C6.1: Enhanced Monitoring Dashboard**
-- Enhance existing monitoring dashboard with real service metrics
-- Add real-time cost tracking and usage analytics
-- Implement service health monitoring with availability metrics
-- Add performance comparison between real and mock services
-
-**C6.2: Advanced Alerting System**
-- Implement cost threshold alerts with configurable limits
-- Add service availability alerts with escalation procedures
-- Create performance degradation alerts with trend analysis
-- Add budget utilization alerts with usage forecasting
-
-**C6.3: Usage Analytics and Optimization**
-- Create usage analytics dashboard with cost trends
-- Implement optimization recommendations based on usage patterns
-- Add capacity planning tools with usage forecasting
-- Create cost optimization reports with actionable insights
-
-**C6.4: Operational Management Tools**
-- Create cost management tools with budget allocation
-- Implement service health management with automated recovery
-- Add usage reporting tools with detailed breakdowns
-- Create optimization tools with performance tuning recommendations
-
-#### Monitoring Integration Tasks
-
-**MI6.1: Dashboard Integration Enhancement**
-- Integrate enhanced dashboard with existing 003 monitoring
-- Add real service metrics collection and visualization
-- Implement cost tracking visualization with trend analysis
-- Add service availability monitoring with historical data
-
-**MI6.2: Alerting Integration**
-- Integrate advanced alerting with existing monitoring infrastructure
-- Add multi-channel alert delivery (email, slack, webhook)
-- Implement alert escalation procedures with severity levels
-- Add alert acknowledgment and resolution tracking
-
-**MI6.3: Analytics Integration**
-- Integrate usage analytics with cost tracking systems
-- Add performance analytics with optimization recommendations
-- Implement trend analysis with forecasting capabilities
-- Add comparative analytics between service modes
-
-#### Documentation and Procedures
-
-**D6.1: Operational Documentation**
-- Create operational runbooks for real service management
-- Document cost budgeting and monitoring procedures
-- Create incident response procedures for service failures
-- Document regular maintenance and optimization procedures
-
-**D6.2: User Documentation**
-- Create user guides for enhanced monitoring dashboard
-- Document alerting configuration and management
-- Create usage analytics interpretation guides
-- Document optimization recommendations and implementation
-
-#### Testing Tasks
-
-**T6.1: Monitoring Enhancement Testing**
-- Test enhanced dashboard with real service metrics
-- Test real-time cost tracking and usage analytics
-- Test service health monitoring and availability alerts
-- Test performance monitoring and comparison features
-
-**T6.2: Alerting System Testing**
-- Test cost threshold alerts with various limit configurations
-- Test service availability alerts with simulated outages
-- Test alert escalation procedures and multi-channel delivery
-- Test alert acknowledgment and resolution workflows
-
-**T6.3: Analytics and Optimization Testing**
-- Test usage analytics accuracy and trend analysis
-- Test optimization recommendations and implementation guidance
-- Test capacity planning tools and usage forecasting
-- Test cost optimization reports and actionable insights
-
-### Expected Outputs
-- Save implementation notes to: `TODOTVDb001_phase6_notes.md`
-- Document monitoring enhancements in: `TODOTVDb001_phase6_monitoring_guide.md`
-- Document operational procedures in: `TODOTVDb001_phase6_operations_manual.md`
-- List any issues/blockers for Phase 7 in: `TODOTVDb001_phase6_handoff.md`
-- Create testing summary in: `TODOTVDb001_phase6_testing_summary.md`
-
-### Progress Checklist
-
-#### Setup
-- [ ] Review Phase 5 validation results and performance metrics
-- [ ] Plan monitoring dashboard enhancements for real service visibility
-- [ ] Design advanced alerting system architecture
-- [ ] Plan operational procedures for real service management
-
-#### Enhanced Monitoring Dashboard
-- [ ] Implement real service metrics visualization
-  - [ ] LlamaParse API usage and performance metrics
-  - [ ] OpenAI API usage, cost, and token consumption
-  - [ ] Service availability and response time tracking
-  - [ ] Error rates and failure pattern analysis
-- [ ] Add real-time cost tracking dashboard
-  - [ ] Daily cost accumulation with budget progress
-  - [ ] Hourly usage patterns and trend analysis
-  - [ ] Service-specific cost breakdown and optimization
-  - [ ] Budget utilization forecasting and alerts
-- [ ] Implement service health monitoring
-  - [ ] Real-time service availability status
-  - [ ] Response time monitoring with historical trends
-  - [ ] Error rate tracking with threshold alerts
-  - [ ] Service dependency health monitoring
-- [ ] Add performance comparison features
-  - [ ] Real vs mock service performance comparison
-  - [ ] Processing time analysis and optimization opportunities
-  - [ ] Resource utilization efficiency metrics
-  - [ ] Throughput analysis with capacity planning
-
-#### Advanced Alerting System
-- [ ] Implement cost threshold alerting
-  - [ ] Daily budget limit alerts with escalation
-  - [ ] Hourly usage spike detection and notifications
-  - [ ] Service-specific cost threshold monitoring
-  - [ ] Budget utilization forecasting alerts
-- [ ] Add service availability alerting
-  - [ ] Real-time service outage detection and notification
-  - [ ] Response time degradation alerts
-  - [ ] Error rate threshold alerts with trend analysis
-  - [ ] Service recovery notification and validation
-- [ ] Create performance alerting
-  - [ ] Processing time degradation detection
-  - [ ] Resource utilization threshold alerts
-  - [ ] Throughput degradation monitoring
-  - [ ] Performance comparison alerts (real vs mock)
-- [ ] Implement alert management
-  - [ ] Multi-channel alert delivery (email, webhook)
-  - [ ] Alert escalation procedures with severity levels
-  - [ ] Alert acknowledgment and resolution tracking
-  - [ ] Alert suppression and maintenance mode
-
-#### Usage Analytics and Optimization
-- [ ] Create comprehensive usage analytics
-  - [ ] Service usage patterns and trends
-  - [ ] Cost analysis with optimization opportunities
-  - [ ] Performance analytics with bottleneck identification
-  - [ ] Capacity utilization analysis and planning
-- [ ] Implement optimization recommendations
-  - [ ] Cost optimization suggestions based on usage patterns
-  - [ ] Performance tuning recommendations
-  - [ ] Capacity planning with usage forecasting
-  - [ ] Service configuration optimization guidance
-- [ ] Add forecasting and planning tools
-  - [ ] Usage growth forecasting with trend analysis
-  - [ ] Cost projection with budget planning
-  - [ ] Capacity planning with scaling recommendations
-  - [ ] Service optimization roadmap development
-- [ ] Create reporting and analytics
-  - [ ] Detailed usage reports with cost breakdowns
-  - [ ] Performance reports with optimization opportunities
-  - [ ] Service health reports with availability metrics
-  - [ ] Comparative analysis reports (real vs mock services)
-
-#### Operational Management Tools
-- [ ] Implement cost management tools
-  - [ ] Budget allocation and tracking tools
-  - [ ] Cost center management and reporting
-  - [ ] Usage quotas and limit management
-  - [ ] Cost optimization workflow tools
-- [ ] Add service health management
-  - [ ] Automated service health checking
-  - [ ] Service recovery procedures and automation
-  - [ ] Maintenance mode management and scheduling
-  - [ ] Service configuration management tools
-- [ ] Create usage management tools
-  - [ ] Usage quota management and enforcement
-  - [ ] Service usage analytics and reporting
-  - [ ] Performance optimization workflow tools
-  - [ ] Capacity management and scaling tools
-- [ ] Implement optimization tools
-  - [ ] Performance tuning recommendation engine
-  - [ ] Cost optimization suggestion system
-  - [ ] Capacity planning and forecasting tools
-  - [ ] Service configuration optimization guidance
-
-#### Testing and Validation
-- [ ] Test enhanced monitoring dashboard
-  - [ ] Real service metrics accuracy and visualization
-  - [ ] Cost tracking accuracy and trend analysis
-  - [ ] Service health monitoring and alerting
-  - [ ] Performance comparison and analysis features
-- [ ] Test advanced alerting system
-  - [ ] Cost threshold alerts with various configurations
-  - [ ] Service availability alerts with simulated failures
-  - [ ] Performance degradation alerts and escalation
-  - [ ] Alert delivery and management workflows
-- [ ] Test analytics and optimization tools
-  - [ ] Usage analytics accuracy and insights
-  - [ ] Optimization recommendations effectiveness
-  - [ ] Forecasting accuracy and planning utility
-  - [ ] Reporting completeness and actionability
-- [ ] Test operational management tools
-  - [ ] Cost management workflow effectiveness
-  - [ ] Service health management automation
-  - [ ] Usage management and quota enforcement
-  - [ ] Optimization tool usability and effectiveness
-
-#### Integration and Documentation
-- [ ] Integrate with existing 003 monitoring infrastructure
-- [ ] Create comprehensive operational documentation
-- [ ] Develop user guides and training materials
-- [ ] Test integration with Docker environment and existing services
-- [ ] Validate monitoring and alerting accuracy under load
-- [ ] Confirm cost tracking precision for production budgeting
-
-#### Documentation
-- [ ] Go through TODOTVDb001 Phase 6 checklist and mark completed items
-- [ ] Save `TODOTVDb001_phase6_notes.md` with implementation details
-- [ ] Save `TODOTVDb001_phase6_monitoring_guide.md` with monitoring documentation
-- [ ] Save `TODOTVDb001_phase6_operations_manual.md` with operational procedures
-- [ ] Save `TODOTVDb001_phase6_handoff.md` with Phase 7 requirements
-- [ ] Save `TODOTVDb001_phase6_testing_summary.md` with comprehensive test results
 
 ---
 
