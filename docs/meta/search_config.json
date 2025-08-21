@@ -1,0 +1,28 @@
+{
+  "file_patterns": {
+    "interfaces": ["**/*.py", "**/*.ts", "**/*.tsx", "**/*.go", "**/*.rs"],
+    "documentation": ["**/*.md", "**/*.rst", "**/*.txt"],
+    "configs": ["**/*.json", "**/*.yaml", "**/*.yml", "**/*.toml"],
+    "tests": ["**/test_*.py", "**/*_test.py", "**/*.test.ts", "**/*.spec.ts"]
+  },
+  "search_commands": {
+    "interfaces": "rg -n --type py --type ts --type go -e 'export interface|export type|def [a-zA-Z0-9_]+\\(|class [A-Z]'",
+    "functions": "rg -n --type py --type ts --type go -e 'def |function |export function |async function'",
+    "imports": "rg -n --type py --type ts --type go -e 'import |from .* import'",
+    "todos": "rg -n -i 'todo|fixme|hack|bug'"
+  },
+  "adjacency_refresh_days": 90,
+  "token_budget": {
+    "total": 20000,
+    "allocation": {
+      "context": 0.40,
+      "rollups": 0.40,
+      "code_snippets": 0.20
+    }
+  },
+  "freshness_check": {
+    "enabled": true,
+    "max_age_days": 90,
+    "warn_age_days": 60
+  }
+}
