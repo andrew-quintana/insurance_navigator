@@ -519,6 +519,163 @@ class EnhancedConfig:
         }
 
 
+@dataclass
+class ProductionConfig:
+    """Production environment configuration."""
+    environment: str = "production"
+    debug: bool = False
+    testing: bool = False
+    
+    # Database configuration
+    database_url: str = ""
+    schema: str = "upload_pipeline"
+    pool_size: int = 20
+    max_overflow: int = 30
+    pool_timeout: int = 30
+    pool_recycle: int = 3600
+    
+    # API configuration
+    host: str = "0.0.0.0"
+    port: int = 8000
+    workers: int = 8
+    reload: bool = False
+    
+    # Security configuration
+    jwt_secret: str = ""
+    jwt_expiry: int = 3600
+    
+    # External services
+    supabase_url: str = ""
+    supabase_anon_key: str = ""
+    supabase_service_role_key: str = ""
+    llamaparse_api_key: str = ""
+    openai_api_key: str = ""
+    
+    # Additional fields for nested YAML structure
+    llamaparse_api_url: str = ""
+    openai_api_url: str = ""
+    
+    @classmethod
+    def from_environment(cls) -> 'ProductionConfig':
+        """Create configuration from environment variables."""
+        return cls(
+            environment=os.getenv('UPLOAD_PIPELINE_ENVIRONMENT', 'production'),
+            debug=os.getenv('DEBUG', 'false').lower() == 'true',
+            testing=os.getenv('TESTING', 'false').lower() == 'true',
+            database_url=os.getenv('DATABASE_URL', ''),
+            schema=os.getenv('DATABASE_SCHEMA', 'upload_pipeline'),
+            pool_size=int(os.getenv('DB_POOL_SIZE', '20')),
+            max_overflow=int(os.getenv('DB_MAX_OVERFLOW', '30')),
+            pool_timeout=int(os.getenv('DB_POOL_TIMEOUT', '30')),
+            pool_recycle=int(os.getenv('DB_POOL_RECYCLE', '3600')),
+            host=os.getenv('API_HOST', '0.0.0.0'),
+            port=int(os.getenv('API_PORT', '8000')),
+            workers=int(os.getenv('API_WORKERS', '8')),
+            reload=os.getenv('API_RELOAD', 'false').lower() == 'true',
+            jwt_secret=os.getenv('JWT_SECRET', ''),
+            jwt_expiry=int(os.getenv('JWT_EXPIRY', '3600')),
+            supabase_url=os.getenv('UPLOAD_PIPELINE_SUPABASE_URL', ''),
+            supabase_anon_key=os.getenv('UPLOAD_PIPELINE_SUPABASE_ANON_KEY', ''),
+            supabase_service_role_key=os.getenv('UPLOAD_PIPELINE_SUPABASE_SERVICE_ROLE_KEY', ''),
+            llamaparse_api_key=os.getenv('UPLOAD_PIPELINE_LLAMAPARSE_API_KEY', ''),
+            openai_api_key=os.getenv('UPLOAD_PIPELINE_OPENAI_API_KEY', '')
+        )
+    
+    @classmethod
+    def from_yaml(cls, yaml_data: Dict[str, Any]) -> 'ProductionConfig':
+        """Create configuration from YAML data with nested structure support."""
+        
+        def resolve_env_var(value: str) -> str:
+            """Resolve environment variable references like ${VAR_NAME}"""
+            if isinstance(value, str) and value.startswith('${') and value.endswith('}'):
+                var_name = value[2:-1]
+                return os.getenv(var_name, '')
+            return value
+        
+        # Extract nested values and flatten them, resolving environment variables
+        config_data = {
+            'environment': yaml_data.get('environment', 'production'),
+            'debug': yaml_data.get('debug', False),
+            'testing': yaml_data.get('testing', False),
+            
+            # Database configuration
+            'database_url': resolve_env_var(yaml_data.get('database', {}).get('url', '')),
+            'schema': yaml_data.get('database', {}).get('schema', 'upload_pipeline'),
+            'pool_size': yaml_data.get('database', {}).get('pool_size', 20),
+            'max_overflow': yaml_data.get('database', {}).get('max_overflow', 30),
+            'pool_timeout': yaml_data.get('database', {}).get('pool_timeout', 30),
+            'pool_recycle': yaml_data.get('database', {}).get('pool_recycle', 3600),
+            
+            # API configuration
+            'host': yaml_data.get('api', {}).get('host', '0.0.0.0'),
+            'port': yaml_data.get('api', {}).get('port', 8000),
+            'workers': yaml_data.get('api', {}).get('workers', 8),
+            'reload': yaml_data.get('api', {}).get('reload', False),
+            
+            # Security configuration
+            'jwt_secret': resolve_env_var(yaml_data.get('security', {}).get('authentication', {}).get('jwt_secret', '')),
+            'jwt_expiry': yaml_data.get('security', {}).get('authentication', {}).get('jwt_expiry', 3600),
+            
+            # External services
+            'supabase_url': resolve_env_var(yaml_data.get('storage', {}).get('supabase', {}).get('url', '')),
+            'supabase_anon_key': resolve_env_var(yaml_data.get('storage', {}).get('supabase', {}).get('anon_key', '')),
+            'supabase_service_role_key': resolve_env_var(yaml_data.get('storage', {}).get('supabase', {}).get('service_role_key', '')),
+            'llamaparse_api_key': resolve_env_var(yaml_data.get('external_services', {}).get('llamaparse', {}).get('api_key', '')),
+            'llamaparse_api_url': resolve_env_var(yaml_data.get('external_services', {}).get('llamaparse', {}).get('api_url', '')),
+            'openai_api_key': resolve_env_var(yaml_data.get('external_services', {}).get('openai', {}).get('api_key', '')),
+            'openai_api_url': resolve_env_var(yaml_data.get('external_services', {}).get('openai', {}).get('api_url', ''))
+        }
+        
+        return cls(**config_data)
+    
+    def validate(self) -> bool:
+        """Validate configuration parameters."""
+        if not self.database_url:
+            logger.error("Database URL is required")
+            return False
+        
+        if not self.jwt_secret:
+            logger.error("JWT secret is required")
+            return False
+        
+        if not self.supabase_url:
+            logger.error("Supabase URL is required")
+            return False
+        
+        if not self.supabase_service_role_key:
+            logger.error("Supabase service role key is required")
+            return False
+        
+        return True
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert configuration to dictionary (excluding sensitive data)."""
+        return {
+            'environment': self.environment,
+            'debug': self.debug,
+            'testing': self.testing,
+            'database': {
+                'schema': self.schema,
+                'pool_size': self.pool_size,
+                'max_overflow': self.max_overflow,
+                'pool_timeout': self.pool_timeout,
+                'pool_recycle': self.pool_recycle
+            },
+            'api': {
+                'host': self.host,
+                'port': self.port,
+                'workers': self.workers,
+                'reload': self.reload
+            },
+            'security': {
+                'jwt_expiry': self.jwt_expiry
+            },
+            'external_services': {
+                'supabase_url': self.supabase_url
+            }
+        }
+
+
 # Exception classes
 
 class ConfigurationError(Exception):
