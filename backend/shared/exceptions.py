@@ -360,6 +360,24 @@ class DocumentValidationError(ProcessingError):
         self.validation_errors = validation_errors
 
 
+class ValidationError(InsuranceNavigatorError):
+    """Raised when general validation fails."""
+    
+    def __init__(self, message: str, field_name: Optional[str] = None, 
+                 validation_errors: Optional[List[str]] = None, context: Optional[Dict[str, Any]] = None):
+        if field_name:
+            context = context or {}
+            context['field_name'] = field_name
+        
+        if validation_errors:
+            context = context or {}
+            context['validation_errors'] = validation_errors
+        
+        super().__init__(message, "VALIDATION_ERROR", context)
+        self.field_name = field_name
+        self.validation_errors = validation_errors
+
+
 class ProcessingTimeoutError(ProcessingError):
     """Raised when document processing times out."""
     

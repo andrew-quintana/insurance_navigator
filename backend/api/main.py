@@ -5,6 +5,9 @@ import logging
 import time
 from datetime import datetime
 
+# Import routes
+from backend.api.routes.upload import router as upload_router
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -24,6 +27,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include routers
+app.include_router(upload_router, prefix="/api/v1", tags=["upload"])
+
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
     """Add processing time header to responses"""
@@ -39,6 +45,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "003-worker-refactor-api",
+        "version": "1.0.0",
         "timestamp": datetime.utcnow().isoformat(),
         "environment": "local"
     }
@@ -50,7 +57,11 @@ async def root():
         "message": "003 Worker Refactor API",
         "version": "1.0.0",
         "status": "running",
-        "environment": "local"
+        "environment": "local",
+        "endpoints": {
+            "upload": "/api/v1/upload",
+            "health": "/health"
+        }
     }
 
 @app.exception_handler(Exception)

@@ -156,32 +156,158 @@ class ServiceHealthConfig:
     enabled: bool = True
     check_interval_seconds: int = 30
     fallback_enabled: bool = True
-    fallback_timeout_seconds: int = 10
-    health_check_timeout_seconds: int = 5
+    timeout_seconds: int = 10
+    max_retries: int = 3
     
     @classmethod
     def from_environment(cls) -> 'ServiceHealthConfig':
         """Create configuration from environment variables."""
         return cls(
-            enabled=os.getenv('SERVICE_HEALTH_MONITORING_ENABLED', 'true').lower() == 'true',
-            check_interval_seconds=int(os.getenv('SERVICE_HEALTH_CHECK_INTERVAL', '30')),
-            fallback_enabled=os.getenv('SERVICE_FALLBACK_ENABLED', 'true').lower() == 'true',
-            fallback_timeout_seconds=int(os.getenv('SERVICE_FALLBACK_TIMEOUT', '10')),
-            health_check_timeout_seconds=int(os.getenv('SERVICE_HEALTH_CHECK_TIMEOUT', '5'))
+            enabled=os.getenv('SERVICE_HEALTH_ENABLED', 'true').lower() == 'true',
+            check_interval_seconds=int(os.getenv('SERVICE_HEALTH_CHECK_INTERVAL_SECONDS', '30')),
+            fallback_enabled=os.getenv('SERVICE_HEALTH_FALLBACK_ENABLED', 'true').lower() == 'true',
+            timeout_seconds=int(os.getenv('SERVICE_HEALTH_TIMEOUT_SECONDS', '10')),
+            max_retries=int(os.getenv('SERVICE_HEALTH_MAX_RETRIES', '3'))
         )
     
     def validate(self) -> bool:
         """Validate configuration parameters."""
         if self.check_interval_seconds <= 0:
-            logger.error("Health check interval must be positive")
+            logger.error("Service health check interval must be positive")
             return False
         
-        if self.fallback_timeout_seconds <= 0:
-            logger.error("Fallback timeout must be positive")
+        if self.timeout_seconds <= 0:
+            logger.error("Service health timeout must be positive")
             return False
         
-        if self.health_check_timeout_seconds <= 0:
-            logger.error("Health check timeout must be positive")
+        if self.max_retries < 0:
+            logger.error("Service health max retries must be non-negative")
+            return False
+        
+        return True
+
+
+@dataclass
+class UploadConfig:
+    """Upload configuration for document processing."""
+    max_file_size_bytes: int = 25 * 1024 * 1024  # 25MB
+    max_pages: int = 100
+    max_concurrent_jobs_per_user: int = 2
+    max_uploads_per_day_per_user: int = 30
+    supported_mime_types: list = None
+    
+    def __post_init__(self):
+        if self.supported_mime_types is None:
+            self.supported_mime_types = ["application/pdf"]
+    
+    @classmethod
+    def from_environment(cls) -> 'UploadConfig':
+        """Create configuration from environment variables."""
+        return cls(
+            max_file_size_bytes=int(os.getenv('MAX_FILE_SIZE_BYTES', '26214400')),  # 25MB
+            max_pages=int(os.getenv('MAX_PAGES', '100')),
+            max_concurrent_jobs_per_user=int(os.getenv('MAX_CONCURRENT_JOBS_PER_USER', '2')),
+            max_uploads_per_day_per_user=int(os.getenv('MAX_UPLOADS_PER_DAY_PER_USER', '30'))
+        )
+    
+    def validate(self) -> bool:
+        """Validate configuration parameters."""
+        if self.max_file_size_bytes <= 0:
+            logger.error("Max file size must be positive")
+            return False
+        
+        if self.max_pages <= 0:
+            logger.error("Max pages must be positive")
+            return False
+        
+        if self.max_concurrent_jobs_per_user <= 0:
+            logger.error("Max concurrent jobs per user must be positive")
+            return False
+        
+        if self.max_uploads_per_day_per_user <= 0:
+            logger.error("Max uploads per day per user must be positive")
+            return False
+        
+        return True
+
+
+@dataclass
+class StorageConfig:
+    """Storage configuration for document storage."""
+    url: str = "http://localhost:5000"
+    anon_key: str = ""
+    service_role_key: str = ""
+    raw_bucket: str = "raw"
+    parsed_bucket: str = "parsed"
+    signed_url_ttl_seconds: int = 300  # 5 minutes
+    timeout: int = 60
+    
+    @classmethod
+    def from_environment(cls) -> 'StorageConfig':
+        """Create configuration from environment variables."""
+        return cls(
+            url=os.getenv('SUPABASE_URL', 'http://localhost:5000'),
+            anon_key=os.getenv('SUPABASE_ANON_KEY', ''),
+            service_role_key=os.getenv('SUPABASE_SERVICE_ROLE_KEY', ''),
+            raw_bucket=os.getenv('STORAGE_RAW_BUCKET', 'raw'),
+            parsed_bucket=os.getenv('STORAGE_PARSED_BUCKET', 'parsed'),
+            signed_url_ttl_seconds=int(os.getenv('STORAGE_SIGNED_URL_TTL_SECONDS', '300')),
+            timeout=int(os.getenv('STORAGE_TIMEOUT_SECONDS', '60'))
+        )
+    
+    def validate(self) -> bool:
+        """Validate configuration parameters."""
+        if not self.url:
+            logger.error("Storage URL is required")
+            return False
+        
+        if self.signed_url_ttl_seconds <= 0:
+            logger.error("Signed URL TTL must be positive")
+            return False
+        
+        if self.timeout <= 0:
+            logger.error("Storage timeout must be positive")
+            return False
+        
+        return True
+
+
+@dataclass
+class DatabaseConfig:
+    """Database configuration for document processing."""
+    url: str = "postgresql://postgres:postgres@localhost:5432/accessa_dev"
+    max_connections: int = 10
+    connection_timeout: int = 30
+    pool_timeout: int = 30
+    pool_recycle: int = 3600
+    
+    @classmethod
+    def from_environment(cls) -> 'DatabaseConfig':
+        """Create configuration from environment variables."""
+        return cls(
+            url=os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/accessa_dev'),
+            max_connections=int(os.getenv('DATABASE_MAX_CONNECTIONS', '10')),
+            connection_timeout=int(os.getenv('DATABASE_CONNECTION_TIMEOUT', '30')),
+            pool_timeout=int(os.getenv('DATABASE_POOL_TIMEOUT', '30')),
+            pool_recycle=int(os.getenv('DATABASE_POOL_RECYCLE', '3600'))
+        )
+    
+    def validate(self) -> bool:
+        """Validate configuration parameters."""
+        if not self.url:
+            logger.error("Database URL is required")
+            return False
+        
+        if self.max_connections <= 0:
+            logger.error("Max connections must be positive")
+            return False
+        
+        if self.connection_timeout <= 0:
+            logger.error("Connection timeout must be positive")
+            return False
+        
+        if self.pool_timeout <= 0:
+            logger.error("Pool timeout must be positive")
             return False
         
         return True
@@ -201,6 +327,9 @@ class EnhancedConfig:
         self.openai = OpenAIConfig.from_environment()
         self.cost_control = CostControlConfig.from_environment()
         self.service_health = ServiceHealthConfig.from_environment()
+        self.upload = UploadConfig.from_environment()
+        self.storage = StorageConfig.from_environment()
+        self.database = DatabaseConfig.from_environment()
         
         # Validate configuration
         self._validate_configuration()
@@ -238,6 +367,15 @@ class EnhancedConfig:
         
         if not self.service_health.validate():
             validation_errors.append("Service health configuration validation failed")
+        
+        if not self.upload.validate():
+            validation_errors.append("Upload configuration validation failed")
+        
+        if not self.storage.validate():
+            validation_errors.append("Storage configuration validation failed")
+        
+        if not self.database.validate():
+            validation_errors.append("Database configuration validation failed")
         
         # Check for configuration conflicts
         if self.service_mode == ServiceMode.REAL:
