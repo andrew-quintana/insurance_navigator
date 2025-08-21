@@ -1,0 +1,26 @@
+{
+  "services_healthy": true,
+  "jwt_authentication": {
+    "token_generated": true,
+    "user_id": "0764d352-25d5-4271-bc2d-05b4b1272ec0",
+    "email": "test@example.com",
+    "role": "user"
+  },
+  "production_endpoints": {
+    "upload": {
+      "success": false,
+      "error": "Server error"
+    },
+    "jobs": {
+      "success": false,
+      "error": "Status 500"
+    },
+    "job_status": null
+  },
+  "test_endpoints": {
+    "success": true,
+    "job_id": null,
+    "document_id": null
+  },
+  "overall_status": "PARTIALLY_COMPLETED"
+}
