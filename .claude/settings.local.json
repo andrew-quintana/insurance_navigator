@@ -5,7 +5,12 @@
       "Bash(for:*)",
       "Bash(do sed -i '' 's/@docs\\/initiatives\\//docs\\/initiatives\\//g' \"$file\")",
       "Bash(done)",
-      "Bash(do sed -i '' 's/@TODO003_/TODO003_/g' \"$file\")"
+      "Bash(do sed -i '' 's/@TODO003_/TODO003_/g' \"$file\")",
+      "Bash(mkdir:*)",
+      "Bash(chmod:*)",
+      "Bash(python:*)",
+      "Bash(scripts/scaffold_initiative.sh:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

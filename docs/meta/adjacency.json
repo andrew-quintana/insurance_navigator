@@ -1,0 +1,70 @@
+{
+  "updated": "2025-08-21",
+  "components": [
+    {
+      "name": "agents",
+      "description": "AI agent system for patient navigation and regulatory compliance",
+      "code_roots": ["agents/", "graph/"],
+      "interfaces": [
+        "agents/base_agent.py",
+        "agents/patient_navigator/",
+        "graph/agent_orchestrator.py"
+      ],
+      "last_updated": "2025-08-21",
+      "maintainer": "ai-team",
+      "status": "active"
+    },
+    {
+      "name": "backend",
+      "description": "Core API and data processing backend services",
+      "code_roots": ["backend/", "api/"],
+      "interfaces": [
+        "backend/api/main.py",
+        "backend/workers/base_worker.py",
+        "backend/shared/external/service_router.py"
+      ],
+      "last_updated": "2025-08-21",
+      "maintainer": "backend-team",
+      "status": "active"
+    },
+    {
+      "name": "database",
+      "description": "Database models, connections, and services",
+      "code_roots": ["db/", "backend/shared/db/"],
+      "interfaces": [
+        "db/services/supabase_client.py",
+        "backend/shared/db/models.py",
+        "db/services/document_service.py"
+      ],
+      "last_updated": "2025-08-21",
+      "maintainer": "data-team",
+      "status": "active"
+    },
+    {
+      "name": "frontend",
+      "description": "Next.js user interface and document management",
+      "code_roots": ["ui/"],
+      "interfaces": [
+        "ui/components/DocumentUpload.tsx",
+        "ui/lib/api-client.ts",
+        "ui/lib/supabase-client.ts"
+      ],
+      "last_updated": "2025-08-21",
+      "maintainer": "frontend-team",
+      "status": "active"
+    },
+    {
+      "name": "supabase",
+      "description": "Edge functions and database migrations",
+      "code_roots": ["supabase/"],
+      "interfaces": [
+        "supabase/functions/upload-handler/",
+        "supabase/functions/processing-webhook/",
+        "supabase/migrations/"
+      ],
+      "last_updated": "2025-08-21",
+      "maintainer": "infra-team",
+      "status": "active"
+    }
+  ]
+}

@@ -112,4 +112,34 @@ When adding new documentation:
 
 ---
 
-**Need help?** Start with the most relevant category above or browse the integration guides for specific technical setup instructions. 
+**Need help?** Start with the most relevant category above or browse the integration guides for specific technical setup instructions.
+
+---
+
+# Documentation Contract
+
+This repository standardizes initiative docs so tools (Cursor, Claude Code) can reliably discover adjacent systems and stay within context budgets.
+
+**Hierarchy**
+/docs/
+
+	/initiatives/           # initiative serials (CONTEXTxxx, PRDxxx, RFCxxx, TODOxxx)
+
+	/knowledge/             # cross-initiative knowledge: impl notes, test summaries, tech debt, change logs
+
+	/summaries/rollups/     # 200–400 word per-component rollups
+
+	/meta/                  # templates, indices, adjacency graph, search config
+
+**Principles**
+1. Adjacent-first: PRDs/RFCs/TODOs must cite the freshest adjacent rollups + interfaces.
+2. Pin contracts: RFCs must include verbatim interface signatures for all integrations.
+3. Budgeted context: Prefer rollups; only include code for interface surfaces.
+
+## Isolation Exception
+If an initiative is truly isolated, set in CONTEXTXXX.md:
+
+> Isolation: true  
+> Isolation_Justification: {1–2 sentences}
+
+CI will skip adjacency freshness & citation checks when `Isolation: true`. 
