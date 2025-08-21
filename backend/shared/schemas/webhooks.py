@@ -19,9 +19,11 @@ class LlamaParseWebhookRequest(BaseModel):
     """LlamaParse webhook request model"""
     job_id: UUID = Field(..., description="Job ID for tracking")
     document_id: UUID = Field(..., description="Document ID")
+    parse_job_id: str = Field(..., description="LlamaParse parse job ID")
     status: str = Field(..., description="Parse status")
     artifacts: List[LlamaParseArtifact] = Field(..., description="Parsed artifacts")
     meta: LlamaParseMeta = Field(..., description="Parser metadata")
+    correlation_id: Optional[str] = Field(None, description="Correlation ID for job tracking")
     
     @validator('status')
     def validate_status(cls, v):
