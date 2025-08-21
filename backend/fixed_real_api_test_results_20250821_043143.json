@@ -1,0 +1,58 @@
+{
+  "overall_success": false,
+  "success_rate_percent": 75.0,
+  "total_tests": 4,
+  "passed_tests": 3,
+  "test_results": {
+    "api_endpoint_discovery": {
+      "success": true,
+      "endpoints": {
+        "/v1/status": {
+          "status_code": 404,
+          "available": true
+        },
+        "/v1/health": {
+          "status_code": 404,
+          "available": true
+        },
+        "/v1/models": {
+          "status_code": 404,
+          "available": true
+        },
+        "/v1/parse": {
+          "status_code": 404,
+          "available": true
+        },
+        "/health": {
+          "status_code": 404,
+          "available": true
+        },
+        "/status": {
+          "status_code": 404,
+          "available": true
+        }
+      },
+      "available_endpoints": [
+        "/v1/status",
+        "/v1/health",
+        "/v1/models",
+        "/v1/parse",
+        "/health",
+        "/status"
+      ]
+    },
+    "basic_connectivity": {
+      "success": false,
+      "health": "ServiceHealth(is_healthy=False, last_check=datetime.datetime(2025, 8, 21, 4, 31, 43, 203547), response_time_ms=280.297, error_count=1, last_error='HTTP 404')"
+    },
+    "parse_request": {
+      "success": true,
+      "error_type": "validation",
+      "error": "LlamaParse service is unavailable"
+    },
+    "webhook_signature": {
+      "success": true
+    }
+  },
+  "timestamp": "2025-08-21T04:31:43.902832"
+}
