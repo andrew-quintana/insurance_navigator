@@ -7,8 +7,10 @@ Run `/clear` to start fresh, then execute this phase.
 **IMPORTANT**: Read these documents completely before starting implementation:
 
 1. `@docs/initiatives/system/upload_refactor/003/TVDb001/TODOTVDb001_phase1_handoff.md` - Service router infrastructure
-2. `@docs/initiatives/system/upload_refactor/003/TVDb001/TODOTVDb001_phase2_handoff.md` - Upload flow validation
-3. `@docs/initiatives/system/upload_refactor/003/TVDb001/TODOTVDb001_phase3_handoff.md` - LlamaParse integration
+2. `@docs/initiatives/system/upload_refactor/003/TVDb001/TODOTVDb001_phase2_handoff.md` - Upload flow mock validation
+2.5. `@docs/initiatives/system/upload_refactor/003/TVDb001/TODOTVDb001_phase2.5_handoff.md` - Upload flow integrated validation
+3. `@docs/initiatives/system/upload_refactor/003/TVDb001/TODOTVDb001_phase3_handoff.md` - LlamaParse mock integration
+3.5. `@docs/initiatives/system/upload_refactor/003/TVDb001/TODOTVDb001_phase3.5_handoff.md` - LlamaParse api integration
 4. `@docs/initiatives/system/upload_refactor/003/TVDb001/RFCTVDb001.md` - OpenAI integration requirements (section 2)
 5. `@docs/initiatives/system/upload_refactor/003/TVDb001/TODOTVDb001.md` - Phase 4 section for detailed tasks
 6. `@backend/shared/external/openai_client.py` - Existing mock implementation for reference
