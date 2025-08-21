@@ -7,6 +7,7 @@ from datetime import datetime
 
 # Import routes
 from backend.api.routes.upload import router as upload_router
+from backend.api.routes.webhooks import router as webhook_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -29,6 +30,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(upload_router, prefix="/api/v1", tags=["upload"])
+app.include_router(webhook_router, prefix="/api/v1/webhooks", tags=["webhooks"])
 
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
@@ -60,6 +62,7 @@ async def root():
         "environment": "local",
         "endpoints": {
             "upload": "/api/v1/upload",
+            "webhooks": "/api/v1/webhooks",
             "health": "/health"
         }
     }
