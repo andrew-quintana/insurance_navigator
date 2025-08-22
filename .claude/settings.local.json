@@ -10,7 +10,8 @@
       "Bash(chmod:*)",
       "Bash(python:*)",
       "Bash(scripts/scaffold_initiative.sh:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(docker-compose up:*)"
     ],
     "deny": []
   }
