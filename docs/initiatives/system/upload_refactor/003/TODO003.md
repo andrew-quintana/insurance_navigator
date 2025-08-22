@@ -377,6 +377,136 @@ You are implementing infrastructure validation framework to prevent the deployme
 
 ---
 
+## Phase 2.1: Upload Endpoint Validation and File Storage Testing
+
+### Prerequisites
+- Files/documents to read:
+  - `TODO003_phase2_notes.md`
+  - `TODO003_phase2_decisions.md`
+  - `docs/initiatives/system/upload_refactor/003/file_testing/PHASE2_UPLOAD_EXECUTION_PROMPT.md`
+  - `docs/initiatives/system/upload_refactor/003/file_testing/TEST_METHOD001.md`
+- Previous phase outputs: Infrastructure validation framework completed
+- Database schema: upload_pipeline schema with all required tables
+- Session setup: Run `/clear` to start fresh
+
+### Context for Claude
+**IMPORTANT**: This is a new session for Phase 2.1. Use previous phase outputs as context.
+
+You are implementing comprehensive upload endpoint validation and file storage testing to ensure the complete upload flow works correctly. This phase addresses the critical issue identified in Phase 2 where files were not actually being uploaded to storage - only the API contract was being tested.
+
+**Key Issue to Resolve**: The previous testing only completed Step 1 (getting signed URL) but never Step 2 (uploading actual file content to storage). This is why no files appeared in the storage system.
+
+### Tasks
+
+#### T2.1.1: Complete Upload Flow Validation
+- Test the complete two-step upload process:
+  - Step 1: POST to `/api/v2/upload` to get signed URL
+  - Step 2: PUT actual file content to the signed URL
+- Validate that files actually appear in storage after upload
+- Test both small (1.7KB) and large (2.4MB) file uploads
+- Verify upload response schema matches UploadResponse model
+
+#### T2.1.2: File Storage Verification
+- Confirm uploaded files are accessible in storage system
+- Validate file metadata and content integrity
+- Test file retrieval and download functionality
+- Verify storage policies and access controls
+
+#### T2.1.3: Database Record Validation
+- Confirm upload_jobs records are created correctly
+- Validate document records in upload_pipeline.documents table
+- Check job status progression through state machine
+- Verify correlation IDs and progress tracking
+
+#### T2.1.4: Error Handling and Edge Cases
+- Test upload failures and error responses
+- Validate retry mechanisms and error recovery
+- Test concurrent upload scenarios
+- Verify rate limiting and abuse prevention
+
+### Expected Outputs
+- Save implementation notes to: `TODO003_phase2.1_notes.md`
+- Document upload validation strategies in: `TODO003_phase2.1_decisions.md`
+- List file storage verification requirements in: `TODO003_phase2.1_handoff.md`
+- Create upload testing summary in: `TODO003_phase2.1_testing_summary.md`
+
+### Progress Checklist
+
+#### Complete Upload Flow Testing
+- [ ] Test signed URL generation (Step 1)
+  - [ ] Validate API endpoint response format
+  - [ ] Confirm job_id and document_id generation
+  - [ ] Verify signed_url format and accessibility
+  - [ ] Check upload_expires_at timestamp validity
+- [ ] Test file content upload (Step 2)
+  - [ ] Upload actual file content to signed URL
+  - [ ] Verify HTTP status codes (200/201)
+  - [ ] Confirm file content integrity
+  - [ ] Test both test files (1.7KB and 2.4MB)
+- [ ] Validate complete upload workflow
+  - [ ] End-to-end upload process testing
+  - [ ] File storage confirmation
+  - [ ] Database record validation
+  - [ ] Job status progression verification
+
+#### File Storage Verification
+- [ ] Confirm file presence in storage
+  - [ ] Check if uploaded files are visible in storage UI
+  - [ ] Validate file metadata (size, type, hash)
+  - [ ] Test file retrieval and download
+  - [ ] Verify storage path structure
+- [ ] Test storage access controls
+  - [ ] Validate authentication requirements
+  - [ ] Test authorization policies
+  - [ ] Verify file privacy and security
+  - [ ] Check storage quota and limits
+
+#### Database Integration Validation
+- [ ] Verify upload_jobs table records
+  - [ ] Confirm job creation with correct metadata
+  - [ ] Validate user_id and document_id relationships
+  - [ ] Check job status and progress tracking
+  - [ ] Verify correlation IDs and timestamps
+- [ ] Validate documents table records
+  - [ ] Confirm document metadata storage
+  - [ ] Verify file path and hash information
+  - [ ] Check processing status tracking
+  - [ ] Validate user ownership and access
+
+#### Error Handling and Resilience
+- [ ] Test upload failure scenarios
+  - [ ] Invalid file types and sizes
+  - [ ] Authentication and authorization failures
+  - [ ] Storage quota exceeded scenarios
+  - [ ] Network and service failures
+- [ ] Validate error recovery mechanisms
+  - [ ] Retry logic and backoff strategies
+  - [ ] Error logging and monitoring
+  - [ ] User notification and feedback
+  - [ ] Automatic cleanup and rollback
+
+### Success Criteria
+- [ ] Both test files upload successfully through complete flow
+- [ ] Files are visible and accessible in storage system
+- [ ] Database records are created correctly for both uploads
+- [ ] Upload response schema matches expected format
+- [ ] No errors or exceptions during upload process
+- [ ] Complete metadata captured for verification
+- [ ] File content integrity verified after upload
+
+### Technical Requirements
+- **API Endpoint**: `/api/v2/upload` with JWT authentication
+- **File Types**: PDF documents (application/pdf)
+- **File Sizes**: 1.7KB and 2.4MB test files
+- **Storage System**: Local Supabase storage simulation
+- **Database**: PostgreSQL with upload_pipeline schema
+- **Authentication**: JWT tokens with proper claims
+
+### Next Phase
+Once Phase 2.1 is completed successfully, proceed to Phase 3: BaseWorker Implementation with Local Testing to implement the enhanced worker system that will process the uploaded documents.
+
+---
+
 ## Phase 3: Enhanced BaseWorker Implementation
 
 ### Prerequisites
@@ -646,7 +776,8 @@ You are implementing comprehensive local integration testing to validate complet
   - [ ] LlamaParse integration with real API and webhook validation
   - [ ] OpenAI integration with actual embedding generation and cost tracking
   - [ ] Rate limiting compliance and optimization testing
-  - [ ] External service failure handling and recovery validation
+  - [ ] Cost tracking and optimization testing with actual API usage
+  - [ ] Service failure recovery testing with real external service outages
 - [ ] Create external service monitoring and validation
   - [ ] API response time and success rate monitoring
   - [ ] Cost tracking and usage optimization validation
@@ -1459,6 +1590,12 @@ You are completing the 003 Worker Refactor project with comprehensive validation
 - [x] Deployment configuration management and validation procedures established
 - [x] Environment configuration and secrets management validated
 - [x] Infrastructure health monitoring and alerting systems operational
+
+### Phase 2.1: Upload Endpoint Validation and File Storage Testing ✅ COMPLETED
+- [x] Complete upload flow validation completed successfully
+- [x] File storage verification and integrity confirmed
+- [x] Database record validation and tracking confirmed
+- [x] Error handling and edge case testing completed
 
 ### Phase 3: Enhanced BaseWorker Implementation ✅ COMPLETED
 - [x] BaseWorker with comprehensive monitoring and state machine processing implemented
