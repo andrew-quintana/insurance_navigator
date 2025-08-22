@@ -18,8 +18,19 @@ def generate_document_id() -> str:
 
 def generate_storage_path(user_id: str, document_id: str, filename: str) -> str:
     """Generate a storage path for a document."""
-    # Create a path like: uploads/{user_id}/{document_id}/{filename}
-    return f"uploads/{user_id}/{document_id}/{filename}"
+    # Create a path like: files/user/{userId}/raw/{datetime}_{hash}.{ext}
+    from datetime import datetime
+    import hashlib
+    
+    # Create a datetime hash for uniqueness
+    timestamp = datetime.utcnow().isoformat()
+    timestamp_hash = hashlib.md5(timestamp.encode()).hexdigest()[:8]
+    
+    # Extract file extension
+    ext = filename.split('.')[-1] if '.' in filename else 'pdf'
+    
+    # Format: files/user/{userId}/raw/{datetime}_{hash}.{ext}
+    return f"files/user/{user_id}/raw/{timestamp_hash}_{hashlib.md5(document_id.encode()).hexdigest()[:8]}.{ext}"
 
 
 def log_event(

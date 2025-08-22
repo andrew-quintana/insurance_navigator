@@ -2,6 +2,7 @@
 Upload endpoint for document ingestion pipeline.
 """
 
+import json
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
@@ -63,21 +64,17 @@ async def upload_document(
         if existing_document:
             # Return existing document information
             logger.info(
-                "Duplicate document detected",
-                user_id=current_user.user_id,
-                file_sha256=request.sha256,
-                existing_document_id=existing_document["document_id"]
+                f"Duplicate document detected - user_id: {current_user.user_id}, file_sha256: {request.sha256}, existing_document_id: {existing_document['document_id']}"
             )
             
             # Log duplicate event
-            await log_event(
-                job_id=None,
+            log_event(
+                event_type="UPLOAD_DEDUP_HIT",
+                user_id=str(current_user.user_id),
                 document_id=existing_document["document_id"],
-                code="UPLOAD_DEDUP_HIT",
-                type="info",
-                severity="info",
-                payload={
-                    "user_id": str(current_user.user_id),
+                job_id=None,
+                stage="duplicate_detection",
+                details={
                     "file_sha256": request.sha256,
                     "filename": request.filename
                 }
@@ -92,14 +89,13 @@ async def upload_document(
             )
         
         # Generate new document ID
-        document_id = generate_document_id(str(current_user.user_id), request.sha256)
+        document_id = generate_document_id()
         
         # Generate storage path
         raw_path = generate_storage_path(
-            config.raw_bucket,
             str(current_user.user_id),
             str(document_id),
-            "pdf"
+            request.filename
         )
         
         # Create document record
@@ -130,14 +126,13 @@ async def upload_document(
         upload_expires_at = datetime.utcnow() + timedelta(seconds=config.signed_url_ttl_seconds)
         
         # Log upload accepted event
-        await log_event(
-            job_id=job_id,
+        log_event(
+            event_type="UPLOAD_ACCEPTED",
+            user_id=str(current_user.user_id),
             document_id=document_id,
-            code="UPLOAD_ACCEPTED",
-            type="stage_started",
-            severity="info",
-            payload={
-                "user_id": str(current_user.user_id),
+            job_id=job_id,
+            stage="upload_initiated",
+            details={
                 "filename": request.filename,
                 "bytes_len": request.bytes_len,
                 "file_sha256": request.sha256,
@@ -146,11 +141,7 @@ async def upload_document(
         )
         
         logger.info(
-            "Document upload initiated",
-            user_id=current_user.user_id,
-            document_id=document_id,
-            job_id=job_id,
-            filename=request.filename
+            f"Document upload initiated - user_id: {current_user.user_id}, document_id: {document_id}, job_id: {job_id}, filename: {request.filename}"
         )
         
         return UploadResponse(
@@ -164,10 +155,8 @@ async def upload_document(
         raise
     except Exception as e:
         logger.error(
-            "Upload endpoint error",
-            exc_info=True,
-            user_id=current_user.user_id,
-            filename=request.filename
+            f"Upload endpoint error - user_id: {current_user.user_id}, filename: {request.filename}",
+            exc_info=True
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -224,6 +213,23 @@ async def _check_duplicate_document(user_id: str, file_sha256: str, db) -> Optio
     
     job_result = await db.fetchrow(job_query, result["document_id"])
     
+    # If no active job exists, create a new one for the duplicate
+    if not job_result:
+        from uuid import uuid4
+        new_job_id = str(uuid4())
+        
+        # Create a new job for the duplicate document
+        await _create_upload_job_for_duplicate(
+            job_id=new_job_id,
+            document_id=result["document_id"],
+            user_id=user_id,
+            raw_path=result["raw_path"],
+            db=db
+        )
+        job_id = new_job_id
+    else:
+        job_id = job_result["job_id"]
+    
     # Generate signed URL for existing file
     config = get_config()
     signed_url = await _generate_signed_url(result["raw_path"], config.signed_url_ttl_seconds)
@@ -231,7 +237,7 @@ async def _check_duplicate_document(user_id: str, file_sha256: str, db) -> Optio
     
     return {
         "document_id": result["document_id"],
-        "job_id": job_result["job_id"] if job_result else None,
+        "job_id": job_id,
         "signed_url": signed_url,
         "upload_expires_at": upload_expires_at
     }
@@ -267,6 +273,46 @@ async def _create_document_record(
     )
 
 
+async def _create_upload_job_for_duplicate(
+    job_id: str,
+    document_id: str,
+    user_id: str,
+    raw_path: str,
+    db
+) -> None:
+    """Create a new upload job for a duplicate document."""
+    # Create job payload for duplicate
+    payload = JobPayloadJobValidated(
+        user_id=user_id,
+        document_id=document_id,
+        file_sha256="",  # Will be filled from existing document
+        bytes_len=0,     # Will be filled from existing document
+        mime="application/pdf",  # Default for existing documents
+        storage_path=raw_path
+    )
+    
+    query = """
+        INSERT INTO upload_pipeline.upload_jobs (
+            job_id, document_id, stage, state, payload, 
+            created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+    """
+    
+    # Convert UUIDs to strings for JSON serialization
+    payload_dict = payload.dict()
+    payload_dict["user_id"] = str(payload_dict["user_id"])
+    payload_dict["document_id"] = str(payload_dict["document_id"])
+    
+    await db.execute(
+        query,
+        job_id,
+        document_id,
+        "queued",  # Start in queued state
+        "queued",
+        json.dumps(payload_dict)  # Convert to JSON string for database storage
+    )
+
+
 async def _create_upload_job(
     job_id: str,
     document_id: str,
@@ -293,13 +339,18 @@ async def _create_upload_job(
         ) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
     """
     
+    # Convert UUIDs to strings for JSON serialization
+    payload_dict = payload.dict()
+    payload_dict["user_id"] = str(payload_dict["user_id"])
+    payload_dict["document_id"] = str(payload_dict["document_id"])
+    
     await db.execute(
         query,
         job_id,
         document_id,
         "queued",  # Start in queued state per updated stage progression
         "queued",
-        payload.dict()
+        json.dumps(payload_dict)  # Convert to JSON string for database storage
     )
 
 
@@ -309,8 +360,19 @@ async def _generate_signed_url(storage_path: str, ttl_seconds: int) -> str:
     # For now, return a placeholder URL
     # TODO: Implement actual Supabase signed URL generation
     
-    # Extract bucket and key from storage path
-    if storage_path.startswith("storage://"):
+    # Handle new path format: files/user/{userId}/raw/{datetime}_{hash}.{ext}
+    if storage_path.startswith("files/user/"):
+        # For Supabase storage, we need to extract the key part
+        # The format is: files/user/{userId}/raw/{datetime}_{hash}.{ext}
+        # We'll use the full path as the key
+        key = storage_path
+        
+        # Placeholder signed URL generation for Supabase Storage
+        # In production, this would call Supabase Storage API
+        return f"https://storage.supabase.co/files/{key}?signed=true&ttl={ttl_seconds}"
+    
+    # Handle legacy storage:// format
+    elif storage_path.startswith("storage://"):
         path_parts = storage_path[10:].split("/", 1)  # Remove "storage://" and split
         if len(path_parts) == 2:
             bucket, key = path_parts

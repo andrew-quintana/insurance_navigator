@@ -5,7 +5,6 @@ This endpoint integrates with the Phase 1 service router and cost tracking infra
 to provide real service integration capabilities while maintaining backward compatibility.
 """
 
-import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from uuid import uuid4, UUID
@@ -19,12 +18,13 @@ from backend.shared.monitoring.cost_tracker import CostTracker
 from backend.shared.config.enhanced_config import EnhancedConfig, ServiceMode
 from backend.shared.storage.storage_manager import StorageManager
 from backend.shared.db.connection import DatabaseManager
+from backend.shared.logging import StructuredLogger
 from backend.shared.exceptions import (
     ServiceUnavailableError, CostLimitExceededError, 
     ValidationError, ConfigurationError
 )
 
-logger = logging.getLogger(__name__)
+logger = StructuredLogger(__name__)
 
 router = APIRouter()
 
