@@ -1,0 +1,68 @@
+# Development Environment Configuration
+# 003 Worker Refactor - Local Development Environment with Supabase
+
+environment: development
+debug: true
+testing: true
+
+# Database Configuration
+database:
+  url: postgresql://postgres:postgres@localhost:5432/postgres
+  schema: upload_pipeline
+  pool_size: 5
+  max_overflow: 10
+  pool_timeout: 30
+  pool_recycle: 3600
+
+# API Server Configuration
+api:
+  host: 0.0.0.0
+  port: 8000
+  workers: 2
+  reload: true
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://127.0.0.1:3000"
+  trusted_hosts:
+    - "localhost"
+    - "127.0.0.1"
+    - "*.render.com"
+
+# Worker Configuration
+worker:
+  max_jobs: 10
+  poll_interval: 5
+  max_retries: 3
+  retry_delay: 10
+  health_check_interval: 30
+  graceful_shutdown_timeout: 60
+
+# External Services Configuration (Mocks for local development)
+external_services:
+  llamaparse:
+    api_url: http://mock-llamaparse:8001
+  openai:
+    api_url: http://mock-openai:8002
+
+# Storage Configuration
+storage:
+  environment: development
+  url: http://127.0.0.1:54321
+  supabase:
+    url: http://127.0.0.1:54321
+    anon_key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+    service_role_key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk1NTkwOTEzMX0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+    storage_url: http://127.0.0.1:54321
+
+  buckets:
+    raw: raw
+    parsed: parsed
+  signed_url_ttl_seconds: 300
+
+# Monitoring Configuration
+monitoring:
+  enabled: true
+  log_level: DEBUG
+  log_format: json
+  metrics_collection: true
+  alerting: false

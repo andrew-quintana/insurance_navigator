@@ -58,6 +58,10 @@ class UploadPipelineConfig(BaseSettings):
     parsed_bucket: str = "parsed"
     signed_url_ttl_seconds: int = 300  # 5 minutes
     
+    # Storage URL configuration for different environments
+    storage_url: str = "https://storage.supabase.co"  # Default production URL
+    storage_environment: str = "production"  # development, staging, production
+    
     # Database configuration
     database_schema: str = "upload_pipeline"
     
@@ -95,8 +99,14 @@ class UploadPipelineConfig(BaseSettings):
     
     @validator('environment')
     def validate_environment(cls, v):
-        if v not in ['development', 'staging', 'production']:
-            raise ValueError('environment must be one of: development, staging, production')
+        if v not in ['mock', 'development', 'staging', 'production']:
+            raise ValueError('environment must be one of: mock, development, staging, production')
+        return v
+    
+    @validator('storage_environment')
+    def validate_storage_environment(cls, v):
+        if v not in ['mock', 'development', 'staging', 'production']:
+            raise ValueError('storage_environment must be one of: mock, development, staging, production')
         return v
 
 

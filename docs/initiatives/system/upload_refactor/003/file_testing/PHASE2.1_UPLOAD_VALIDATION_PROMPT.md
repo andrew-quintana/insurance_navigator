@@ -5,7 +5,7 @@ You are implementing Phase 2.1 of the 003 Worker Refactor iteration. This phase 
 
 ## Documentation References
 Please review these documents before starting implementation:
-- `docs/initiatives/system/upload_refactor/003/TODO003.md` - **PRIMARY REFERENCE**: Complete Phase 2.1 implementation checklist and requirements
+- `docs/initiatives/system/upload_refactor/003/file_testing/TODO001.md` - **PRIMARY REFERENCE**: Complete Phase 2.1 implementation checklist and requirements
 - `docs/initiatives/system/upload_refactor/003/file_testing/PHASE2_UPLOAD_EXECUTION_PROMPT.md` - Previous upload testing approach and lessons learned
 - `docs/initiatives/system/upload_refactor/003/file_testing/TEST_METHOD001.md` - Testing methodology and procedures
 - `TODO003_phase2_notes.md` - Phase 2 infrastructure validation framework implementation
