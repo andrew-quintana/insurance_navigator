@@ -1,4 +1,5 @@
 # PHASE 3: Database Flow Verification and Processing Outcomes
+also remember we're using postgres not accessa_dev
 
 ## Objective
 Verify the complete database flow from upload initiation through all processing stages, ensuring every database table captures and processes the upload data correctly with proper relationships and state transitions.

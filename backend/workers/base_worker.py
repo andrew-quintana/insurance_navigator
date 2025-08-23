@@ -155,7 +155,7 @@ class BaseWorker:
                         FROM upload_pipeline.upload_jobs uj
                         JOIN upload_pipeline.documents d ON uj.document_id = d.document_id
                         WHERE uj.stage IN (
-                            'parsed', 'parse_validated', 'chunking', 'chunks_buffered',
+                            'queued', 'job_validated', 'parsed', 'parse_validated', 'chunking', 'chunks_buffered',
                             'embedding', 'embeddings_buffered'
                         )
                         AND uj.state IN ('queued', 'working', 'retryable')
@@ -190,7 +190,7 @@ class BaseWorker:
         """Process a single job with comprehensive monitoring"""
         job_id = job["job_id"]
         status = job["stage"] # Changed from job["status"] to job["stage"]
-        correlation_id = job.get("correlation_id") or self.logger.get_correlation_id()
+        correlation_id = job.get("correlation_id") or str(uuid.uuid4())
         
         start_time = datetime.utcnow()
         
@@ -202,7 +202,11 @@ class BaseWorker:
             )
             
             # Route to appropriate processor based on stage
-            if status == "parsed":
+            if status == "queued":
+                await self._process_queued_job(job, correlation_id)
+            elif status == "job_validated":
+                await self._process_job_validated(job, correlation_id)
+            elif status == "parsed":
                 await self._validate_parsed(job, correlation_id)
             elif status == "parse_validated":
                 await self._process_chunks(job, correlation_id)
@@ -243,6 +247,48 @@ class BaseWorker:
             
             # Handle error - retry or mark as failed
             await self._handle_processing_error(job, e, correlation_id)
+    
+    async def _process_queued_job(self, job: Dict[str, Any], correlation_id: str):
+        """Process queued job - initial validation and dedupe check"""
+        job_id = job["job_id"]
+        document_id = job["document_id"]
+        
+        try:
+            self.logger.info(
+                "Processing queued job - initial validation",
+                job_id=str(job_id),
+                document_id=str(document_id),
+                correlation_id=correlation_id
+            )
+            
+            # TODO: Implement initial validation logic (dedupe check, etc.)
+            # For now, just advance to job_validated stage
+            await self._advance_job_stage(job_id, "job_validated", correlation_id)
+            
+        except Exception as e:
+            await self._handle_processing_error(job, e, correlation_id)
+            raise
+    
+    async def _process_job_validated(self, job: Dict[str, Any], correlation_id: str):
+        """Process job_validated job - prepare for parsing"""
+        job_id = job["job_id"]
+        document_id = job["document_id"]
+        
+        try:
+            self.logger.info(
+                "Processing job_validated job - preparing for parsing",
+                job_id=str(job_id),
+                document_id=str(document_id),
+                correlation_id=correlation_id
+            )
+            
+            # TODO: Implement parsing preparation logic
+            # For now, just advance to parsing stage
+            await self._advance_job_stage(job_id, "parsing", correlation_id)
+            
+        except Exception as e:
+            await self._handle_processing_error(job, e, correlation_id)
+            raise
     
     async def _validate_parsed(self, job: Dict[str, Any], correlation_id: str):
         """Validate parsed content with comprehensive error checking"""
@@ -287,7 +333,7 @@ class BaseWorker:
                 # Update job with validation results
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs 
-                    SET parsed_path = $1, parsed_sha256 = $2, status = 'parse_validated',
+                    SET parsed_path = $1, parsed_sha256 = $2, stage = 'parse_validated',
                         updated_at = now()
                     WHERE job_id = $3
                 """, parsed_path, content_sha, job_id)
@@ -683,6 +729,33 @@ class BaseWorker:
         vector_bytes = b''.join(float(x).hex().encode() for x in vector)
         return hashlib.sha256(vector_bytes).hexdigest()
     
+    async def _advance_job_stage(self, job_id: str, new_stage: str, correlation_id: str):
+        """Advance job to next stage"""
+        try:
+            async with self.db.get_db_connection() as conn:
+                await conn.execute("""
+                    UPDATE upload_pipeline.upload_jobs 
+                    SET stage = $1, state = 'queued', updated_at = now()
+                    WHERE job_id = $2
+                """, new_stage, job_id)
+                
+                self.logger.info(
+                    "Job stage advanced",
+                    job_id=job_id,
+                    new_stage=new_stage,
+                    correlation_id=correlation_id
+                )
+        
+        except Exception as e:
+            self.logger.error(
+                "Failed to advance job stage",
+                job_id=job_id,
+                new_stage=new_stage,
+                error=str(e),
+                correlation_id=correlation_id
+            )
+            raise
+    
     async def _handle_processing_error(self, job: Dict[str, Any], error: Exception, correlation_id: str):
         """Handle processing errors with retry logic"""
         job_id = job["job_id"]
@@ -714,7 +787,7 @@ class BaseWorker:
             async with self.db.get_db_connection() as conn:
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
-                    SET status = $1, last_error = $2, updated_at = now()
+                    SET stage = $1, last_error = $2, updated_at = now()
                     WHERE job_id = $3
                 """, failure_status, json.dumps({
                     "error": str(error),
