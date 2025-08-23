@@ -355,10 +355,20 @@ async def _create_upload_job(
 
 
 async def _generate_signed_url(storage_path: str, ttl_seconds: int) -> str:
-    """Generate a signed URL for file upload."""
-    # This would integrate with Supabase Storage
-    # For now, return a placeholder URL
-    # TODO: Implement actual Supabase signed URL generation
+    """Generate a signed URL for file upload based on environment configuration."""
+    config = get_config()
+    
+    # Determine storage base URL based on environment
+    if config.storage_environment == "mock":
+        # Mock environment - use mock storage service
+        storage_base_url = "http://localhost:5001"
+    elif config.storage_environment == "development":
+        # Development environment - use actual Supabase storage
+        storage_base_url = "http://127.0.0.1:54321"
+    elif config.storage_environment == "staging":
+        storage_base_url = "https://staging-storage.supabase.co"
+    else:  # production
+        storage_base_url = "https://storage.supabase.co"
     
     # Handle new path format: files/user/{userId}/raw/{datetime}_{hash}.{ext}
     if storage_path.startswith("files/user/"):
@@ -367,18 +377,32 @@ async def _generate_signed_url(storage_path: str, ttl_seconds: int) -> str:
         # We'll use the full path as the key
         key = storage_path
         
-        # Placeholder signed URL generation for Supabase Storage
-        # In production, this would call Supabase Storage API
-        return f"https://storage.supabase.co/files/{key}?signed=true&ttl={ttl_seconds}"
+        # Generate environment-appropriate signed URL
+        if config.storage_environment == "mock":
+            # Mock environment - direct access URL to mock service
+            return f"{storage_base_url}/storage/v1/object/upload/{key}"
+        elif config.storage_environment == "development":
+            # Development environment - Supabase signed URL to local Supabase
+            return f"{storage_base_url}/storage/v1/object/upload/{key}"
+        else:
+            # Staging/Production - Supabase signed URL
+            return f"{storage_base_url}/files/{key}?signed=true&ttl={ttl_seconds}"
     
     # Handle legacy storage:// format
     elif storage_path.startswith("storage://"):
         path_parts = storage_path[10:].split("/", 1)  # Remove "storage://" and split
         if len(path_parts) == 2:
             bucket, key = path_parts
-            # Placeholder signed URL generation
-            # In production, this would call Supabase Storage API
-            return f"https://storage.supabase.co/{bucket}/{key}?signed=true&ttl={ttl_seconds}"
+            # Generate environment-appropriate signed URL
+            if config.storage_environment == "mock":
+                # Mock environment - direct access URL to mock service
+                return f"{storage_base_url}/storage/v1/object/upload/{bucket}/{key}"
+            elif config.storage_environment == "development":
+                # Development environment - Supabase signed URL to local Supabase
+                return f"{storage_base_url}/storage/v1/object/upload/{bucket}/{key}"
+            else:
+                # Staging/Production - Supabase signed URL
+                return f"{storage_base_url}/{bucket}/{key}?signed=true&ttl={ttl_seconds}"
     
     # Fallback for invalid storage paths
     raise ValueError(f"Invalid storage path format: {storage_path}")

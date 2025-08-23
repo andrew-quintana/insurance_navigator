@@ -1,140 +1,287 @@
-# PHASE 3: Database and Storage Verification Prompt
+# PHASE 3: Database Flow Verification and Processing Outcomes
 
 ## Objective
-Verify that uploaded documents were correctly stored in the database and Supabase buckets, with accurate metadata and accessible file paths.
+Verify the complete database flow from upload initiation through all processing stages, ensuring every database table captures and processes the upload data correctly with proper relationships and state transitions.
 
 ## Context
-Both test documents have been uploaded successfully via the upload refactor 003 API. You now need to verify that the data was properly persisted in the database and that files are accessible in the correct bucket locations.
+Phase 2.1 successfully validated the upload endpoint and file storage. Now Phase 3 focuses on the **database processing pipeline** - how each database table processes the upload data, maintains relationships, and tracks the complete lifecycle of uploaded documents.
 
 ## Prerequisites
-- Phase 2 completed successfully
-- Both uploads returned job_id and document_id values
-- Upload responses captured and available
+- ✅ Phase 2.1 completed: Upload endpoint working, files stored in Supabase
+- ✅ JWT authentication working correctly
+- ✅ Environment configuration validated (development mode)
+- ✅ Test document successfully uploaded and stored
 
-## Tasks
+## Core Focus: Database Processing Flow
 
-### 1. Database Record Verification
-Query the following tables to verify records were created:
+### 1. Database Schema Flow Verification
+Track the complete data flow through every database table:
 
-#### Documents Table (`upload_pipeline.documents`)
-```sql
-SELECT document_id, user_id, filename, mime, bytes_len, 
-       file_sha256, raw_path, created_at, updated_at
-FROM upload_pipeline.documents 
-WHERE document_id IN ('doc_id_1', 'doc_id_2')
-ORDER BY created_at DESC;
+#### Primary Flow Path
+```
+Upload Request → Documents Table → Upload Jobs Table → Events Table → Processing State
 ```
 
-Verify for each document:
-- [ ] Document ID matches upload response
-- [ ] Filename is correct
-- [ ] File size (bytes_len) matches actual file size
-- [ ] SHA256 hash matches calculated hash
-- [ ] Raw path follows expected format
-- [ ] Created/updated timestamps are recent
-
-#### Upload Jobs Table (`upload_pipeline.upload_jobs`)
-```sql
-SELECT job_id, document_id, user_id, status, raw_path,
-       chunks_version, embed_model, embed_version, progress,
-       retry_count, correlation_id, created_at, updated_at
-FROM upload_pipeline.upload_jobs 
-WHERE job_id IN ('job_id_1', 'job_id_2')
-ORDER BY created_at DESC;
+#### Secondary Flow Paths
+```
+User Authentication → User Sessions → Access Logs
+File Storage → Storage Metadata → Bucket References
+Job Processing → Worker Assignments → Status Updates
 ```
 
-Verify for each job:
-- [ ] Job ID matches upload response
-- [ ] Document ID links correctly
-- [ ] Status is "uploaded" (initial state)
-- [ ] Raw path matches document record
-- [ ] Progress field contains enhanced payload
-- [ ] Retry count is 0
+### 2. Table-by-Table Processing Verification
 
-#### Events Table (`upload_pipeline.events`)
-```sql
-SELECT event_id, job_id, document_id, type, severity, code,
-       payload, correlation_id, ts
-FROM upload_pipeline.events 
-WHERE job_id IN ('job_id_1', 'job_id_2')
-ORDER BY ts DESC;
+#### A. Documents Table (`upload_pipeline.documents`)
+**Purpose**: Master record of uploaded documents
+**Verification Tasks**:
+- [ ] Document record created with correct metadata
+- [ ] All required fields populated (document_id, user_id, filename, mime, bytes_len, file_sha256, raw_path)
+- [ ] Timestamps accurate (created_at, updated_at)
+- [ ] File path follows expected naming convention
+- [ ] SHA256 hash matches actual file content
+- [ ] File size matches actual file size
+
+**Expected Processing**:
+- Record created immediately upon upload acceptance
+- Status: "uploaded" or "pending_processing"
+- Raw path points to actual Supabase storage location
+
+#### B. Upload Jobs Table (`upload_pipeline.upload_jobs`)
+**Purpose**: Processing queue and job lifecycle management
+**Verification Tasks**:
+- [ ] Job record created with correct document_id linkage
+- [ ] Job payload contains complete upload metadata
+- [ ] Initial state: "queued" or "pending"
+- [ ] Progress field populated with job details
+- [ ] Retry count initialized to 0
+- [ ] Correlation ID generated for tracking
+
+**Expected Processing**:
+- Job created immediately after document record
+- Links to document via document_id foreign key
+- Contains enhanced payload with processing requirements
+- Ready for worker pickup
+
+#### C. Events Table (`upload_pipeline.events`)
+**Purpose**: Audit trail and processing history
+**Verification Tasks**:
+- [ ] UPLOAD_ACCEPTED event logged
+- [ ] Event payload contains upload metadata
+- [ ] Correlation ID matches job correlation ID
+- [ ] Timestamps accurate and sequential
+- [ ] Event severity and type appropriate
+- [ ] Job and document IDs properly linked
+
+**Expected Processing**:
+- Event logged for every state change
+- Payload contains relevant context data
+- Maintains complete processing history
+
+#### D. User Sessions/Authentication Tables
+**Purpose**: Track user authentication and access
+**Verification Tasks**:
+- [ ] User authentication recorded
+- [ ] Session information captured
+- [ ] Access permissions validated
+- [ ] User ID properly linked across tables
+
+#### E. Storage Metadata Tables (if applicable)
+**Purpose**: Track file storage and bucket information
+**Verification Tasks**:
+- [ ] Storage location recorded
+- [ ] Bucket references maintained
+- [ ] File accessibility tracked
+- [ ] Storage paths validated
+
+### 3. Cross-Table Relationship Verification
+
+#### Primary Relationships
+- [ ] `documents.document_id` ↔ `upload_jobs.document_id`
+- [ ] `upload_jobs.job_id` ↔ `events.job_id`
+- [ ] `documents.user_id` ↔ `upload_jobs.user_id`
+- [ ] `upload_jobs.correlation_id` ↔ `events.correlation_id`
+
+#### Data Consistency Checks
+- [ ] All foreign key relationships valid
+- [ ] Referential integrity maintained
+- [ ] No orphaned records
+- [ ] Timestamps logically consistent
+
+### 4. Processing State Validation
+
+#### Expected State Progression
+```
+Upload → Document Created → Job Queued → Event Logged → Ready for Processing
 ```
 
-Verify events were logged:
-- [ ] UPLOAD_ACCEPTED events created
-- [ ] Correlation IDs match
-- [ ] Event payloads contain upload metadata
+#### State Verification
+- [ ] Document status: "uploaded" or "pending_processing"
+- [ ] Job status: "queued" or "pending"
+- [ ] Event type: "UPLOAD_ACCEPTED"
+- [ ] All timestamps within expected ranges
+- [ ] No processing errors or failed states
 
-### 2. Storage Bucket Verification
-Check Supabase bucket storage for uploaded files:
+### 5. Data Integrity Verification
 
-#### File Existence Verification
-For each document, verify the file exists at the raw_path location:
-- Check bucket: [configured raw bucket name]
-- Path format: `{user_id}/{document_id}.pdf`
-- File accessibility via generated signed URLs
+#### Metadata Accuracy
+- [ ] File size matches actual file size exactly
+- [ ] SHA256 hash matches file content
+- [ ] MIME type correctly identified
+- [ ] Filename preserved accurately
+- [ ] User ID matches authenticated user
 
-#### File Integrity Verification
-- Download files via signed URLs
-- Calculate SHA256 hash of downloaded files
-- Compare with original file hashes
-- Verify file sizes match exactly
+#### Processing Metadata
+- [ ] Job payload contains all required fields
+- [ ] Event payloads contain relevant context
+- [ ] Correlation IDs unique and traceable
+- [ ] Timestamps accurate and sequential
 
-### 3. Cross-Reference Validation
-Ensure data consistency across all systems:
-- [ ] Database document_id matches job document_id
-- [ ] Raw paths in documents table match jobs table
-- [ ] File paths in database match actual bucket locations
-- [ ] File hashes in database match actual file hashes
-- [ ] File sizes in database match actual file sizes
+### 6. Performance and Capacity Verification
 
-### 4. Access Control Verification
-Test file accessibility:
-- [ ] Files are accessible via signed URLs from upload response
-- [ ] Direct bucket access works (if configured)
-- [ ] Files are not publicly accessible without authentication
+#### Processing Metrics
+- [ ] Document creation time < 100ms
+- [ ] Job creation time < 50ms
+- [ ] Event logging time < 25ms
+- [ ] Total database processing < 200ms
 
-### 5. Metadata Accuracy
-Comprehensive metadata verification:
+#### Capacity Verification
+- [ ] Large files (>2MB) processed correctly
+- [ ] Multiple concurrent uploads handled
+- [ ] Database connection pool working
+- [ ] No memory leaks or connection issues
 
-**For simulated_insurance_document.pdf:**
-- [ ] Size: ~1,740 bytes
-- [ ] Type: application/pdf
-- [ ] SHA256: [verify hash]
-- [ ] Path: storage://{bucket}/{user_id}/{doc_id}.pdf
+## Database Connection and Tools
 
-**For scan_classic_hmo_parsed.pdf:**
-- [ ] Size: ~2,516,582 bytes
-- [ ] Type: application/pdf
-- [ ] SHA256: [verify hash]
-- [ ] Path: storage://{bucket}/{user_id}/{doc_id}.pdf
+### Connection Details
+- **Database**: PostgreSQL via Supabase
+- **Schema**: `upload_pipeline`
+- **Access**: Service role key for admin access
+- **Connection**: From UPLOAD_PIPELINE_SUPABASE_URL
+
+### Required Queries
+
+#### 1. Document Verification Query
+```sql
+SELECT 
+    d.document_id,
+    d.user_id,
+    d.filename,
+    d.mime,
+    d.bytes_len,
+    d.file_sha256,
+    d.raw_path,
+    d.created_at,
+    d.updated_at
+FROM upload_pipeline.documents d
+WHERE d.document_id = '[ACTUAL_DOCUMENT_ID]'
+ORDER BY d.created_at DESC;
+```
+
+#### 2. Job Verification Query
+```sql
+SELECT 
+    j.job_id,
+    j.document_id,
+    j.user_id,
+    j.stage,
+    j.state,
+    j.payload,
+    j.created_at,
+    j.updated_at
+FROM upload_pipeline.upload_jobs j
+WHERE j.document_id = '[ACTUAL_DOCUMENT_ID]'
+ORDER BY j.created_at DESC;
+```
+
+#### 3. Event Verification Query
+```sql
+SELECT 
+    e.event_id,
+    e.job_id,
+    e.document_id,
+    e.type,
+    e.severity,
+    e.payload,
+    e.correlation_id,
+    e.ts
+FROM upload_pipeline.events e
+WHERE e.job_id = '[ACTUAL_JOB_ID]'
+ORDER BY e.ts DESC;
+```
+
+#### 4. Cross-Reference Verification Query
+```sql
+SELECT 
+    d.document_id,
+    d.filename,
+    d.raw_path,
+    j.job_id,
+    j.state,
+    j.stage,
+    e.type as event_type,
+    e.ts as event_time
+FROM upload_pipeline.documents d
+LEFT JOIN upload_pipeline.upload_jobs j ON d.document_id = j.document_id
+LEFT JOIN upload_pipeline.events e ON j.job_id = e.job_id
+WHERE d.document_id = '[ACTUAL_DOCUMENT_ID]'
+ORDER BY e.ts DESC;
+```
 
 ## Success Criteria
-- [ ] All database records created correctly
-- [ ] Files stored in correct bucket locations
-- [ ] File integrity verified (hashes match)
-- [ ] All metadata is accurate
-- [ ] Files are accessible via generated URLs
-- [ ] Cross-references between tables are consistent
 
-## Database Connection
-Use the database configuration from the upload service:
-- URL: From UPLOAD_PIPELINE_SUPABASE_URL environment variable
-- Service role key for admin access
+### Database Processing Success
+- [ ] All required tables populated correctly
+- [ ] Foreign key relationships maintained
+- [ ] Data integrity preserved (no corruption)
+- [ ] Processing state progression correct
+- [ ] All metadata accurately captured
+
+### Performance Success
+- [ ] Processing times within acceptable limits
+- [ ] No database connection issues
+- [ ] No memory or capacity problems
+- [ ] Concurrent processing working
+
+### Traceability Success
+- [ ] Complete audit trail maintained
+- [ ] All processing steps logged
+- [ ] Correlation IDs traceable end-to-end
+- [ ] No missing or orphaned records
 
 ## Output Required
-- Database verification report with query results
-- Storage verification report with file details
-- Cross-reference validation results
-- Any discrepancies or issues discovered
-- Complete traceability matrix showing data flow
+
+### 1. Database Processing Report
+- Complete query results for all tables
+- State progression verification
+- Relationship validation results
+- Performance metrics
+
+### 2. Data Flow Analysis
+- Complete traceability matrix
+- Processing pipeline validation
+- Error state analysis (if any)
+- Capacity and performance assessment
+
+### 3. Issues and Recommendations
+- Any processing anomalies discovered
+- Performance bottlenecks identified
+- Data integrity issues found
+- Recommendations for improvement
 
 ## Troubleshooting
-If verification fails:
-- Check service logs for errors
-- Verify database permissions
-- Confirm bucket permissions and configuration
-- Review upload response data for accuracy
+
+### Common Issues
+- **Missing Records**: Check database permissions and connection
+- **Relationship Failures**: Verify foreign key constraints
+- **Performance Issues**: Check connection pool and indexing
+- **State Inconsistencies**: Verify processing logic
+
+### Debugging Steps
+1. Check database connection and permissions
+2. Verify table schema and constraints
+3. Review processing logic and state machines
+4. Check for transaction rollbacks or failures
+5. Validate correlation ID generation
 
 ## Next Phase
-Once verification is complete, proceed to Phase 4: Visual Inspection Link Generation to provide stakeholder-friendly access for manual verification.
+Once database flow verification is complete, proceed to Phase 4: Visual Inspection and Stakeholder Verification to provide human-readable access to the processed data.

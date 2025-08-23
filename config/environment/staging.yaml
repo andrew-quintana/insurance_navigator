@@ -1,0 +1,90 @@
+# Staging Environment Configuration
+# 003 Worker Refactor - Staging Environment
+
+environment: staging
+debug: true
+testing: false
+
+# Database Configuration
+database:
+  url: ${DATABASE_URL}
+  schema: upload_pipeline
+  pool_size: 10
+  max_overflow: 15
+  pool_timeout: 30
+  pool_recycle: 3600
+
+# API Server Configuration
+api:
+  host: 0.0.0.0
+  port: 8000
+  workers: 4
+  reload: true
+  cors_origins:
+    - "https://staging.accessa.ai"
+    - "https://staging-app.accessa.ai"
+  trusted_hosts:
+    - "staging.accessa.ai"
+    - "staging-app.accessa.ai"
+    - "*.render.com"
+
+# Worker Configuration
+worker:
+  max_jobs: 25
+  poll_interval: 5
+  max_retries: 3
+  retry_delay: 10
+  health_check_interval: 30
+  graceful_shutdown_timeout: 60
+
+# External Services Configuration
+external_services:
+  llamaparse:
+    api_url: ${LLAMAPARSE_API_URL}
+    api_key: ${LLAMAPARSE_API_KEY}
+    timeout: 120
+    max_retries: 3
+    retry_delay: 5
+  
+  openai:
+    api_url: ${OPENAI_API_URL}
+    api_key: ${OPENAI_API_KEY}
+    timeout: 60
+    max_retries: 3
+    retry_delay: 5
+    batch_size: 256
+    rate_limit_delay: 1
+
+# Storage Configuration
+storage:
+  environment: staging
+  url: https://staging-storage.supabase.co
+  supabase:
+    url: ${SUPABASE_URL}
+    anon_key: ${SUPABASE_ANON_KEY}
+    service_role_key: ${SUPABASE_SERVICE_ROLE_KEY}
+    storage_url: ${SUPABASE_STORAGE_URL}
+  
+  buckets:
+    raw:
+      name: raw
+      public: false
+      max_file_size: 268435456  # 256MB
+      allowed_mime_types:
+        - application/pdf
+    
+    parsed:
+      name: parsed
+      public: false
+      max_file_size: 10485760   # 10MB
+      allowed_mime_types:
+        - text/markdown
+        - text/plain
+
+# Monitoring Configuration
+monitoring:
+  enabled: true
+  log_level: INFO
+  log_format: json
+  metrics_collection: true
+  alerting: true
