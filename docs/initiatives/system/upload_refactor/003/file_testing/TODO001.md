@@ -34,18 +34,41 @@
 - [x] Verify files appear in Supabase dashboard
 
 ## Phase 3 — Database Flow Verification and Processing Outcomes
+
+### Expected Processing State Flow
+```
+queued → job_validated → parsing → parsed → parse_validated → chunking → chunks_buffered → embedding → embedded
+```
+
+### Job Status Definitions
+- **queued**: Initial state when job is first created. Document has been uploaded and a job has been enqueued for processing.
+- **job_validated**: Confirmed via hash not to be a dupe upload, proceeds to this state to confirm it needs processing
+- **parsing**: Document is actively being processed by the parser (e.g., LlamaParse) to extract text and structure.
+- **parsed**: Parser has completed processing and returned results via webhook, but results haven't been validated yet.
+- **parse_validated**: Parsed content has been validated (format, completeness, uniqueness in blob storage) and is ready for chunking.
+- **chunking**: System is actively dividing the parsed document into semantic chunks for embedding and deduped via hashing.
+- **chunks_buffered**: All chunks have been created and stored in the appropriate table but not yet committed to the main chunks table.
+- **embedding**: System is actively generating vector embeddings for the document chunks in the buffer table. (As each row is embedded written to the `document_chunks` table (with hashing deduping) it is removed from the buffer table.
+- **embedded**: All embeddings have been successfully written to the appropriate chunks and the chunks have been moved from the buffer to the `document_chunks` table. The table is ready for rag operations.
+
+### Database Verification Tasks
 - [ ] Connect to upload_pipeline database schema
-- [ ] Query documents table for uploaded file records
-- [ ] Verify upload_jobs table for processing queue entries
-- [ ] Check events table for audit trail and processing history
+- [ ] Query documents table for uploaded file records (master document metadata)
+- [ ] Verify upload_jobs table for processing queue entries (job lifecycle management)
+- [ ] Check events table for audit trail and processing history (state transitions)
+- [ ] Validate document_chunks table for processed chunks (final output)
+- [ ] Check chunk buffer table for temporary storage during processing
 - [ ] Validate cross-table relationships and foreign key integrity
-- [ ] Verify processing state progression and state machines
+- [ ] Verify processing state progression follows defined flow (queued → embedded)
 - [ ] Test data integrity (file sizes, hashes, metadata accuracy)
 - [ ] Measure database processing performance and capacity
 - [ ] Document complete data flow through all database tables
 - [ ] Verify correlation IDs and traceability end-to-end
 - [ ] Check for any processing errors or failed states
 - [ ] Validate user authentication and session tracking
+- [ ] Verify state transition events logged for each status change
+- [ ] Confirm chunking and embedding processes working correctly
+- [ ] Validate buffer table management during processing
 
 ## Phase 4 — Verification & Validation
 - [ ] Query database for created records
@@ -81,9 +104,13 @@
   - `test_document.pdf` (63 bytes) - Successfully uploaded and stored in Phase 2.1
   - Additional test documents can be created as needed for database flow testing
 - Focus on database processing pipeline validation rather than file storage testing
+- Processing state flow: queued → job_validated → parsing → parsed → parse_validated → chunking → chunks_buffered → embedding → embedded
 - Visual inspection links critical for stakeholder confidence
 - Database record verification must include all expected fields and relationships
 - Processing state progression validation essential for downstream processing
+- State transitions must be properly logged in events table
+- Chunking and embedding processes must be validated through buffer and final tables
+- Performance metrics should be captured for each processing stage
 
 ## Risk Mitigation
 - Backup test environment state before execution

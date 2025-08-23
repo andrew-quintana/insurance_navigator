@@ -29,7 +29,26 @@ File Storage → Storage Metadata → Bucket References
 Job Processing → Worker Assignments → Status Updates
 ```
 
-### 2. Table-by-Table Processing Verification
+### 2. Expected Processing State Flow
+
+#### Full State Progression
+```
+queued → job_validated → parsing → parsed → parse_validated → chunking → chunks_buffered → embedding → embedded
+```
+
+#### Job Status Definitions
+
+- **queued**: Initial state when job is first created. Document has been uploaded and a job has been enqueued for processing.
+- **job_validated**: Confirmed via hash not to be a dupe upload, proceeds to this state to confirm it needs processing
+- **parsing**: Document is actively being processed by the parser (e.g., LlamaParse) to extract text and structure.
+- **parsed**: Parser has completed processing and returned results via webhook, but results haven't been validated yet.
+- **parse_validated**: Parsed content has been validated (format, completeness, uniqueness in blob storage) and is ready for chunking.
+- **chunking**: System is actively dividing the parsed document into semantic chunks for embedding and deduped via hashing.
+- **chunks_buffered**: All chunks have been created and stored in the appropriate table but not yet committed to the main chunks table.
+- **embedding**: System is actively generating vector embeddings for the document chunks in the buffer table. (As each row is embedded written to the `document_chunks` table (with hashing deduping) it is removed from the buffer table.
+- **embedded**: All embeddings have been successfully written to the appropriate chunks and the chunks have been moved from the buffer to the `document_chunks` table. The table is ready for rag operations.
+
+### 3. Table-by-Table Processing Verification
 
 #### A. Documents Table (`upload_pipeline.documents`)
 **Purpose**: Master record of uploaded documents
@@ -51,16 +70,18 @@ Job Processing → Worker Assignments → Status Updates
 **Verification Tasks**:
 - [ ] Job record created with correct document_id linkage
 - [ ] Job payload contains complete upload metadata
-- [ ] Initial state: "queued" or "pending"
+- [ ] Initial state: "queued" (as per state flow definition)
 - [ ] Progress field populated with job details
 - [ ] Retry count initialized to 0
 - [ ] Correlation ID generated for tracking
+- [ ] State progression follows expected flow: queued → job_validated → parsing → parsed → parse_validated → chunking → chunks_buffered → embedding → embedded
 
 **Expected Processing**:
 - Job created immediately after document record
 - Links to document via document_id foreign key
 - Contains enhanced payload with processing requirements
 - Ready for worker pickup
+- State transitions occur as processing progresses through pipeline
 
 #### C. Events Table (`upload_pipeline.events`)
 **Purpose**: Audit trail and processing history
@@ -71,11 +92,14 @@ Job Processing → Worker Assignments → Status Updates
 - [ ] Timestamps accurate and sequential
 - [ ] Event severity and type appropriate
 - [ ] Job and document IDs properly linked
+- [ ] State transition events logged for each status change
+- [ ] Processing milestone events captured (parsing started, chunking complete, etc.)
 
 **Expected Processing**:
 - Event logged for every state change
 - Payload contains relevant context data
 - Maintains complete processing history
+- Tracks progression through all processing stages
 
 #### D. User Sessions/Authentication Tables
 **Purpose**: Track user authentication and access
@@ -93,35 +117,67 @@ Job Processing → Worker Assignments → Status Updates
 - [ ] File accessibility tracked
 - [ ] Storage paths validated
 
-### 3. Cross-Table Relationship Verification
+#### F. Document Chunks Table (`upload_pipeline.document_chunks`)
+**Purpose**: Store processed document chunks for RAG operations
+**Verification Tasks**:
+- [ ] Chunks created during chunking stage
+- [ ] Chunks moved from buffer to main table during embedding stage
+- [ ] Hashing deduplication working correctly
+- [ ] Vector embeddings properly stored
+- [ ] Chunks linked to original document
+
+#### G. Chunk Buffer Table (if applicable)
+**Purpose**: Temporary storage during chunking and embedding
+**Verification Tasks**:
+- [ ] Chunks stored in buffer during processing
+- [ ] Buffer cleared as chunks are embedded
+- [ ] No orphaned chunks left in buffer
+- [ ] Proper cleanup after embedding complete
+
+### 4. Cross-Table Relationship Verification
 
 #### Primary Relationships
 - [ ] `documents.document_id` ↔ `upload_jobs.document_id`
 - [ ] `upload_jobs.job_id` ↔ `events.job_id`
 - [ ] `documents.user_id` ↔ `upload_jobs.user_id`
 - [ ] `upload_jobs.correlation_id` ↔ `events.correlation_id`
+- [ ] `upload_jobs.document_id` ↔ `document_chunks.document_id` (after chunking)
 
 #### Data Consistency Checks
 - [ ] All foreign key relationships valid
 - [ ] Referential integrity maintained
 - [ ] No orphaned records
 - [ ] Timestamps logically consistent
+- [ ] State progression follows defined flow
 
-### 4. Processing State Validation
+### 5. Processing State Validation
 
 #### Expected State Progression
 ```
-Upload → Document Created → Job Queued → Event Logged → Ready for Processing
+Upload → Document Created → Job Queued → Event Logged → Processing Pipeline → Final State
 ```
 
 #### State Verification
 - [ ] Document status: "uploaded" or "pending_processing"
-- [ ] Job status: "queued" or "pending"
+- [ ] Job status: "queued" (initial state)
 - [ ] Event type: "UPLOAD_ACCEPTED"
 - [ ] All timestamps within expected ranges
 - [ ] No processing errors or failed states
+- [ ] State transitions follow defined progression
+- [ ] Each state change properly logged in events table
 
-### 5. Data Integrity Verification
+#### State Transition Validation
+- [ ] **queued**: Job created and ready for processing
+- [ ] **job_validated**: Hash validation completed, no duplicates
+- [ ] **parsing**: Parser actively processing document
+- [ ] **parsed**: Parser completed, results pending validation
+- [ ] **parse_validated**: Content validated, ready for chunking
+- [ ] **chunking**: Document being divided into semantic chunks
+- [ ] **chunks_buffered**: All chunks created and stored in buffer
+- [ ] **embedding**: Vector embeddings being generated
+- [ ] **embedded**: Processing complete, ready for RAG operations
+
+### 6. Data Integrity Verification
 
 #### Metadata Accuracy
 - [ ] File size matches actual file size exactly
@@ -135,20 +191,31 @@ Upload → Document Created → Job Queued → Event Logged → Ready for Proces
 - [ ] Event payloads contain relevant context
 - [ ] Correlation IDs unique and traceable
 - [ ] Timestamps accurate and sequential
+- [ ] State progression properly tracked
 
-### 6. Performance and Capacity Verification
+#### Chunk Processing Validation
+- [ ] Chunks created with proper semantic boundaries
+- [ ] Hashing deduplication working correctly
+- [ ] Vector embeddings generated and stored
+- [ ] Buffer table properly managed during processing
+
+### 7. Performance and Capacity Verification
 
 #### Processing Metrics
 - [ ] Document creation time < 100ms
 - [ ] Job creation time < 50ms
 - [ ] Event logging time < 25ms
 - [ ] Total database processing < 200ms
+- [ ] State transition times within acceptable limits
+- [ ] Chunking processing time reasonable for document size
+- [ ] Embedding generation time acceptable
 
 #### Capacity Verification
 - [ ] Large files (>2MB) processed correctly
 - [ ] Multiple concurrent uploads handled
 - [ ] Database connection pool working
 - [ ] No memory leaks or connection issues
+- [ ] Buffer table properly managed during high load
 
 ## Database Connection and Tools
 
@@ -227,26 +294,67 @@ WHERE d.document_id = '[ACTUAL_DOCUMENT_ID]'
 ORDER BY e.ts DESC;
 ```
 
+#### 5. State Progression Query
+```sql
+SELECT 
+    j.job_id,
+    j.state,
+    j.stage,
+    j.updated_at as state_change_time,
+    e.type as event_type,
+    e.ts as event_time,
+    e.payload as event_payload
+FROM upload_pipeline.upload_jobs j
+LEFT JOIN upload_pipeline.events e ON j.job_id = e.job_id
+WHERE j.document_id = '[ACTUAL_DOCUMENT_ID]'
+ORDER BY j.updated_at ASC, e.ts ASC;
+```
+
+#### 6. Chunk Processing Verification Query
+```sql
+SELECT 
+    dc.chunk_id,
+    dc.document_id,
+    dc.chunk_text,
+    dc.embedding_vector,
+    dc.created_at,
+    j.state as job_state
+FROM upload_pipeline.document_chunks dc
+JOIN upload_pipeline.upload_jobs j ON dc.document_id = j.document_id
+WHERE dc.document_id = '[ACTUAL_DOCUMENT_ID]'
+ORDER BY dc.created_at ASC;
+```
+
 ## Success Criteria
 
 ### Database Processing Success
 - [ ] All required tables populated correctly
 - [ ] Foreign key relationships maintained
 - [ ] Data integrity preserved (no corruption)
-- [ ] Processing state progression correct
+- [ ] Processing state progression follows defined flow
 - [ ] All metadata accurately captured
+- [ ] State transitions properly logged and tracked
 
 ### Performance Success
 - [ ] Processing times within acceptable limits
 - [ ] No database connection issues
 - [ ] No memory or capacity problems
 - [ ] Concurrent processing working
+- [ ] State transitions efficient and timely
 
 ### Traceability Success
 - [ ] Complete audit trail maintained
 - [ ] All processing steps logged
 - [ ] Correlation IDs traceable end-to-end
 - [ ] No missing or orphaned records
+- [ ] State progression fully documented
+
+### Processing Pipeline Success
+- [ ] All defined states properly implemented
+- [ ] State transitions occur in correct order
+- [ ] Chunking and embedding working correctly
+- [ ] Buffer table properly managed
+- [ ] Final state "embedded" achieved successfully
 
 ## Output Required
 
@@ -255,10 +363,12 @@ ORDER BY e.ts DESC;
 - State progression verification
 - Relationship validation results
 - Performance metrics
+- Processing pipeline validation
 
 ### 2. Data Flow Analysis
 - Complete traceability matrix
 - Processing pipeline validation
+- State transition analysis
 - Error state analysis (if any)
 - Capacity and performance assessment
 
@@ -266,6 +376,7 @@ ORDER BY e.ts DESC;
 - Any processing anomalies discovered
 - Performance bottlenecks identified
 - Data integrity issues found
+- State transition problems
 - Recommendations for improvement
 
 ## Troubleshooting
@@ -274,7 +385,10 @@ ORDER BY e.ts DESC;
 - **Missing Records**: Check database permissions and connection
 - **Relationship Failures**: Verify foreign key constraints
 - **Performance Issues**: Check connection pool and indexing
-- **State Inconsistencies**: Verify processing logic
+- **State Inconsistencies**: Verify processing logic and state machine
+- **State Transition Failures**: Check worker processes and event handling
+- **Chunking Issues**: Verify parser output and chunking logic
+- **Embedding Failures**: Check vector generation and storage
 
 ### Debugging Steps
 1. Check database connection and permissions
@@ -282,6 +396,9 @@ ORDER BY e.ts DESC;
 3. Review processing logic and state machines
 4. Check for transaction rollbacks or failures
 5. Validate correlation ID generation
+6. Monitor state transition events
+7. Verify chunking and embedding processes
+8. Check buffer table management
 
 ## Next Phase
 Once database flow verification is complete, proceed to Phase 4: Visual Inspection and Stakeholder Verification to provide human-readable access to the processed data.
