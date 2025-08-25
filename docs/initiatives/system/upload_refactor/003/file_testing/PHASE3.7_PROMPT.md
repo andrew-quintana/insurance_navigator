@@ -1,243 +1,238 @@
-# Phase 3.7 Execution Prompt: chunks_buffered → embedding Transition Validation
+# Phase 3.7 Execution Prompt: chunks_stored → embedding_queued Transition Validation
 
 ## Context
-You are implementing Phase 3.7 of the upload refactor 003 file testing initiative. This phase focuses on validating the transition from `chunks_buffered` to `embedding` stage, which involves OpenAI API integration, vector generation, and embedding storage in buffer tables.
+You are implementing Phase 3.7 of the upload refactor 003 file testing initiative. This phase focuses on validating the automatic transition from `chunks_stored` to `embedding_queued` stage, building upon the successful chunking completion implementation from Phase 3.6.
 
 ## Documentation References
 Please review these documents before starting implementation:
 - `docs/initiatives/system/upload_refactor/003/file_testing/TODO001.md` - Phase 3.7 requirements and tasks
 - `docs/initiatives/system/upload_refactor/003/file_testing/TEST_METHOD001.md` - Testing methodology and procedures
-- `docs/initiatives/system/upload_refactor/003/file_testing/PHASE3.6_PROMPT.md` - Phase 3.6 completion status and handoff
+- `docs/initiatives/system/upload_refactor/003/file_testing/TODO001_phase3.6_handoff.md` - **REQUIRED**: Phase 3.6 handoff notes and requirements
 - `docs/initiatives/system/upload_refactor/003/file_testing/PHASE3_SCOPE_UPDATE.md` - Phase 3 scope and objectives
 
 ## Primary Objective
-**VALIDATE** the transition from `chunks_buffered` to `embedding` stage by testing OpenAI API integration, vector generation for document chunks, and embedding storage in buffer tables.
+**VALIDATE** the automatic transition from `chunks_stored` to `embedding_queued` stage by ensuring the worker process successfully queues jobs for embedding and advances them to the next stage.
 
 ## Expected Outputs
 Document your work in these files:
 - `TODO001_phase3.7_notes.md` - Phase 3.7 implementation details and validation results
-- `TODO001_phase3.7_decisions.md` - Technical decisions and embedding approaches
-- `TODO001_phase3.7_handoff.md` - Requirements for Phase 3.8 (embedding → embedded)
+- `TODO001_phase3.7_decisions.md` - Technical decisions and embedding queue approaches
+- `TODO001_phase3.7_handoff.md` - **REQUIRED**: Comprehensive handoff notes for Phase 3.8 transition
 - `TODO001_phase3.7_testing_summary.md` - Phase 3.7 testing results and status
 
 ## Implementation Approach
-1. **Verify Chunks Buffered**: Ensure chunks are available in buffer tables
-2. **Test OpenAI API Integration**: Validate mock OpenAI service integration
-3. **Test Vector Generation**: Test embedding generation for document chunks
-4. **Validate Storage**: Confirm embeddings are stored in buffer tables
-5. **Validate Stage Transition**: Confirm jobs advance from `chunks_buffered` to `embedding`
+1. **Review Phase 3.6 Handoff**: **REQUIRED**: Read and understand all Phase 3.6 handoff requirements
+2. **Verify Current System State**: Confirm chunking completion and database state from Phase 3.6
+3. **Test Embedding Queue Processing**: Validate worker handles `chunks_stored` stage jobs automatically
+4. **Validate Embedding Queue Logic**: Test embedding queue preparation and setup logic
+5. **Confirm Stage Transitions**: Verify jobs advance from `chunks_stored` to `embedding_queued` stage
+6. **Document Results**: Record all findings and prepare for Phase 3.8
+7. **Create Handoff Notes**: **REQUIRED**: Document complete handoff requirements for next phase
 
 ## Phase 3.7 Requirements
 
 ### Core Tasks
-- [ ] Verify chunks are available in buffer tables from previous phase
-- [ ] Test OpenAI API integration and service connectivity
-- [ ] Validate vector generation for document chunks
-- [ ] Test embedding storage in buffer tables
-- [ ] Verify job status updates correctly to `embedding` stage
-- [ ] Document embedding performance and cost tracking
+- [ ] **REQUIRED**: Review and understand Phase 3.6 handoff notes completely
+- [ ] Verify current system state matches Phase 3.6 handoff expectations
+- [ ] Test automatic job processing for `chunks_stored` stage
+- [ ] Validate embedding queue logic
+- [ ] Test embedding queue preparation and setup
+- [ ] Verify jobs transition from `chunks_stored` to `embedding_queued` stage
+- [ ] Test error handling for embedding queue failures
+- [ ] **REQUIRED**: Create comprehensive handoff notes for Phase 3.8
 
 ### Success Criteria
-- ✅ Chunks available in buffer tables for embedding
-- ✅ OpenAI API integration working correctly
-- ✅ Vector generation successful for all chunks
-- ✅ Embeddings stored in buffer tables
-- ✅ Jobs transition from `chunks_buffered` to `embedding` stage
-- ✅ Embedding performance within acceptable limits
+- ✅ Worker automatically processes `chunks_stored` stage jobs
+- ✅ Jobs transition from `chunks_stored` to `embedding_queued` stage
+- ✅ Embedding queue logic working correctly
+- ✅ Embedding queue preparation and setup completed properly
+- ✅ Database updates reflect embedding queue stage transitions accurately
+- ✅ **REQUIRED**: Complete handoff documentation ready for Phase 3.8
 
-### Current Status from Phase 3.6
-- **Chunking Completion**: Phase 3.6 completion required ✅
-- **Buffer Management**: Ready for embedding ⏳
-- **OpenAI Integration**: Ready for testing ⏳
-- **Vector Generation**: Ready for validation ⏳
+### Dependencies from Phase 3.6
+- **Worker Automation**: ✅ Confirmed working from Phase 3.6 handoff
+- **Chunking Completion**: ✅ Chunking completion logic validated and working
+- **Database Infrastructure**: ✅ PostgreSQL operational with correct schema
+- **BaseWorker Implementation**: ✅ Enhanced with comprehensive monitoring
+- **Environment Configuration**: ✅ Docker Compose stack fully operational
 
 ## Technical Focus Areas
 
-### 1. OpenAI API Integration
-- Verify mock OpenAI service is running and healthy
-- Test API endpoint connectivity and response handling
-- Validate request/response formats and error handling
-- Test rate limiting and retry logic
+### 1. Embedding Queue Processing
+- Validate `_process_chunks_stored()` method implementation
+- Test embedding queue logic execution
+- Verify stage transition database updates
+- Check for any missing dependencies or imports
 
-### 2. Vector Generation and Processing
-- Test embedding generation for various chunk types
-- Validate vector dimensions and quality
-- Test batch processing and performance
-- Verify embedding metadata and storage
+### 2. Embedding Queue Logic
+- Test embedding queue preparation and setup
+- Validate embedding configuration and parameters
+- Verify embedding strategy selection
+- Test error handling for embedding queue failures
 
-### 3. Embedding Storage and Management
-- Test embedding storage in buffer tables
-- Validate vector indexing and organization
-- Test embedding retrieval and access
-- Verify embedding integrity and persistence
-
-### 4. Stage Transition Management
-- Validate job status updates from `chunks_buffered` to `embedding`
-- Test database transaction management
-- Verify correlation ID tracking and audit logging
-- Check for any constraint violations or errors
+### 3. Database State Management
+- Monitor job stage transitions in real-time
+- Validate database update operations during embedding queue setup
+- Check for any constraint violations
+- Verify transaction management
 
 ## Testing Procedures
 
-### Step 1: Chunks Buffered Verification
+### Step 1: Phase 3.6 Handoff Review
 ```bash
-# Check chunk buffer table population
-python scripts/check-chunk-buffer.py
+# REQUIRED: Review Phase 3.6 handoff notes
+cat docs/initiatives/system/upload_refactor/003/file_testing/TODO001_phase3.6_handoff.md
 
-# Verify chunks are ready for embedding
-python scripts/verify-chunks-for-embedding.py
-
-# Validate chunk metadata completeness
-python scripts/validate-chunk-metadata.py
+# Verify current system state matches handoff expectations
+docker-compose ps
+docker-compose logs base-worker --tail=20
 ```
 
-### Step 2: OpenAI Service Verification
+### Step 2: Environment Verification
 ```bash
-# Check mock OpenAI service status
-docker-compose ps mock-openai
+# Check worker service status
+docker-compose ps base-worker
 
-# Verify service health endpoint
-curl http://localhost:8002/health
+# Check worker logs for embedding queue activity
+docker-compose logs base-worker --tail=50
 
-# Check service logs for any errors
-docker-compose logs mock-openai --tail=20
+# Verify chunks_stored stage jobs exist
+docker exec -it $(docker ps -q -f name=postgres) psql -U postgres -d postgres -c "SELECT stage, COUNT(*) FROM upload_pipeline.upload_jobs GROUP BY stage;"
 ```
 
-### Step 3: API Integration Testing
+### Step 3: Embedding Queue Stage Validation
 ```bash
-# Test OpenAI API connectivity
-python scripts/test-openai-connectivity.py
-
-# Validate API request/response formats
-python scripts/validate-openai-formats.py
-
-# Test API error handling and retry logic
-python scripts/test-openai-error-handling.py
-```
-
-### Step 4: Vector Generation Testing
-```bash
-# Test embedding generation for chunks
-python scripts/test-embedding-generation.py
-
-# Validate vector dimensions and quality
-python scripts/validate-vector-quality.py
-
-# Test batch processing performance
-python scripts/benchmark-embedding-performance.py
-```
-
-### Step 5: Embedding Storage Testing
-```bash
-# Test embedding storage in buffer tables
-python scripts/test-embedding-storage.py
-
-# Validate vector indexing
-python scripts/validate-vector-indexing.py
-
-# Test embedding retrieval
-python scripts/test-embedding-retrieval.py
-```
-
-### Step 6: Stage Transition Validation
-```bash
-# Monitor job stage transitions
+# Monitor worker processing in real-time
 docker-compose logs base-worker -f
 
-# Check database for stage changes
-python scripts/monitor-stage-transitions.py
+# Check database for stage transitions
+# Monitor for automatic embedding queue processing
 ```
 
-### Step 7: Database State Validation
+### Step 4: Embedding Queue Logic Testing
+```bash
+# Test embedding queue logic
+# Verify embedding queue preparation and setup
+# Test error handling for embedding queue failures
+```
+
+### Step 5: Stage Transition Validation
 ```sql
--- Check job stage transitions
-SELECT job_id, stage, updated_at, embed_model, embed_version
+-- Monitor job stage changes
+SELECT job_id, stage, updated_at
 FROM upload_pipeline.upload_jobs 
-WHERE stage IN ('chunks_buffered', 'embedding')
+WHERE stage IN ('chunks_stored', 'embedding_queued')
 ORDER BY updated_at DESC;
-
--- Verify embedding buffer table population
-SELECT COUNT(*) as total_embeddings,
-       COUNT(DISTINCT job_id) as jobs_with_embeddings,
-       COUNT(DISTINCT chunk_id) as chunks_with_embeddings
-FROM upload_pipeline.document_vector_buffer;
-
--- Check embedding vector dimensions
-SELECT chunk_id, 
-       array_length(embedding_vector, 1) as vector_dimensions
-FROM upload_pipeline.document_vector_buffer
-LIMIT 5;
 ```
 
 ## Expected Outcomes
 
 ### Success Scenario
-- Chunks available in buffer tables for embedding
-- OpenAI API integration working correctly
-- Vector generation successful for all chunks
-- Embeddings stored in buffer tables
-- Jobs transition from `chunks_buffered` to `embedding` stage
-- Embedding performance within acceptable limits
-- Ready to proceed to Phase 3.8 (embedding → embedded)
+- Worker automatically processes `chunks_stored` stage jobs
+- Jobs transition from `chunks_stored` to `embedding_queued` stage
+- Embedding queue logic working correctly
+- Embedding queue preparation and setup completed properly
+- Database reflects all embedding queue stage transitions accurately
+- **REQUIRED**: Complete handoff documentation ready for Phase 3.8
 
 ### Failure Scenarios
-- Chunks not available in buffer tables
-- OpenAI API integration failing
-- Vector generation not working correctly
-- Embedding storage issues
-- Stage transition failures
+- Worker not processing `chunks_stored` stage jobs
+- Embedding queue logic failing
+- Jobs stuck in `chunks_stored` stage
+- Embedding queue preparation errors not handled properly
+- Database update failures during embedding queue setup
 
 ## Risk Assessment
 
-### High Risk
-- **OpenAI API Integration Failures**: Service not operational or responding
-  - *Mitigation*: Verify service health and restart if necessary
-- **Vector Generation Issues**: Embeddings not generated properly
-  - *Mitigation*: Validate embedding generation logic and API responses
+### Low Risk
+- **Worker Processing**: Already validated and working from Phase 3.6
+- **Database Operations**: Schema and constraints verified
+- **Service Communication**: All services healthy and communicating
 
 ### Medium Risk
-- **Performance Issues**: Embedding generation taking too long
-  - *Mitigation*: Benchmark embedding performance and optimize if needed
-- **Storage Issues**: Embeddings not stored correctly in buffer
-  - *Mitigation*: Verify buffer table configuration and storage logic
+- **Embedding Queue Logic**: Embedding queue setup needs testing
+- **Embedding Preparation**: Setup and configuration needs validation
+- **Error Handling**: Embedding queue failure scenarios need testing
 
-### Low Risk
-- **Metadata Issues**: Incomplete embedding metadata
-  - *Mitigation*: Validate metadata capture logic and storage
-- **Quality Issues**: Poor vector quality or dimensions
-  - *Mitigation*: Test vector quality assessment and validation
+### Mitigation Strategies
+- Comprehensive logging and monitoring during embedding queue setup
+- Test with various chunk configurations and embedding strategies
+- Validate error handling and recovery procedures
 
 ## Next Phase Readiness
 
 ### Phase 3.8 Dependencies
-- ✅ `chunks_buffered → embedding` transition working correctly
-- ✅ OpenAI API integration operational
-- ✅ Vector generation functional
-- ✅ Embedding storage working correctly
-- ✅ All chunks have embeddings in buffer tables
+- ✅ `chunks_stored → embedding_queued` transition working automatically
+- ✅ Embedding queue logic validated and working
+- ✅ Embedding queued stage operational
+- ✅ Database state management working correctly
+- ✅ **REQUIRED**: Complete handoff documentation provided
 
 ### Handoff Requirements
-- Complete Phase 3.7 testing results
-- OpenAI API integration status and configuration
-- Vector generation configuration and status
-- Embedding storage configuration
-- Recommendations for Phase 3.8 implementation
+- **REQUIRED**: Complete Phase 3.7 testing results
+- **REQUIRED**: Embedding queue logic status and configuration
+- **REQUIRED**: Any issues or workarounds identified
+- **REQUIRED**: Recommendations for Phase 3.8 implementation
+- **REQUIRED**: Comprehensive handoff notes document
 
 ## Success Metrics
 
 ### Phase 3.7 Completion Criteria
-- [ ] Chunks available in buffer tables for embedding
-- [ ] OpenAI API integration working correctly
-- [ ] Vector generation successful for all chunks
-- [ ] Embeddings stored in buffer tables
-- [ ] Jobs transition from `chunks_buffered` to `embedding` stage
-- [ ] Embedding performance within acceptable limits
-- [ ] Ready to proceed to Phase 3.8
+- [ ] Worker automatically processes `chunks_stored` stage jobs
+- [ ] Jobs transition from `chunks_stored` to `embedding_queued` stage
+- [ ] Embedding queue logic working correctly
+- [ ] Embedding queue preparation and setup completed properly
+- [ ] Database updates reflect embedding queue stage transitions accurately
+- [ ] No manual intervention required for embedding queue processing
+- [ ] **REQUIRED**: Complete handoff documentation ready for Phase 3.8
+
+## Handoff Documentation Requirements
+
+### **MANDATORY**: Phase 3.7 → Phase 3.8 Handoff Notes
+The handoff document (`TODO001_phase3.7_handoff.md`) must include:
+
+1. **Phase 3.7 Completion Summary**
+   - What was accomplished and validated
+   - Technical implementation details
+   - Success criteria achievement status
+
+2. **Current System State**
+   - Database status and job distribution
+   - Worker service health and operational status
+   - Embedding queue logic status and health
+   - All service dependencies and their health
+
+3. **Phase 3.8 Requirements**
+   - Primary objective and success criteria
+   - Technical focus areas and testing procedures
+   - Dependencies and prerequisites
+
+4. **Risk Assessment**
+   - Current risk profile and mitigation strategies
+   - Known issues and workarounds
+   - Recommendations for risk management
+
+5. **Knowledge Transfer**
+   - Key learnings from Phase 3.7
+   - Embedding queue patterns established
+   - Best practices and architectural decisions
+
+6. **Handoff Checklist**
+   - Phase 3.7 deliverables completed
+   - Phase 3.8 readiness confirmed
+   - Documentation handoff status
+
+7. **Next Phase Success Metrics**
+   - Phase 3.8 completion criteria
+   - Performance expectations
+   - Quality assurance requirements
 
 ---
 
 **Phase 3.7 Status**: 🔄 IN PROGRESS  
-**Focus**: chunks_buffered → embedding Transition Validation  
-**Environment**: postgres database, mock OpenAI service, vector buffer tables  
-**Success Criteria**: OpenAI integration and vector generation working  
-**Next Phase**: Phase 3.8 (embedding → embedded)
+**Focus**: chunks_stored → embedding_queued Transition Validation  
+**Environment**: postgres database, local worker processes, embedding queue logic  
+**Success Criteria**: Automatic embedding queue stage processing and embedding setup  
+**Next Phase**: Phase 3.8 (embedding_queued → embedding_in_progress)  
+**Handoff Requirement**: ✅ MANDATORY - Complete handoff documentation  
+**Phase 3.6 Dependency**: ✅ REQUIRED - Review and understand Phase 3.6 handoff notes

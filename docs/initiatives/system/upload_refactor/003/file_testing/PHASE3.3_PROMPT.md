@@ -1,212 +1,242 @@
 # Phase 3.3 Execution Prompt: parsing → parsed Transition Validation
 
 ## Context
-You are implementing Phase 3.3 of the upload refactor 003 file testing initiative. This phase focuses on validating the transition from `parsing` to `parsed` stage, which involves LlamaParse service integration, webhook callback handling, and parsed content storage.
+You are implementing Phase 3.3 of the upload refactor 003 file testing initiative. This phase focuses on validating the automatic transition from `parsing` to `parsed` stage, building upon the successful worker automation implementation from Phase 3.2.
 
 ## Documentation References
 Please review these documents before starting implementation:
 - `docs/initiatives/system/upload_refactor/003/file_testing/TODO001.md` - Phase 3.3 requirements and tasks
 - `docs/initiatives/system/upload_refactor/003/file_testing/TEST_METHOD001.md` - Testing methodology and procedures
-- `docs/initiatives/system/upload_refactor/003/file_testing/PHASE3.2_PROMPT.md` - Phase 3.2 completion status and handoff
+- `docs/initiatives/system/upload_refactor/003/file_testing/TODO001_phase3.2_handoff.md` - **REQUIRED**: Phase 3.2 handoff notes and requirements
 - `docs/initiatives/system/upload_refactor/003/file_testing/PHASE3_SCOPE_UPDATE.md` - Phase 3 scope and objectives
 
 ## Primary Objective
-**VALIDATE** the transition from `parsing` to `parsed` stage by testing LlamaParse service integration, webhook callback handling, and parsed content storage and metadata capture.
+**VALIDATE** the automatic transition from `parsing` to `parsed` stage by ensuring the worker process successfully handles parsing stage jobs and advances them to the next stage through LlamaParse integration.
 
 ## Expected Outputs
 Document your work in these files:
 - `TODO001_phase3.3_notes.md` - Phase 3.3 implementation details and validation results
-- `TODO001_phase3.3_decisions.md` - Technical decisions and integration approaches
-- `TODO001_phase3.3_handoff.md` - Requirements for Phase 3.4 (parsed → parse_validated)
+- `TODO001_phase3.3_decisions.md` - Technical decisions and LlamaParse integration approaches
+- `TODO001_phase3.3_handoff.md` - **REQUIRED**: Comprehensive handoff notes for Phase 3.4 transition
 - `TODO001_phase3.3_testing_summary.md` - Phase 3.3 testing results and status
 
 ## Implementation Approach
-1. **Verify LlamaParse Service**: Ensure mock LlamaParse service is operational
-2. **Test Job Submission**: Submit jobs to LlamaParse service for parsing
-3. **Validate Webhook Handling**: Test webhook callback processing from LlamaParse
-4. **Verify Content Storage**: Confirm parsed content is stored correctly
-5. **Validate Stage Transition**: Confirm jobs advance from `parsing` to `parsed` stage
+1. **Review Phase 3.2 Handoff**: **REQUIRED**: Read and understand all Phase 3.2 handoff requirements
+2. **Verify Current System State**: Confirm worker automation and database state from Phase 3.2
+3. **Test Parsing Stage Processing**: Validate worker handles `parsing` stage jobs automatically
+4. **Validate LlamaParse Integration**: Test webhook callbacks and parsing job submission
+5. **Confirm Stage Transitions**: Verify jobs advance from `parsing` to `parsed` stage
+6. **Document Results**: Record all findings and prepare for Phase 3.4
+7. **Create Handoff Notes**: **REQUIRED**: Document complete handoff requirements for next phase
 
 ## Phase 3.3 Requirements
 
 ### Core Tasks
-- [ ] Verify mock LlamaParse service is operational and responding
-- [ ] Test job submission to LlamaParse service from parsing stage
-- [ ] Validate webhook callback handling from LlamaParse service
-- [ ] Test parsed content storage and metadata capture
-- [ ] Verify job status updates correctly to `parsed` stage
-- [ ] Document parsing stage completion and content storage
+- [ ] **REQUIRED**: Review and understand Phase 3.2 handoff notes completely
+- [ ] Verify current system state matches Phase 3.2 handoff expectations
+- [ ] Test automatic job processing for `parsing` stage
+- [ ] Validate LlamaParse webhook callback handling
+- [ ] Test parsing job submission and status tracking
+- [ ] Verify jobs transition from `parsing` to `parsed` stage
+- [ ] Test error handling for parsing failures
+- [ ] **REQUIRED**: Create comprehensive handoff notes for Phase 3.4
 
 ### Success Criteria
-- ✅ Mock LlamaParse service operational and responding
-- ✅ Jobs successfully submitted to LlamaParse service
-- ✅ Webhook callbacks processed correctly
-- ✅ Parsed content stored with proper metadata
+- ✅ Worker automatically processes `parsing` stage jobs
 - ✅ Jobs transition from `parsing` to `parsed` stage
-- ✅ All parsing metadata captured accurately
+- ✅ LlamaParse integration working correctly
+- ✅ Webhook callbacks handled properly
+- ✅ Database updates reflect parsing stage transitions accurately
+- ✅ **REQUIRED**: Complete handoff documentation ready for Phase 3.4
 
-### Current Status from Phase 3.2
-- **Worker Automation**: Phase 3.2 completion required ✅
-- **Database State**: Jobs advancing to parsing stage ✅
-- **LlamaParse Integration**: Ready for testing ⏳
-- **Webhook Handling**: Ready for validation ⏳
+### Dependencies from Phase 3.2
+- **Worker Automation**: ✅ Confirmed working from Phase 3.2 handoff
+- **Database Infrastructure**: ✅ PostgreSQL operational with correct schema
+- **BaseWorker Implementation**: ✅ Enhanced with comprehensive monitoring
+- **Environment Configuration**: ✅ Docker Compose stack fully operational
+- **Job Processing**: ✅ Automatic stage transitions validated
 
 ## Technical Focus Areas
 
-### 1. LlamaParse Service Integration
-- Verify mock LlamaParse service is running and healthy
-- Test job submission API endpoints
-- Validate request/response formats
-- Test service error handling and recovery
+### 1. Parsing Stage Processing
+- Validate `_process_parsing()` method implementation
+- Test parsing preparation logic execution
+- Verify stage transition database updates
+- Check for any missing dependencies or imports
 
-### 2. Webhook Callback Processing
-- Test webhook endpoint availability and security
-- Validate webhook payload processing
-- Test webhook signature verification (if implemented)
-- Verify webhook error handling and retry logic
+### 2. LlamaParse Integration
+- Test webhook callback handling from mock LlamaParse service
+- Validate parsing job submission and status tracking
+- Verify parsed content storage and retrieval
+- Test error handling for parsing failures
 
-### 3. Parsed Content Storage
-- Test parsed content storage in designated locations
-- Validate metadata capture and storage
-- Test content format validation
-- Verify storage access and retrieval
-
-### 4. Stage Transition Management
-- Validate job status updates from `parsing` to `parsed`
-- Test database transaction management
-- Verify correlation ID tracking
+### 3. Database State Management
+- Monitor job stage transitions in real-time
+- Validate database update operations during parsing
 - Check for any constraint violations
+- Verify transaction management
 
 ## Testing Procedures
 
-### Step 1: LlamaParse Service Verification
+### Step 1: Phase 3.2 Handoff Review
 ```bash
-# Check mock LlamaParse service status
-docker-compose ps mock-llamaparse
+# REQUIRED: Review Phase 3.2 handoff notes
+cat docs/initiatives/system/upload_refactor/003/file_testing/TODO001_phase3.2_handoff.md
 
-# Verify service health endpoint
-curl http://localhost:8001/health
-
-# Check service logs for any errors
-docker-compose logs mock-llamaparse --tail=20
+# Verify current system state matches handoff expectations
+docker-compose ps
+docker-compose logs base-worker --tail=20
 ```
 
-### Step 2: Job Submission Testing
+### Step 2: Environment Verification
 ```bash
-# Test job submission to LlamaParse service
-curl -X POST http://localhost:8001/parse \
+# Check worker service status
+docker-compose ps base-worker
+
+# Check worker logs for parsing activity
+docker-compose logs base-worker --tail=50
+
+# Verify parsing stage jobs exist
+docker exec -it $(docker ps -q -f name=postgres) psql -U postgres -d postgres -c "SELECT stage, COUNT(*) FROM upload_pipeline.upload_jobs GROUP BY stage;"
+```
+
+### Step 3: Parsing Stage Validation
+```bash
+# Monitor worker processing in real-time
+docker-compose logs base-worker -f
+
+# Check database for stage transitions
+# Monitor for automatic parsing stage processing
+```
+
+### Step 4: LlamaParse Integration Test
+```bash
+# Test webhook callback handling
+curl -X POST http://localhost:8000/webhooks/llamaparse \
   -H "Content-Type: application/json" \
-  -d '{
-    "job_id": "test-job-123",
-    "source_url": "http://localhost:5001/storage/v1/object/upload/test-doc.pdf",
-    "webhook_url": "http://localhost:8000/webhooks/llamaparse"
-  }'
+  -d '{"test": "webhook"}'
 
-# Monitor service response and processing
-docker-compose logs mock-llamaparse -f
+# Verify parsing service health
+curl http://localhost:8001/health
 ```
 
-### Step 3: Webhook Callback Testing
-```bash
-# Monitor webhook endpoint for callbacks
-docker-compose logs api-server -f
-
-# Check webhook processing in real-time
-# Verify callback payload processing
-# Test webhook error scenarios
-```
-
-### Step 4: Content Storage Validation
-```bash
-# Check parsed content storage
-ls -la local-storage/parsed/
-
-# Verify content metadata
-# Test content retrieval and access
-# Validate content format and completeness
-```
-
-### Step 5: Database State Validation
+### Step 5: Stage Transition Validation
 ```sql
--- Check job stage transitions
-SELECT job_id, stage, updated_at, parsed_path
+-- Monitor job stage changes
+SELECT job_id, stage, updated_at
 FROM upload_pipeline.upload_jobs 
 WHERE stage IN ('parsing', 'parsed')
 ORDER BY updated_at DESC;
-
--- Verify parsed content metadata
-SELECT * FROM upload_pipeline.documents 
-WHERE parsed_path IS NOT NULL;
 ```
 
 ## Expected Outcomes
 
 ### Success Scenario
-- Mock LlamaParse service operational and responding
-- Jobs successfully submitted and processed by LlamaParse
-- Webhook callbacks processed correctly
-- Parsed content stored with proper metadata
+- Worker automatically processes `parsing` stage jobs
 - Jobs transition from `parsing` to `parsed` stage
-- Ready to proceed to Phase 3.4 (parsed → parse_validated)
+- LlamaParse integration working correctly
+- Webhook callbacks handled properly
+- Database reflects all stage transitions accurately
+- **REQUIRED**: Complete handoff documentation ready for Phase 3.4
 
 ### Failure Scenarios
-- LlamaParse service not responding or operational
-- Job submission failures or errors
-- Webhook callback processing issues
-- Parsed content storage problems
-- Stage transition failures
+- Worker not processing `parsing` stage jobs
+- LlamaParse webhook callbacks failing
+- Jobs stuck in `parsing` stage
+- Parsing logic execution errors
+- Database update failures during parsing
 
 ## Risk Assessment
 
-### High Risk
-- **LlamaParse Service Failures**: Service not operational or responding
-  - *Mitigation*: Verify service health and restart if necessary
-- **Webhook Processing Failures**: Callbacks not handled correctly
-  - *Mitigation*: Test webhook endpoint and error handling
+### Low Risk
+- **Worker Processing**: Already validated and working from Phase 3.2
+- **Database Operations**: Schema and constraints verified
+- **Service Communication**: All services healthy and communicating
 
 ### Medium Risk
-- **Content Storage Issues**: Parsed content not stored correctly
-  - *Mitigation*: Validate storage configuration and permissions
-- **Stage Transition Failures**: Jobs not advancing to parsed stage
-  - *Mitigation*: Check database constraints and transaction management
+- **LlamaParse Integration**: Webhook handling needs validation
+- **Parsing Logic**: Stage transition logic needs testing
+- **Error Handling**: Parsing failure scenarios need validation
 
-### Low Risk
-- **Metadata Capture Issues**: Incomplete parsing metadata
-  - *Mitigation*: Validate metadata capture logic and storage
-- **Format Validation Problems**: Invalid parsed content format
-  - *Mitigation*: Test content format validation and error handling
+### Mitigation Strategies
+- Comprehensive logging and monitoring during parsing
+- Test with various document types and sizes
+- Validate error handling and recovery procedures
 
 ## Next Phase Readiness
 
 ### Phase 3.4 Dependencies
-- ✅ `parsing → parsed` transition working correctly
-- ✅ LlamaParse service integration operational
-- ✅ Webhook callback handling functional
-- ✅ Parsed content storage working correctly
-- ✅ Parsing metadata captured accurately
+- ✅ `parsing → parsed` transition working automatically
+- ✅ LlamaParse integration validated and working
+- ✅ Parsing logic operational
+- ✅ Database state management working correctly
+- ✅ **REQUIRED**: Complete handoff documentation provided
 
 ### Handoff Requirements
-- Complete Phase 3.3 testing results
-- LlamaParse service integration status
-- Webhook handling configuration and status
-- Parsed content storage configuration
-- Recommendations for Phase 3.4 implementation
+- **REQUIRED**: Complete Phase 3.3 testing results
+- **REQUIRED**: LlamaParse integration status and configuration
+- **REQUIRED**: Any issues or workarounds identified
+- **REQUIRED**: Recommendations for Phase 3.4 implementation
+- **REQUIRED**: Comprehensive handoff notes document
 
 ## Success Metrics
 
 ### Phase 3.3 Completion Criteria
-- [ ] Mock LlamaParse service operational and responding
-- [ ] Jobs successfully submitted to LlamaParse service
-- [ ] Webhook callbacks processed correctly
-- [ ] Parsed content stored with proper metadata
+- [ ] Worker automatically processes `parsing` stage jobs
 - [ ] Jobs transition from `parsing` to `parsed` stage
-- [ ] All parsing metadata captured accurately
-- [ ] Ready to proceed to Phase 3.4
+- [ ] LlamaParse integration working correctly
+- [ ] Webhook callbacks handled properly
+- [ ] Database updates reflect parsing stage transitions accurately
+- [ ] No manual intervention required for parsing processing
+- [ ] **REQUIRED**: Complete handoff documentation ready for Phase 3.4
+
+## Handoff Documentation Requirements
+
+### **MANDATORY**: Phase 3.3 → Phase 3.4 Handoff Notes
+The handoff document (`TODO001_phase3.3_handoff.md`) must include:
+
+1. **Phase 3.3 Completion Summary**
+   - What was accomplished and validated
+   - Technical implementation details
+   - Success criteria achievement status
+
+2. **Current System State**
+   - Database status and job distribution
+   - Worker service health and operational status
+   - LlamaParse integration status and health
+   - All service dependencies and their health
+
+3. **Phase 3.4 Requirements**
+   - Primary objective and success criteria
+   - Technical focus areas and testing procedures
+   - Dependencies and prerequisites
+
+4. **Risk Assessment**
+   - Current risk profile and mitigation strategies
+   - Known issues and workarounds
+   - Recommendations for risk management
+
+5. **Knowledge Transfer**
+   - Key learnings from Phase 3.3
+   - LlamaParse integration patterns established
+   - Best practices and architectural decisions
+
+6. **Handoff Checklist**
+   - Phase 3.3 deliverables completed
+   - Phase 3.4 readiness confirmed
+   - Documentation handoff status
+
+7. **Next Phase Success Metrics**
+   - Phase 3.4 completion criteria
+   - Performance expectations
+   - Quality assurance requirements
 
 ---
 
 **Phase 3.3 Status**: 🔄 IN PROGRESS  
 **Focus**: parsing → parsed Transition Validation  
-**Environment**: postgres database, mock LlamaParse service, webhook handling  
-**Success Criteria**: LlamaParse integration and webhook processing working  
-**Next Phase**: Phase 3.4 (parsed → parse_validated)
+**Environment**: postgres database, local worker processes, mock LlamaParse service  
+**Success Criteria**: Automatic parsing stage processing and LlamaParse integration  
+**Next Phase**: Phase 3.4 (parsed → parse_validated)  
+**Handoff Requirement**: ✅ MANDATORY - Complete handoff documentation  
+**Phase 3.2 Dependency**: ✅ REQUIRED - Review and understand Phase 3.2 handoff notes
