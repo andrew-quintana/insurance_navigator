@@ -9,6 +9,7 @@ import traceback
 
 from shared.db import DatabaseManager
 from shared.storage import StorageManager
+from shared.storage.mock_storage import MockStorageManager
 from shared.external import LlamaParseClient, OpenAIClient
 from shared.external.service_router import ServiceRouter, ServiceMode
 from shared.logging import StructuredLogger
@@ -136,8 +137,14 @@ class BaseWorker:
             
             # Initialize storage manager
             storage_config = self.config.get_storage_config()
-            self.storage = StorageManager(storage_config)
-            self.logger.info("Storage manager initialized")
+            
+            # Use mock storage for local testing
+            if hasattr(self.config, 'use_mock_storage') and self.config.use_mock_storage:
+                self.storage = MockStorageManager()
+                self.logger.info("Mock storage manager initialized for local testing")
+            else:
+                self.storage = StorageManager(storage_config)
+                self.logger.info("Storage manager initialized")
             
             # Initialize ServiceRouter
             service_router_config = self.config.get_service_router_config()
@@ -444,12 +451,23 @@ class BaseWorker:
     async def _validate_parsed(self, job: Dict[str, Any], correlation_id: str):
         """Validate parsed content with comprehensive error checking"""
         job_id = job["job_id"]
-        parsed_path = job["parsed_path"]
-        
-        if not parsed_path:
-            raise ValueError("No parsed_path found for parsed job")
+        document_id = job["document_id"]
         
         try:
+            # Get parsed content information from documents table
+            async with self.db.get_db_connection() as conn:
+                doc_info = await conn.fetchrow("""
+                    SELECT parsed_path, parsed_sha256 
+                    FROM upload_pipeline.documents 
+                    WHERE document_id = $1
+                """, document_id)
+                
+                if not doc_info or not doc_info["parsed_path"]:
+                    raise ValueError(f"No parsed_path found for document {document_id}")
+                
+                parsed_path = doc_info["parsed_path"]
+                existing_sha256 = doc_info["parsed_sha256"]
+            
             # Read parsed content from storage
             parsed_content = await self.storage.read_blob(parsed_path)
             
@@ -463,11 +481,11 @@ class BaseWorker:
             # Check for duplicate parsed content
             async with self.db.get_db_connection() as conn:
                 existing = await conn.fetchrow("""
-                    SELECT job_id, parsed_path 
-                    FROM upload_pipeline.upload_jobs 
-                    WHERE parsed_sha256 = $1 AND job_id != $2
+                    SELECT d.document_id, d.parsed_path 
+                    FROM upload_pipeline.documents d
+                    WHERE d.parsed_sha256 = $1 AND d.document_id != $2
                     LIMIT 1
-                """, content_sha, job_id)
+                """, content_sha, document_id)
                 
                 if existing:
                     # Use canonical path for duplicate
@@ -481,13 +499,19 @@ class BaseWorker:
                     )
                     parsed_path = canonical_path
                 
-                # Update job with validation results
+                # Update document with validation results
+                await conn.execute("""
+                    UPDATE upload_pipeline.documents 
+                    SET parsed_sha256 = $1, updated_at = now()
+                    WHERE document_id = $2
+                """, content_sha, document_id)
+                
+                # Update job stage to parse_validated
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs 
-                    SET parsed_path = $1, parsed_sha256 = $2, stage = 'parse_validated',
-                        updated_at = now()
-                    WHERE job_id = $3
-                """, parsed_path, content_sha, job_id)
+                    SET stage = 'parse_validated', updated_at = now()
+                    WHERE job_id = $1
+                """, job_id)
                 
                 self.logger.log_state_transition(
                     from_status="parsed",
@@ -508,7 +532,7 @@ class BaseWorker:
             self.logger.error(
                 "Parse validation failed",
                 job_id=str(job_id),
-                parsed_path=parsed_path,
+                document_id=str(document_id),
                 error=str(e),
                 correlation_id=correlation_id
             )
@@ -518,10 +542,24 @@ class BaseWorker:
         """Generate chunks with comprehensive validation"""
         job_id = job["job_id"]
         document_id = job["document_id"]
-        parsed_path = job["parsed_path"]
-        chunks_version = job["chunks_version"]
+        
+        # Get chunks_version from payload or use default
+        chunks_version = job.get("chunks_version") or "markdown-simple@1"
         
         try:
+            # Get parsed content information from documents table
+            async with self.db.get_db_connection() as conn:
+                doc_info = await conn.fetchrow("""
+                    SELECT parsed_path, parsed_sha256 
+                    FROM upload_pipeline.documents 
+                    WHERE document_id = $1
+                """, document_id)
+                
+                if not doc_info or not doc_info["parsed_path"]:
+                    raise ValueError(f"No parsed_path found for document {document_id}")
+                
+                parsed_path = doc_info["parsed_path"]
+            
             # Read parsed content
             parsed_content = await self.storage.read_blob(parsed_path)
             

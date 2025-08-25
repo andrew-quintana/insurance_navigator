@@ -63,6 +63,8 @@ class DatabaseManager:
         """Context manager for database connections"""
         connection = await self.get_connection()
         try:
+            # Set search path to include upload_pipeline schema
+            await connection.execute('SET search_path TO upload_pipeline, public')
             yield connection
         finally:
             await self.release_connection(connection)

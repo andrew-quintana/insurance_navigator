@@ -49,6 +49,9 @@ class WorkerConfig:
     # Logging configuration
     log_level: str = "INFO"
     
+    # Local testing configuration
+    use_mock_storage: bool = True  # Default to mock storage for local development
+    
     @classmethod
     def from_environment(cls) -> 'WorkerConfig':
         """Create configuration from environment variables"""
@@ -85,7 +88,10 @@ class WorkerConfig:
             recovery_timeout=int(os.getenv("WORKER_RECOVERY_TIMEOUT", "60")),
             
             # Logging
-            log_level=os.getenv("LOG_LEVEL", "INFO")
+            log_level=os.getenv("LOG_LEVEL", "INFO"),
+            
+            # Local testing
+            use_mock_storage=os.getenv("USE_MOCK_STORAGE", "true").lower() == "true"
         )
     
     def to_dict(self) -> Dict[str, Any]:
@@ -108,7 +114,8 @@ class WorkerConfig:
             "openai_max_batch_size": self.openai_max_batch_size,
             "failure_threshold": self.failure_threshold,
             "recovery_timeout": self.recovery_timeout,
-            "log_level": self.log_level
+            "log_level": self.log_level,
+            "use_mock_storage": self.use_mock_storage
         }
     
     def validate(self) -> bool:
