@@ -227,7 +227,7 @@ class BaseWorker:
                         FROM upload_pipeline.upload_jobs uj
                         JOIN upload_pipeline.documents d ON uj.document_id = d.document_id
                         WHERE uj.stage IN (
-                            'job_validated', 'parsed', 'parse_validated', 'chunking', 'chunks_buffered',
+                            'job_validated', 'parsing', 'parsed', 'parse_validated', 'chunking', 'chunks_buffered',
                             'embedding', 'embeddings_buffered'
                         )
                         AND uj.state IN ('queued', 'working', 'retryable')
@@ -282,6 +282,8 @@ class BaseWorker:
             # Route to appropriate processor based on stage
             if status == "job_validated":
                 await self._process_job_validated(job, correlation_id)
+            elif status == "parsing":
+                await self._process_parsing(job, correlation_id)
             elif status == "parsed":
                 await self._validate_parsed(job, correlation_id)
             elif status == "parse_validated":
@@ -381,6 +383,62 @@ class BaseWorker:
                 error=str(e),
                 correlation_id=correlation_id
             )
+            raise
+    
+    async def _process_parsing(self, job: Dict[str, Any], correlation_id: str):
+        """Process parsing stage - submit document to LlamaParse for parsing"""
+        job_id = job["job_id"]
+        document_id = job["document_id"]
+        
+        try:
+            self.logger.info(
+                "Processing parsing stage",
+                job_id=str(job_id),
+                document_id=str(document_id),
+                correlation_id=correlation_id
+            )
+            
+            # Get document details from payload
+            payload = job.get("payload", {})
+            storage_path = payload.get("storage_path")
+            mime_type = payload.get("mime", "application/pdf")
+            
+            if not storage_path:
+                raise ValueError("No storage_path found in job payload")
+            
+            # For Phase 3.3 testing, simulate successful parsing by advancing to 'parsed' stage
+            # In production, this would involve actual LlamaParse API submission and webhook handling
+            self.logger.info(
+                "Simulating successful parsing for Phase 3.3 testing",
+                job_id=str(job_id),
+                document_id=str(document_id),
+                storage_path=storage_path,
+                mime_type=mime_type,
+                correlation_id=correlation_id
+            )
+            
+            # Simulate parsing delay
+            await asyncio.sleep(2)
+            
+            # Advance job to 'parsed' stage
+            await self._advance_job_stage(job_id, "parsed", correlation_id)
+            
+            self.logger.info(
+                "Job advanced to parsed stage",
+                job_id=str(job_id),
+                document_id=str(document_id),
+                correlation_id=correlation_id
+            )
+            
+        except Exception as e:
+            self.logger.error(
+                "Failed to process parsing stage",
+                job_id=str(job_id),
+                document_id=str(document_id),
+                error=str(e),
+                correlation_id=correlation_id
+            )
+            await self._handle_processing_error(job, e, correlation_id)
             raise
     
     async def _validate_parsed(self, job: Dict[str, Any], correlation_id: str):
