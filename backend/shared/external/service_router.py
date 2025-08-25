@@ -163,7 +163,7 @@ class ServiceRouter:
     automatic fallback to mock services when real services are unavailable.
     """
     
-    def __init__(self, config: Optional[Dict[str, Any]] = None, start_health_monitoring: bool = True):
+    def __init__(self, config: Optional[Dict[str, Any]] = None, start_health_monitoring: bool = False):
         # Parse configuration
         if config is None:
             config = {}
@@ -184,7 +184,7 @@ class ServiceRouter:
         self.fallback_enabled = config.get("fallback_enabled", True)
         self.fallback_timeout = config.get("fallback_timeout", 10)  # seconds
         
-        # Start health monitoring
+        # Health monitoring setup (but don't start yet)
         self._health_monitor_task = None
         self._health_monitoring_started = False
         
@@ -192,8 +192,8 @@ class ServiceRouter:
         if config:
             self._auto_register_services(config)
         
-        if start_health_monitoring:
-            self._start_health_monitoring()
+        # Note: Health monitoring will be started explicitly when needed
+        # Don't start it during initialization to avoid blocking
     
     def _auto_register_services(self, config: Dict[str, Any]) -> None:
         """Automatically register services based on configuration"""

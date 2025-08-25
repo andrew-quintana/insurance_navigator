@@ -42,8 +42,11 @@ class WorkerRunner:
             # Set up signal handlers for graceful shutdown
             self._setup_signal_handlers()
             
-            # Start the worker
+            # Start the worker (don't await - it runs in background)
             await self.worker.start()
+            
+            # Wait a moment to ensure the worker is fully started
+            await asyncio.sleep(1)
             
         except Exception as e:
             logger.error(f"Failed to start worker runner: {str(e)}")

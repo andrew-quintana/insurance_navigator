@@ -54,24 +54,77 @@ class BaseWorker:
             self.logger.info("Starting BaseWorker", worker_id=self.worker_id)
             
             # Initialize components
+            self.logger.info("🔧 Initializing components...", worker_id=self.worker_id)
             await self._initialize_components()
+            self.logger.info("✅ Components initialized successfully", worker_id=self.worker_id)
             
-            # Start main processing loop
-            await self.process_jobs_continuously()
+            # Start main processing loop in background
+            self.logger.info("🚀 Starting main processing loop in background...", worker_id=self.worker_id)
+            try:
+                self._processing_task = asyncio.create_task(self.process_jobs_continuously())
+                self.logger.info(f"✅ Main processing loop started in background, task: {self._processing_task}", worker_id=self.worker_id)
+                
+                # Add error handling for the task
+                def task_done_callback(task):
+                    try:
+                        if task.exception():
+                            self.logger.error(f"❌ Processing task failed with exception: {task.exception()}", worker_id=self.worker_id)
+                            import traceback
+                            self.logger.error(f"❌ Full traceback: {traceback.format_exc()}", worker_id=self.worker_id)
+                            # Don't set running to False here - let the main loop handle it
+                        else:
+                            self.logger.info("✅ Processing task completed successfully", worker_id=self.worker_id)
+                    except Exception as e:
+                        self.logger.error(f"❌ Error in task callback: {e}", worker_id=self.worker_id)
+                
+                self._processing_task.add_done_callback(task_done_callback)
+                
+                # Wait a moment to ensure the task starts running
+                await asyncio.sleep(0.1)
+                
+                # Verify the task is running
+                if self._processing_task.done():
+                    self.logger.error("❌ Processing task completed immediately - this indicates an error", worker_id=self.worker_id)
+                    if self._processing_task.exception():
+                        raise self._processing_task.exception()
+                    else:
+                        raise RuntimeError("Processing task completed immediately without exception")
+                
+                self.logger.info("✅ Processing task verified as running", worker_id=self.worker_id)
+                
+            except Exception as e:
+                self.logger.error(f"❌ Failed to create processing task: {e}", worker_id=self.worker_id)
+                self.running = False
+                raise
+            
+            # Add debug logging to confirm method is returning
+            self.logger.info("🏁 start() method completing, returning to caller", worker_id=self.worker_id)
             
         except Exception as e:
-            self.logger.error("Error starting BaseWorker", error=str(e), worker_id=self.worker_id)
-            raise
-        finally:
+            self.logger.error("❌ Error starting BaseWorker", error=str(e), worker_id=self.worker_id)
             self.running = False
+            import traceback
+            self.logger.error(f"❌ Full traceback: {traceback.format_exc()}", worker_id=self.worker_id)
+            raise
     
     async def stop(self):
         """Stop the worker process"""
         self.logger.info("Stopping BaseWorker", worker_id=self.worker_id)
         self.running = False
         
+        # Cancel processing task if running
+        if hasattr(self, '_processing_task') and self._processing_task:
+            self.logger.info("Cancelling processing task...", worker_id=self.worker_id)
+            self._processing_task.cancel()
+            try:
+                await self._processing_task
+            except asyncio.CancelledError:
+                self.logger.info("Processing task cancelled successfully", worker_id=self.worker_id)
+        
         # Cleanup components
         await self._cleanup_components()
+        
+        self.logger.info("🛑 BaseWorker stopped", worker_id=self.worker_id)
     
     async def _initialize_components(self):
         """Initialize worker components"""
@@ -90,6 +143,10 @@ class BaseWorker:
             service_router_config = self.config.get_service_router_config()
             self.service_router = ServiceRouter(service_router_config)
             self.logger.info("ServiceRouter initialized")
+            
+            # Start health monitoring after all components are initialized
+            self.service_router.start_health_monitoring()
+            self.logger.info("Health monitoring started")
             
         except Exception as e:
             self.logger.error("Failed to initialize components", error=str(e))
@@ -113,41 +170,56 @@ class BaseWorker:
     async def process_jobs_continuously(self):
         """Main worker loop with enhanced health monitoring"""
         self.logger.info("Starting job processing loop", worker_id=self.worker_id)
+        self.logger.info(f"🔍 Initial running flag: {self.running}", worker_id=self.worker_id)
         
+        loop_count = 0
         while self.running:
             try:
+                loop_count += 1
+                self.logger.info(f"🔄 Main loop iteration {loop_count}, running={self.running}")
+                
                 # Check circuit breaker
                 if self.circuit_open:
                     if self._should_attempt_reset():
+                        self.logger.info("🔄 Attempting circuit breaker reset", worker_id=self.worker_id)
                         self._reset_circuit()
                     else:
+                        self.logger.info("⏸️ Circuit breaker open, waiting...", worker_id=self.worker_id)
                         await asyncio.sleep(10)
                         continue
                 
                 # Get next job
+                self.logger.info("🔍 Calling _get_next_job()...", worker_id=self.worker_id)
                 job = await self._get_next_job()
                 
                 if job:
+                    self.logger.info("✅ Job retrieved, processing...", worker_id=self.worker_id)
                     await self._process_single_job_with_monitoring(job)
                 else:
                     # No jobs available, wait before next poll
+                    self.logger.info(f"⏳ No jobs available, waiting {self.poll_interval}s...", worker_id=self.worker_id)
                     await asyncio.sleep(self.poll_interval)
                     
             except asyncio.CancelledError:
                 self.logger.info("Worker loop cancelled", worker_id=self.worker_id)
                 break
             except Exception as e:
-                self.logger.error("Worker loop error", error=str(e), worker_id=self.worker_id)
+                self.logger.error("❌ Worker loop error", error=str(e), worker_id=self.worker_id)
                 await self._handle_worker_error(e)
                 await asyncio.sleep(10)
         
-        self.logger.info("Job processing loop stopped", worker_id=self.worker_id)
+        self.logger.info(f"Job processing loop stopped, final running flag: {self.running}", worker_id=self.worker_id)
     
     async def _get_next_job(self) -> Optional[Dict[str, Any]]:
         """Get next job from queue using FOR UPDATE SKIP LOCKED"""
         try:
+            self.logger.info("🔍 _get_next_job() called - attempting to retrieve job")
+            
             async with self.db.get_db_connection() as conn:
+                self.logger.info("🔍 Database connection acquired")
+                
                 # Query for next available job with user_id from documents table
+                self.logger.info("🔍 Executing job query...")
                 job = await conn.fetchrow("""
                     WITH next_job AS (
                         SELECT uj.job_id, uj.document_id, d.user_id, uj.stage, uj.state,
@@ -155,7 +227,7 @@ class BaseWorker:
                         FROM upload_pipeline.upload_jobs uj
                         JOIN upload_pipeline.documents d ON uj.document_id = d.document_id
                         WHERE uj.stage IN (
-                            'queued', 'job_validated', 'parsed', 'parse_validated', 'chunking', 'chunks_buffered',
+                            'job_validated', 'parsed', 'parse_validated', 'chunking', 'chunks_buffered',
                             'embedding', 'embeddings_buffered'
                         )
                         AND uj.state IN ('queued', 'working', 'retryable')
@@ -170,20 +242,26 @@ class BaseWorker:
                     SELECT * FROM next_job
                 """)
                 
+                self.logger.info(f"🔍 Query executed, result: {job}")
+                
                 if job:
                     job_dict = dict(job)
                     self.logger.info(
-                        "Retrieved job for processing",
+                        "✅ Retrieved job for processing",
                         job_id=str(job_dict["job_id"]),
                         stage=job_dict["stage"],
                         document_id=str(job_dict["document_id"])
                     )
                     return job_dict
+                else:
+                    self.logger.info("⚠️ No jobs found in query")
                 
                 return None
                 
         except Exception as e:
-            self.logger.error("Failed to retrieve next job", error=str(e))
+            self.logger.error("❌ Failed to retrieve next job", error=str(e), traceback=str(e.__traceback__))
+            import traceback
+            self.logger.error(f"❌ Full traceback: {traceback.format_exc()}")
             return None
     
     async def _process_single_job_with_monitoring(self, job: Dict[str, Any]):
@@ -202,9 +280,7 @@ class BaseWorker:
             )
             
             # Route to appropriate processor based on stage
-            if status == "queued":
-                await self._process_queued_job(job, correlation_id)
-            elif status == "job_validated":
+            if status == "job_validated":
                 await self._process_job_validated(job, correlation_id)
             elif status == "parsed":
                 await self._validate_parsed(job, correlation_id)
@@ -270,24 +346,41 @@ class BaseWorker:
             raise
     
     async def _process_job_validated(self, job: Dict[str, Any], correlation_id: str):
-        """Process job_validated job - prepare for parsing"""
+        """Process job_validated stage - prepare for parsing"""
         job_id = job["job_id"]
         document_id = job["document_id"]
         
         try:
             self.logger.info(
-                "Processing job_validated job - preparing for parsing",
+                "Processing job_validated stage",
                 job_id=str(job_id),
                 document_id=str(document_id),
                 correlation_id=correlation_id
             )
             
-            # TODO: Implement parsing preparation logic
-            # For now, just advance to parsing stage
-            await self._advance_job_stage(job_id, "parsing", correlation_id)
-            
+            # Update job stage to 'parsing' to indicate parsing preparation
+            async with self.db.get_db_connection() as conn:
+                await conn.execute("""
+                    UPDATE upload_pipeline.upload_jobs
+                    SET stage = 'parsing', state = 'working', updated_at = now()
+                    WHERE job_id = $1
+                """, job_id)
+                
+                self.logger.info(
+                    "Job advanced to parsing stage",
+                    job_id=str(job_id),
+                    document_id=str(document_id),
+                    correlation_id=correlation_id
+                )
+                
         except Exception as e:
-            await self._handle_processing_error(job, e, correlation_id)
+            self.logger.error(
+                "Failed to process job_validated stage",
+                job_id=str(job_id),
+                document_id=str(document_id),
+                error=str(e),
+                correlation_id=correlation_id
+            )
             raise
     
     async def _validate_parsed(self, job: Dict[str, Any], correlation_id: str):
