@@ -13,7 +13,11 @@
       "Bash(rm:*)",
       "Bash(docker-compose up:*)",
       "Bash(docker exec:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(__NEW_LINE__ mv TODO001_phase5_decisions.md TODO001_phase6_decisions.md)",
+      "Bash(__NEW_LINE__ mv TODO001_phase5_handoff.md TODO001_phase6_handoff.md)",
+      "Bash(__NEW_LINE__ mv TODO001_phase5_notes.md TODO001_phase6_notes.md)",
+      "Bash(__NEW_LINE__ mv TODO001_phase5_testing_summary.md TODO001_phase6_testing_summary.md)"
     ],
     "deny": []
   }

@@ -145,15 +145,16 @@ queued → job_validated → parsing → parsed → parse_validated → chunking
 - [ ] Test backup and recovery procedures
 - [ ] Document production readiness assessment
 
-## Phase 5 — Documentation & Reporting
-- [ ] Generate comprehensive testing report with all phase results
-- [ ] Create visual inspection links for manual verification
-- [ ] Document discovered issues and resolution status
-- [ ] Update traceability matrix with actual results
-- [ ] Prepare stakeholder summary and recommendations
-- [ ] Archive test artifacts and evidence
+## Phase 5 — Development End-to-End Testing
+- [ ] Configure development-level external service integrations
+- [ ] Update service router to use development services instead of mocks
+- [ ] Implement development service authentication and configuration  
+- [ ] Validate complete end-to-end workflows with development services
+- [ ] Test error handling and service resilience with development services
+- [ ] Test performance under development service constraints
+- [ ] Document development testing results and service integration status
 
-## Phase 5 — API Integration and Project Completion
+## Phase 6 — API Integration and Project Completion
 - [ ] Identify and document all required external API integrations
 - [ ] Implement API connections and authentication mechanisms
 - [ ] Integrate API data flow with existing processing pipeline
@@ -161,6 +162,14 @@ queued → job_validated → parsing → parsed → parse_validated → chunking
 - [ ] Clean up test data if required
 - [ ] Update system documentation based on findings
 - [ ] Mark initiative testing phase complete
+
+## Phase 7 — Documentation & Reporting
+- [ ] Generate comprehensive testing report with all phase results
+- [ ] Create visual inspection links for manual verification
+- [ ] Document discovered issues and resolution status
+- [ ] Update traceability matrix with actual results
+- [ ] Prepare stakeholder summary and recommendations
+- [ ] Archive test artifacts and evidence
 
 ## Blockers
 - Database access credentials or permissions
