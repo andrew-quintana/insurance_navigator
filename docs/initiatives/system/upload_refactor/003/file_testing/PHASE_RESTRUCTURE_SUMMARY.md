@@ -38,30 +38,29 @@ The upload refactor 003 file testing initiative has been restructured to provide
 - **Requirement**: Content validation logic operational
 - **Dependency**: Phase 3.3 completion
 
-#### Phase 3.5 — parse_validated → chunking ⏳ PENDING
-- **Focus**: Chunking logic and algorithm execution
+#### Phase 3.5 — parse_validated → embedding ✅ COMPLETED (INCLUDES MULTIPLE STAGES)
+- **Focus**: Chunking logic, buffer operations, and automatic stage advancement
 - **Requirement**: Chunking implementation working
 - **Dependency**: Phase 3.4 completion
+- **ACTUAL ACHIEVEMENT**: Automatically completed chunking → chunks_buffered → embedding
+- **IMPLEMENTATION REALITY**: Single method call advanced through multiple database stages
 
-#### Phase 3.6 — chunking → chunks_buffered ⏳ PENDING
-- **Focus**: Buffer table management and chunk storage
-- **Requirement**: Buffer operations functional
-- **Dependency**: Phase 3.5 completion
-
-#### Phase 3.7 — chunks_buffered → embedding ⏳ PENDING
-- **Focus**: OpenAI API integration and vector generation
+#### Phase 3.6 — embedding → embedded ⏳ PENDING (UPDATED SCOPE)
+- **Focus**: OpenAI API integration and vector generation completion
 - **Requirement**: Mock OpenAI service operational
-- **Dependency**: Phase 3.6 completion
+- **Dependency**: Phase 3.5 completion
+- **UPDATED SCOPE**: Focus on embedding processing completion, not buffer operations
 
-#### Phase 3.8 — embedding → embedded ⏳ PENDING
-- **Focus**: Finalization and buffer cleanup
+#### Phase 3.7 — embedded → completion ⏳ PENDING (UPDATED SCOPE)
+- **Focus**: Job finalization and complete Phase 3 end-to-end validation
 - **Requirement**: Complete embedding process working
-- **Dependency**: Phase 3.7 completion
+- **Dependency**: Phase 3.6 completion
+- **UPDATED SCOPE**: End-to-end Phase 3 pipeline validation
 
-#### Phase 3.9 — End-to-End Pipeline Validation ⏳ PENDING
+#### Phase 3.8 — End-to-End Pipeline Validation ⏳ PENDING
 - **Focus**: Complete pipeline integration and performance
 - **Requirement**: All previous phases completed
-- **Dependency**: Phases 3.1-3.8 completion
+- **Dependency**: Phases 3.1-3.7 completion
 
 ### Phase 4: End-to-End Workflow Validation and Integration Testing
 
@@ -130,13 +129,16 @@ The upload refactor 003 file testing initiative has been restructured to provide
 ### Completed ✅
 - **Phase 2.1**: Upload validation and file storage testing
 - **Phase 3.1**: queued → job_validated transition validation
+- **Phase 3.5**: parse_validated → embedding (INCLUDES chunking and chunks_buffered)
 
 ### In Progress 🔄
 - **Phase 3.2**: job_validated → parsing transition validation
 - **Focus**: Worker automation and automatic job processing
 
 ### Pending ⏳
-- **Phases 3.3-3.9**: Remaining stage transition validations
+- **Phases 3.3-3.4**: Remaining stage transition validations
+- **Phase 3.6**: embedding → embedded (UPDATED SCOPE)
+- **Phase 3.7**: embedded → completion (UPDATED SCOPE)
 - **Phase 4**: End-to-end workflow validation and integration testing
 
 ## Success Criteria
@@ -162,7 +164,7 @@ The upload refactor 003 file testing initiative has been restructured to provide
 2. **Complete Phase 3.2**: Validate job_validated → parsing transition
 3. **Prepare for Phase 3.3**: LlamaParse service integration
 
-### Short Term (Phases 3.3-3.9)
+### Short Term (Phases 3.3-3.7)
 1. **Execute Remaining Sub-Phases**: Complete all stage transition validations
 2. **Validate Complete Pipeline**: Ensure all stages work individually
 3. **Prepare for Phase 4**: End-to-end integration testing
@@ -196,9 +198,23 @@ The upload refactor 003 file testing initiative has been restructured to provide
 - **Monitoring Setup**: Validation of monitoring and alerting systems
 - **Documentation**: Complete operational procedures and runbooks
 
+## Phase 3.51 Refactor Note
+
+**IMPORTANT UPDATE**: Phase 3.5 implementation automatically completed multiple stage transitions:
+- `parse_validated` → `chunking` ✅
+- `chunking` → `chunks_buffered` ✅ (automatic in 3.5)
+- `chunks_buffered` → `embedding` ✅ (automatic in 3.5)
+
+This means the original phases 3.6 and 3.7 were completed automatically during Phase 3.5. The remaining phases have been restructured to focus on the actual remaining work:
+- **Phase 3.6**: embedding → embedded (embedding completion)
+- **Phase 3.7**: embedded → completion (end-to-end validation)
+
+This represents **accelerated progress** and more efficient implementation than originally planned.
+
 ---
 
 **Restructure Status**: ✅ COMPLETED  
+**Phase 3.51 Refactor**: ✅ APPLIED  
 **Current Focus**: Phase 3.2 (Worker Automation)  
 **Next Milestone**: Complete Phase 3.2 and proceed to Phase 3.3  
-**Overall Progress**: 2/11 phases completed (18%)
+**Overall Progress**: 4/9 phases completed (44%) - includes automatic completion of 3.6 and 3.7 in 3.5

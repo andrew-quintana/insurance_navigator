@@ -606,13 +606,13 @@ class BaseWorker:
                 
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
-                    SET status = 'chunks_stored', progress = $1, updated_at = now()
-                    WHERE job_id = $2
-                """, json.dumps(progress), job_id)
+                    SET stage = 'chunks_buffered', updated_at = now()
+                    WHERE job_id = $1
+                """, job_id)
                 
                 self.logger.log_state_transition(
                     from_status="parse_validated",
-                    to_status="chunks_stored",
+                    to_status="chunks_buffered",
                     job_id=str(job_id),
                     correlation_id=correlation_id
                 )
@@ -650,13 +650,13 @@ class BaseWorker:
             async with self.db.get_db_connection() as conn:
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
-                    SET status = 'embedding_queued', updated_at = now()
+                    SET stage = 'embedding', updated_at = now()
                     WHERE job_id = $1
                 """, job_id)
                 
                 self.logger.log_state_transition(
-                    from_status="chunks_stored",
-                    to_status="embedding_queued",
+                    from_status="chunks_buffered",
+                    to_status="embedding",
                     job_id=str(job_id),
                     correlation_id=correlation_id
                 )
@@ -682,17 +682,17 @@ class BaseWorker:
         document_id = job["document_id"]
         
         try:
-            # Update status to in progress
+            # Update stage to in progress
             async with self.db.get_db_connection() as conn:
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
-                    SET status = 'embedding_in_progress', updated_at = now()
+                    SET stage = 'embedding', updated_at = now()
                     WHERE job_id = $1
                 """, job_id)
                 
                 self.logger.log_state_transition(
-                    from_status="embedding_queued",
-                    to_status="embedding_in_progress",
+                    from_status="embedding",
+                    to_status="embedding",
                     job_id=str(job_id),
                     correlation_id=correlation_id
                 )
@@ -753,13 +753,13 @@ class BaseWorker:
                 
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
-                    SET status = 'embeddings_stored', progress = $1, updated_at = now()
+                    SET stage = 'embedded', updated_at = now()
                     WHERE job_id = $2
-                """, json.dumps(progress), job_id)
+                """, job_id)
                 
                 self.logger.log_state_transition(
-                    from_status="embedding_in_progress",
-                    to_status="embeddings_stored",
+                    from_status="embedding",
+                    to_status="embedded",
                     job_id=str(job_id),
                     correlation_id=correlation_id
                 )
@@ -806,13 +806,13 @@ class BaseWorker:
             async with self.db.get_db_connection() as conn:
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
-                    SET status = 'complete', updated_at = now()
+                    SET stage = 'embedded', updated_at = now()
                     WHERE job_id = $1
                 """, job_id)
                 
                 self.logger.log_state_transition(
-                    from_status="embeddings_stored",
-                    to_status="complete",
+                    from_status="embedded",
+                    to_status="embedded",
                     job_id=str(job_id),
                     correlation_id=correlation_id
                 )
