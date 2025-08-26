@@ -212,6 +212,19 @@ class LlamaParseClient:
         time_since_failure = datetime.utcnow() - self.last_failure_time
         return time_since_failure.total_seconds() >= self.recovery_timeout
     
+    async def is_available(self) -> bool:
+        """Check if the LlamaParse service is available"""
+        try:
+            # Use health check to determine availability
+            health_result = await self.health_check()
+            return health_result["status"] == "healthy" and not self.circuit_open
+        except Exception:
+            return False
+    
+    async def get_health(self) -> Dict[str, Any]:
+        """Get service health information (alias for health_check for compatibility)"""
+        return await self.health_check()
+    
     async def health_check(self) -> Dict[str, Any]:
         """Perform health check on LlamaParse API"""
         try:

@@ -20,12 +20,19 @@ Document your work in these files:
 - `TODO001_phase6_handoff.md` - **REQUIRED**: Comprehensive handoff notes for project completion
 - `TODO001_phase6_testing_summary.md` - Phase 6 testing results and API integration validation
 
+## Test Files for API Integration
+**Primary Test Files**:
+- `examples/simulated_insurance_document.pdf` - **Small test file** for initial issue detection and debugging
+- `examples/scan_classic_hmo.pdf` - **Large test file** for comprehensive testing and performance validation
+
+**Testing Strategy**: Start with the simulated document to iron out API integration issues, then validate with the larger scan_classic_hmo.pdf for full-scale testing.
+
 ## Implementation Approach
 1. **Review Phase 5 Handoff**: **REQUIRED**: Read and understand all Phase 5 handoff requirements
 2. **Verify Current System State**: Confirm development end-to-end testing completion and system state from Phase 5
 3. **API Service Assessment**: Identify and document all required external API integrations
-4. **API Implementation**: Implement API connections and data flow integration
-5. **Integration Testing**: Test API integrations and validate data flow
+4. **API Implementation**: Implement API connections and data flow integration using specified test files
+5. **Integration Testing**: Test API integrations and validate data flow with both small and large test files
 6. **Error Handling**: Implement comprehensive API error handling and resilience
 7. **Create Handoff Notes**: **REQUIRED**: Document complete project completion status
 
@@ -107,11 +114,14 @@ python scripts/analyze-api-constraints.py
 
 ### Step 3: API Implementation
 ```bash
+# Test with simulated document first (small file for issue detection)
+cp examples/simulated_insurance_document.pdf /tmp/test_api_small.pdf
+
 # Implement API client connections
 python scripts/implement-api-clients.py
 
-# Integrate API calls into processing pipeline
-python scripts/integrate-api-pipeline.py
+# Integrate API calls into processing pipeline using test files
+python scripts/integrate-api-pipeline.py --test-file=/tmp/test_api_small.pdf
 
 # Configure API authentication and settings
 python scripts/configure-api-settings.py
@@ -119,14 +129,18 @@ python scripts/configure-api-settings.py
 
 ### Step 4: Integration Testing
 ```bash
-# Test API connectivity and authentication
-python scripts/test-api-connectivity.py
+# Test API connectivity and authentication with small file first
+python scripts/test-api-connectivity.py --test-file=examples/simulated_insurance_document.pdf
 
-# Validate data flow integration
-python scripts/test-api-data-flow.py
+# Validate data flow integration with small file
+python scripts/test-api-data-flow.py --test-file=examples/simulated_insurance_document.pdf
+
+# Test with larger file after small file validation
+cp examples/scan_classic_hmo.pdf /tmp/test_api_large.pdf
+python scripts/test-api-data-flow.py --test-file=/tmp/test_api_large.pdf
 
 # Test error scenarios and edge cases
-python scripts/test-api-error-scenarios.py
+python scripts/test-api-error-scenarios.py --small-file=examples/simulated_insurance_document.pdf --large-file=examples/scan_classic_hmo.pdf
 ```
 
 ### Step 5: Error Handling Implementation
@@ -137,8 +151,8 @@ python scripts/implement-api-error-handling.py
 # Add retry logic and circuit breakers
 python scripts/implement-api-resilience.py
 
-# Test API failure scenarios
-python scripts/test-api-failure-handling.py
+# Test API failure scenarios with both test files
+python scripts/test-api-failure-handling.py --small-file=examples/simulated_insurance_document.pdf --large-file=examples/scan_classic_hmo.pdf
 ```
 
 ### Step 6: API Integration Validation

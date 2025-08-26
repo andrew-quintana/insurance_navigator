@@ -22,7 +22,7 @@ ENV PYTHONPATH=/app
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "from base_worker import BaseWorker; print('Worker import successful')" || exit 1
+    CMD python -c "from enhanced_base_worker import EnhancedBaseWorker; print('Enhanced worker import successful')" || exit 1
 
-# Run the worker
-CMD ["python", "runner.py"]
+# Run the enhanced worker
+CMD ["python", "enhanced_runner.py"]
