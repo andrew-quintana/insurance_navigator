@@ -1,7 +1,7 @@
-# Phase 5 Execution Prompt: API Integration
+# Phase 5 Execution Prompt: Development End-to-End Testing
 
 ## Context
-You are implementing Phase 5 of the upload refactor 003 file testing initiative. This phase focuses on API integration, building upon the successful end-to-end pipeline validation from Phase 4.
+You are implementing Phase 5 of the upload refactor 003 file testing initiative. This phase focuses on development end-to-end testing with development configuration, including updating development-level servers similar to mock servers, building upon the successful pipeline validation from Phase 4.
 
 ## Documentation References
 Please review these documents before starting implementation:
@@ -11,42 +11,44 @@ Please review these documents before starting implementation:
 - `docs/initiatives/system/upload_refactor/003/file_testing/PHASE3_SCOPE_UPDATE.md` - Phase 3 scope and objectives
 
 ## Primary Objective
-**INTEGRATE** external APIs into the upload processing pipeline by implementing API connections, validating data flow integration, and ensuring seamless operation with external services.
+**TEST** the complete system in a development environment with realistic services by implementing development-level external service configurations, validating end-to-end workflows, and ensuring production readiness through comprehensive development testing.
 
 ## Expected Outputs
 Document your work in these files:
-- `TODO001_phase5_notes.md` - Phase 5 implementation details and API integration results
-- `TODO001_phase5_decisions.md` - Technical decisions and API integration approaches
-- `TODO001_phase5_handoff.md` - **REQUIRED**: Comprehensive handoff notes for project completion
-- `TODO001_phase5_testing_summary.md` - Phase 5 testing results and API integration validation
+- `TODO001_phase5_notes.md` - Phase 5 implementation details and development testing results
+- `TODO001_phase5_decisions.md` - Technical decisions and development service integration approaches
+- `TODO001_phase5_handoff.md` - **REQUIRED**: Comprehensive handoff notes for Phase 6 transition
+- `TODO001_phase5_testing_summary.md` - Phase 5 testing results and development environment validation
 
 ## Implementation Approach
 1. **Review Phase 4 Handoff**: **REQUIRED**: Read and understand all Phase 4 handoff requirements
 2. **Verify Current System State**: Confirm end-to-end pipeline completion and database state from Phase 4
-3. **API Service Assessment**: Identify and document all required external API integrations
-4. **API Implementation**: Implement API connections and data flow integration
-5. **Integration Testing**: Test API integrations and validate data flow
-6. **Error Handling**: Implement comprehensive API error handling and resilience
-7. **Create Handoff Notes**: **REQUIRED**: Document complete project completion status
+3. **Development Service Setup**: Configure development-level external services (LlamaParse, OpenAI development endpoints)
+4. **Service Router Configuration**: Update service router to use development services instead of mocks
+5. **End-to-End Development Testing**: Test complete workflows with development external services
+6. **Performance and Reliability Validation**: Validate system performance under development service constraints
+7. **Create Handoff Notes**: **REQUIRED**: Document complete development testing results for Phase 6
 
 ## Phase 5 Requirements
 
 ### Core Tasks
 - [ ] **REQUIRED**: Review and understand Phase 4 handoff notes completely
 - [ ] Verify current system state matches Phase 4 handoff expectations
-- [ ] Identify and document all required external API integrations
-- [ ] Implement API connections and authentication mechanisms
-- [ ] Integrate API data flow with existing processing pipeline
-- [ ] Validate API integrations and test error handling
-- [ ] **REQUIRED**: Create comprehensive project completion handoff notes
+- [ ] Configure development-level external service integrations
+- [ ] Update service router to use development services instead of mocks
+- [ ] Implement development service authentication and configuration
+- [ ] Validate complete end-to-end workflows with development services
+- [ ] Test error handling and service resilience with development services
+- [ ] **REQUIRED**: Create comprehensive handoff notes for Phase 6
 
 ### Success Criteria
-- ✅ External API integrations identified and documented
-- ✅ API connections and authentication implemented
-- ✅ API data flow integrated with processing pipeline
-- ✅ API integrations validated and error handling tested
-- ✅ System operates seamlessly with external services
-- ✅ **REQUIRED**: Complete project completion documentation ready
+- ✅ Development external services configured and operational
+- ✅ Service router updated to use development services
+- ✅ End-to-end workflows validated with development services
+- ✅ Error handling and service resilience tested
+- ✅ Performance validated under development service constraints
+- ✅ System ready for production API integration
+- ✅ **REQUIRED**: Complete handoff documentation ready for Phase 6
 
 ### Dependencies from Phase 4
 - **End-to-End Pipeline**: ✅ Confirmed working from Phase 4 handoff
@@ -57,29 +59,29 @@ Document your work in these files:
 
 ## Technical Focus Areas
 
-### 1. API Service Assessment
-- Identify all required external API integrations
-- Document API specifications and requirements
-- Analyze authentication and security requirements
-- Assess API rate limits and usage patterns
+### 1. Development Service Configuration
+- Configure development LlamaParse API endpoints and authentication
+- Set up OpenAI development API keys and usage tracking
+- Implement development service rate limiting and quotas
+- Configure development service error handling and timeouts
 
-### 2. API Implementation
-- Implement API client connections and authentication
-- Integrate API calls into processing pipeline
-- Handle API responses and data transformation
-- Implement API configuration management
+### 2. Service Router Enhancement
+- Update ServiceRouter to support development mode
+- Implement development service selection and configuration
+- Add development service health checks and monitoring
+- Ensure seamless switching between mock and development services
 
-### 3. Integration Testing
-- Test API connectivity and authentication
-- Validate data flow between APIs and pipeline
-- Test error scenarios and edge cases
-- Verify API response handling and processing
+### 3. End-to-End Development Testing
+- Test complete document processing with development services
+- Validate service integration reliability and performance
+- Test concurrent processing with development service limits
+- Validate error scenarios and recovery with development services
 
-### 4. Error Handling and Resilience
-- Implement comprehensive API error handling
-- Add retry logic and circuit breaker patterns
-- Handle API rate limiting and throttling
-- Ensure graceful degradation when APIs are unavailable
+### 4. Development Environment Validation
+- Verify development service authentication and authorization
+- Test development service rate limits and usage patterns
+- Validate development service error handling and resilience
+- Ensure development environment production readiness
 
 ## Testing Procedures
 
@@ -93,78 +95,80 @@ docker-compose ps
 docker-compose logs base-worker --tail=20
 ```
 
-### Step 2: API Service Assessment
+### Step 2: Development Service Setup
 ```bash
-# Identify required API integrations
-python scripts/assess-api-requirements.py
+# Configure development service endpoints
+python scripts/configure-development-services.py
 
-# Document API specifications and authentication
-python scripts/document-api-specs.py
+# Set up development API credentials
+python scripts/setup-development-credentials.py
 
-# Analyze API rate limits and usage patterns
-python scripts/analyze-api-constraints.py
+# Validate development service connectivity
+python scripts/validate-development-services.py
 ```
 
-### Step 3: API Implementation
+### Step 3: Service Router Configuration
 ```bash
-# Implement API client connections
-python scripts/implement-api-clients.py
+# Update service router for development mode
+python scripts/update-service-router-development.py
 
-# Integrate API calls into processing pipeline
-python scripts/integrate-api-pipeline.py
+# Test service router development mode switching
+python scripts/test-service-router-modes.py
 
-# Configure API authentication and settings
-python scripts/configure-api-settings.py
+# Validate service router development configuration
+python scripts/validate-service-router-development.py
 ```
 
-### Step 4: Integration Testing
+### Step 4: End-to-End Development Testing
 ```bash
-# Test API connectivity and authentication
-python scripts/test-api-connectivity.py
+# Test complete workflow with development services
+python scripts/test-development-end-to-end.py
 
-# Validate data flow integration
-python scripts/test-api-data-flow.py
+# Monitor development service performance
+python scripts/monitor-development-services.py
 
-# Test error scenarios and edge cases
-python scripts/test-api-error-scenarios.py
+# Test concurrent processing with development services
+python scripts/test-development-concurrency.py
 ```
 
-### Step 5: Error Handling Implementation
+### Step 5: Development Service Resilience Testing
 ```bash
-# Implement comprehensive API error handling
-python scripts/implement-api-error-handling.py
+# Test development service error scenarios
+python scripts/test-development-service-errors.py
 
-# Add retry logic and circuit breakers
-python scripts/implement-api-resilience.py
+# Test development service rate limiting
+python scripts/test-development-rate-limits.py
 
-# Test API failure scenarios
-python scripts/test-api-failure-handling.py
+# Validate development service recovery mechanisms
+python scripts/test-development-service-recovery.py
 ```
 
-### Step 6: API Integration Validation
+### Step 6: Development Environment Validation
 ```sql
--- Monitor API integration status
+-- Monitor development service integration status
 SELECT 
-    api_name,
+    service_name,
+    mode,
     status,
     last_successful_call,
     error_count,
     avg_response_time
-FROM api_integration_status 
-WHERE last_check >= NOW() - INTERVAL '1 hour'
-ORDER BY api_name;
+FROM service_router_status 
+WHERE mode = 'development'
+ORDER BY service_name;
 
--- Check API call success rates
+-- Check development service call success rates
 SELECT 
-    api_endpoint,
+    service_endpoint,
     COUNT(*) as total_calls,
     SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful_calls,
     ROUND(100.0 * SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) / COUNT(*), 2) as success_rate
-FROM api_call_logs 
-WHERE created_at >= NOW() - INTERVAL '24 hours'
-GROUP BY api_endpoint;
+FROM service_call_logs 
+WHERE service_mode = 'development'
+  AND created_at >= NOW() - INTERVAL '24 hours'
+GROUP BY service_endpoint;
 
--- Verify direct-write architecture data flow
+-- Verify development end-to-end processing
 SELECT d.document_id, d.filename, uj.stage, uj.updated_at,
        dc.chunk_count, dc.embedding_count
 FROM upload_pipeline.documents d
@@ -176,120 +180,123 @@ LEFT JOIN (
     FROM upload_pipeline.document_chunks
     GROUP BY document_id
 ) dc ON d.document_id = dc.document_id
-WHERE uj.stage = 'embedded'
+WHERE d.created_at >= NOW() - INTERVAL '1 hour'
 ORDER BY uj.updated_at DESC;
 ```
 
 ## Expected Outcomes
 
 ### Success Scenario
-- External API integrations identified and documented
-- API connections and authentication implemented
-- API data flow integrated with processing pipeline
-- API integrations validated and error handling tested
-- System operates seamlessly with external services
-- **REQUIRED**: Complete project completion documentation ready
+- Development external services configured and operational
+- Service router updated to use development services
+- End-to-end workflows validated with development services
+- Error handling and service resilience tested
+- Performance validated under development service constraints
+- System ready for production API integration
+- **REQUIRED**: Complete handoff documentation ready for Phase 6
 
 ### Failure Scenarios
-- API integrations not properly identified or documented
-- API connections or authentication failures
-- API data flow integration issues
-- API error handling inadequate or untested
-- System fails to operate with external services
+- Development services not properly configured or accessible
+- Service router fails to switch to development mode
+- End-to-end workflows fail with development services
+- Development service error handling inadequate
+- Performance degradation with development services
+- System not ready for production API integration
 
 ## Risk Assessment
 
 ### High Risk
-- **API Integration Failures**: Critical API integrations failing
-  - *Mitigation*: Comprehensive testing and fallback procedures
-- **Authentication Issues**: API authentication failures
-  - *Mitigation*: Thorough authentication testing and secure credential management
+- **Development Service Integration Failures**: Critical development services not accessible
+  - *Mitigation*: Comprehensive service validation and fallback procedures
+- **Service Authentication Issues**: Development API authentication failures
+  - *Mitigation*: Thorough credential validation and secure management
 
 ### Medium Risk
-- **API Rate Limiting**: Exceeding API rate limits
-  - *Mitigation*: Implement proper throttling and retry logic
-- **Data Flow Issues**: API data integration problems
-  - *Mitigation*: Comprehensive data flow testing and validation
+- **Development Service Rate Limiting**: Exceeding development API rate limits
+  - *Mitigation*: Implement proper throttling and usage monitoring
+- **Performance Degradation**: Development services slower than mocks
+  - *Mitigation*: Performance testing and optimization strategies
 
 ### Low Risk
-- **API Response Changes**: External API response format changes
-  - *Mitigation*: Robust response parsing and validation
-- **Documentation Gaps**: Incomplete API integration documentation
-  - *Mitigation*: Comprehensive documentation review
+- **Service Configuration Changes**: Development service endpoints or formats change
+  - *Mitigation*: Robust service configuration and validation
+- **Documentation Gaps**: Incomplete development service integration documentation
+  - *Mitigation*: Comprehensive documentation review and validation
 
-## Project Completion Readiness
+## Phase 6 Readiness
 
-### Final Phase Dependencies
-- ✅ External API integrations identified and implemented
-- ✅ API authentication and security measures validated
-- ✅ API data flow integrated with processing pipeline
-- ✅ API error handling and resilience implemented
-- ✅ **REQUIRED**: Complete project completion documentation provided
+### Phase 6 Dependencies
+- ✅ Development external services configured and tested
+- ✅ Service router supporting development and production modes
+- ✅ End-to-end workflows validated with realistic service constraints
+- ✅ Error handling and service resilience tested
+- ✅ **REQUIRED**: Complete handoff documentation provided
 
-### Project Completion Requirements
-- **REQUIRED**: Complete Phase 5 API integration testing results
-- **REQUIRED**: API integration status and configuration
-- **REQUIRED**: API validation results and performance metrics
-- **REQUIRED**: Recommendations for production deployment
-- **REQUIRED**: Comprehensive project completion handoff notes
+### Handoff Requirements
+- **REQUIRED**: Complete Phase 5 development testing results
+- **REQUIRED**: Development service integration status and configuration
+- **REQUIRED**: End-to-end validation results with development services
+- **REQUIRED**: Performance benchmarks and service usage metrics
+- **REQUIRED**: Comprehensive handoff notes for Phase 6 production API integration
 
 ## Success Metrics
 
 ### Phase 5 Completion Criteria
-- [ ] External API integrations identified and documented
-- [ ] API connections and authentication implemented
-- [ ] API data flow integrated with processing pipeline
-- [ ] API integrations validated and error handling tested
-- [ ] System operates seamlessly with external services
-- [ ] **REQUIRED**: Complete project completion documentation ready
+- [ ] Development external services configured and operational
+- [ ] Service router updated to use development services
+- [ ] End-to-end workflows validated with development services
+- [ ] Error handling and service resilience tested
+- [ ] Performance validated under development service constraints
+- [ ] System ready for production API integration
+- [ ] **REQUIRED**: Complete handoff documentation ready for Phase 6
 
 ## Handoff Documentation Requirements
 
-### **MANDATORY**: Phase 5 → Project Completion Handoff Notes
+### **MANDATORY**: Phase 5 → Phase 6 Handoff Notes
 The handoff document (`TODO001_phase5_handoff.md`) must include:
 
 1. **Phase 5 Completion Summary**
-   - What was accomplished with API integrations
+   - What was accomplished with development service integration
    - Technical implementation details
    - Success criteria achievement status
 
 2. **Current System State**
    - Database status and job distribution
    - Worker service health and operational status
-   - API integration status and health
-   - All service dependencies and their health
+   - Development service integration status and health
+   - Service router configuration and mode support
 
-3. **Project Completion Status**
-   - Overall system functionality and readiness
-   - End-to-end pipeline validation status
-   - Production deployment readiness assessment
+3. **Phase 6 Requirements**
+   - Primary objective and success criteria for production API integration
+   - Technical focus areas and implementation procedures
+   - Dependencies and prerequisites for production services
 
 4. **Risk Assessment**
    - Current risk profile and mitigation strategies
-   - Known issues and workarounds
-   - Recommendations for production deployment
+   - Known issues and workarounds from development testing
+   - Recommendations for production API integration
 
 5. **Knowledge Transfer**
-   - Key learnings from Phase 5
-   - API integration patterns established
-   - Best practices and architectural decisions
+   - Key learnings from Phase 5 development testing
+   - Service integration patterns established
+   - Best practices and architectural decisions for production readiness
 
-6. **Project Completion Checklist**
-   - All phase deliverables completed
-   - System ready for production deployment
+6. **Handoff Checklist**
+   - Phase 5 deliverables completed
+   - Phase 6 readiness confirmed
    - Documentation handoff status
 
-7. **Production Deployment Recommendations**
-   - System deployment readiness
-   - Monitoring and maintenance requirements
-   - Performance expectations and metrics
+7. **Production Readiness Assessment**
+   - Development testing completion status
+   - Service integration validation results
+   - Performance expectations and production preparation
 
 ---
 
 **Phase 5 Status**: 🔄 IN PROGRESS  
-**Focus**: API Integration  
-**Environment**: postgres database, API-integrated processing pipeline  
-**Success Criteria**: External API integration and validation  
-**Next Phase**: Project Completion  
-**Handoff Requirement**: ✅ MANDATORY - Complete project completion documentation  
+**Focus**: Development End-to-End Testing  
+**Environment**: postgres database, development service-integrated processing pipeline  
+**Success Criteria**: Complete development service integration and validation  
+**Next Phase**: Phase 6 (Production API Integration)  
+**Handoff Requirement**: ✅ MANDATORY - Complete handoff documentation for Phase 6  
 **Phase 4 Dependency**: ✅ REQUIRED - Review and understand Phase 4 handoff notes
