@@ -280,6 +280,42 @@ class CostTracker:
         
         return summary
     
+    def get_daily_cost(self, service_name: str) -> float:
+        """
+        Get the current day's cost for a specific service.
+        
+        Args:
+            service_name: Name of the service
+            
+        Returns:
+            Current day's cost in USD
+        """
+        now = datetime.utcnow()
+        date_key = now.strftime("%Y-%m-%d")
+        
+        with self._lock:
+            if date_key in self.daily_metrics and service_name in self.daily_metrics[date_key]:
+                return self.daily_metrics[date_key][service_name].total_cost_usd
+            return 0.0
+    
+    def get_hourly_requests(self, service_name: str) -> int:
+        """
+        Get the current hour's request count for a specific service.
+        
+        Args:
+            service_name: Name of the service
+            
+        Returns:
+            Current hour's request count
+        """
+        now = datetime.utcnow()
+        hour_key = now.strftime("%Y-%m-%d-%H")
+        
+        with self._lock:
+            if hour_key in self.hourly_metrics and service_name in self.hourly_metrics[hour_key]:
+                return self.hourly_metrics[hour_key][service_name].request_count
+            return 0
+    
     def get_cost_forecast(self, service_name: str, days: int = 30) -> Dict[str, Any]:
         """
         Generate cost forecast based on current usage patterns.

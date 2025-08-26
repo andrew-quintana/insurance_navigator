@@ -69,8 +69,8 @@ class EnhancedBaseWorker:
         self.last_failure_time = None
         
         # Cost management
-        self.daily_cost_limit = config.get("daily_cost_limit", 5.00)  # $5.00 default
-        self.hourly_rate_limit = config.get("hourly_rate_limit", 100)  # 100 requests/hour default
+        self.daily_cost_limit = getattr(config, "daily_cost_limit", 5.00)  # $5.00 default
+        self.hourly_rate_limit = getattr(config, "hourly_rate_limit", 100)  # 100 requests/hour default
         
         # Service health tracking
         self.service_health = {}
