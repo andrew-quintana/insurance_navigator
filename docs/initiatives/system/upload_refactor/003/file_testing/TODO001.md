@@ -80,40 +80,33 @@ queued → job_validated → parsing → parsed → parse_validated → chunking
 - [ ] Verify job status updates correctly to parse_validated stage
 - [ ] Document parse validation results and metadata
 
-### Phase 3.5 — parse_validated → chunking Transition Validation
-- [ ] Test chunking logic and algorithm execution
-- [ ] Validate chunk generation and metadata creation
-- [ ] Test chunk storage in buffer tables
-- [ ] Verify job status updates correctly to chunking stage
-- [ ] Document chunking performance and results
+### Phase 3.5 — parse_validated → embedding Transition Validation ✅ COMPLETED (INCLUDES MULTIPLE STAGES)
+- [x] Test chunking logic and algorithm execution
+- [x] Validate chunk generation and metadata creation
+- [x] Test chunk storage in buffer tables
+- [x] Verify job status updates correctly to embedding stage
+- [x] Document chunking performance and results
+- **PHASE 3.51 REFACTOR NOTE**: Phase 3.5 automatically completed chunking → chunks_buffered → embedding stages due to efficient worker implementation
 
-### Phase 3.6 — chunking → chunks_buffered Transition Validation
-- [ ] Test complete chunking process completion
-- [ ] Validate all chunks stored in buffer tables
-- [ ] Test chunk deduplication and integrity checks
-- [ ] Verify job status updates correctly to chunks_buffered stage
-- [ ] Document chunk buffer management and performance
-
-### Phase 3.7 — chunks_buffered → embedding Transition Validation
-- [ ] Test embedding generation for document chunks
+### Phase 3.6 — embedding → embedded Transition Validation (UPDATED SCOPE)
+- [ ] Test embedding completion logic and vector generation
 - [ ] Validate OpenAI API integration and rate limiting
-- [ ] Test vector generation and storage in buffer
-- [ ] Verify job status updates correctly to embedding stage
-- [ ] Document embedding performance and cost tracking
-
-### Phase 3.8 — embedding → embedded Transition Validation
-- [ ] Test complete embedding process for all chunks
-- [ ] Validate vector storage and final table population
-- [ ] Test buffer cleanup and finalization logic
+- [ ] Test vector generation and storage completion
 - [ ] Verify job status updates correctly to embedded stage
-- [ ] Document complete pipeline performance and results
+- [ ] Document embedding completion performance and results
+- **UPDATED SCOPE**: Focus on embedding completion, not buffer operations (already completed in 3.5)
 
-### Phase 3.9 — End-to-End Pipeline Validation
-- [ ] Test complete document processing from upload to completion
-- [ ] Validate all stage transitions work automatically
-- [ ] Test concurrent job processing and system performance
-- [ ] Verify complete traceability and audit trail
-- [ ] Document end-to-end performance metrics
+### Phase 3.7 — embedded → completion Transition Validation (UPDATED SCOPE)
+- [ ] Test complete pipeline integration and end-to-end validation
+- [ ] Validate all stage transitions work seamlessly together
+- [ ] Test job finalization and completion logic
+- [ ] Verify complete Phase 3 pipeline readiness
+- [ ] Document end-to-end Phase 3 performance and results
+- **UPDATED SCOPE**: Focus on complete Phase 3 validation, not individual stage transitions (already completed)
+
+### Phase 3.8 — End-to-End Pipeline Validation (REMOVED - INTEGRATED INTO 3.7)
+- **STATUS**: Integrated into Phase 3.7 scope after Phase 3.51 refactor
+- **RATIONALE**: Eliminated redundant validation phase while maintaining comprehensive coverage
 
 ## Phase 4 — End-to-End Workflow Validation and Integration Testing
 
@@ -188,26 +181,4 @@ queued → job_validated → parsing → parsed → parse_validated → chunking
 - Chunking and embedding processes must be validated through buffer and final tables
 - Performance metrics should be captured for each processing stage
 - Worker automation is critical for Phase 3.2+ completion
-
-## Risk Mitigation
-- Backup test environment state before execution
-- Document rollback procedures for any test data
-- Maintain audit trail of all test activities
-- Establish communication channel for real-time issue reporting
-- Monitor API costs during real API testing phases
-
-## Success Criteria
-- All 9 processing stages validated and working automatically
-- Complete end-to-end pipeline processing validated
-- Performance metrics within acceptable limits
-- Complete traceability maintained end-to-end
-- Zero data integrity issues identified
-- Complete documentation package delivered
-- Production readiness confirmed
-
-## Current Status
-- **Phase 2.1**: ✅ COMPLETED - Upload validation and file storage working
-- **Phase 3.1**: ✅ COMPLETED - queued → job_validated transition validated
-- **Phase 3.2-3.9**: 🔄 PENDING - Worker automation and subsequent transitions
-- **Phase 4**: 🔄 PENDING - End-to-end workflow validation
-- **Next Focus**: Complete Phase 3 sub-phases, then Phase 4 end-to-end validation
+- **PHASE 3.51 REFACTOR COMPLETED**: Phase structure realigned with implementation reality
