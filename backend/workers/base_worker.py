@@ -729,17 +729,20 @@ class BaseWorker:
                     # Generate vector SHA for integrity
                     vector_sha = self._compute_vector_sha(embedding)
                     
+                    # Convert Python list to pgvector string format
+                    vector_string = '[' + ','.join(str(x) for x in embedding) + ']'
+                    
                     # Write to vector buffer
                     result = await conn.execute("""
                         INSERT INTO upload_pipeline.document_vector_buffer 
                         (document_id, chunk_id, embed_model, embed_version, vector, vector_sha, created_at)
-                        VALUES ($1, $2, $3, $4, $5, $6, now())
+                        VALUES ($1, $2, $3, $4, $5::vector(1536), $6, now())
                         ON CONFLICT (chunk_id, embed_model, embed_version) 
-                        DO UPDATE SET vector = $5, vector_sha = $6, created_at = now()
+                        DO UPDATE SET vector = $5::vector(1536), vector_sha = $6, created_at = now()
                     """, document_id, chunk["chunk_id"], 
                         job.get("embed_model", "text-embedding-3-small"),
                         job.get("embed_version", "1"),
-                        embedding, vector_sha)
+                        vector_string, vector_sha)
                     
                     embeddings_written += 1
                 
