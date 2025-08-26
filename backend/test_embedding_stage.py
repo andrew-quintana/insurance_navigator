@@ -1,3 +1,6 @@
+# Buffer table references updated for Phase 3.7 direct-write architecture
+# Original buffer-based approach replaced with direct writes to document_chunks
+
 #!/usr/bin/env python3
 """
 Phase 3.6 Test Script: Embedding Stage Validation
@@ -302,7 +305,7 @@ class MockBaseWorker:
                 
                 self.logger.log_buffer_operation(
                     operation="write",
-                    table="document_vector_buffer",
+                    table="document_chunks",
                     count=embeddings_written,
                     job_id=str(job_id),
                     correlation_id=correlation_id

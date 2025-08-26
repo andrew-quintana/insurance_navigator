@@ -569,34 +569,12 @@ class BaseWorker:
             if not chunks:
                 raise ValueError("No chunks generated from parsed content")
             
-            # Write chunks to buffer with idempotent operations
+            # Store chunks temporarily for direct write with embeddings in embedding stage
+            self._temp_chunks = chunks
+            chunks_written = len(chunks)  # All chunks ready for processing
+            
+            # Update job progress and status
             async with self.db.get_db_connection() as conn:
-                chunks_written = 0
-                
-                for chunk in chunks:
-                    chunk_id = self._generate_chunk_id(
-                        document_id, chunk["chunker_name"], 
-                        chunk["chunker_version"], chunk["ord"]
-                    )
-                    
-                    chunk_sha = self._compute_sha256(chunk["text"])
-                    
-                    # Idempotent chunk write
-                    result = await conn.execute("""
-                        INSERT INTO upload_pipeline.document_chunk_buffer 
-                        (chunk_id, document_id, chunk_ord, chunker_name, chunker_version,
-                         chunk_sha, text, meta, created_at)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())
-                        ON CONFLICT (chunk_id) DO NOTHING
-                    """, chunk_id, document_id, chunk["ord"], chunk["chunker_name"],
-                        chunk["chunker_version"], chunk_sha, chunk["text"], 
-                        json.dumps(chunk["meta"]))
-                    
-                    # Count actual writes (not conflicts)
-                    if result.split()[-1] == "1":  # INSERT 0 1
-                        chunks_written += 1
-                
-                # Update job progress and status
                 progress = job.get("progress", {})
                 progress.update({
                     "chunks_total": len(chunks),
@@ -618,8 +596,8 @@ class BaseWorker:
                 )
                 
                 self.logger.log_buffer_operation(
-                    operation="write",
-                    table="document_chunk_buffer",
+                    operation="prepared",
+                    table="direct_write_cache",
                     count=chunks_written,
                     job_id=str(job_id),
                     correlation_id=correlation_id
@@ -697,17 +675,24 @@ class BaseWorker:
                     correlation_id=correlation_id
                 )
             
-            # Get chunks for embedding
-            async with self.db.get_db_connection() as conn:
-                chunks = await conn.fetch("""
-                    SELECT chunk_id, text, chunk_sha
-                    FROM upload_pipeline.document_chunk_buffer
-                    WHERE document_id = $1
-                    ORDER BY chunk_ord
-                """, document_id)
+            # Get chunks from temporary storage or regenerate if needed
+            if hasattr(self, '_temp_chunks') and self._temp_chunks:
+                chunks = self._temp_chunks
+            else:
+                # Fallback: regenerate chunks from parsed content
+                async with self.db.get_db_connection() as conn:
+                    doc_info = await conn.fetchrow("""
+                        SELECT parsed_path, parsed_sha256 
+                        FROM upload_pipeline.documents 
+                        WHERE document_id = $1
+                    """, document_id)
+                
+                parsed_content = await self.storage.read_blob(doc_info["parsed_path"])
+                chunks = await self._generate_chunks(parsed_content, 
+                                                   job.get("chunks_version", "markdown-simple@1"))
             
             if not chunks:
-                raise ValueError("No chunks found for embedding")
+                raise ValueError("No chunks available for embedding")
             
             # Extract text for embedding
             texts = [chunk["text"] for chunk in chunks]
@@ -721,28 +706,40 @@ class BaseWorker:
             if len(embeddings) != len(chunks):
                 raise ValueError(f"Expected {len(chunks)} embeddings, got {len(embeddings)}")
             
-            # Write embeddings to buffer
+            # Direct write: chunks + embeddings to document_chunks (Phase 3.7 architecture)
             async with self.db.get_db_connection() as conn:
                 embeddings_written = 0
                 
                 for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-                    # Generate vector SHA for integrity
-                    vector_sha = self._compute_vector_sha(embedding)
+                    # Generate deterministic chunk ID
+                    chunk_id = self._generate_chunk_id(
+                        document_id, chunk["chunker_name"], 
+                        chunk["chunker_version"], chunk["ord"]
+                    )
+                    
+                    # Generate integrity hashes
+                    chunk_sha = self._compute_sha256(chunk["text"])
                     
                     # Convert Python list to pgvector string format
                     vector_string = '[' + ','.join(str(x) for x in embedding) + ']'
                     
-                    # Write to vector buffer
+                    # Direct write to final table (bypassing buffer)
                     result = await conn.execute("""
-                        INSERT INTO upload_pipeline.document_vector_buffer 
-                        (document_id, chunk_id, embed_model, embed_version, vector, vector_sha, created_at)
-                        VALUES ($1, $2, $3, $4, $5::vector(1536), $6, now())
-                        ON CONFLICT (chunk_id, embed_model, embed_version) 
-                        DO UPDATE SET vector = $5::vector(1536), vector_sha = $6, created_at = now()
-                    """, document_id, chunk["chunk_id"], 
+                        INSERT INTO upload_pipeline.document_chunks 
+                        (chunk_id, document_id, chunker_name, chunker_version, chunk_ord,
+                         text, chunk_sha, embed_model, embed_version, vector_dim, embedding, 
+                         embed_updated_at, created_at, updated_at)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 1536, $10::vector(1536), now(), now(), now())
+                        ON CONFLICT (document_id, chunker_name, chunker_version, chunk_ord) 
+                        DO UPDATE SET 
+                            embedding = $10::vector(1536), 
+                            embed_updated_at = now(),
+                            updated_at = now()
+                    """, chunk_id, document_id, chunk["chunker_name"], chunk["chunker_version"],
+                        chunk["ord"], chunk["text"], chunk_sha,
                         job.get("embed_model", "text-embedding-3-small"),
                         job.get("embed_version", "1"),
-                        vector_string, vector_sha)
+                        vector_string)
                     
                     embeddings_written += 1
                 
@@ -768,8 +765,8 @@ class BaseWorker:
                 )
                 
                 self.logger.log_buffer_operation(
-                    operation="write",
-                    table="document_vector_buffer",
+                    operation="direct_write",
+                    table="document_chunks",
                     count=embeddings_written,
                     job_id=str(job_id),
                     correlation_id=correlation_id
@@ -783,11 +780,16 @@ class BaseWorker:
                     correlation_id=correlation_id
                 )
                 
+                # Clean up temporary chunks cache
+                if hasattr(self, '_temp_chunks'):
+                    delattr(self, '_temp_chunks')
+                
                 self.logger.info(
-                    "Embedding processing completed successfully",
+                    "Embedding processing completed successfully (direct write)",
                     job_id=str(job_id),
                     chunks_processed=len(chunks),
                     embeddings_generated=len(embeddings),
+                    embeddings_written=embeddings_written,
                     duration_seconds=duration,
                     correlation_id=correlation_id
                 )

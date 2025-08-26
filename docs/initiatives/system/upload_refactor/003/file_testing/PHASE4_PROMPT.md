@@ -1,13 +1,13 @@
 # Phase 4 Execution Prompt: End-to-End Pipeline Validation
 
 ## Context
-You are implementing Phase 4 of the upload refactor 003 file testing initiative. This phase focuses on validating the complete end-to-end pipeline by testing all processing stages working together seamlessly, building upon the successful individual stage implementations from Phases 3.2-3.9.
+You are implementing Phase 4 of the upload refactor 003 file testing initiative. This phase focuses on validating the complete end-to-end pipeline by testing all processing stages working together seamlessly, building upon the successful individual stage implementations from Phases 3.2-3.7.
 
 ## Documentation References
 Please review these documents before starting implementation:
 - `docs/initiatives/system/upload_refactor/003/file_testing/TODO001.md` - Phase 4 requirements and tasks
 - `docs/initiatives/system/upload_refactor/003/file_testing/TEST_METHOD001.md` - Testing methodology and procedures
-- `docs/initiatives/system/upload_refactor/003/file_testing/TODO001_phase3.9_handoff.md` - **REQUIRED**: Phase 3.9 handoff notes and requirements
+- `docs/initiatives/system/upload_refactor/003/file_testing/TODO001_phase3.7_handoff.md` - **REQUIRED**: Phase 3.7 handoff notes and requirements
 - `docs/initiatives/system/upload_refactor/003/file_testing/PHASE3_SCOPE_UPDATE.md` - Phase 3 scope and objectives
 
 ## Primary Objective
@@ -21,8 +21,8 @@ Document your work in these files:
 - `TODO001_phase4_testing_summary.md` - Phase 4 testing results and status
 
 ## Implementation Approach
-1. **Review Phase 3.9 Handoff**: **REQUIRED**: Read and understand all Phase 3.9 handoff requirements
-2. **Verify Current System State**: Confirm all individual stage completions and database state from Phase 3.9
+1. **Review Phase 3.7 Handoff**: **REQUIRED**: Read and understand all Phase 3.7 handoff requirements
+2. **Verify Current System State**: Confirm all individual stage completions and database state from Phase 3.7
 3. **Test Complete Pipeline Integration**: Validate all stages work together seamlessly
 4. **Validate End-to-End Workflow**: Test complete document processing from upload to completion
 5. **Test Performance and Scalability**: Validate system performance under realistic workloads
@@ -32,8 +32,8 @@ Document your work in these files:
 ## Phase 4 Requirements
 
 ### Core Tasks
-- [ ] **REQUIRED**: Review and understand Phase 3.9 handoff notes completely
-- [ ] Verify current system state matches Phase 3.9 handoff expectations
+- [ ] **REQUIRED**: Review and understand Phase 3.7 handoff notes completely
+- [ ] Verify current system state matches Phase 3.7 handoff expectations
 - [ ] Test complete pipeline integration and coordination
 - [ ] Validate end-to-end document processing workflow
 - [ ] Test concurrent job processing and system performance
@@ -49,8 +49,8 @@ Document your work in these files:
 - ✅ End-to-end performance within acceptable limits
 - ✅ **REQUIRED**: Complete handoff documentation ready for Phase 5
 
-### Dependencies from Phase 3.9
-- **Worker Automation**: ✅ Confirmed working from Phase 3.9 handoff
+### Dependencies from Phase 3.7
+- **Worker Automation**: ✅ Confirmed working from Phase 3.7 handoff
 - **All Individual Stages**: ✅ All 9 processing stages validated and working
 - **Database Infrastructure**: ✅ PostgreSQL operational with correct schema
 - **BaseWorker Implementation**: ✅ Enhanced with comprehensive monitoring
@@ -84,10 +84,10 @@ Document your work in these files:
 
 ## Testing Procedures
 
-### Step 1: Phase 3.9 Handoff Review
+### Step 1: Phase 3.7 Handoff Review
 ```bash
-# REQUIRED: Review Phase 3.9 handoff notes
-cat docs/initiatives/system/upload_refactor/003/file_testing/TODO001_phase3.9_handoff.md
+# REQUIRED: Review Phase 3.7 handoff notes
+cat docs/initiatives/system/upload_refactor/003/file_testing/TODO001_phase3.7_handoff.md
 
 # Verify current system state matches handoff expectations
 docker-compose ps
@@ -164,21 +164,18 @@ FROM upload_pipeline.upload_jobs
 GROUP BY stage 
 ORDER BY stage;
 
--- Verify complete data flow
+-- Verify complete data flow (using direct-write architecture)
 SELECT d.document_id, d.filename, uj.stage, uj.updated_at,
-       dc.chunk_count, dvb.embedding_count
+       dc.chunk_count, dc.embedding_count
 FROM upload_pipeline.documents d
 JOIN upload_pipeline.upload_jobs uj ON d.document_id = uj.document_id
 LEFT JOIN (
-    SELECT document_id, COUNT(*) as chunk_count
+    SELECT document_id, 
+           COUNT(*) as chunk_count,
+           COUNT(CASE WHEN embedding IS NOT NULL THEN 1 END) as embedding_count
     FROM upload_pipeline.document_chunks
     GROUP BY document_id
 ) dc ON d.document_id = dc.document_id
-LEFT JOIN (
-    SELECT document_id, COUNT(*) as embedding_count
-    FROM upload_pipeline.document_vector_buffer
-    GROUP BY document_id
-) dvb ON d.document_id = dvb.document_id
 ORDER BY uj.updated_at DESC;
 ```
 
@@ -297,4 +294,4 @@ The handoff document (`TODO001_phase4_handoff.md`) must include:
 **Success Criteria**: Complete pipeline integration and performance  
 **Next Phase**: Phase 5 (Performance Optimization and Scaling)  
 **Handoff Requirement**: ✅ MANDATORY - Complete handoff documentation  
-**Phase 3.9 Dependency**: ✅ REQUIRED - Review and understand Phase 3.9 handoff notes
+**Phase 3.7 Dependency**: ✅ REQUIRED - Review and understand Phase 3.7 handoff notes

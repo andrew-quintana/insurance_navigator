@@ -12,7 +12,8 @@
       "Bash(scripts/scaffold_initiative.sh:*)",
       "Bash(rm:*)",
       "Bash(docker-compose up:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Bash(find:*)"
     ],
     "deny": []
   }

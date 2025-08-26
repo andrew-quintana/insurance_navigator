@@ -1,3 +1,6 @@
+# Buffer table references updated for Phase 3.7 direct-write architecture
+# Original buffer-based approach replaced with direct writes to document_chunks
+
 #!/usr/bin/env python3
 """
 Security Validation Testing
@@ -127,13 +130,11 @@ class SecurityValidator:
             for doc_id in self.test_documents.values():
                 async with self.db.get_db_connection() as conn:
                     await conn.execute("""
-                        DELETE FROM upload_pipeline.document_vector_buffer 
-                        WHERE document_id = $1
+                        UPDATE upload_pipeline.document_chunks SET embedding = NULL WHERE document_id = $1
                     """, doc_id)
                     
                     await conn.execute("""
-                        DELETE FROM upload_pipeline.document_chunk_buffer 
-                        WHERE document_id = $1
+                        DELETE FROM upload_pipeline.document_chunks WHERE document_id = $1
                     """, doc_id)
                     
                     await conn.execute("""

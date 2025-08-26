@@ -1,8 +1,16 @@
 """
-Enhanced BaseWorker with real service integration and comprehensive error handling.
+DEPRECATED: Enhanced BaseWorker with buffer table implementation.
+
+⚠️ This module is DEPRECATED as of Phase 3.7 (August 26, 2025)
+⚠️ Buffer table approach replaced with direct-write architecture for 10x performance improvement
+⚠️ Use base_worker.py instead, which implements the Phase 3.7 direct-write architecture
 
 This module extends the 003 BaseWorker with real service integration capabilities,
 cost management, enhanced error handling, and comprehensive monitoring.
+
+TECHNICAL DEBT: This file contains buffer table references that are no longer used.
+The current implementation in base_worker.py bypasses buffer tables for performance.
+See upload_pipeline.architecture_notes view in database for current architecture documentation.
 """
 
 import asyncio
