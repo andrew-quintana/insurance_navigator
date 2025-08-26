@@ -163,6 +163,21 @@ SELECT
 FROM api_call_logs 
 WHERE created_at >= NOW() - INTERVAL '24 hours'
 GROUP BY api_endpoint;
+
+-- Verify direct-write architecture data flow
+SELECT d.document_id, d.filename, uj.stage, uj.updated_at,
+       dc.chunk_count, dc.embedding_count
+FROM upload_pipeline.documents d
+JOIN upload_pipeline.upload_jobs uj ON d.document_id = uj.document_id
+LEFT JOIN (
+    SELECT document_id, 
+           COUNT(*) as chunk_count,
+           COUNT(CASE WHEN embedding IS NOT NULL THEN 1 END) as embedding_count
+    FROM upload_pipeline.document_chunks
+    GROUP BY document_id
+) dc ON d.document_id = dc.document_id
+WHERE uj.stage = 'embedded'
+ORDER BY uj.updated_at DESC;
 ```
 
 ## Expected Outcomes

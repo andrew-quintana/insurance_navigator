@@ -1,3 +1,6 @@
+# Buffer table references updated for Phase 3.7 direct-write architecture
+# Original buffer-based approach replaced with direct writes to document_chunks
+
 #!/usr/bin/env python3
 """
 Performance Validation Testing
@@ -219,12 +222,12 @@ class PerformanceValidator:
             # Verify results
             async with self.db.get_db_connection() as conn:
                 chunk_count = await conn.fetchval("""
-                    SELECT COUNT(*) FROM upload_pipeline.document_chunk_buffer 
+                    SELECT COUNT(*) FROM upload_pipeline.document_chunks 
                     WHERE document_id = $1
                 """, document_id)
                 
                 embedding_count = await conn.fetchval("""
-                    SELECT COUNT(*) FROM upload_pipeline.document_vector_buffer 
+                    SELECT COUNT(CASE WHEN embedding IS NOT NULL THEN 1 END) FROM upload_pipeline.document_chunks 
                     WHERE document_id = $1
                 """, document_id)
                 
@@ -483,12 +486,12 @@ class PerformanceValidator:
             # Verify results
             async with self.db.get_db_connection() as conn:
                 chunk_count = await conn.fetchval("""
-                    SELECT COUNT(*) FROM upload_pipeline.document_chunk_buffer 
+                    SELECT COUNT(*) FROM upload_pipeline.document_chunks 
                     WHERE document_id = $1
                 """, document_id)
                 
                 embedding_count = await conn.fetchval("""
-                    SELECT COUNT(*) FROM upload_pipeline.document_vector_buffer 
+                    SELECT COUNT(CASE WHEN embedding IS NOT NULL THEN 1 END) FROM upload_pipeline.document_chunks 
                     WHERE document_id = $1
                 """, document_id)
                 
