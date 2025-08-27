@@ -280,8 +280,7 @@ class EnhancedBaseWorker:
                         FROM upload_pipeline.upload_jobs uj
                         JOIN upload_pipeline.documents d ON uj.document_id = d.document_id
                         WHERE uj.stage IN (
-                            'parsed', 'parse_validated', 'chunking', 'chunks_buffered',
-                            'embedding', 'embeddings_buffered'
+                            'parsed', 'parse_validated', 'chunking', 'embedding'
                         )
                         AND uj.state IN ('queued', 'working', 'retryable')
                         AND (
@@ -326,19 +325,19 @@ class EnhancedBaseWorker:
                 correlation_id=correlation_id
             )
             
-            # Route to appropriate processor based on status
+            # Route to appropriate processor based on stage
             if status == "parsed":
                 await self._validate_parsed_enhanced(job, correlation_id)
             elif status == "parse_validated":
                 await self._process_chunks_enhanced(job, correlation_id)
-            elif status == "chunks_stored":
+            elif status == "chunking":
                 await self._queue_embeddings_enhanced(job, correlation_id)
-            elif status in ["embedding_queued", "embedding_in_progress"]:
+            elif status == "embedding":
                 await self._process_embeddings_enhanced(job, correlation_id)
-            elif status == "embeddings_stored":
+            elif status == "embedded":
                 await self._finalize_job_enhanced(job, correlation_id)
             else:
-                raise ValueError(f"Unexpected job status: {status}")
+                raise ValueError(f"Unexpected job stage: {status}")
             
             # Record successful processing metrics
             duration = (datetime.utcnow() - start_time).total_seconds()
@@ -371,10 +370,19 @@ class EnhancedBaseWorker:
     async def _validate_parsed_enhanced(self, job: Dict[str, Any], correlation_id: str):
         """Enhanced parse validation with real service integration and error handling"""
         job_id = job["job_id"]
-        parsed_path = job.get("parsed_path")
+        document_id = job["document_id"]
         
-        if not parsed_path:
-            raise ValueError("No parsed_path found for parsed job")
+        # Get parsed_path from documents table
+        async with self.db.get_db_connection() as conn:
+            doc_row = await conn.fetchrow("""
+                SELECT parsed_path FROM upload_pipeline.documents 
+                WHERE document_id = $1
+            """, document_id)
+            
+            if not doc_row or not doc_row["parsed_path"]:
+                raise ValueError("No parsed_path found for parsed job")
+            
+            parsed_path = doc_row["parsed_path"]
         
         try:
             # Read parsed content from storage
@@ -411,10 +419,18 @@ class EnhancedBaseWorker:
                 # Update job with validation results
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs 
-                    SET parsed_path = $1, parsed_sha256 = $2, status = 'parse_validated',
+                    SET stage = 'parse_validated', state = 'queued',
                         updated_at = now()
-                    WHERE job_id = $3
-                """, parsed_path, content_sha, job_id)
+                    WHERE job_id = $1
+                """, job_id)
+                
+                # Update document with parsed content info
+                await conn.execute("""
+                    UPDATE upload_pipeline.documents
+                    SET parsed_path = $1, processing_status = 'parse_validated',
+                        updated_at = now()
+                    WHERE document_id = $2
+                """, parsed_path, job['document_id'])
                 
                 self.logger.log_state_transition(
                     from_status="parsed",
@@ -445,8 +461,19 @@ class EnhancedBaseWorker:
         """Enhanced chunk processing with real service integration and error handling"""
         job_id = job["job_id"]
         document_id = job["document_id"]
-        parsed_path = job["parsed_path"]
         chunks_version = job.get("chunks_version", "markdown-simple@1")
+        
+        # Get parsed_path from documents table
+        async with self.db.get_db_connection() as conn:
+            doc_row = await conn.fetchrow("""
+                SELECT parsed_path FROM upload_pipeline.documents 
+                WHERE document_id = $1
+            """, document_id)
+            
+            if not doc_row or not doc_row["parsed_path"]:
+                raise ValueError("No parsed_path found for document")
+            
+            parsed_path = doc_row["parsed_path"]
         
         try:
             # Read parsed content
@@ -485,7 +512,7 @@ class EnhancedBaseWorker:
                     if result.split()[-1] == "1":  # INSERT 0 1
                         chunks_written += 1
                 
-                # Update job progress and status
+                # Update job progress and move to next stage
                 progress = job.get("progress", {})
                 progress.update({
                     "chunks_total": len(chunks),
@@ -495,13 +522,21 @@ class EnhancedBaseWorker:
                 
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
-                    SET progress = $1, status = 'chunks_stored', updated_at = now()
+                    SET payload = $1, stage = 'chunking', state = 'done', updated_at = now()
                     WHERE job_id = $2
                 """, json.dumps(progress), job_id)
                 
+                # Create next stage job for embedding
+                await conn.execute("""
+                    INSERT INTO upload_pipeline.upload_jobs (document_id, stage, state, created_at, updated_at)
+                    VALUES ($1, 'embedding', 'queued', now(), now())
+                    ON CONFLICT (document_id, stage) WHERE state = ANY (ARRAY['queued'::text, 'working'::text, 'retryable'::text])
+                    DO NOTHING
+                """, job['document_id'])
+                
                 self.logger.log_state_transition(
                     from_status="parse_validated",
-                    to_status="chunks_stored",
+                    to_status="chunking",
                     job_id=str(job_id),
                     correlation_id=correlation_id
                 )
@@ -566,13 +601,13 @@ class EnhancedBaseWorker:
             async with self.db.get_db_connection() as conn:
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
-                    SET status = 'embedding_queued', updated_at = now()
+                    SET stage = 'embedding', state = 'queued', updated_at = now()
                     WHERE job_id = $1
                 """, job_id)
                 
                 self.logger.log_state_transition(
-                    from_status="chunks_stored",
-                    to_status="embedding_queued",
+                    from_status="chunking",
+                    to_status="embedding",
                     job_id=str(job_id),
                     correlation_id=correlation_id
                 )
@@ -604,12 +639,12 @@ class EnhancedBaseWorker:
             async with self.db.get_db_connection() as conn:
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
-                    SET status = 'embedding_in_progress', updated_at = now()
+                    SET state = 'working', updated_at = now()
                     WHERE job_id = $1
                 """, job_id)
                 
                 self.logger.log_state_transition(
-                    from_status="embedding_queued",
+                    from_status="embedding",
                     to_status="embedding_in_progress",
                     job_id=str(job_id),
                     correlation_id=correlation_id
@@ -701,13 +736,13 @@ class EnhancedBaseWorker:
                 
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
-                    SET status = 'embeddings_stored', progress = $1, updated_at = now()
+                    SET stage = 'embedded', state = 'done', payload = $1, updated_at = now()
                     WHERE job_id = $2
                 """, json.dumps(progress), job_id)
                 
                 self.logger.log_state_transition(
                     from_status="embedding_in_progress",
-                    to_status="embeddings_stored",
+                    to_status="embedded",
                     job_id=str(job_id),
                     correlation_id=correlation_id
                 )
@@ -756,14 +791,17 @@ class EnhancedBaseWorker:
         try:
             # Update job status to complete
             async with self.db.get_db_connection() as conn:
+                # Mark document as fully processed
                 await conn.execute("""
-                    UPDATE upload_pipeline.upload_jobs
-                    SET status = 'complete', updated_at = now()
-                    WHERE job_id = $1
-                """, job_id)
+                    UPDATE upload_pipeline.documents
+                    SET processing_status = 'completed', updated_at = now()
+                    WHERE document_id = $1
+                """, document_id)
+                
+                # No need to update job as it's already at 'embedded' stage
                 
                 self.logger.log_state_transition(
-                    from_status="embeddings_stored",
+                    from_status="embedded",
                     to_status="complete",
                     job_id=str(job_id),
                     correlation_id=correlation_id
@@ -859,7 +897,7 @@ class EnhancedBaseWorker:
         async with self.db.get_db_connection() as conn:
             await conn.execute("""
                 UPDATE upload_pipeline.upload_jobs
-                SET status = 'failed', last_error = $1, updated_at = now()
+                SET state = 'deadletter', last_error = $1, updated_at = now()
                 WHERE job_id = $2
             """, json.dumps({
                 "error": error,
