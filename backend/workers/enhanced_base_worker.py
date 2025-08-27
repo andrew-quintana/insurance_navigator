@@ -334,8 +334,8 @@ class EnhancedBaseWorker:
                 await self._queue_embeddings_enhanced(job, correlation_id)
             elif status == "embedding":
                 await self._process_embeddings_enhanced(job, correlation_id)
-            elif status == "embedded":
-                await self._finalize_job_enhanced(job, correlation_id)
+            elif status == self.config.terminal_stage:
+                await self._finalize_terminal_stage_enhanced(job, correlation_id)
             else:
                 raise ValueError(f"Unexpected job stage: {status}")
             
@@ -736,13 +736,13 @@ class EnhancedBaseWorker:
                 
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
-                    SET stage = 'embedded', state = 'done', payload = $1, updated_at = now()
+                    SET stage = $3, state = 'queued', payload = $1, updated_at = now()
                     WHERE job_id = $2
-                """, json.dumps(progress), job_id)
+                """, json.dumps(progress), job_id, self.config.terminal_stage)
                 
                 self.logger.log_state_transition(
                     from_status="embedding_in_progress",
-                    to_status="embedded",
+                    to_status=self.config.terminal_stage,
                     job_id=str(job_id),
                     correlation_id=correlation_id
                 )
@@ -783,14 +783,21 @@ class EnhancedBaseWorker:
             )
             raise
     
-    async def _finalize_job_enhanced(self, job: Dict[str, Any], correlation_id: str):
-        """Enhanced job finalization with comprehensive cleanup and monitoring"""
+    async def _finalize_terminal_stage_enhanced(self, job: Dict[str, Any], correlation_id: str):
+        """Enhanced job finalization when reaching terminal stage"""
         job_id = job["job_id"]
         document_id = job["document_id"]
         
         try:
-            # Update job status to complete
+            # Update job state to 'done' and document to 'completed'
             async with self.db.get_db_connection() as conn:
+                # Mark job as done at terminal stage
+                await conn.execute("""
+                    UPDATE upload_pipeline.upload_jobs
+                    SET state = 'done', updated_at = now()
+                    WHERE job_id = $1 AND stage = $2
+                """, job_id, self.config.terminal_stage)
+                
                 # Mark document as fully processed
                 await conn.execute("""
                     UPDATE upload_pipeline.documents
@@ -798,11 +805,9 @@ class EnhancedBaseWorker:
                     WHERE document_id = $1
                 """, document_id)
                 
-                # No need to update job as it's already at 'embedded' stage
-                
                 self.logger.log_state_transition(
-                    from_status="embedded",
-                    to_status="complete",
+                    from_status=self.config.terminal_stage,
+                    to_status=f"{self.config.terminal_stage}:done",
                     job_id=str(job_id),
                     correlation_id=correlation_id
                 )
@@ -811,9 +816,10 @@ class EnhancedBaseWorker:
                 final_metrics = await self._get_job_final_metrics(document_id)
                 
                 self.logger.info(
-                    "Enhanced job finalization completed",
+                    "Enhanced job finalization completed at terminal stage",
                     job_id=str(job_id),
                     document_id=str(document_id),
+                    terminal_stage=self.config.terminal_stage,
                     final_metrics=final_metrics,
                     correlation_id=correlation_id
                 )
@@ -823,6 +829,7 @@ class EnhancedBaseWorker:
                 "Enhanced job finalization failed",
                 job_id=str(job_id),
                 document_id=str(document_id),
+                terminal_stage=self.config.terminal_stage,
                 error=str(e),
                 correlation_id=correlation_id
             )

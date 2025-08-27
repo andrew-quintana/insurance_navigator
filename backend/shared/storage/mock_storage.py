@@ -169,3 +169,7 @@ Processing timestamp: 2025-08-25
         except Exception as e:
             print(f"Mock storage: Failed to get blob metadata {path}: {e}")
             return None
+    
+    async def close(self):
+        """Close the mock storage manager (no-op for mock)"""
+        pass
