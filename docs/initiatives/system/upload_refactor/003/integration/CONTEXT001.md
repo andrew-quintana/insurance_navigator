@@ -1,445 +1,450 @@
-# Integration Context (Upload Refactor + Agent Workflows) — v1.0
+# Integration Context (003 Upload Pipeline + Agent Workflows) — v1.0
 
-**Purpose**: Single source of truth for integrating the successfully completed 003 Worker Refactor upload pipeline with the patient navigator agent workflows, enabling end-to-end document processing and intelligent conversation capabilities through automated testing and schema reconciliation.
+**Purpose**: Single source of truth for integrating the completed 003 Worker Refactor upload pipeline infrastructure with patient navigator agent workflows, enabling comprehensive end-to-end document processing and intelligent conversation capabilities through automated testing and schema reconciliation.
 
-**Integration Scope**: Connect the robust local-first upload infrastructure from 003 with agent workflows to create a complete document-to-conversation pipeline with comprehensive RAG capabilities.
+**Integration Objectives**: Connect the production-ready local-first upload infrastructure from 003 with agent workflow systems to create a complete document-to-conversation pipeline with robust RAG capabilities, validated through comprehensive automated testing.
 
 ---
 
 ## 0) TL;DR (Integration Overview)
 
-- **Upload Pipeline Integration**: Leverage completed 003 Worker Refactor's robust document processing with patient navigator agents
-- **Schema Reconciliation**: Address database schema mismatches between upload pipeline and agent RAG systems
-- **End-to-End Testing**: Automated testing from document upload through agent conversations using RAG
-- **Mock Service Utilization**: Use existing mock infrastructure for deterministic integration testing
-- **Conversation Validation**: Ensure agent workflows effectively leverage processed documents through RAG queries
+- **Upload Infrastructure Leverage**: Utilize completed 003 Worker Refactor's robust Docker-based document processing with comprehensive monitoring (for testing, this will be tested in the cloud in future production validation efforts)
+- **Agent System Integration**: Connect with multiple patient navigator agent workflows (information retrieval, strategy, supervisor orchestration)
+- **RAG System Configuration**: Configure agents to query vectorized chunks directly from upload pipeline
+- **End-to-End Validation**: Automated testing from document upload through agent conversations using processed documents
+- **Mock Service Coordination**: Unified mock infrastructure for deterministic integration testing across both systems
+- **Conversation Quality Assurance**: Validate agents effectively leverage processed documents through comprehensive RAG query testing
 
 ---
 
-## 1) Context & Integration Goals
+## 1) Current State Analysis & Integration Context
 
-**003 Upload Refactor Status**: ✅ COMPLETED SUCCESSFULLY
-- Local-first Docker environment operational
-- >99% pipeline reliability achieved
-- Complete document processing from upload to vector embeddings
-- Mock services for LlamaParse and OpenAI functional
-- Comprehensive monitoring and health checks established
+### ✅ 003 Upload Pipeline Infrastructure (COMPLETED)
+**Status**: Production-ready with >99% pipeline reliability
+**Location**: `docs/initiatives/system/upload_refactor/003/`
 
-**Agent Workflows Status**: Multiple workflow implementations available
-- **Information Retrieval Agent**: Context document shows production-ready RAG integration patterns
-- **Strategy Agent**: PRD001 shows web-first approach with RAG integration
-- **Supervisor Workflow**: PRD001 shows orchestration patterns for workflow routing
-- **RAG Tooling**: Existing `agents/tooling/rag/core.py` with Supabase integration
+**Key Achievements**:
+- **Local-First Development**: Complete Docker-based environment replicating production architecture
+- **State Machine**: Robust `uploaded → parse_queued → parsed → parse_validated → chunking → chunks_stored → embedding_queued → embedding_in_progress → embeddings_stored → complete`
+- **Database Schema**: `upload_pipeline` schema with documents, upload_jobs, buffer tables (document_chunk_buffer, document_vector_buffer)
+- **Mock Services**: Deterministic LlamaParse and OpenAI services with consistent responses for initial testing and development
+- **API Integration**: Actual service usage after end-to-end validation with mock services
+- **Vector Storage**: Processed embeddings ready for RAG integration with pgvector extension
+- **Monitoring Framework**: Comprehensive health checks and validation infrastructure
 
-**Integration Objectives**:
-1. **End-to-End Validation**: Documents uploaded → processed → available for agent conversations
-2. **Schema Reconciliation**: Ensure upload pipeline output matches agent RAG input expectations
-3. **Conversation Testing**: Validate agents can effectively query processed documents
-4. **Infrastructure Alignment**: Leverage 003's mock services for agent testing
-5. **Performance Baseline**: Establish performance metrics for integrated system
+### ✅ Agent Workflow Ecosystem (MULTIPLE IMPLEMENTATIONS)
+**Location**: `docs/initiatives/agents/patient_navigator/`
 
----
+**Available Workflows**:
+1. **Information Retrieval Agent**: Production-ready RAG integration patterns with `agents/tooling/rag/core.py`
+   - Self-consistency methodology for response validation
+   - Insurance terminology translation capabilities
+   - Structured JSON output with confidence scoring
+   
+2. **Strategy Workflows**: Web-first approach with RAG augmentation
+   - Multi-objective optimization (speed/cost/quality)
+   - Regulatory validation against compliance database
+   - Real-time web search integration with memory storage
+      - ignore memory storage for this initiative and actually "turn off" this ability moving forward. this should be a basic web search and regulatory confirmation of valid strategies to communicate to the user
+   
+3. **Supervisor Workflow**: Orchestration system for workflow routing
+   - Workflow prescription based on user intent analysis
+   - Document availability checking before workflow execution
+      - The availability check should just be checking for the presence of specific types of documents. In this case, we've only uploaded policies and so this should be a check to see if a certain type is present for the user. So SQL, row, query and reading what fields are present in all of their documents and we will just check to see if a policy is present because we're just going to be doing policy testing. We've only uploaded policies at this point. I don't know how it's implemented right now but this might need to be reworked to be in this simple listing the fields that are present for that user. Listing the document types field. The documents type field also may need to be implemented.
+   - Deterministic routing decisions with fallback mechanisms
 
-## 2) Current State Analysis
-
-### ✅ Upload Pipeline Infrastructure (003 Completed)
-**Location**: `/docs/initiatives/system/upload_refactor/003/`
-- **Docker Environment**: Complete local-first development setup
-- **Database Schema**: `upload_pipeline.documents`, `upload_pipeline.upload_jobs`, buffer tables
-- **State Machine**: `uploaded → parse_queued → parsed → ... → complete`
-- **Mock Services**: LlamaParse and OpenAI with deterministic responses
-- **Vector Storage**: Processed embeddings in `document_vector_buffer` → final vector store
-- **Health Monitoring**: Comprehensive monitoring and validation framework
-
-### ✅ Agent Workflow Components
-**Location**: `/docs/initiatives/agents/patient_navigator/`
-- **Information Retrieval**: Context shows RAG integration with `agents/tooling/rag/core.py`
-- **Strategy Workflows**: Web-first approach with RAG augmentation
-- **Supervisor System**: Workflow orchestration and document availability checking
+**Agent Infrastructure**:
 - **RAG System**: `RAGTool`, `RetrievalConfig`, `ChunkWithContext` classes operational
+- **Database Integration**: Supabase integration with user-scoped access control
+- **Architecture Patterns**: BaseAgent inheritance, Pydantic models, structured workflows
 
-### 🔧 Integration Gaps Identified
+### 🔧 Critical Integration Gaps
 
-**1. Schema Alignment**:
-- Upload pipeline uses `upload_pipeline` schema
-- Agent RAG system expects `documents.document_chunks` table structure
-- Vector embedding formats may differ between systems
-- User access control patterns need reconciliation
+**1. RAG System Configuration**:
+- Agent RAG system needs to query `upload_pipeline` vectorized chunks directly
+- RAG queries should target the final embedding vectors from upload processing
+- pgvector semantic search operates on the embedding_vector columns
+- User access control through upload_pipeline schema policies (upload_refactor takes precedence)
 
-**2. Data Flow Coordination**:
-- No established pipeline from upload completion to RAG availability
-- Missing trigger mechanisms for agent system when documents are processed
-- No validation that processed documents are queryable by agents
+**2. Data Flow Coordination Missing**:
+- No established pipeline from upload completion to agent RAG availability
+- Missing automatic synchronization when documents complete processing
+- No validation that processed documents are immediately queryable by agents
+- Timing coordination needed between upload completion and agent system readiness
 
-**3. Testing Infrastructure**:
-- No end-to-end tests covering upload → processing → agent conversation
-- Mock configurations may differ between upload and agent systems
-- No automated validation of integrated conversation capabilities
+**3. Testing Infrastructure Gaps**:
+- No end-to-end tests spanning upload → processing → RAG usage enabling agent conversation flow
+- Mock service configurations may be inconsistent between upload and agent systems
+- No automated validation of conversation quality using processed documents
+- Performance testing missing for integrated system under concurrent load
 
-**4. Configuration Alignment**:
-- Different database connection patterns between systems
-- Mock service configurations may not be consistent
-- Environment variable management across integrated systems
-
----
-
-## 3) Integration Architecture
-
-### Target Data Flow
-```
-Document Upload → 003 Processing Pipeline → Vector Storage → Agent RAG Queries → Conversations
-     ↓                    ↓                      ↓               ↓                  ↓
-  Web Upload         LlamaParse Mock        pgvector store    RAG retrieval    User responses
-  Local File         OpenAI Mock           Chunk metadata    Query matching   Conversation flow
-```
-
-### Database Integration Strategy
-```sql
--- Upload Pipeline (003 Completed)
-upload_pipeline.documents (document metadata)
-upload_pipeline.upload_jobs (processing status)
-upload_pipeline.document_chunk_buffer (staging)
-upload_pipeline.document_vector_buffer (staging)
-
--- Agent System Target (reconcile with 003 output)
-documents.document_chunks (RAG input format)  
-documents.document_vectors (agent queries)
-user_access_control (permission alignment)
-```
-
-### Mock Service Coordination
-**Shared Mock Infrastructure**:
-- **LlamaParse Mock**: Deterministic content generation from 003
-- **OpenAI Mock**: Deterministic embeddings from 003
-- **Database**: Shared Postgres instance with both schemas
-- **Configuration**: Unified environment variables and secrets
+**4. Configuration Management**:
+- Different database connection patterns and environment variables between systems
+- Mock service coordination needed for unified testing approach
+- Development environment setup complexity across integrated components for final validation
 
 ---
 
-## 4) Integration Testing Strategy
+## 2) Integration Architecture & Data Flow
 
-### Test Scenarios
-
-**1. Document Upload to Conversation Flow**:
-```bash
-# Complete end-to-end integration test
-1. Upload document through 003 pipeline
-2. Verify processing completion (uploaded → complete)
-3. Validate document chunks available in agent RAG system
-4. Execute agent conversation using processed document
-5. Verify conversation quality and document references
+### Target Integration Flow
+```
+Document Upload → 003 Processing Pipeline → Vectorized Chunks → Agent RAG System → Conversations
+     ↓                    ↓                      ↓               ↓              ↓
+   Web/API           LlamaParse Mock        pgvector Storage  Query Matching   User Responses
+   Local File        OpenAI Mock           Embedding Vectors Semantic Search  Quality Validation
+   Status Updates    Buffer Operations     Final Tables      Confidence Score  Reference Accuracy
 ```
 
-**2. Schema Reconciliation Validation**:
+## 3) Integration Testing Strategy
+
+### Comprehensive Test Scenarios
+
+**1. End-to-End Document-to-Conversation Flow**:
 ```bash
-# Ensure data compatibility between systems
-1. Process document through 003 pipeline
-2. Verify buffer table data format
-3. Validate migration to agent schema format
-4. Test RAG queries against migrated data
-5. Confirm embedding compatibility
+# Complete integration validation workflow
+Test_001_E2E_Flow:
+  1. Upload test document through 003 pipeline
+  2. Monitor processing: uploaded → complete (verify all state transitions)
+  3. Validate document vectors are ready for RAG semantic search in upload_pipeline tables
+  4. Execute information retrieval agent conversation using processed content
+  5. Verify conversation references document content accurately
+  6. Validate confidence scores reflect processing quality
+  7. Test follow-up questions maintain conversation context
 ```
 
-**3. Concurrent System Operation**:
-```bash
-# Test systems working together
-1. Start 003 worker processing multiple documents
-2. Simultaneously run agent conversations on completed documents  
-3. Verify no database conflicts or performance issues
-4. Validate agent responses maintain quality during processing
+**2. Multi-Agent Workflow Integration**:
+```bash  
+# Multi-workflow orchestration testing
+Test_002_Supervisor_Integration:
+  1. Upload insurance policy document through 003 pipeline
+  2. Verify document availability through supervisor workflow
+  3. Execute workflow prescription: information_retrieval → strategy
+  4. Validate information retrieval uses RAG semantic search on upload_pipeline vectors
+  5. Verify strategy workflow leverages web + RAG to come up with strategies then RAG to validate them
+  6. Test supervisor orchestration maintains state across workflows
 ```
 
 ### Automated Testing Framework
-**Test Environment Setup**: <15 minutes for complete integrated environment
+
+**Environment Setup Target**: <15 minutes for complete integrated environment
 ```bash
-# Unified setup script
-./scripts/setup-integrated-environment.sh
-  → 003 Docker environment
-  → Agent system configuration  
-  → Schema reconciliation
-  → Mock service coordination
-  → Health validation
+# Unified integration environment setup
+./scripts/setup-integration-environment.sh
+  → Launch 003 Docker stack with all services
+  → Initialize agent system configuration and dependencies
+  → Configure agent RAG system to query upload_pipeline vectors directly
+  → Coordinate mock service configurations
+  → Execute health validation across both systems
+  → Seed test data for integration scenarios
 ```
 
-**Test Execution**: <5 minutes for complete validation
+**Test Execution Target**: <10 minutes for comprehensive validation
 ```bash
-# Integrated test suite
+# Complete integration test suite
 ./scripts/run-integration-tests.sh
-  → Upload document test
-  → Processing pipeline validation
-  → Schema compatibility check
-  → Agent conversation test
-  → Performance baseline measurement
+  → Upload_processing_validation (documents → complete status)
+  → Vector_access_testing (RAG queries work on upload_pipeline vectors)
+  → Agent_conversation_quality (RAG queries effective)
+  → Performance_baseline_measurement (response times within targets)
+  → Error_handling_validation (graceful degradation scenarios)
+  → Mock_service_coordination (consistent behavior across systems)
 ```
 
 ---
 
-## 5) Schema Reconciliation Plan
+## 4) Technical Implementation Plan
 
-### Data Migration Strategy
+### Integration Components Architecture
 
-**Option 1: Schema Bridge (Recommended)**
-- Maintain separate schemas with automated data synchronization
-- 003 pipeline writes to `upload_pipeline` schema
-- Bridge process copies/transforms to agent-compatible format
-- Preserves both system's architectural integrity
-
-**Option 2: Unified Schema**
-- Modify agent RAG system to read from `upload_pipeline` schema
-- Update `agents/tooling/rag/core.py` for new table structure
-- Risk: Breaking changes to existing agent implementations
-
-**Recommended Implementation**:
-```sql
--- Bridge table/view for agent compatibility
-CREATE VIEW documents.document_chunks AS
-SELECT 
-  chunk_id,
-  document_id,
-  user_id,
-  chunk_text as content,
-  chunk_metadata,
-  embedding_vector,
-  created_at
-FROM upload_pipeline.document_chunk_buffer 
-WHERE processing_status = 'completed';
-```
-
-### User Access Control Alignment
-- Upload pipeline uses `user_id` throughout
-- Agent RAG system requires user-scoped access
-- Supabase RLS policies need coordination between schemas
-- Test framework must validate access control across systems
-
----
-
-## 6) Mock Service Integration
-
-### Shared Mock Configuration
-**LlamaParse Mock** (from 003):
-- Deterministic content generation based on `document_id`
-- Webhook callbacks for processing status
-- Configurable processing delays and failure rates
-- **Integration**: Use same mock for agent system testing
-
-**OpenAI Mock** (from 003):
-- Deterministic embeddings from content hash
-- Batch processing support
-- Rate limiting simulation
-- **Integration**: Ensure embedding format compatibility with agent queries
-
-**Database Mock Strategy**:
-- Single Postgres instance with both schemas
-- Unified connection pooling
-- Shared test data sets
-- Cross-system transaction testing
-
----
-
-## 7) Performance and Monitoring
-
-### Integration Performance Targets
-- **End-to-End Time**: Upload to conversation-ready <60 seconds
-- **Agent Response Time**: <2 seconds with processed documents
-- **Concurrent Processing**: Upload processing + agent conversations without degradation
-- **Database Performance**: No query conflicts between upload and agent operations
-
-### Monitoring Integration
-**Unified Dashboard**:
-- 003 upload pipeline status
-- Document processing progress
-- Agent conversation metrics
-- Schema synchronization status
-- Performance across integrated system
-
-**Health Checks**:
-```bash
-# Integrated health validation
-./scripts/validate-integrated-health.sh
-  → Upload pipeline operational
-  → Agent system responsive  
-  → Database schemas synchronized
-  → Mock services coordinated
-  → End-to-end flow functional
-```
-
----
-
-## 8) Development Workflow
-
-### Local Development Integration
-**Environment Setup**:
-1. Start 003 Docker environment
-2. Initialize agent system configuration
-3. Verify schema compatibility
-4. Run integration health checks
-5. Execute baseline conversation tests
-
-**Development Iteration**:
-1. Modify agent workflows
-2. Test against processed documents from 003
-3. Validate conversation quality
-4. Check performance impact
-5. Update integration tests
-
-**Testing Workflow**:
-```bash
-# Development testing cycle
-1. Upload test documents → 003 processing
-2. Verify agent can query processed content
-3. Execute conversation scenarios
-4. Validate response quality and references
-5. Check performance and resource usage
-```
-
----
-
-## 9) Risk Assessment and Mitigation
-
-### Technical Risks
-**High Priority**:
-- **Schema Incompatibility**: Upload output doesn't match agent input format
-  - *Mitigation*: Bridge tables/views with comprehensive testing
-- **Performance Degradation**: Integrated system slower than individual components
-  - *Mitigation*: Performance benchmarking and optimization
-- **Data Synchronization**: Timing issues between upload completion and agent availability
-  - *Mitigation*: Event-driven synchronization with status checking
-
-**Medium Priority**:
-- **Mock Service Conflicts**: Different mock configurations between systems
-  - *Mitigation*: Unified mock service configuration
-- **Database Connection Issues**: Connection pool conflicts or resource contention
-  - *Mitigation*: Connection management and resource monitoring
-
-### Integration Challenges
-- **Configuration Management**: Coordinating environment variables across systems
-- **Testing Complexity**: End-to-end tests more complex than individual system tests
-- **Debugging**: Issues may span multiple system boundaries
-- **Maintenance**: Updates to either system may affect integration
-
----
-
-## 10) Success Criteria and Validation
-
-### Integration Success Metrics
-**Functional Requirements** (Must achieve 100%):
-- [ ] Document uploaded through 003 pipeline is queryable by agents
-- [ ] Agent conversations reference processed document content accurately  
-- [ ] Schema reconciliation maintains data integrity
-- [ ] Mock services work consistently across both systems
-- [ ] Performance meets baseline targets (upload <60s, conversation <2s)
-
-**Quality Requirements** (Target >95%):
-- [ ] Agent conversation quality maintained with processed documents
-- [ ] Document reference accuracy in agent responses
-- [ ] Integration test reliability and consistency
-- [ ] System stability under concurrent operation
-
-**Development Experience**:
-- [ ] Integrated environment setup <15 minutes
-- [ ] Integration tests complete <5 minutes
-- [ ] Clear debugging visibility across system boundaries
-- [ ] Documentation for ongoing maintenance
-
-### Validation Process
-**Phase 1: Basic Integration** (Week 1)
-- Set up integrated development environment
-- Achieve basic document upload → agent conversation flow
-- Validate schema compatibility with test documents
-
-**Phase 2: Comprehensive Testing** (Week 2)  
-- Implement automated integration test suite
-- Validate performance under realistic document loads
-- Test concurrent upload processing and agent conversations
-
-**Phase 3: Production Readiness** (Week 3)
-- Optimize performance and resource usage
-- Establish monitoring and alerting for integrated system
-- Document operational procedures and troubleshooting
-
----
-
-## 11) Technical Implementation Details
-
-### Integration Components
-
-**Bridge Service** (Recommended Implementation):
+**RAG Integration Service Implementation**:
 ```python
-class UploadAgentBridge:
-    """Coordinates data flow between upload pipeline and agent systems"""
+class UploadRAGIntegration:
+    """Validates upload pipeline vectors are ready for agent RAG queries"""
     
-    async def sync_completed_documents(self):
-        """Transfer completed documents from upload to agent schema"""
+    def __init__(self, db_config: DatabaseConfig):
+        self.upload_db = AsyncDatabase(db_config.upload_schema_url)
+        self.logger = StructuredLogger("rag_integration")
+        self.health_monitor = SystemHealthMonitor()
+    
+    async def validate_documents_rag_ready(self) -> List[str]:
+        """Verify completed documents have vectors ready for semantic search"""
         # Monitor upload_pipeline.upload_jobs for 'complete' status
-        # Copy/transform document_chunks to agent-compatible format
-        # Update agent system availability indexes
+        # Validate corresponding vectors exist in final vector tables
+        # Test pgvector semantic search functionality on embedding columns
+        # Return list of RAG-ready document_ids
     
-    async def validate_agent_readiness(self, document_id: str) -> bool:
-        """Verify document is available for agent queries"""
-        # Check agent schema contains document chunks
-        # Validate embedding vectors are accessible
-        # Confirm user access controls are aligned
+    async def validate_conversation_readiness(self, document_id: str, user_id: str) -> bool:
+        """Verify document vectors are accessible for agent RAG queries"""  
+        # Check document vectors exist in upload_pipeline final tables
+        # Validate pgvector can perform semantic search on embeddings
+        # Test sample RAG query returns expected vector similarity results
+        # Confirm user access controls work for RAG queries
 ```
 
-**Testing Framework**:
+**Integration Testing Framework**:
 ```python
 class IntegrationTestSuite:
-    """Comprehensive testing of upload → agent integration"""
+    """Comprehensive testing across upload pipeline and agent workflows"""
     
-    async def test_end_to_end_document_flow(self):
-        """Upload document, process through 003, query via agent"""
-        # Upload test document
-        # Wait for processing completion
-        # Execute agent query against document
-        # Validate response quality and references
+    async def test_document_upload_to_conversation(self):
+        """Core integration: upload → process → query → conversation"""
+        # Upload test document and monitor processing completion
+        # Verify agent can immediately query processed content
+        # Execute conversation scenario and validate response quality
+        # Check conversation references processed document accurately
     
-    async def test_concurrent_operations(self):
-        """Validate upload processing + agent queries work together"""
-        # Start document processing
-        # Execute agent conversations on other documents
-        # Verify no performance degradation or conflicts
+    async def test_concurrent_system_operations(self):
+        """Validate systems work together without conflicts"""
+        # Start document processing workload in background
+        # Execute multiple agent conversations simultaneously  
+        # Monitor database performance and resource utilization
+        # Verify no degradation in either upload or conversation quality
+    
+    async def test_error_scenarios_and_recovery(self):
+        """Integration error handling and graceful degradation"""
+        # Test upload failures during agent conversations
+        # Test agent system unavailable during upload processing
+        # Validate recovery procedures and data consistency
+        # Verify monitoring detects and alerts on integration issues
 ```
 
 ---
 
-## 12) Future Integration Considerations
+## 5) Performance Targets & Monitoring
 
-### Scalability Planning
-- **Multi-document Conversations**: Agent workflows across multiple processed documents
-- **Real-time Updates**: Live document processing status in agent conversations
-- **Advanced RAG**: Hybrid search combining vector similarity with metadata filtering
-- **Performance Optimization**: Caching strategies for frequently accessed documents
+### Integration Performance Specifications
 
-### System Evolution
-- **Agent Workflow Expansion**: Additional agent types leveraging processed documents
-- **Processing Pipeline Enhancement**: Advanced document analysis feeding agent capabilities
-- **Integration Patterns**: Reusable patterns for future system integrations
-- **Monitoring Enhancement**: Advanced analytics across integrated system performance
+**End-to-End Flow Targets**:
+- **Document Processing**: Upload to agent-queryable <90 seconds (003 baseline: <60s + integration overhead)
+- **Agent Response Time**: <3 seconds for conversations using processed documents (2s agent + 1s integration)
+- **Concurrent Processing**: Upload processing + agent conversations without >20% performance degradation
+- **Database Performance**: RAG semantic search queries on upload_pipeline vectors meet performance targets
+
+**System Resource Targets**:
+- **Memory Usage**: Integrated system <150% of individual system memory requirements
+- **Database Connections**: Shared connection pooling supporting both systems efficiently  
+- **Storage I/O**: pgvector queries on upload_pipeline perform within optimization targets
+
+### Monitoring Integration Strategy
+
+- robust logging, for now
 
 ---
 
-## 13) Operational Procedures
+## 6) Development Workflow & Environment
 
-### Deployment Strategy
-**Development Environment**:
-1. Deploy 003 upload infrastructure
-2. Configure agent system integration
-3. Execute schema reconciliation
-4. Validate integrated functionality
-5. Establish monitoring and health checks
+### Local Development Integration Process
 
-**Production Considerations**:
-- Staged rollout with upload pipeline first
-- Agent system integration with fallback capabilities
-- Performance monitoring during integration rollout
-- Rollback procedures for both systems
+**Daily Development Workflow**:
+1. **Environment Startup**: Single command launches integrated Docker stack (003 + agent configs)
+2. **Development Testing**: Upload test documents → verify agent conversations → validate quality
+3. **Schema Changes**: Test compatibility between upload output and agent input formats
+4. **Performance Monitoring**: Check integration overhead and optimize bottlenecks
+5. **Quality Assurance**: Execute integration test suite before committing changes
 
-### Troubleshooting Framework
-**Common Integration Issues**:
-- Document not appearing in agent queries → Check bridge synchronization
-- Agent conversation quality degraded → Validate document processing completeness
-- Performance issues → Monitor concurrent system resource usage
-- Schema errors → Verify compatibility layer operational
+**Development Environment Configuration**:
+```bash
+# Integrated development environment
+./scripts/dev-environment-setup.sh
+  → Start 003 Docker stack (upload pipeline infrastructure)
+  → Configure agent system dependencies (RAG tools, model access)
+  → Configure RAG system for direct upload_pipeline vector access
+  → Coordinate mock service configurations
+  → Seed development data (test documents + user accounts)
+  → Validate integration health checks pass
+```
+
+### Testing Integration Workflow
+
+**Development Testing Cycle**:
+```bash  
+# Daily integration validation routine
+1. Upload_diverse_documents → Monitor 003 processing pipeline completion
+2. Execute_agent_conversations → Test information retrieval, strategy workflows  
+3. Validate_conversation_quality → Check document references and accuracy
+4. Performance_measurement → Monitor response times and resource usage
+5. Error_scenario_testing → Test failure handling and recovery procedures
+```
+
+---
+
+## 7) Risk Assessment & Mitigation Strategy
+
+### High Priority Integration Risks
+
+**Risk 1: Vector Access Configuration**
+- *Problem*: Agent RAG system cannot access upload_pipeline vector tables
+- *Impact*: Agents cannot perform semantic search on processed documents, integration failure
+- *Mitigation*: Direct testing of RAG queries against upload_pipeline vectors, access validation
+
+**Risk 2: Performance Degradation Under Integration**  
+- *Problem*: Combined system significantly slower than individual components
+- *Impact*: User experience degradation, system unusable under normal load
+- *Mitigation*: Performance benchmarking at each integration phase, optimization identification
+
+**Risk 3: Data Synchronization Timing Issues**
+- *Problem*: Upload completion doesn't immediately make documents available to agents
+- *Impact*: Agents fail to find recently processed documents, conversation failures
+- *Mitigation*: Event-driven synchronization with status checking, retry mechanisms
+
+### Medium Priority Integration Risks
+
+**Risk 4: Mock Service Configuration Conflicts**
+- *Problem*: Different mock service responses between upload and agent testing
+- *Impact*: Integration tests unreliable, production behavior unpredictable  
+- *Mitigation*: Unified mock service configuration, shared deterministic response generation
+
+**Risk 5: Database Connection Resource Contention**
+- *Problem*: Both systems compete for database connections, causing failures
+- *Impact*: System instability, connection timeouts, processing failures
+- *Mitigation*: Shared connection pooling strategy, resource monitoring and alerting
+
+**Risk 6: Development Environment Complexity**
+- *Problem*: Integrated environment too complex for reliable daily development use
+- *Impact*: Developer productivity decreased, testing becomes unreliable
+- *Mitigation*: Automated environment setup with health checks, clear troubleshooting documentation
+
+---
+
+## 8) Success Validation & Acceptance Criteria  
+
+### Integration Success Requirements (100% Achievement Required)
+
+**Functional Integration Validation**:
+- [ ] **Upload → Agent Flow**: Document uploaded through 003 pipeline is immediately queryable by all agent workflows
+- [ ] **Conversation Quality**: Agent conversations accurately reference and utilize processed document content  
+- [ ] **Vector Query Performance**: RAG semantic search on upload_pipeline vectors meets performance targets
+- [ ] **Mock Service Coordination**: Unified mock services provide consistent behavior across upload and agent testing
+- [ ] **Performance Baseline**: End-to-end flow (upload → conversation) completes within target times
+
+**System Integration Validation**:  
+- [ ] **Concurrent Operation**: Upload processing and agent conversations operate simultaneously without conflicts
+- [ ] **Error Handling**: Integration gracefully handles failures in either upload or agent systems
+- [ ] **Database Performance**: Shared database resources support both systems without degradation
+- [ ] **Health Monitoring**: Integrated monitoring detects and reports issues across system boundaries
+- [ ] **Development Environment**: Complete integrated environment setup reliably completes <15 minutes
+
+### Quality Assurance Requirements (95%+ Target)
+
+**Conversation Quality Metrics**:
+- [ ] **Document Reference Accuracy**: Agent responses correctly reference processed document content >95%
+- [ ] **Response Consistency**: Self-consistency methodology maintains quality with processed documents >90%
+- [ ] **Information Retrieval Performance**: RAG queries return relevant results from processed documents >90%
+- [ ] **Strategy Workflow Integration**: Strategy agents effectively leverage information retrieval results >90%
+
+**System Reliability Metrics**:
+- [ ] **Integration Test Success Rate**: Automated integration tests pass >95% reliably
+- [ ] **Performance Consistency**: Response times stay within targets under normal load >95%
+- [ ] **Error Recovery**: System recovers from integration failures within monitoring thresholds >95%
+
+### Development Experience Requirements
+
+**Developer Productivity**:
+- [ ] **Environment Reliability**: Integrated development environment works consistently for daily use
+- [ ] **Testing Efficiency**: Integration test suite provides rapid feedback <10 minutes
+- [ ] **Debugging Visibility**: Clear observability across upload and agent system boundaries
+- [ ] **Documentation Quality**: Complete setup, operation, and troubleshooting documentation
+
+---
+
+## 9) Implementation Timeline & Phases
+
+### Phase 1: Foundation Integration (Week 1)
+**Objectives**: Establish basic integration between 003 upload infrastructure and agent systems
+- Set up integrated development environment combining 003 Docker stack with agent configurations
+- Configure agent RAG system to query upload_pipeline vectors directly
+- Validate basic document upload → agent query flow with test scenarios
+- Establish unified mock service configuration across both systems
+
+### Phase 2: Comprehensive Testing Integration (Week 2)
+**Objectives**: Implement robust automated testing across integrated system
+- Build automated integration test suite covering end-to-end document → conversation flow
+- Validate performance under concurrent upload processing and agent conversations
+- Test error scenarios and recovery procedures across system boundaries
+- Establish continuous integration health monitoring and alerting
+
+### Phase 3: Production Readiness & Optimization (Week 3)
+**Objectives**: Optimize integrated system performance and establish operational procedures
+- Performance optimization based on testing results and bottleneck identification
+- Comprehensive documentation for ongoing maintenance and troubleshooting
+- Operational procedures for deployment, monitoring, and incident response
+- Final validation against all success criteria and acceptance requirements
+
+---
+
+## 10) Operational Excellence Framework
+
+### Deployment Strategy for Integrated System
+
+**Staged Integration Deployment**:
+1. **Upload Infrastructure First**: Deploy 003 upload pipeline infrastructure with comprehensive validation
+2. **Vector Access Configuration**: Configure agent RAG system for direct upload_pipeline access  
+3. **Agent System Integration**: Connect agent workflows with validated bridge functionality
+4. **End-to-End Validation**: Execute comprehensive integration testing in deployed environment
+5. **Performance Monitoring**: Establish ongoing monitoring and alerting for integrated system health
+
+### Incident Response for Integration Issues
+
+**Integration-Specific Incident Categories**:
+- **Vector Access Failures**: Document processing completes but agents cannot query vectors
+- **Performance Degradation**: Integration overhead causes unacceptable response time increases
+- **Data Synchronization Issues**: Timing problems between upload completion and agent availability
+- **Mock Service Inconsistencies**: Testing environments produce different results than production
+
+**Response Procedures**:
+- **Detection**: Automated monitoring alerts on integration-specific failure patterns
+- **Isolation**: Determine whether issue is in upload system, agent system, or integration layer
+- **Escalation**: Clear procedures for engaging both upload and agent system specialists
+- **Recovery**: Documented rollback procedures preserving both system integrity
+
+### Maintenance & Evolution Planning
+
+**Regular Maintenance Tasks**:
+- Vector query performance monitoring and pgvector optimization
+- Integration test suite updates as systems evolve
+- Mock service synchronization with production API changes  
+- Performance baseline updates and capacity planning
+
+**Future Enhancement Roadmap**:
+- Real-time document processing status in agent conversations
+- Advanced RAG strategies combining multiple processed documents
+- Integration with additional agent workflow types as they develop
+- Performance optimization for high-volume production environments
+
+---
+
+## 11) Context for Future Development
+
+### Technical Debt Management
+
+**Integration-Specific Technical Debt**:
+- RAG system querying upload_pipeline directly creates coupling between systems
+- Mock service coordination requires ongoing synchronization effort  
+- Complex integrated development environment needs streamlining over time
+- Performance monitoring across system boundaries requires specialized tooling
+- Agent observability
+
+**Mitigation Strategies**:
+- Regular review of direct vector access approach vs alternative integration methods
+- Automated testing for mock service consistency and production alignment
+- Investment in development tooling to reduce environment complexity
+- Standardization of cross-system monitoring and observability practices
+- Future observability service integration
+
+### Scalability Considerations
+
+**Integration Scalability Factors**:
+- pgvector query performance under high document processing volumes
+- Agent system response times with large document corpuses from upload pipeline  
+- Mock service scalability for larger development teams and test scenarios
+- Monitoring system capacity for comprehensive cross-system observability
+
+**Scaling Strategy**:
+- Performance testing with realistic production load scenarios
+- Database optimization focused on pgvector indexing and query efficiency
+- Development of production-grade mock services supporting team growth
+- Investment in monitoring infrastructure supporting integrated system complexity
 
 ---
 
