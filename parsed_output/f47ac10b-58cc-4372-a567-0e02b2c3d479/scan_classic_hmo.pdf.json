@@ -1,0 +1,34 @@
+# Test Insurance Document
+
+This is a test insurance document containing information about a Classic HMO plan.
+
+## Coverage Details
+
+The Classic HMO provides comprehensive coverage including:
+
+- Preventive care services at 100% coverage
+- Specialist visits with copay
+- Emergency room services
+- Prescription drug coverage
+- Mental health and substance abuse services
+
+## Network Information
+
+This plan uses a network of healthcare providers. Members must choose a Primary Care Provider (PCP) and get referrals for specialist care.
+
+## Benefits Summary
+
+| Service Type | Coverage |
+|-------------|----------|
+| PCP Visit | $20 copay |
+| Specialist | $40 copay |
+| Emergency Room | $150 copay |
+| Urgent Care | $30 copay |
+
+## Contact Information
+
+For questions about your coverage, please call customer service at 1-800-EXAMPLE.
+
+## Important Notes
+
+This is a test document created for pipeline validation purposes. The content is simulated and does not represent actual insurance coverage.
