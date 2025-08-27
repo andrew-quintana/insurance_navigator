@@ -49,6 +49,9 @@ class WorkerConfig:
     # Logging configuration
     log_level: str = "INFO"
     
+    # Pipeline configuration
+    terminal_stage: str = "embedded"  # Stage where processing completes and state becomes 'done'
+    
     # Local testing configuration
     use_mock_storage: bool = True  # Default to mock storage for local development
     
@@ -90,6 +93,9 @@ class WorkerConfig:
             # Logging
             log_level=os.getenv("LOG_LEVEL", "INFO"),
             
+            # Pipeline
+            terminal_stage=os.getenv("TERMINAL_STAGE", "embedded"),
+            
             # Local testing
             use_mock_storage=os.getenv("USE_MOCK_STORAGE", "true").lower() == "true"
         )
@@ -115,6 +121,7 @@ class WorkerConfig:
             "failure_threshold": self.failure_threshold,
             "recovery_timeout": self.recovery_timeout,
             "log_level": self.log_level,
+            "terminal_stage": self.terminal_stage,
             "use_mock_storage": self.use_mock_storage
         }
     

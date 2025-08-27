@@ -233,10 +233,10 @@ class BaseWorker:
                                uj.payload, uj.retry_count, uj.last_error, uj.created_at
                         FROM upload_pipeline.upload_jobs uj
                         JOIN upload_pipeline.documents d ON uj.document_id = d.document_id
-                        WHERE uj.stage IN (
-                            'job_validated', 'parsing', 'parsed', 'parse_validated', 'chunking', 'chunks_buffered',
+                        WHERE (uj.stage IN (
+                            'job_validated', 'parsing', 'parsed', 'parse_validated', 'chunking', 'chunked',
                             'embedding', 'embeddings_buffered'
-                        )
+                        ) OR uj.stage = $1)
                         AND uj.state IN ('queued', 'working', 'retryable')
                         AND (
                             uj.last_error IS NULL 
@@ -247,7 +247,7 @@ class BaseWorker:
                         LIMIT 1
                     )
                     SELECT * FROM next_job
-                """)
+                """, self.config.terminal_stage)
                 
                 self.logger.info(f"🔍 Query executed, result: {job}")
                 
@@ -295,12 +295,12 @@ class BaseWorker:
                 await self._validate_parsed(job, correlation_id)
             elif status == "parse_validated":
                 await self._process_chunks(job, correlation_id)
-            elif status == "chunks_buffered":
+            elif status == "chunked":
                 await self._queue_embeddings(job, correlation_id)
             elif status in ["embedding", "embeddings_buffered"]:
                 await self._process_embeddings(job, correlation_id)
-            elif status == "embedded":
-                await self._finalize_job(job, correlation_id)
+            elif status == self.config.terminal_stage:
+                await self._finalize_terminal_stage(job, correlation_id)
             else:
                 raise ValueError(f"Unexpected job stage: {status}")
             
@@ -584,13 +584,13 @@ class BaseWorker:
                 
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
-                    SET stage = 'chunks_buffered', updated_at = now()
+                    SET stage = 'chunked', state = 'queued', updated_at = now()
                     WHERE job_id = $1
                 """, job_id)
                 
                 self.logger.log_state_transition(
                     from_status="parse_validated",
-                    to_status="chunks_buffered",
+                    to_status="chunked",
                     job_id=str(job_id),
                     correlation_id=correlation_id
                 )
@@ -633,7 +633,7 @@ class BaseWorker:
                 """, job_id)
                 
                 self.logger.log_state_transition(
-                    from_status="chunks_buffered",
+                    from_status="chunked",
                     to_status="embedding",
                     job_id=str(job_id),
                     correlation_id=correlation_id
@@ -732,13 +732,13 @@ class BaseWorker:
                 
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
-                    SET stage = 'embedded', updated_at = now()
+                    SET stage = $2, state = 'queued', updated_at = now()
                     WHERE job_id = $1
-                """, job_id)
+                """, job_id, self.config.terminal_stage)
                 
                 self.logger.log_state_transition(
                     from_status="embedding",
-                    to_status="embedded",
+                    to_status=self.config.terminal_stage,
                     job_id=str(job_id),
                     correlation_id=correlation_id
                 )
@@ -781,21 +781,29 @@ class BaseWorker:
             )
             raise
     
-    async def _finalize_job(self, job: Dict[str, Any], correlation_id: str):
-        """Finalize job processing"""
+    async def _finalize_terminal_stage(self, job: Dict[str, Any], correlation_id: str):
+        """Finalize job when it reaches the terminal stage"""
         job_id = job["job_id"]
         
         try:
             async with self.db.get_db_connection() as conn:
+                # Update job state to 'done' when at terminal stage
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
-                    SET stage = 'embedded', updated_at = now()
-                    WHERE job_id = $1
+                    SET state = 'done', updated_at = now()
+                    WHERE job_id = $1 AND stage = $2
+                """, job_id, self.config.terminal_stage)
+                
+                # Also update document processing status to completed
+                await conn.execute("""
+                    UPDATE upload_pipeline.documents
+                    SET processing_status = 'completed', updated_at = now()
+                    WHERE document_id = (SELECT document_id FROM upload_pipeline.upload_jobs WHERE job_id = $1)
                 """, job_id)
                 
                 self.logger.log_state_transition(
-                    from_status="embedded",
-                    to_status="embedded",
+                    from_status=self.config.terminal_stage,
+                    to_status=f"{self.config.terminal_stage}:done",
                     job_id=str(job_id),
                     correlation_id=correlation_id
                 )
@@ -805,12 +813,14 @@ class BaseWorker:
                     event_code="JOB_COMPLETED",
                     severity="info",
                     job_id=str(job_id),
+                    terminal_stage=self.config.terminal_stage,
                     correlation_id=correlation_id
                 )
                 
                 self.logger.info(
-                    "Job finalized successfully",
+                    "Job finalized at terminal stage",
                     job_id=str(job_id),
+                    terminal_stage=self.config.terminal_stage,
                     correlation_id=correlation_id
                 )
         
@@ -818,6 +828,7 @@ class BaseWorker:
             self.logger.error(
                 "Job finalization failed",
                 job_id=str(job_id),
+                terminal_stage=self.config.terminal_stage,
                 error=str(e),
                 correlation_id=correlation_id
             )
