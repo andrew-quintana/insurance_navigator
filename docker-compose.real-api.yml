@@ -1,4 +1,8 @@
 
+# Real API Integration Environment
+# This configuration replaces mock services with real LlamaParse and OpenAI APIs
+# for Phase 2 testing and validation
+
 services:
   postgres:
     image: pgvector/pgvector:pg15
@@ -26,19 +30,18 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/accessa_dev
-      LLAMAPARSE_API_URL: http://mock-llamaparse:8001
-      OPENAI_API_URL: http://mock-openai:8002
+      LLAMAPARSE_API_URL: https://api.llamaindex.ai
+      LLAMAPARSE_API_KEY: ${LLAMAPARSE_API_KEY}
+      OPENAI_API_URL: https://api.openai.com/v1
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
       STORAGE_TYPE: local
       LOCAL_STORAGE_PATH: /app/storage
+      ENVIRONMENT: real_api_testing
     volumes:
       - ./mock_storage:/app/storage
       - ./mock_storage:/app/mock_storage
     depends_on:
       postgres:
-        condition: service_healthy
-      mock-llamaparse:
-        condition: service_healthy
-      mock-openai:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -52,19 +55,19 @@ services:
       dockerfile: config/docker/Dockerfile
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/accessa_dev
-      LLAMAPARSE_API_URL: http://mock-llamaparse:8001
-      OPENAI_API_URL: http://mock-openai:8002
+      LLAMAPARSE_API_URL: https://api.llamaindex.ai
+      LLAMAPARSE_API_KEY: ${LLAMAPARSE_API_KEY}
+      OPENAI_API_URL: https://api.openai.com/v1
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       STORAGE_TYPE: local
       LOCAL_STORAGE_PATH: /app/storage
+      ENVIRONMENT: real_api_testing
     volumes:
       - ./mock_storage:/app/storage
       - ./mock_storage:/app/mock_storage
     depends_on:
       postgres:
-        condition: service_healthy
-      mock-llamaparse:
-        condition: service_healthy
-      mock-openai:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
@@ -72,55 +75,23 @@ services:
       timeout: 10s
       retries: 3
 
-  mock-llamaparse:
-    build:
-      context: ./testing/mocks
-      dockerfile: llamaparse.Dockerfile
-    ports:
-      - "8001:8001"
-    environment:
-      MOCK_LLAMAPARSE_DELAY: 2
-      MOCK_LLAMAPARSE_FAILURE_RATE: 0.0
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  mock-openai:
-    build:
-      context: ./testing/mocks
-      dockerfile: openai.Dockerfile
-    ports:
-      - "8002:8002"
-    environment:
-      MOCK_OPENAI_DELAY: 0.5
-      MOCK_OPENAI_FAILURE_RATE: 0.0
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  local-storage:
-    image: alpine:latest
-    volumes:
-      - ./mock_storage:/storage
-    command: ["tail", "-f", "/dev/null"]
+# Mock services removed for real API integration
+# Local storage service removed for real API integration
 
   monitoring:
     build:
-      context: .
-      dockerfile: config/docker/Dockerfile
+      context: ./monitoring
+      dockerfile: Dockerfile
     ports:
-      - "8004:8004"
+      - "8004:3000"
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/accessa_dev
+      ENVIRONMENT: real_api_testing
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -133,13 +104,12 @@ services:
       - "8003:8003"
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/accessa_dev
-      OPENAI_API_URL: http://mock-openai:8002
+      OPENAI_API_URL: https://api.openai.com/v1
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
       UPLOAD_PIPELINE_SCHEMA: upload_pipeline
-      AGENT_ENVIRONMENT: development
+      AGENT_ENVIRONMENT: real_api_testing
     depends_on:
       postgres:
-        condition: service_healthy
-      mock-openai:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
