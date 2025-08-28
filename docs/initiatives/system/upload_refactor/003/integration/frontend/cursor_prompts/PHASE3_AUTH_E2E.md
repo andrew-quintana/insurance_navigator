@@ -1,7 +1,14 @@
-# Phase 3: Authentication E2E Testing - Cursor Implementation Prompt
+# Phase 3: Complete Frontend E2E Testing & User Journey Validation - Cursor Implementation Prompt
 
 ## Context
-You are implementing Phase 3 of frontend integration testing. Phases 1-2 should be complete with unit tests and integration tests passing. This phase implements end-to-end testing using Playwright to validate complete authenticated user journeys across browsers.
+You are implementing Phase 3 of comprehensive frontend integration testing. Phases 1-2 should be complete with unit tests and integration tests passing. This phase implements end-to-end testing using Playwright to validate complete frontend integration scope across browsers.
+
+## Required Reading
+**Before starting, review these documentation files:**
+1. `docs/initiatives/system/upload_refactor/003/integration/frontend/TESTING_SPEC001.md` - Complete E2E testing scope
+2. `docs/initiatives/system/upload_refactor/003/integration/frontend/TODO001.md` - Phase 3 detailed tasks
+3. `docs/initiatives/system/upload_refactor/003/integration/frontend/phase2/PHASE2_HANDOFF.md` - Phase 2 completion status
+4. Review Phase 1-2 deliverables to understand current test infrastructure
 
 ## Prerequisites
 - Phase 1 complete: Authentication unit tests passing
@@ -9,17 +16,26 @@ You are implementing Phase 3 of frontend integration testing. Phases 1-2 should 
 - Mock services running reliably
 - All authentication flows validated at integration level
 
-## Phase 3 Goals
-1. Set up Playwright for cross-browser authentication testing
-2. Implement authentication flow as critical user journey #1
-3. Test complete authenticated upload → chat flow
-4. Validate cross-browser authentication compatibility  
-5. Achieve 100% pass rate on critical authenticated user journeys
+## Phase 3 Goals (Reference: TODO001.md Phase 3)
+1. Set up Playwright for cross-browser testing of complete frontend integration
+2. Implement comprehensive E2E testing covering:
+   - Authentication flow (PRIORITY #1)
+   - Frontend upload components E2E
+   - Chat interface integration E2E
+   - Document state management E2E
+   - Agent conversation quality E2E
+   - Cross-browser compatibility E2E
+   - Responsive design E2E
+   - Performance optimization E2E
+3. Validate complete user journeys across all components
+4. Achieve 100% pass rate on critical user journeys covering complete scope
 
 ## Implementation Tasks
 
-### Task 3.1: Authentication Playwright E2E Setup
-**Priority**: CRITICAL - Foundation for all E2E testing
+### Task 3.1: Complete Frontend Playwright E2E Setup
+**Priority**: CRITICAL - Foundation for comprehensive E2E testing
+
+**Reference**: TODO001.md Section 3.1 for detailed Playwright setup requirements
 
 **Installation & Configuration**:
 ```bash
@@ -146,8 +162,10 @@ export class AuthPage {
 }
 ```
 
-### Task 3.2: Authentication Flow E2E Tests (PRIORITY #1)
-**Priority**: CRITICAL - Foundation for all other features
+### Task 3.2: Complete Frontend Integration E2E Tests
+**Priority**: CRITICAL - All frontend components and user journeys
+
+**Reference**: TODO001.md Section 3.2 for complete E2E testing scope covering all 8 areas
 
 **Test File: `e2e/tests/auth-flow.spec.ts`**
 
@@ -482,15 +500,17 @@ export const setupAuthenticatedSession = async (page: Page) => {
 };
 ```
 
-## Success Criteria
-- [ ] Authentication flow tests pass 100% across all browsers
-- [ ] Upload → chat flow works with authentication
-- [ ] Cross-browser authentication compatibility verified
-- [ ] Protected route access control working
-- [ ] Session persistence and expiry handled correctly
-- [ ] Mobile authentication responsive and functional
-- [ ] Test execution completes in < 20 minutes
-- [ ] No flaky tests (< 2% failure rate)
+## Success Criteria (Reference: TODO001.md Phase 3 Acceptance Criteria)
+- [ ] Authentication flow tests pass 100% across all browsers (PRIORITY #1)
+- [ ] Frontend upload components E2E tests pass across all browsers
+- [ ] Chat interface integration E2E validated with real-time features
+- [ ] Document state management E2E working with status updates
+- [ ] Agent conversation quality E2E validated with RAG accuracy
+- [ ] Cross-browser compatibility verified for complete upload → conversation flow
+- [ ] Responsive design E2E validated on mobile, tablet, and desktop
+- [ ] Performance optimization E2E verified for large files and conversation response
+- [ ] Test execution completes in < 30 minutes for complete scope
+- [ ] No flaky tests (< 2% failure rate) across all test scenarios
 
 ## File Structure Expected
 ```
@@ -513,7 +533,16 @@ e2e/
     └── auth-helpers.ts
 ```
 
+## Phase 3 Documentation Requirements
+**Create these deliverables in `docs/initiatives/system/upload_refactor/003/integration/frontend/phase3/`:**
+1. **PHASE3_COMPLETION_SUMMARY.md** - Summary of all E2E testing implemented
+2. **PHASE3_E2E_TEST_RESULTS.md** - Detailed E2E test results across all browsers and components
+3. **PHASE3_CROSS_BROWSER_REPORT.md** - Cross-browser compatibility findings
+4. **PHASE3_RESPONSIVE_DESIGN_VALIDATION.md** - Mobile, tablet, desktop validation results
+5. **PHASE3_DECISIONS.md** - Technical decisions made during E2E implementation
+6. **PHASE3_HANDOFF.md** - Handoff notes for Phase 4 performance testing
+
 ## Next Phase
-After Phase 3 completion, you'll move to Phase 4: Authentication Performance Testing with load testing and performance metrics collection.
+After Phase 3 completion with proper documentation, you'll move to Phase 4: Frontend Integration Performance Testing with load testing covering the complete frontend scope.
 
 Start with Task 3.1 (Playwright setup) and focus on getting the authentication flow tests working first - they're the foundation for all other E2E tests.

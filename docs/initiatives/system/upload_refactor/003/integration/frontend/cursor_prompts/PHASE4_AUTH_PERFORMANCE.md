@@ -1,7 +1,14 @@
-# Phase 4: Authentication Performance Testing - Cursor Implementation Prompt
+# Phase 4: Frontend Integration Performance Testing & Load Validation - Cursor Implementation Prompt
 
 ## Context
-You are implementing Phase 4 of frontend integration testing. Phases 1-3 should be complete with unit tests, integration tests, and E2E tests all passing. This phase focuses on performance testing with authentication load scenarios and metrics collection.
+You are implementing Phase 4 of comprehensive frontend integration testing. Phases 1-3 should be complete with unit tests, integration tests, and E2E tests all passing. This phase focuses on performance testing covering the complete frontend integration scope.
+
+## Required Reading
+**Before starting, review these documentation files:**
+1. `docs/initiatives/system/upload_refactor/003/integration/frontend/TESTING_SPEC001.md` - Performance testing scope
+2. `docs/initiatives/system/upload_refactor/003/integration/frontend/TODO001.md` - Phase 4 detailed tasks
+3. `docs/initiatives/system/upload_refactor/003/integration/frontend/phase3/PHASE3_HANDOFF.md` - Phase 3 completion status
+4. Review previous phase deliverables to understand current test infrastructure
 
 ## Prerequisites  
 - Phase 1 complete: Authentication unit tests (85%+ coverage)
@@ -9,17 +16,25 @@ You are implementing Phase 4 of frontend integration testing. Phases 1-3 should 
 - Phase 3 complete: Authentication E2E tests (100% pass rate on critical journeys)
 - All authentication flows validated and stable
 
-## Phase 4 Goals
-1. Implement authentication performance metrics collection
-2. Create authenticated load testing scenarios with Artillery.js
-3. Validate performance under concurrent authenticated users
+## Phase 4 Goals (Reference: TODO001.md Phase 4)
+1. Implement comprehensive performance metrics collection covering:
+   - Authentication performance (PRIORITY #1)
+   - Upload component performance with large files
+   - Chat interface response times
+   - Document state management performance
+   - Cross-browser performance validation
+   - Responsive design performance across devices
+2. Create load testing scenarios with Artillery.js for complete scope
+3. Validate performance under concurrent users across all components
 4. Establish performance baselines and regression detection
-5. Ensure authentication performance meets MVP targets
+5. Ensure all frontend components meet MVP performance targets
 
 ## Implementation Tasks
 
-### Task 4.1: Authentication Performance Metrics Implementation
-**Priority**: CRITICAL - Foundation for performance monitoring
+### Task 4.1: Complete Frontend Performance Metrics Implementation
+**Priority**: CRITICAL - Foundation for comprehensive performance monitoring
+
+**Reference**: TODO001.md Section 4.1 for detailed performance metrics requirements across all components
 
 **Files to Create**:
 
@@ -222,8 +237,10 @@ export class FrontendMetricsCollector {
 }
 ```
 
-### Task 4.2: Authenticated Load Testing Implementation
-**Priority**: CRITICAL - Test system under authenticated load
+### Task 4.2: Complete Frontend Load Testing Implementation
+**Priority**: CRITICAL - Test system under load across all components
+
+**Reference**: TODO001.md Section 4.2 for complete load testing scenarios
 
 **Installation**:
 ```bash
@@ -675,15 +692,18 @@ if (current.authResponseTime > baseline.authResponseTime * 1.2) {
 }
 ```
 
-## Success Criteria
-- [ ] Authentication performance metrics collected accurately
-- [ ] Load testing supports 10 concurrent authenticated users
-- [ ] Authentication response time < 1 second (95th percentile)
-- [ ] Session validation < 500ms
-- [ ] Token refresh < 1 second  
-- [ ] Memory usage stable during 2-hour authenticated sessions
-- [ ] Error rate < 1% under load
-- [ ] Performance regression detection working
+## Success Criteria (Reference: TODO001.md Phase 4 Acceptance Criteria)
+- [ ] Performance metrics collected for all frontend components
+- [ ] Authentication performance: response time < 1 second (PRIORITY #1)
+- [ ] Upload performance: large files (50MB) handled efficiently
+- [ ] Chat performance: response times < 5 seconds under load
+- [ ] Document state management: real-time updates < 2 seconds
+- [ ] Cross-browser performance validated across Chrome, Firefox, Safari
+- [ ] Responsive design performance optimized for mobile, tablet, desktop
+- [ ] Load testing supports concurrent users across all features
+- [ ] Memory usage stable during extended sessions across all components
+- [ ] Error rate < 1% under load for complete frontend scope
+- [ ] Performance regression detection working for all components
 - [ ] Baseline metrics established for future comparisons
 
 ## Performance Targets
@@ -718,7 +738,16 @@ ui/lib/performance/
 └── browser-monitor.ts
 ```
 
+## Phase 4 Documentation Requirements
+**Create these deliverables in `docs/initiatives/system/upload_refactor/003/integration/frontend/phase4/`:**
+1. **PHASE4_COMPLETION_SUMMARY.md** - Summary of all performance testing implemented
+2. **PHASE4_PERFORMANCE_BASELINE.md** - Performance baselines for all components
+3. **PHASE4_LOAD_TEST_RESULTS.md** - Detailed load testing results across all scenarios
+4. **PHASE4_PERFORMANCE_OPTIMIZATION.md** - Performance optimization recommendations
+5. **PHASE4_DECISIONS.md** - Technical decisions made during performance testing
+6. **PHASE4_HANDOFF.md** - Handoff notes for Phase 5 production validation
+
 ## Next Phase
-After Phase 4 completion, you'll move to Phase 5: Full Integration Validation with production-like testing environment and final deployment readiness validation.
+After Phase 4 completion with proper documentation, you'll move to Phase 5: Complete Frontend Integration Validation with real backend services covering the complete scope.
 
 Start with Task 4.1 (metrics collection) as it's needed for all other performance testing tasks.

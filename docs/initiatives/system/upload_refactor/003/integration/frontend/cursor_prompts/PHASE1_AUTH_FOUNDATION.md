@@ -1,7 +1,15 @@
-# Phase 1: Authentication Foundation Testing - Cursor Implementation Prompt
+# Phase 1: Frontend Integration Foundation & Unit Testing - Cursor Implementation Prompt
 
 ## Context
-You are implementing Phase 1 of frontend integration testing for an insurance document upload and AI agent chat system. This phase focuses on establishing authentication-first testing infrastructure and unit tests. Authentication is PRIORITY #1 since all other features depend on it.
+You are implementing Phase 1 of comprehensive frontend integration testing for an insurance document upload and AI agent chat system. This phase establishes the complete testing foundation with authentication-first approach.
+
+## Required Reading
+**Before starting, read these documentation files to understand the complete scope:**
+1. `docs/initiatives/system/upload_refactor/003/integration/frontend/TESTING_SPEC001.md` - Complete frontend integration scope
+2. `docs/initiatives/system/upload_refactor/003/integration/frontend/RFC001.md` - Technical architecture
+3. `docs/initiatives/system/upload_refactor/003/integration/frontend/TODO001.md` - Phase 1 implementation tasks
+
+Authentication is PRIORITY #1 since all other features depend on it, but this phase covers the complete frontend integration scope.
 
 ## Current System Overview
 - **Frontend**: Next.js/React UI in `/ui` directory
@@ -11,17 +19,25 @@ You are implementing Phase 1 of frontend integration testing for an insurance do
 - **Key Components**: DocumentUpload, DocumentManager, ChatInterface
 - **API Client**: `/ui/lib/api-client.ts` and `/ui/lib/supabase-client.ts`
 
-## Phase 1 Goals
-1. Set up Jest + React Testing Library with authentication mocks
-2. Create comprehensive authentication component unit tests
-3. Create authenticated API client unit tests
-4. Establish CI/CD pipeline with coverage reporting
-5. Achieve 85%+ code coverage including authentication flows
+## Phase 1 Goals (Reference: TODO001.md Phase 1)
+1. Audit existing unit tests from previous efforts
+2. Set up Jest + React Testing Library with authentication mocks
+3. Create comprehensive unit tests for all frontend components:
+   - Authentication components (PRIORITY #1)
+   - Frontend upload components (DocumentUpload, DocumentManager, DocumentUploadModal)
+   - Chat interface components
+   - Document state management components
+   - Responsive design components
+4. Create authenticated API client unit tests
+5. Establish CI/CD pipeline with coverage reporting
+6. Achieve 85%+ code coverage including complete frontend integration scope
 
 ## Implementation Tasks
 
-### Task 1.1: Authentication Testing Infrastructure Setup
-**Priority**: CRITICAL - This is the foundation for all other tests
+### Task 1.1: Complete Frontend Testing Infrastructure Setup
+**Priority**: CRITICAL - This is the foundation for all frontend integration testing
+
+**Reference**: TODO001.md Section 1.1 for detailed tasks
 
 ```bash
 # Install dependencies
@@ -43,8 +59,10 @@ npm install --save-dev @testing-library/react @testing-library/jest-dom @testing
 - Configure coverage thresholds: 85% lines, 80% branches
 - Include authentication-aware test utilities
 
-### Task 1.2: Authentication Component Unit Tests
-**Priority**: CRITICAL - Authentication must work before other features
+### Task 1.2: Complete Frontend Component Unit Tests
+**Priority**: CRITICAL - All frontend components with authentication-first approach
+
+**Reference**: TODO001.md Section 1.2 for complete component list and requirements
 
 **Components to Test** (in order of priority):
 
@@ -77,8 +95,10 @@ npm install --save-dev @testing-library/react @testing-library/jest-dom @testing
 - Error handling for auth failures
 - User data isolation
 
-### Task 1.3: Authentication API Client Unit Tests  
-**Priority**: CRITICAL - API client handles all auth communications
+### Task 1.3: Complete API Client Unit Tests
+**Priority**: CRITICAL - API client handles all frontend-backend communications
+
+**Reference**: TODO001.md Section 1.3 for detailed API testing requirements
 
 **Files to Test**:
 
@@ -156,17 +176,28 @@ it('should handle authentication errors', async () => {
 });
 ```
 
-## Success Criteria
-- [ ] All authentication tests pass (100% for auth flows)
-- [ ] 85%+ overall code coverage
+## Success Criteria (Reference: TODO001.md Phase 1 Acceptance Criteria)
+- [ ] All unit tests pass including complete frontend integration scope
+- [ ] 85%+ code coverage on all frontend components including auth flows
+- [ ] Upload components tested with various file types and sizes
+- [ ] Chat components tested with document context integration
+- [ ] Responsive design tested across viewport sizes
+- [ ] Cross-browser compatibility validated in unit tests
+- [ ] Authentication errors properly handled and tested
+- [ ] Document state transitions thoroughly tested
 - [ ] CI pipeline runs tests successfully
-- [ ] Authentication mocks work reliably
-- [ ] All components handle auth states correctly
-- [ ] API client includes auth headers properly
-- [ ] Error scenarios covered comprehensively
+- [ ] Tests run in < 60 seconds including complete setup
+
+## Phase 1 Documentation Requirements
+**Create these deliverables in `docs/initiatives/system/upload_refactor/003/integration/frontend/phase1/`:**
+1. **PHASE1_COMPLETION_SUMMARY.md** - Summary of all work completed
+2. **PHASE1_TEST_COVERAGE_REPORT.md** - Detailed coverage analysis
+3. **PHASE1_DECISIONS.md** - Technical decisions made during implementation
+4. **PHASE1_HANDOFF.md** - Handoff notes for Phase 2
+5. **PHASE1_TESTING_RESULTS.md** - Test results and any issues found
 
 ## Next Phase
-After Phase 1 completion, you'll move to Phase 2: Authentication Integration Testing with mock services and full request/response cycle validation.
+After Phase 1 completion with proper documentation, you'll move to Phase 2: Complete Frontend Integration Testing with mock services covering the full scope.
 
 ## File Structure Expected
 ```
