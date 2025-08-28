@@ -36,6 +36,11 @@ After successful local integration testing, the next initiative will be **Cloud 
 ### Tasks
 
 #### 1.1 Authentication Testing Infrastructure Setup (PRIORITY #1)
+- [ ] **Audit existing unit tests** - Check `ui/__tests__/` for existing unit tests from other efforts
+  - Inventory existing component tests (DocumentUpload, Chat, etc.)
+  - Assess current test coverage and authentication integration
+  - Identify gaps in frontend integration scope coverage
+  - Plan to enhance existing tests rather than rewrite where possible
 - [ ] Configure Jest + React Testing Library in ui/ directory with auth mocks
 - [ ] Set up MSW (Mock Service Worker) for authentication API mocking
 - [ ] Create authentication test utilities and custom matchers
@@ -48,38 +53,88 @@ After successful local integration testing, the next initiative will be **Cloud 
 - CI pipeline runs auth tests on every PR
 - Mock authentication service responds reliably
 
-#### 1.2 Authentication Component Unit Testing (PRIORITY #1)
-- [ ] Create unit tests for authentication components
+#### 1.2 Complete Frontend Component Unit Testing
+
+**Note**: Check existing unit tests first - enhance and extend rather than duplicate. Unit tests serve primarily for root cause analysis when integration tests fail, helping identify which specific components are causing failures.
+
+**1.2.1 Authentication Components (PRIORITY #1)**
+- [ ] **Audit existing auth tests** - Check if auth components already have unit tests
+- [ ] Create or enhance unit tests for authentication components
   - Login form validation and submission
   - Registration form validation and error handling
   - Session state management and persistence
   - Authentication redirect logic
   - Password reset flow
-- [ ] Create unit tests for `DocumentUpload.tsx` (Authenticated Context)
-  - Authentication requirement validation
-  - File validation with user context (type, size limits)
-  - Upload progress state management with auth headers
-  - Error state handling including auth errors
-  - User interaction flows requiring authentication
-- [ ] Create unit tests for `DocumentManager.tsx` (Authenticated Context)
+  - Protected route access control
+
+**1.2.2 Frontend Upload Components**
+- [ ] Create unit tests for `DocumentUpload.tsx`
+  - File selection and validation (PDF only, size limits)
+  - Upload initiation with authentication headers
+  - Progress tracking and status updates (0-100%)
+  - Error handling (network, validation, auth failures)
+  - Drag-and-drop functionality
+  - Multiple file handling
+- [ ] Create unit tests for `DocumentManager.tsx`
   - User-specific document list rendering
-  - Status update handling with ownership validation
-  - Document deletion functionality with auth verification
-- [ ] Create unit tests for `DocumentUploadModal.tsx` (Authenticated Context)
-  - Authentication-aware modal behavior
-  - Form validation and submission with auth context
-  - Auth error message display
-- [ ] Create unit tests for `app/chat/page.tsx` (Authenticated Context)
+  - Document status display (queued → processing → complete)
+  - Document deletion with ownership verification
+  - Search and filtering capabilities
+  - Responsive layout adaptation
+- [ ] Create unit tests for `DocumentUploadModal.tsx`
+  - Modal open/close behavior and accessibility
+  - Form validation and submission
+  - Upload progress display within modal
+  - Error message presentation
+  - File preview functionality
+
+**1.2.3 Chat Interface Integration Components**
+- [ ] Create unit tests for `ChatInterface.tsx` or `app/chat/page.tsx`
   - Authentication requirement for chat access
   - Message input and submission with user context
-  - Conversation history rendering for authenticated user
-  - Loading states and auth error handling
+  - Real-time message rendering and updates
+  - Conversation history with document context
+  - Agent response handling and display
+  - Typing indicators and loading states
+- [ ] Create unit tests for chat sub-components
+  - `MessageList.tsx` - Message history rendering
+  - `MessageInput.tsx` - Input validation and submission
+  - `AgentResponse.tsx` - Response formatting and citations
+  - `ConversationState.tsx` - State management
+
+**1.2.4 Document State Management Components**
+- [ ] Create unit tests for document state management
+  - Upload progress state tracking
+  - Processing status synchronization
+  - Real-time status updates via WebSocket/polling
+  - Error state handling and recovery
+  - Status notification components
+
+**1.2.5 Responsive Design Components**
+- [ ] Create unit tests for responsive components
+  - Mobile upload interface adaptations
+  - Desktop chat optimization
+  - Tablet-friendly document management
+  - Navigation and menu components
+  - Touch interaction handling
+
+**1.2.6 Cross-browser Compatibility Testing**
+- [ ] Verify unit tests pass across browsers
+  - Chrome-specific file API handling
+  - Firefox upload behavior
+  - Safari WebSocket connections
+  - Browser storage persistence (localStorage/sessionStorage)
 
 **Acceptance Criteria**:
-- 85%+ code coverage on tested components including auth flows
+- 85%+ code coverage on all frontend components including auth flows
 - All component behaviors tested in authenticated and unauthenticated contexts
+- Upload components tested with various file types and sizes
+- Chat components tested with document context integration
+- Responsive design tested across viewport sizes
+- Cross-browser compatibility validated in unit tests
 - Authentication errors properly handled and tested
-- Tests run in < 30 seconds including auth setup
+- Document state transitions thoroughly tested
+- Tests run in < 60 seconds including complete setup
 
 #### 1.3 Authentication API Client Unit Testing (PRIORITY #1)
 - [ ] Create unit tests for `lib/supabase-client.ts` (PRIORITY #1)
@@ -141,6 +196,12 @@ mock-upload-api:
 mock-agent-api:
   - POST /api/chat -> authenticated agent responses with user context
   - GET /api/conversations -> user-specific conversation history
+  - WebSocket /ws/chat -> real-time chat updates and typing indicators
+
+mock-document-state-api:
+  - WebSocket /ws/upload-progress -> real-time upload progress updates
+  - GET /api/documents/:id/status -> document processing status
+  - POST /api/documents/:id/reprocess -> reprocess failed documents
 ```
 
 **Acceptance Criteria**:
@@ -162,11 +223,18 @@ tests/integration/
 │   ├── environment.ts        // Environment management with auth
 │   ├── auth-helpers.ts       // Authentication setup utilities
 │   ├── test-data.ts         // User and session data seeding
-│   └── api-helpers.ts       // Authenticated API testing utilities
+│   ├── api-helpers.ts       // Authenticated API testing utilities
+│   ├── websocket-helpers.ts // Real-time connection testing
+│   └── responsive-helpers.ts // Viewport and device testing
 ├── scenarios/
 │   ├── auth-flow.test.ts    // Authentication tests (PRIORITY #1)
-│   ├── upload-flow.test.ts  // Authenticated upload integration tests
-│   └── chat-flow.test.ts    // Authenticated chat integration tests
+│   ├── upload-components.test.ts // Upload component integration
+│   ├── chat-integration.test.ts // Chat interface integration
+│   ├── document-state.test.ts   // Document state management
+│   ├── cross-browser.test.ts    // Browser compatibility
+│   ├── responsive-design.test.ts // Mobile/desktop/tablet
+│   ├── performance-optimization.test.ts // Load and memory
+│   └── rag-quality.test.ts      // Agent conversation accuracy
 ```
 
 **Acceptance Criteria**:
@@ -174,7 +242,9 @@ tests/integration/
 - Test data cleanup between test runs
 - Clear test failure reporting and debugging
 
-#### 2.3 Authentication API Integration Testing (PRIORITY #1)
+#### 2.3 Complete Frontend Integration Testing
+
+**2.3.1 Authentication API Integration Testing (PRIORITY #1)**
 - [ ] Implement authentication flow integration tests (PRIORITY #1)
   - User registration with email validation and confirmation
   - User login with credential validation and session creation
@@ -182,22 +252,101 @@ tests/integration/
   - Auth token refresh handling during long operations
   - Password reset flow
   - Authentication error handling (invalid credentials, expired sessions)
-- [ ] Implement authenticated upload flow integration tests
-  - File upload initiation with authentication headers
-  - Progress tracking with user session validation
-  - Processing status updates with ownership verification
-  - Upload completion and user-specific document availability
-- [ ] Implement authenticated chat integration tests
+  - Protected route access validation
+
+**2.3.2 Frontend Upload Components Integration**
+- [ ] Implement DocumentUpload component integration
+  - File selection and drag-drop with API integration
+  - Upload initiation with authentication headers
+  - Progress tracking with real-time updates (WebSocket/polling)
+  - File validation integration with backend constraints
+  - Error handling for network, validation, and auth failures
+- [ ] Implement DocumentManager component integration
+  - User-specific document list retrieval and display
+  - Document status synchronization with backend state
+  - Document deletion with API confirmation
+  - Search and filtering with backend queries
+- [ ] Implement DocumentUploadModal integration
+  - Modal form submission with file upload API
+  - Progress display during upload operations
+  - Error state presentation and recovery options
+
+**2.3.3 Chat Interface Integration**
+- [ ] Implement real-time conversation integration
   - Message sending with user context and authentication
-  - Response receiving with user-specific document context
-  - Conversation history management for authenticated user
-  - Agent context and user document integration
+  - Agent response receiving and display formatting
+  - Conversation history retrieval and pagination
+  - WebSocket connection management for real-time updates
+  - Typing indicators and response loading states
+- [ ] Implement agent workflow integration
+  - Document context passing to agent queries
+  - Multi-document conversation capabilities
+  - Citation and source reference handling
+  - Conversation persistence and retrieval
+
+**2.3.4 Document State Management Integration**
+- [ ] Implement upload progress state integration
+  - Real-time progress updates via WebSocket or polling
+  - Status synchronization (queued → processing → complete)
+  - Error state handling and user notifications
+  - Retry mechanisms for failed uploads
+- [ ] Implement processing status integration
+  - Backend processing state monitoring
+  - Completion notifications and user alerts
+  - Processing error handling and recovery
+
+**2.3.5 Agent Conversation Quality Integration**
+- [ ] Implement RAG retrieval accuracy testing
+  - Document content integration with agent responses
+  - Relevant information extraction validation
+  - Multi-document query handling
+  - Citation accuracy and source verification
+- [ ] Implement conversation context testing
+  - User-specific document access in conversations
+  - Conversation history context preservation
+  - Privacy and data isolation validation
+
+**2.3.6 Cross-browser Compatibility Integration**
+- [ ] Implement browser-specific integration tests
+  - Chrome file API and upload behavior
+  - Firefox WebSocket connection stability
+  - Safari authentication persistence
+  - Browser storage (localStorage/sessionStorage) consistency
+
+**2.3.7 Responsive Design Integration**
+- [ ] Implement mobile device integration
+  - Touch-friendly upload interface
+  - Mobile chat experience optimization
+  - Responsive document management
+- [ ] Implement tablet integration
+  - Hybrid touch/cursor interaction
+  - Optimized layout for tablet viewports
+- [ ] Implement desktop integration
+  - Advanced drag-drop functionality
+  - Multi-window support
+  - Keyboard shortcuts and accessibility
+
+**2.3.8 Performance Optimization Integration**
+- [ ] Implement large file handling
+  - Memory usage during large uploads (up to 50MB)
+  - Network efficiency and resumable uploads
+  - Browser performance during file processing
+- [ ] Implement conversation response optimization
+  - Response time measurement and optimization
+  - Memory usage during extended chat sessions
+  - Network bandwidth optimization for real-time features
 
 **Acceptance Criteria**:
-- 95%+ pass rate on integration test suite including auth flows
-- Tests validate complete authenticated request/response cycles
-- Authentication error scenarios properly tested and handled
-- User data isolation validated across all operations
+- 95%+ pass rate on complete integration test suite including all scopes
+- All frontend upload components integrated and tested with backend APIs
+- Chat interface integration with real-time conversation and document workflows validated
+- Document state management with real-time status updates working
+- Agent conversation quality with RAG retrieval accuracy verified
+- Cross-browser compatibility confirmed for upload → conversation flow
+- Responsive design integration tested on mobile, tablet, and desktop
+- Performance optimization validated for large file handling and conversation response times
+- Authentication flows and user data isolation tested across all features
+- Local integration testing validated against Docker Compose backend stack
 
 ### Phase 2 Deliverables
 - [ ] Mock environment with realistic API responses
@@ -230,7 +379,9 @@ tests/integration/
 - Page objects provide maintainable test structure
 - Test execution completes in < 20 minutes
 
-#### 3.2 Critical Authenticated User Journey Testing
+#### 3.2 Complete Frontend Integration E2E Testing
+
+**3.2.1 Authentication Flow (PRIORITY #1)**
 - [ ] **Authentication Flow (PRIORITY #1)**
   - New user registration with email validation
   - Existing user login with credentials
@@ -238,6 +389,99 @@ tests/integration/
   - Protected route access (upload/chat requires auth)
   - Logout and session cleanup
   - Password reset flow
+  - Authentication error handling (invalid credentials, expired sessions)
+
+**3.2.2 Frontend Upload Components E2E**
+- [ ] **DocumentUpload Component Journey**
+  - Authenticated user selects files via drag-drop or file picker
+  - File validation (PDF only, size limits) with user feedback
+  - Upload initiation with progress tracking (0-100%)
+  - Real-time status updates during processing
+  - Upload completion with document availability confirmation
+- [ ] **DocumentManager Component Journey**
+  - User views personal document list with current status
+  - Document filtering and search functionality
+  - Document deletion with confirmation and backend synchronization
+  - Status refresh and real-time updates
+- [ ] **DocumentUploadModal Component Journey**
+  - Modal opening with accessibility and focus management
+  - File upload within modal with progress display
+  - Error handling and recovery within modal context
+  - Modal closing with proper cleanup
+
+**3.2.3 Chat Interface Integration E2E**
+- [ ] **Real-time Conversation Journey**
+  - Authenticated user initiates chat after document upload
+  - Message sending with user context and authentication
+  - Agent response with document-specific information
+  - Conversation history persistence and retrieval
+  - WebSocket/real-time updates for typing indicators and responses
+- [ ] **Agent Workflow Integration Journey**
+  - Multi-document conversation capabilities
+  - Document context integration in agent responses
+  - Citation and source reference accuracy
+  - Conversation branching and context preservation
+
+**3.2.4 Document State Management E2E**
+- [ ] **Upload Progress State Journey**
+  - Real-time progress updates via WebSocket or polling
+  - Status transitions (queued → processing → complete)
+  - Error state handling with user notifications
+  - Retry mechanisms for failed uploads
+- [ ] **Processing Status Journey**
+  - Backend processing monitoring and status display
+  - Completion notifications and user alerts
+  - Processing error recovery and reprocessing options
+
+**3.2.5 Agent Conversation Quality E2E**
+- [ ] **RAG Retrieval Accuracy Journey**
+  - Document upload followed by content-specific queries
+  - Verification of relevant information extraction
+  - Multi-document query handling and context switching
+  - Citation accuracy and source verification
+- [ ] **Conversation Context Journey**
+  - User-specific document access in conversations
+  - Privacy and data isolation validation between users
+  - Conversation history context preservation across sessions
+
+**3.2.6 Cross-browser Compatibility E2E**
+- [ ] **Chrome Browser Journey**
+  - Complete upload → chat flow in Chrome
+  - File API and drag-drop functionality
+  - WebSocket stability and real-time updates
+- [ ] **Firefox Browser Journey**
+  - Upload behavior and progress tracking
+  - Chat interface consistency
+  - Authentication persistence
+- [ ] **Safari Browser Journey**
+  - macOS-specific file handling
+  - WebSocket connection stability
+  - Session management across tabs
+
+**3.2.7 Responsive Design E2E**
+- [ ] **Mobile Device Journey**
+  - Touch-friendly upload interface on mobile
+  - Mobile chat experience optimization
+  - Responsive document management
+  - Mobile authentication flows
+- [ ] **Desktop Journey**
+  - Advanced drag-drop functionality
+  - Multi-window support
+  - Keyboard shortcuts and accessibility
+- [ ] **Tablet Journey**
+  - Hybrid touch/cursor interaction
+  - Optimized layout for tablet viewports
+  - Touch and keyboard input handling
+
+**3.2.8 Performance Optimization E2E**
+- [ ] **Large File Handling Journey**
+  - Upload of files up to 50MB with progress tracking
+  - Memory usage monitoring during large uploads
+  - Network efficiency and resumable upload behavior
+- [ ] **Conversation Response Performance Journey**
+  - Response time measurement under load
+  - Memory usage during extended chat sessions
+  - Network bandwidth optimization for real-time features
   - Authentication error handling (invalid credentials, expired sessions)
 - [ ] **Authenticated Upload → Chat Complete Flow**
   - User authentication (prerequisite)
