@@ -9,7 +9,7 @@ This directory contains comprehensive prompts for implementing authentication-fi
 ## Phase Implementation Order
 
 ### Phase 1: Frontend Integration Foundation & Unit Testing
-**File**: `PHASE1_AUTH_FOUNDATION.md`
+**File**: `PHASE1_FRONTEND_FOUNDATION.md`
 **Duration**: Week 1 (5 days)
 **Focus**: Complete frontend unit testing with authentication-first approach
 
@@ -23,7 +23,7 @@ This directory contains comprehensive prompts for implementing authentication-fi
 **Start Here**: This is the foundation - all other phases depend on this being complete.
 
 ### Phase 2: Complete Frontend Integration Testing & Mock Environment
-**File**: `PHASE2_AUTH_INTEGRATION.md`
+**File**: `PHASE2_FRONTEND_INTEGRATION.md`
 **Duration**: Week 2 (5 days)
 **Focus**: Comprehensive integration testing with mock services
 
@@ -35,7 +35,7 @@ This directory contains comprehensive prompts for implementing authentication-fi
 - **Documentation**: Mock environment docs, integration test results, decisions, handoff
 
 ### Phase 3: Complete Frontend E2E Testing & User Journey Validation
-**File**: `PHASE3_AUTH_E2E.md`  
+**File**: `PHASE3_FRONTEND_E2E.md`  
 **Duration**: Week 3 (5 days)
 **Focus**: Playwright E2E testing for complete frontend scope
 
@@ -47,7 +47,7 @@ This directory contains comprehensive prompts for implementing authentication-fi
 - **Documentation**: E2E test results, cross-browser report, responsive validation, handoff
 
 ### Phase 4: Frontend Integration Performance Testing & Load Validation
-**File**: `PHASE4_AUTH_PERFORMANCE.md`
+**File**: `PHASE4_FRONTEND_PERFORMANCE.md`
 **Duration**: Week 4 (5 days)  
 **Focus**: Performance validation across all frontend components
 
@@ -59,7 +59,7 @@ This directory contains comprehensive prompts for implementing authentication-fi
 - **Documentation**: Performance baselines, load test results, optimization recommendations, handoff
 
 ### Phase 5: Complete Frontend Integration Validation & Production Readiness
-**File**: `PHASE5_FULL_INTEGRATION.md`
+**File**: `PHASE5_FRONTEND_INTEGRATION_VALIDATION.md`
 **Duration**: Week 5 (5 days)
 **Focus**: Production-ready validation with real services for complete scope
 
