@@ -1,7 +1,14 @@
-# Phase 2: Authentication Integration Testing - Cursor Implementation Prompt
+# Phase 2: Complete Frontend Integration Testing & Mock Environment - Cursor Implementation Prompt
 
 ## Context  
-You are implementing Phase 2 of frontend integration testing. Phase 1 (authentication foundation unit tests) should be complete. This phase builds authentication-aware integration tests with mock services that simulate real API interactions.
+You are implementing Phase 2 of comprehensive frontend integration testing. Phase 1 (complete frontend unit tests) should be complete. This phase builds integration tests covering the complete frontend scope with mock services.
+
+## Required Reading
+**Before starting, review these documentation files:**
+1. `docs/initiatives/system/upload_refactor/003/integration/frontend/TESTING_SPEC001.md` - Complete integration scope
+2. `docs/initiatives/system/upload_refactor/003/integration/frontend/TODO001.md` - Phase 2 detailed tasks
+3. `docs/initiatives/system/upload_refactor/003/integration/frontend/phase1/PHASE1_HANDOFF.md` - Phase 1 completion status
+4. Review Phase 1 deliverables to understand current test infrastructure
 
 ## Prerequisites
 - Phase 1 complete: Unit tests passing with 85%+ coverage
@@ -9,17 +16,26 @@ You are implementing Phase 2 of frontend integration testing. Phase 1 (authentic
 - Authentication mocks working
 - CI/CD pipeline running tests
 
-## Phase 2 Goals
-1. Create mock authentication service environment
-2. Build integration test framework with auth-aware utilities
-3. Test complete authenticated API integration flows
-4. Validate authentication throughout request/response cycles
-5. Achieve 95% pass rate on integration test suite
+## Phase 2 Goals (Reference: TODO001.md Phase 2)
+1. Create comprehensive mock environment for all frontend components
+2. Build integration test framework covering complete scope:
+   - Authentication integration (PRIORITY #1)
+   - Frontend upload components integration
+   - Chat interface integration with real-time features
+   - Document state management integration
+   - Agent conversation quality integration
+   - Cross-browser compatibility integration
+   - Responsive design integration
+   - Performance optimization integration
+3. Validate complete frontend-backend integration cycles
+4. Achieve 95% pass rate on complete integration test suite
 
 ## Implementation Tasks
 
-### Task 2.1: Authentication Mock Environment Setup
-**Priority**: CRITICAL - Foundation for integration testing
+### Task 2.1: Complete Frontend Mock Environment Setup
+**Priority**: CRITICAL - Foundation for complete integration testing
+
+**Reference**: TODO001.md Section 2.1 for detailed mock service requirements
 
 **Docker Environment to Create**:
 
@@ -73,8 +89,10 @@ services:
 // POST /auth/v1/logout - Sign out
 ```
 
-### Task 2.2: Authentication Integration Test Framework
-**Priority**: CRITICAL - Utilities for auth-aware testing
+### Task 2.2: Complete Frontend Integration Test Framework
+**Priority**: CRITICAL - Utilities for comprehensive frontend testing
+
+**Reference**: TODO001.md Section 2.2 for complete framework structure
 
 **Files to Create**:
 
@@ -112,8 +130,10 @@ export class AuthenticatedAPIClient {
 }
 ```
 
-### Task 2.3: Authentication API Integration Tests
-**Priority**: CRITICAL - Core authentication flow validation
+### Task 2.3: Complete Frontend Integration Tests
+**Priority**: CRITICAL - All frontend component integration validation
+
+**Reference**: TODO001.md Section 2.3 for complete testing scope including all 8 integration areas
 
 **Test File: `tests/integration/scenarios/auth-flow.test.ts`**
 
@@ -280,16 +300,17 @@ it('should handle token expiry during operation', async () => {
 });
 ```
 
-## Success Criteria
-- [ ] Mock authentication service running reliably
-- [ ] All authentication integration tests pass (100%)
-- [ ] Upload integration tests pass with auth (100%)  
-- [ ] Chat integration tests pass with auth (100%)
+## Success Criteria (Reference: TODO001.md Phase 2 Acceptance Criteria)
+- [ ] All frontend upload components integrated and tested with backend APIs
+- [ ] Chat interface integration with real-time conversation and document workflows validated
+- [ ] Document state management with real-time status updates working
+- [ ] Agent conversation quality with RAG retrieval accuracy verified
+- [ ] Cross-browser compatibility confirmed for upload → conversation flow
+- [ ] Responsive design integration tested on mobile, tablet, and desktop
+- [ ] Performance optimization validated for large file handling and conversation response times
+- [ ] Authentication flows and user data isolation tested across all features
+- [ ] Local integration testing validated against Docker Compose backend stack
 - [ ] 95%+ pass rate on complete integration test suite
-- [ ] Token refresh tested and working
-- [ ] Error scenarios properly handled
-- [ ] Test data isolation working
-- [ ] Environment setup/teardown reliable
 
 ## File Structure Expected
 ```
@@ -317,7 +338,15 @@ tests/integration/
     └── sample-documents/
 ```
 
+## Phase 2 Documentation Requirements
+**Create these deliverables in `docs/initiatives/system/upload_refactor/003/integration/frontend/phase2/`:**
+1. **PHASE2_COMPLETION_SUMMARY.md** - Summary of all integration testing implemented
+2. **PHASE2_MOCK_ENVIRONMENT_DOCUMENTATION.md** - Mock service setup and configuration
+3. **PHASE2_INTEGRATION_TEST_RESULTS.md** - Detailed test results for all integration areas
+4. **PHASE2_DECISIONS.md** - Technical decisions made during integration testing
+5. **PHASE2_HANDOFF.md** - Handoff notes for Phase 3 E2E testing
+
 ## Next Phase
-After Phase 2 completion, you'll move to Phase 3: Authentication E2E Testing with Playwright for full user journey validation across browsers.
+After Phase 2 completion with proper documentation, you'll move to Phase 3: Complete Frontend E2E Testing with Playwright for full user journey validation covering the complete scope.
 
 Start with Task 2.1 (mock environment) and ensure the authentication service is working before building tests on top of it.
