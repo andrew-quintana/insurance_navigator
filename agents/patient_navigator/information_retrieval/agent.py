@@ -471,3 +471,26 @@ Generate a detailed response that would be most helpful to the user.
                 "confidence_score": 0.0,
                 "source_chunks": []
             } 
+
+    def mock_output(self, user_input: str) -> InformationRetrievalOutput:
+        """
+        Generate a mock output matching the InformationRetrievalOutput schema.
+        
+        Args:
+            user_input: The user's query input
+            
+        Returns:
+            Mock InformationRetrievalOutput with valid data types
+        """
+        # Generate realistic mock data with proper types
+        mock_data = {
+            "expert_reframe": f"mock_expert_reframe for: {user_input[:50]}...",
+            "direct_answer": f"Mock answer for: {user_input[:50]}...",
+            "key_points": ["mock_key_point_1", "mock_key_point_2", "mock_key_point_3"],
+            "confidence_score": 0.85,  # Float between 0.0 and 1.0
+            "source_chunks": [],  # Empty list of SourceChunk objects
+            "processing_steps": ["step1", "step2", "step3"],  # List of strings
+            "error_message": None  # Optional string
+        }
+        
+        return InformationRetrievalOutput(**mock_data) 

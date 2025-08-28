@@ -26,7 +26,7 @@ class TestRealAgentIntegration:
     async def test_real_information_retrieval_agent(self, chat_interface):
         """Test that the real information retrieval agent can process queries."""
         message = ChatMessage(
-            user_id="test_user_real",
+            user_id="5710ff53-32ea-4fab-be6d-3a6f0627fbff",  # Valid UUID for testing
             content="What is the deductible for my insurance policy?",
             timestamp=time.time(),
             message_type="text",
@@ -60,7 +60,7 @@ class TestRealAgentIntegration:
     async def test_real_strategy_agent(self, chat_interface):
         """Test that the real strategy agent can process strategy requests."""
         message = ChatMessage(
-            user_id="test_user_real",
+            user_id="5710ff53-32ea-4fab-be6d-3a6f0627fbff",  # Valid UUID for testing
             content="What strategy should I use to minimize my out-of-pocket costs?",
             timestamp=time.time(),
             message_type="text",

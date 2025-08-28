@@ -7,11 +7,82 @@ few-shot learning with confidence scoring and deterministic execution ordering.
 
 import logging
 import asyncio
+import os
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
 
 from agents.base_agent import BaseAgent
 from ..models import WorkflowPrescriptionResult, WorkflowType
+
+
+def _get_claude_haiku_llm():
+    """
+    Return a callable that invokes Claude Haiku, or None for mock mode.
+    
+    We prefer to avoid hard dependency; if Anthropic client isn't available,
+    we return None and the agent will run in mock mode.
+    """
+    try:
+        from anthropic import Anthropic
+        
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if not api_key:
+            return None
+        
+        client = Anthropic(api_key=api_key)
+        model = os.getenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307")
+        
+        def call_llm(prompt: str) -> str:
+            """Call Claude Haiku with the given prompt."""
+            try:
+                # Add explicit JSON formatting instruction to the prompt
+                json_prompt = prompt + "\n\nIMPORTANT: You must respond with ONLY valid JSON. Do not include any other text, explanations, or formatting outside the JSON object."
+                
+                resp = client.messages.create(
+                    model=model,
+                    max_tokens=4000,
+                    temperature=0.2,
+                    messages=[{"role": "user", "content": json_prompt}],
+                )
+                
+                content = resp.content[0].text if getattr(resp, "content", None) else ""
+                
+                if not content:
+                    raise ValueError("Empty response from Claude Haiku")
+                
+                # Try to extract JSON from the response
+                content = content.strip()
+                
+                # If the response starts with a backtick, extract the JSON from within
+                if content.startswith("```json"):
+                    content = content.split("```json")[1].split("```")[0].strip()
+                elif content.startswith("```"):
+                    content = content.split("```")[1].split("```")[0].strip()
+                
+                # Validate that we have valid JSON
+                try:
+                    import json
+                    json.loads(content)  # Validate JSON
+                    return content
+                except json.JSONDecodeError:
+                    # Fallback to a basic response if JSON parsing fails
+                    fallback_response = {
+                        "prescribed_workflows": ["information_retrieval"],
+                        "confidence_score": 0.7,
+                        "reasoning": "Default fallback due to JSON parsing error",
+                        "execution_order": ["information_retrieval"]
+                    }
+                    return json.dumps(fallback_response)
+                
+            except Exception as e:
+                logging.error(f"Claude Haiku API call failed: {e}")
+                raise
+        
+        return call_llm
+        
+    except Exception as e:
+        logging.warning(f"Failed to initialize Anthropic client: {e}")
+        return None
 
 
 class WorkflowPrescriptionAgent(BaseAgent):
@@ -34,11 +105,21 @@ class WorkflowPrescriptionAgent(BaseAgent):
         prompt_path = "agents/patient_navigator/supervisor/workflow_prescription/prompts/system_prompt.md"
         examples_path = "agents/patient_navigator/supervisor/workflow_prescription/prompts/examples.md"
         
+        # Auto-detect LLM client if not provided
+        llm_client = kwargs.get('llm')
+        if llm_client is None and not use_mock:
+            llm_client = _get_claude_haiku_llm()
+            if llm_client:
+                logging.info("Auto-detected Claude Haiku LLM client for WorkflowPrescriptionAgent")
+            else:
+                logging.info("No Claude Haiku client available for WorkflowPrescriptionAgent, using mock mode")
+        
         super().__init__(
             name="workflow_prescription",
             prompt=prompt_path,
             output_schema=WorkflowPrescriptionResult,
-            mock=use_mock,
+            llm=llm_client,
+            mock=use_mock or llm_client is None,
             examples=examples_path,
             **kwargs
         )
@@ -83,206 +164,98 @@ class WorkflowPrescriptionAgent(BaseAgent):
             # Fallback to default prescription
             return self._fallback_prescription(user_query)
     
-    def _parse_workflow_response(self, response: str) -> WorkflowPrescriptionResult:
-        """
-        Parse LLM response into WorkflowPrescriptionResult.
+    async def _call_llm(self, prompt: str) -> str:
+        """Call the LLM with the given prompt."""
+        if self.llm is None:
+            raise RuntimeError("No LLM provided.")
         
-        Args:
-            response: Raw LLM response string
-            
-        Returns:
-            Parsed WorkflowPrescriptionResult
-        """
+        # Handle both sync and async LLM calls
+        if asyncio.iscoroutinefunction(self.llm):
+            return await self.llm(prompt)
+        else:
+            return self.llm(prompt)
+    
+    def _parse_workflow_response(self, response: str) -> WorkflowPrescriptionResult:
+        """Parse the LLM response into a WorkflowPrescriptionResult."""
         try:
-            # Try to parse as JSON first
             import json
-            parsed = json.loads(response.strip())
+            data = json.loads(response)
             
-            # Extract fields from parsed response
-            workflows = parsed.get("prescribed_workflows", [])
-            confidence = parsed.get("confidence_score", 0.5)
-            reasoning = parsed.get("reasoning", "Default reasoning")
+            # Extract prescribed workflows
+            workflows = []
+            for workflow_name in data.get("prescribed_workflows", []):
+                try:
+                    workflow_type = WorkflowType(workflow_name)
+                    workflows.append(workflow_type)
+                except ValueError:
+                    self.logger.warning(f"Unknown workflow type: {workflow_name}")
+                    continue
             
-            # Convert string workflow names to WorkflowType enum
-            workflow_types = []
-            for workflow in workflows:
-                if workflow == "information_retrieval":
-                    workflow_types.append(WorkflowType.INFORMATION_RETRIEVAL)
-                elif workflow == "strategy":
-                    workflow_types.append(WorkflowType.STRATEGY)
-                else:
-                    self.logger.warning(f"Unknown workflow type: {workflow}")
-            
-            return WorkflowPrescriptionResult(
-                prescribed_workflows=workflow_types,
-                confidence_score=confidence,
-                reasoning=reasoning,
-                execution_order=[]  # Will be set by caller
+            # Create result object
+            result = WorkflowPrescriptionResult(
+                prescribed_workflows=workflows,
+                confidence_score=data.get("confidence_score", 0.8),
+                reasoning=data.get("reasoning", "LLM-based workflow prescription"),
+                execution_order=[]  # Will be set later
             )
             
-        except (json.JSONDecodeError, KeyError, ValueError) as e:
-            self.logger.error(f"Failed to parse workflow response: {e}")
-            # Fallback to simple parsing
-            return self._simple_parse_response(response)
-    
-    def _simple_parse_response(self, response: str) -> WorkflowPrescriptionResult:
-        """
-        Simple fallback parsing for malformed responses.
-        
-        Args:
-            response: Raw LLM response string
+            return result
             
-        Returns:
-            WorkflowPrescriptionResult with default values
-        """
-        # Look for workflow keywords in response
-        workflows = []
-        if "information_retrieval" in response.lower():
-            workflows.append(WorkflowType.INFORMATION_RETRIEVAL)
-        if "strategy" in response.lower():
-            workflows.append(WorkflowType.STRATEGY)
-        
-        # Default to information_retrieval if no workflows found
-        if not workflows:
-            workflows = [WorkflowType.INFORMATION_RETRIEVAL]
-        
-        return WorkflowPrescriptionResult(
-            prescribed_workflows=workflows,
-            confidence_score=0.5,  # Low confidence for fallback
-            reasoning="Fallback parsing due to malformed response",
-            execution_order=[]
-        )
+        except Exception as e:
+            self.logger.error(f"Failed to parse LLM response: {e}")
+            raise
     
     def _determine_execution_order(self, workflows: List[WorkflowType]) -> List[WorkflowType]:
-        """
-        Determine deterministic execution order for prescribed workflows.
+        """Determine the optimal execution order for workflows."""
+        # Simple priority-based ordering
+        priority_order = [
+            WorkflowType.INFORMATION_RETRIEVAL,
+            WorkflowType.STRATEGY
+        ]
         
-        Args:
-            workflows: List of prescribed workflows
-            
-        Returns:
-            Ordered list of workflows for execution
-        """
-        # MVP: Simple deterministic order - information_retrieval first, then strategy
+        # Sort workflows by priority
         ordered_workflows = []
+        for priority_workflow in priority_order:
+            if priority_workflow in workflows:
+                ordered_workflows.append(priority_workflow)
         
-        # Always add information_retrieval first if present
-        if WorkflowType.INFORMATION_RETRIEVAL in workflows:
-            ordered_workflows.append(WorkflowType.INFORMATION_RETRIEVAL)
-        
-        # Then add strategy if present
-        if WorkflowType.STRATEGY in workflows:
-            ordered_workflows.append(WorkflowType.STRATEGY)
+        # Add any remaining workflows
+        for workflow in workflows:
+            if workflow not in ordered_workflows:
+                ordered_workflows.append(workflow)
         
         return ordered_workflows
     
     def _mock_prescribe_workflows(self, user_query: str) -> WorkflowPrescriptionResult:
-        """
-        Generate mock workflow prescription for testing.
+        """Generate mock workflow prescription for testing."""
+        # Simple keyword-based mock prescription
+        query_lower = user_query.lower()
         
-        Args:
-            user_query: The user's request/question
-            
-        Returns:
-            Mock WorkflowPrescriptionResult
-        """
-        # Simple mock logic based on query content
-        workflows = []
-        
-        if "coverage" in user_query.lower() or "benefits" in user_query.lower():
-            workflows.append(WorkflowType.INFORMATION_RETRIEVAL)
-        
-        if "find" in user_query.lower() or "provider" in user_query.lower() or "network" in user_query.lower():
-            workflows.append(WorkflowType.STRATEGY)
-        
-        # Default to information_retrieval if no specific patterns
-        if not workflows:
+        if any(word in query_lower for word in ["strategy", "plan", "approach", "how to"]):
+            workflows = [WorkflowType.STRATEGY]
+            reasoning = "Mock: Query appears to request strategic guidance"
+        else:
             workflows = [WorkflowType.INFORMATION_RETRIEVAL]
+            reasoning = "Mock: Default to information retrieval for general queries"
         
-        execution_order = self._determine_execution_order(workflows)
-        
-        return WorkflowPrescriptionResult(
+        result = WorkflowPrescriptionResult(
             prescribed_workflows=workflows,
-            confidence_score=0.8,  # High confidence for mock
-            reasoning="Mock prescription based on query keywords",
-            execution_order=execution_order
+            confidence_score=0.8,
+            reasoning=reasoning,
+            execution_order=workflows
         )
+        
+        return result
     
     def _fallback_prescription(self, user_query: str) -> WorkflowPrescriptionResult:
-        """
-        Fallback prescription when LLM fails.
-        
-        Args:
-            user_query: The user's request/question
-            
-        Returns:
-            Fallback WorkflowPrescriptionResult
-        """
+        """Fallback prescription when LLM fails."""
         self.logger.warning("Using fallback prescription due to LLM failure")
         
-        return WorkflowPrescriptionResult(
+        result = WorkflowPrescriptionResult(
             prescribed_workflows=[WorkflowType.INFORMATION_RETRIEVAL],
-            confidence_score=0.3,  # Low confidence for fallback
-            reasoning="Fallback prescription due to system error",
+            confidence_score=0.6,
+            reasoning="Fallback: Default to information retrieval due to processing error",
             execution_order=[WorkflowType.INFORMATION_RETRIEVAL]
         )
-    
-    async def _call_llm(self, prompt: str) -> str:
-        """
-        Call the LLM with the formatted prompt.
         
-        Args:
-            prompt: Formatted prompt string
-            
-        Returns:
-            LLM response string
-        """
-        if self.llm is None:
-            raise ValueError("LLM not configured for WorkflowPrescriptionAgent")
-        
-        try:
-            # Handle both sync and async LLM callables
-            if asyncio.iscoroutinefunction(self.llm):
-                response = await self.llm(prompt)
-            else:
-                # For sync LLM callables, run in executor
-                loop = asyncio.get_event_loop()
-                response = await loop.run_in_executor(None, self.llm, prompt)
-            
-            if not response:
-                raise ValueError("Empty response from LLM")
-            
-            self.logger.debug(f"LLM response: {response[:200]}...")
-            return response
-            
-        except Exception as e:
-            self.logger.error(f"LLM call failed: {e}")
-            raise
-    
-    def process(self, input_data: Any) -> Dict[str, Any]:
-        """
-        Process method for compatibility with existing patterns.
-        
-        Args:
-            input_data: Input data (can be string or dict)
-            
-        Returns:
-            Dictionary with workflow prescription results
-        """
-        if isinstance(input_data, str):
-            user_query = input_data
-        elif isinstance(input_data, dict):
-            user_query = input_data.get("user_query", "")
-        else:
-            raise ValueError(f"Unsupported input type: {type(input_data)}")
-        
-        # Use asyncio to run async method in sync context
-        loop = asyncio.get_event_loop()
-        result = loop.run_until_complete(self.prescribe_workflows(user_query))
-        
-        return {
-            "prescribed_workflows": [w.value for w in result.prescribed_workflows],
-            "confidence_score": result.confidence_score,
-            "reasoning": result.reasoning,
-            "execution_order": [w.value for w in result.execution_order]
-        } 
+        return result 

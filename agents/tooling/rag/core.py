@@ -99,19 +99,26 @@ class RAGTool:
         try:
             conn = await self._get_db_conn()
             # Query for top-k chunks with user-scoped access
+            schema = os.getenv("DATABASE_SCHEMA", "upload_pipeline")
+            
+            # Convert Python list to PostgreSQL vector format
+            vector_string = '[' + ','.join(str(x) for x in query_embedding) + ']'
+            
             sql = f"""
-                SELECT dc.id, dc.doc_id, dc.chunk_index, dc.content, dc.section_path, dc.section_title,
-                       dc.page_start, dc.page_end, dc.tokens,
-                       1 - (dc.embedding <=> $1) as similarity
-                FROM documents.document_chunks dc
-                JOIN documents.documents d ON dc.doc_id = d.id
-                WHERE d.owner = $2
+                SELECT dc.chunk_id, dc.document_id, dc.chunk_ord as chunk_index, dc.text as content,
+                       NULL as section_path, NULL as section_title,
+                       NULL as page_start, NULL as page_end,
+                       NULL as tokens,
+                       1 - (dc.embedding <=> $1::vector) as similarity
+                FROM {schema}.document_chunks dc
+                JOIN {schema}.documents d ON dc.document_id = d.document_id
+                WHERE d.user_id = $2
                   AND dc.embedding IS NOT NULL
-                  AND 1 - (dc.embedding <=> $1) > $3
-                ORDER BY dc.embedding <=> $1
+                  AND 1 - (dc.embedding <=> $1::vector) > $3
+                ORDER BY dc.embedding <=> $1::vector
                 LIMIT $4
             """
-            rows = await conn.fetch(sql, query_embedding, self.user_id, self.config.similarity_threshold, self.config.max_chunks)
+            rows = await conn.fetch(sql, vector_string, self.user_id, self.config.similarity_threshold, self.config.max_chunks)
             chunks = []
             total_tokens = 0
             for row in rows:
@@ -119,8 +126,8 @@ class RAGTool:
                 if total_tokens + tokens > self.config.token_budget:
                     break
                 chunk = ChunkWithContext(
-                    id=str(row["id"]),
-                    doc_id=str(row["doc_id"]),
+                    id=str(row["chunk_id"]),
+                    doc_id=str(row["document_id"]),
                     chunk_index=row["chunk_index"],
                     content=row["content"],
                     section_path=row["section_path"] or [],
@@ -146,11 +153,21 @@ class RAGTool:
         Returns:
             asyncpg.Connection
         """
+        # Try to use DATABASE_URL first, then fall back to individual parameters
+        database_url = os.getenv("DATABASE_URL")
+        if database_url:
+            try:
+                return await asyncpg.connect(database_url)
+            except Exception as e:
+                self.logger.warning(f"Failed to connect using DATABASE_URL: {e}, falling back to individual parameters")
+        
+        # Fallback to individual environment variables
         host = os.getenv("SUPABASE_DB_HOST", "127.0.0.1")
         port = int(os.getenv("SUPABASE_DB_PORT", "5432"))
         user = os.getenv("SUPABASE_DB_USER", "postgres")
         password = os.getenv("SUPABASE_DB_PASSWORD", "postgres")
         database = os.getenv("SUPABASE_DB_NAME", "postgres")
+        
         return await asyncpg.connect(
             host=host,
             port=port,
