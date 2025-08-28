@@ -30,7 +30,8 @@
       "Bash(PYTHONPATH:*)",
       "Bash(git checkout:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(./scripts/run-e2e-integration-test.sh:*)"
     ],
     "deny": []
   }
