@@ -106,7 +106,7 @@ class InformationRetrievalOutput(BaseModel):
     )
     
     processing_steps: Optional[List[str]] = Field(
-        default=None,
+        default_factory=list,
         description="List of processing steps completed for transparency"
     )
     
