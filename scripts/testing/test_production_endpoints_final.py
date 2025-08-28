@@ -33,7 +33,8 @@ def generate_test_jwt_token():
     """Generate a valid JWT token for testing."""
     
     supabase_url = "http://localhost:54321"
-    service_role_key = "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJmcKHUkt3pV/LC87Dkk="
+    # Use the correct service role key from docker-compose.yml
+    service_role_key = "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
     
     payload = {
         "sub": str(uuid.uuid4()),

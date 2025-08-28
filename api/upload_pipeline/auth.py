@@ -155,30 +155,30 @@ async def get_optional_user(request: Request) -> Optional[User]:
         return None
 
 
-def require_user():
+async def require_user(request: Request) -> User:
     """
     Dependency for endpoints that require authentication.
     
+    Args:
+        request: FastAPI request object
+        
     Returns:
         User object if authentication succeeds
         
     Raises:
         HTTPException: If authentication fails
     """
-    async def _require_user(request: Request) -> User:
-        return await get_current_user(request)
-    
-    return _require_user
+    return await get_current_user(request)
 
 
-def optional_user():
+async def optional_user(request: Request) -> Optional[User]:
     """
     Dependency for endpoints that optionally use authentication.
     
+    Args:
+        request: FastAPI request object
+        
     Returns:
         User object if authentication succeeds, None otherwise
     """
-    async def _optional_user(request: Request) -> Optional[User]:
-        return await get_optional_user(request)
-    
-    return _optional_user
+    return await get_optional_user(request)

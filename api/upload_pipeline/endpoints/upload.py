@@ -25,7 +25,7 @@ router = APIRouter()
 @router.post("/upload", response_model=UploadResponse)
 async def upload_document(
     request: UploadRequest,
-    current_user: User = Depends(require_user())
+    current_user: User = Depends(require_user)
 ):
     """
     Upload a new document for processing.
