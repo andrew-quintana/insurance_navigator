@@ -1,121 +1,110 @@
 import '@testing-library/jest-dom'
 
 // Mock Next.js router
-jest.mock('next/router', () => ({
-  useRouter() {
-    return {
-      route: '/',
-      pathname: '/',
-      query: {},
-      asPath: '/',
-      push: jest.fn(),
-      replace: jest.fn(),
-      reload: jest.fn(),
-      back: jest.fn(),
-      prefetch: jest.fn().mockResolvedValue(undefined),
-      beforePopState: jest.fn(),
-      events: {
-        on: jest.fn(),
-        off: jest.fn(),
-        emit: jest.fn(),
-      },
-    }
+const mockRouter = {
+  push: jest.fn(),
+  replace: jest.fn(),
+  prefetch: jest.fn(),
+  back: jest.fn(),
+  forward: jest.fn(),
+  refresh: jest.fn(),
+  pathname: '/',
+  query: {},
+  asPath: '/',
+  events: {
+    on: jest.fn(),
+    off: jest.fn(),
+    emit: jest.fn(),
   },
+}
+
+jest.mock('next/router', () => ({
+  useRouter: () => mockRouter,
 }))
 
 // Mock Next.js navigation
+const mockNavigation = {
+  push: jest.fn(),
+  replace: jest.fn(),
+  prefetch: jest.fn(),
+  back: jest.fn(),
+  forward: jest.fn(),
+  refresh: jest.fn(),
+  pathname: '/',
+  searchParams: new URLSearchParams(),
+}
+
 jest.mock('next/navigation', () => ({
-  useRouter() {
-    return {
-      push: jest.fn(),
-      replace: jest.fn(),
-      refresh: jest.fn(),
-      back: jest.fn(),
-      forward: jest.fn(),
-    }
-  },
-  useSearchParams() {
-    return new URLSearchParams()
-  },
-  usePathname() {
-    return '/'
-  },
+  useRouter: () => mockNavigation,
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
 }))
 
 // Mock Supabase client
-jest.mock('./lib/supabase-client', () => ({
-  supabase: {
-    auth: {
-      getSession: jest.fn().mockResolvedValue({ data: { session: null } }),
-      signUp: jest.fn(),
-      signInWithPassword: jest.fn(),
-      signOut: jest.fn(),
-      onAuthStateChange: jest.fn(() => ({ data: { subscription: { unsubscribe: jest.fn() } } })),
-    },
-    from: jest.fn(() => ({
-      select: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      delete: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      single: jest.fn(),
-    })),
-    storage: {
-      from: jest.fn(() => ({
-        upload: jest.fn(),
-        download: jest.fn(),
-        remove: jest.fn(),
-        list: jest.fn(),
-        getPublicUrl: jest.fn(),
-      })),
-    },
+const mockSupabase = {
+  auth: {
+    getSession: jest.fn(),
+    signUp: jest.fn(),
+    signInWithPassword: jest.fn(),
+    signOut: jest.fn(),
+    onAuthStateChange: jest.fn(),
+    refreshSession: jest.fn(),
   },
+  from: jest.fn(),
+  storage: {
+    from: jest.fn(),
+  },
+}
+
+jest.mock('@/lib/supabase-client', () => ({
+  supabase: mockSupabase,
 }))
 
-// Mock API client
-jest.mock('./lib/api-client', () => ({
-  uploadDocument: jest.fn(),
-  getDocuments: jest.fn(),
-  deleteDocument: jest.fn(),
-  sendChatMessage: jest.fn(),
-  getConversations: jest.fn(),
-}))
+// Mock fetch globally for API testing
+const mockFetch = jest.fn()
+global.fetch = mockFetch
 
-// Mock file APIs for testing file uploads
-global.File = class MockFile {
-  constructor(parts, name, properties) {
-    this.parts = parts
+// Mock File and FileReader
+global.File = class File {
+  constructor(bits, name, options = {}) {
+    this.bits = bits
     this.name = name
-    this.size = properties?.size || parts.join('').length
-    this.type = properties?.type || 'text/plain'
-    this.lastModified = properties?.lastModified || Date.now()
+    this.type = options.type || ''
+    this.size = bits.length
+    this.lastModified = Date.now()
   }
 }
 
-global.FileReader = class MockFileReader {
+global.FileReader = class FileReader {
   constructor() {
     this.readyState = 0
     this.result = null
     this.error = null
     this.onload = null
     this.onerror = null
-    this.onabort = null
+    this.onloadend = null
   }
-  
-  readAsDataURL(file) {
-    this.readyState = 2
-    this.result = `data:${file.type};base64,${btoa(file.parts.join(''))}`
-    if (this.onload) this.onload({ target: this })
+
+  readAsText(blob) {
+    setTimeout(() => {
+      this.readyState = 2
+      this.result = 'test content'
+      if (this.onload) this.onload()
+      if (this.onloadend) this.onloadend()
+    }, 0)
   }
-  
-  readAsText(file) {
-    this.readyState = 2
-    this.result = file.parts.join('')
-    if (this.onload) this.onload({ target: this })
+
+  readAsDataURL(blob) {
+    setTimeout(() => {
+      this.readyState = 2
+      this.result = 'data:text/plain;base64,dGVzdCBjb250ZW50'
+      if (this.onload) this.onload()
+      if (this.onloadend) this.onloadend()
+    }, 0)
   }
 }
 
-// Mock window.matchMedia for responsive tests
+// Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: jest.fn().mockImplementation(query => ({
@@ -131,20 +120,20 @@ Object.defineProperty(window, 'matchMedia', {
 })
 
 // Mock ResizeObserver
-global.ResizeObserver = class MockResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
+global.ResizeObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+}))
 
 // Mock IntersectionObserver
-global.IntersectionObserver = class MockIntersectionObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
+global.IntersectionObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+}))
 
-// Suppress console errors in tests unless debugging
+// Suppress console.error in tests
 const originalError = console.error
 beforeAll(() => {
   console.error = (...args) => {
@@ -161,3 +150,6 @@ beforeAll(() => {
 afterAll(() => {
   console.error = originalError
 })
+
+// Export mock for use in tests
+export { mockSupabase, mockFetch }
