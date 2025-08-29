@@ -1,0 +1,42 @@
+[
+  {
+    "email": "integration-test-1@example.com",
+    "password": "IntegrationTest123!",
+    "expectedBehavior": "successful_registration_and_login"
+  },
+  {
+    "email": "integration-test-2@example.com", 
+    "password": "IntegrationTest123!",
+    "expectedBehavior": "successful_registration_and_login"
+  },
+  {
+    "email": "duplicate-test@example.com",
+    "password": "DuplicateTest123!",
+    "expectedBehavior": "duplicate_email_error"
+  },
+  {
+    "email": "invalid-credentials@example.com",
+    "password": "WrongPassword123!",
+    "expectedBehavior": "invalid_credentials_error"
+  },
+  {
+    "email": "session-test@example.com",
+    "password": "SessionTest123!",
+    "expectedBehavior": "session_management_testing"
+  },
+  {
+    "email": "upload-test@example.com",
+    "password": "UploadTest123!",
+    "expectedBehavior": "document_upload_testing"
+  },
+  {
+    "email": "chat-test@example.com",
+    "password": "ChatTest123!",
+    "expectedBehavior": "chat_integration_testing"
+  },
+  {
+    "email": "performance-test@example.com",
+    "password": "PerformanceTest123!",
+    "expectedBehavior": "performance_testing"
+  }
+]

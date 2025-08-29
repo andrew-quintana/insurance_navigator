@@ -1,0 +1,65 @@
+version: '3.8'
+services:
+  mock-auth-service:
+    build: ./mocks/auth-service
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=test
+      - JWT_SECRET=test-secret-key-12345
+      - PORT=3001
+      - CORS_ORIGIN=http://localhost:3000
+    volumes:
+      - ./mocks/auth-service:/app
+      - /app/node_modules
+    networks:
+      - frontend-test
+
+  mock-api-service:
+    build: ./mocks/api-service
+    ports:
+      - "3002:3002"
+    depends_on:
+      - mock-auth-service
+    environment:
+      - NODE_ENV=test
+      - AUTH_SERVICE_URL=http://mock-auth-service:3001
+      - PORT=3002
+      - CORS_ORIGIN=http://localhost:3000
+      - UPLOAD_MAX_SIZE=52428800
+      - ALLOWED_FILE_TYPES=application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document
+    volumes:
+      - ./mocks/api-service:/app
+      - /app/node_modules
+      - ./fixtures:/app/fixtures
+    networks:
+      - frontend-test
+
+  frontend-test:
+    build:
+      context: ../../ui
+      dockerfile: Dockerfile.test
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=test
+      - NEXT_PUBLIC_SUPABASE_URL=http://localhost:3001
+      - NEXT_PUBLIC_API_URL=http://localhost:3002
+      - NEXT_PUBLIC_MOCK_MODE=true
+    depends_on:
+      - mock-auth-service
+      - mock-api-service
+    volumes:
+      - ../../ui:/app
+      - /app/node_modules
+      - ./fixtures:/app/fixtures
+    networks:
+      - frontend-test
+    command: npm run dev
+
+networks:
+  frontend-test:
+    driver: bridge
+
+volumes:
+  test_data:
