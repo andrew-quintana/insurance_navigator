@@ -1,0 +1,36 @@
+{
+  "name": "frontend-integration-tests",
+  "version": "1.0.0",
+  "description": "Frontend integration testing for Insurance Navigator",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run scenarios/",
+    "test:auth": "vitest run scenarios/auth-flow.test.ts",
+    "test:upload": "vitest run scenarios/upload-flow.test.ts",
+    "test:chat": "vitest run scenarios/chat-flow.test.ts",
+    "test:all": "vitest run scenarios/ --reporter=verbose",
+    "start:services": "docker-compose -f docker-compose.mock.yml up -d",
+    "stop:services": "docker-compose -f docker-compose.mock.yml down -v",
+    "restart:services": "npm run stop:services && npm run start:services",
+    "health:check": "node -e \"Promise.all([fetch('http://localhost:3001/health'), fetch('http://localhost:3002/health')]).then(() => console.log('✅ All services healthy')).catch(() => console.log('❌ Services not healthy'))\"",
+    "setup:environment": "node -e \"const { TestEnvironment } = require('./setup/environment.ts'); new TestEnvironment().initialize().then(() => console.log('✅ Environment ready')).catch(console.error)\"",
+    "cleanup:environment": "node -e \"const { TestEnvironment } = require('./setup/environment.ts'); new TestEnvironment().cleanup().then(() => console.log('✅ Environment cleaned')).catch(console.error)\""
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "vitest": "^1.0.0",
+    "@vitest/ui": "^1.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "typescript": "^5.0.0",
+    "tsx": "^4.0.0"
+  },
+  "keywords": ["testing", "integration", "frontend", "authentication", "upload", "chat"],
+  "author": "Insurance Navigator Team",
+  "license": "MIT"
+}
