@@ -1,0 +1,31 @@
+{
+  "name": "frontend-performance-tests",
+  "version": "1.0.0",
+  "description": "Frontend performance testing for Insurance Navigator",
+  "main": "run-auth-performance.js",
+  "scripts": {
+    "test:load": "node run-auth-performance.js",
+    "test:auth": "artillery run artillery-auth.yml",
+    "test:stress": "artillery run artillery-stress-auth.yml",
+    "test:cross-browser": "node run-auth-performance.js cross-browser",
+    "test:responsive": "node run-auth-performance.js responsive",
+    "test:all": "node run-auth-performance.js",
+    "report": "artillery report results/latest.json",
+    "clean": "rm -rf results/*.json",
+    "install-artillery": "npm install -g artillery"
+  },
+  "dependencies": {
+    "artillery": "^2.0.0",
+    "artillery-plugin-metrics-by-endpoint": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  },
+  "keywords": ["performance", "testing", "artillery", "frontend", "authentication", "load-testing"],
+  "author": "Insurance Navigator Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

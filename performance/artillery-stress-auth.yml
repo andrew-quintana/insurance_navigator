@@ -1,0 +1,279 @@
+config:
+  target: http://localhost:3001
+  phases:
+    # Stress test with high concurrent auth load
+    - duration: 60
+      arrivalRate: 10
+      name: "Auth stress test"
+    - duration: 120  
+      arrivalRate: 20
+      name: "Peak auth load"
+    - duration: 60
+      arrivalRate: 30
+      name: "Maximum stress test"
+    - duration: 60
+      arrivalRate: 5
+      name: "Stress recovery"
+
+  plugins:
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+
+  # Stricter performance thresholds for stress testing
+  ensure:
+    maxErrorRate: 5  # Allow higher error rate under stress
+    maxResponseTime: 5000  # 5 seconds under stress
+    maxLatency: 3000  # 3 seconds under stress
+
+scenarios:
+  # Concurrent Authentication Stress
+  - name: "Concurrent Authentication Stress"
+    weight: 40
+    flow:
+      # Rapid fire registration and login
+      - post:
+          url: "/auth/v1/signup"
+          json:
+            email: "stress-{{ $randomString() }}-{{ $timestamp }}@example.com"
+            password: "StressTest123!"
+          capture:
+            - json: "$.session.access_token"
+              as: "authToken"
+            - json: "$.user.id"
+              as: "userId"
+          expect:
+            - statusCode: [200, 201, 409]  # Allow duplicate email errors
+      - think: 0.5
+      
+      # Immediate login attempt
+      - post:
+          url: "/auth/v1/token?grant_type=password"
+          json:
+            email: "stress-{{ $randomString() }}-{{ $timestamp }}@example.com"
+            password: "StressTest123!"
+          expect:
+            - statusCode: [200, 401]  # Allow login failures under stress
+      - think: 0.5
+      
+      # Immediate operations to test session handling
+      - get:
+          url: "/api/auth/user"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: [200, 401]  # Allow auth failures under stress
+      - think: 1
+
+  # Document Upload Stress Test
+  - name: "Document Upload Stress Test"
+    weight: 30
+    flow:
+      # Login first
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "upload-stress@example.com"
+            password: "UploadStress123!"
+          capture:
+            - json: "$.access_token"
+              as: "authToken"
+            - json: "$.user.id"
+              as: "userId"
+      - think: 1
+      
+      # Concurrent upload attempts
+      - post:
+          url: "/api/upload"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          formData:
+            file: "@./fixtures/sample-policy.pdf"
+          expect:
+            - statusCode: [200, 201, 413, 500]  # Allow various responses under stress
+      - think: 0.5
+      
+      - post:
+          url: "/api/upload"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          formData:
+            file: "@./fixtures/sample-policy.pdf"
+          expect:
+            - statusCode: [200, 201, 413, 500]
+      - think: 0.5
+      
+      # Get documents under stress
+      - get:
+          url: "/api/documents"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: [200, 401, 500]
+
+  # Chat Interface Stress Test
+  - name: "Chat Interface Stress Test"
+    weight: 20
+    flow:
+      # Login
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "chat-stress@example.com"
+            password: "ChatStress123!"
+          capture:
+            - json: "$.access_token"
+              as: "authToken"
+            - json: "$.user.id"
+              as: "userId"
+      - think: 1
+      
+      # Rapid fire chat messages
+      - post:
+          url: "/api/chat"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            message: "Stress test message {{ $randomString() }}"
+            conversationId: "stress-conv-{{ $uuid }}"
+            userId: "{{ userId }}"
+          expect:
+            - statusCode: [200, 201, 429, 500]  # Allow rate limiting and errors
+      - think: 0.2
+      
+      - post:
+          url: "/api/chat"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            message: "Another stress message {{ $randomString() }}"
+            conversationId: "stress-conv-{{ $uuid }}"
+            userId: "{{ userId }}"
+          expect:
+            - statusCode: [200, 201, 429, 500]
+      - think: 0.2
+      
+      - post:
+          url: "/api/chat"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            message: "Third stress message {{ $randomString() }}"
+            conversationId: "stress-conv-{{ $uuid }}"
+            userId: "{{ userId }}"
+          expect:
+            - statusCode: [200, 201, 429, 500]
+
+  # Session Management Stress Test
+  - name: "Session Management Stress Test"
+    weight: 10
+    flow:
+      # Login
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "session-stress@example.com"
+            password: "SessionStress123!"
+          capture:
+            - json: "$.access_token"
+              as: "authToken"
+            - json: "$.refresh_token"
+              as: "refreshToken"
+      - think: 1
+      
+      # Validate session multiple times
+      - get:
+          url: "/api/auth/user"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: [200, 401, 500]
+      - think: 0.5
+      
+      - get:
+          url: "/api/auth/user"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: [200, 401, 500]
+      - think: 0.5
+      
+      # Refresh token under stress
+      - post:
+          url: "/api/auth/refresh"
+          json:
+            refresh_token: "{{ refreshToken }}"
+          expect:
+            - statusCode: [200, 401, 500]
+      - think: 1
+      
+      # Use new token
+      - get:
+          url: "/api/auth/user"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: [200, 401, 500]
+
+  # Memory Leak Stress Test
+  - name: "Memory Leak Stress Test"
+    weight: 5
+    flow:
+      # Login
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "memory-stress@example.com"
+            password: "MemoryStress123!"
+          capture:
+            - json: "$.access_token"
+              as: "authToken"
+      - think: 1
+      
+      # Repeated operations to test memory usage
+      - loop:
+          - get:
+              url: "/api/auth/user"
+              headers:
+                Authorization: "Bearer {{ authToken }}"
+              expect:
+                - statusCode: [200, 401, 500]
+          - think: 0.1
+        count: 50  # 50 rapid requests to test memory stability
+      
+      # Final memory check
+      - get:
+          url: "/auth/v1/user"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: [200, 401, 500]
+
+  # Network Interruption Stress Test
+  - name: "Network Interruption Stress Test"
+    weight: 5
+    flow:
+      # Login
+      - post:
+          url: "/auth/v1/token?grant_type=password"
+          json:
+            email: "network-stress@example.com"
+            password: "NetworkStress123!"
+          capture:
+            - json: "$.access_token"
+              as: "authToken"
+      - think: 1
+      
+      # Simulate network interruptions with rapid requests
+      - loop:
+          - post:
+              url: "http://localhost:3002/api/chat"
+              headers:
+                Authorization: "Bearer {{ authToken }}"
+              json:
+                message: "Network stress test {{ $randomString() }}"
+                conversationId: "network-stress-{{ $uuid }}"
+                userId: "network-stress-user"
+              expect:
+                - statusCode: [200, 201, 429, 500, 502, 503, 504]
+          - think: 0.05  # Very rapid requests
+        count: 100  # 100 rapid requests to test network resilience
