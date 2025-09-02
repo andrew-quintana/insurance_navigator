@@ -1,36 +1,38 @@
 {
   "name": "frontend-integration-tests",
   "version": "1.0.0",
-  "description": "Frontend integration testing for Insurance Navigator",
+  "description": "Comprehensive frontend integration tests for the insurance navigator system",
   "main": "index.js",
   "scripts": {
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage",
-    "test:integration": "vitest run scenarios/",
-    "test:auth": "vitest run scenarios/auth-flow.test.ts",
-    "test:upload": "vitest run scenarios/upload-flow.test.ts",
-    "test:chat": "vitest run scenarios/chat-flow.test.ts",
-    "test:all": "vitest run scenarios/ --reporter=verbose",
-    "start:services": "docker-compose -f docker-compose.mock.yml up -d",
-    "stop:services": "docker-compose -f docker-compose.mock.yml down -v",
-    "restart:services": "npm run stop:services && npm run start:services",
-    "health:check": "node -e \"Promise.all([fetch('http://localhost:3001/health'), fetch('http://localhost:3002/health')]).then(() => console.log('✅ All services healthy')).catch(() => console.log('❌ Services not healthy'))\"",
-    "setup:environment": "node -e \"const { TestEnvironment } = require('./setup/environment.ts'); new TestEnvironment().initialize().then(() => console.log('✅ Environment ready')).catch(console.error)\"",
-    "cleanup:environment": "node -e \"const { TestEnvironment } = require('./setup/environment.ts'); new TestEnvironment().cleanup().then(() => console.log('✅ Environment cleaned')).catch(console.error)\""
+    "test:integration": "vitest run",
+    "test:integration:watch": "vitest",
+    "test:full-system": "vitest run scenarios/full-system.test.ts",
+    "test:real-system": "vitest run scenarios/real-system-integration.test.ts",
+    "test:production-readiness": "vitest run scenarios/production-readiness.test.ts",
+    "test:security": "vitest run scenarios/security-validation.test.ts",
+    "test:accessibility": "vitest run scenarios/accessibility.test.ts",
+    "test:all": "vitest run scenarios/",
+    "start:environment": "docker-compose -f docker-compose.full.yml up -d",
+    "stop:environment": "docker-compose -f docker-compose.full.yml down -v",
+    "wait:services": "node setup/wait-for-services.js",
+    "reset:data": "docker-compose -f docker-compose.full.yml exec -T postgres psql -U postgres -d postgres -c \"TRUNCATE upload_pipeline.documents CASCADE; TRUNCATE upload_pipeline.upload_jobs CASCADE;\"",
+    "performance:real-system": "cd performance && node run-real-system-performance.js"
   },
   "dependencies": {
-    "node-fetch": "^3.3.2"
+    "@playwright/test": "^1.40.0",
+    "node-fetch": "^3.3.2",
+    "vitest": "^1.0.0"
   },
   "devDependencies": {
-    "vitest": "^1.0.0",
-    "@vitest/ui": "^1.0.0",
-    "@vitest/coverage-v8": "^1.0.0",
-    "typescript": "^5.0.0",
-    "tsx": "^4.0.0"
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
   },
-  "keywords": ["testing", "integration", "frontend", "authentication", "upload", "chat"],
+  "keywords": [
+    "integration-tests",
+    "frontend",
+    "e2e",
+    "testing"
+  ],
   "author": "Insurance Navigator Team",
   "license": "MIT"
 }

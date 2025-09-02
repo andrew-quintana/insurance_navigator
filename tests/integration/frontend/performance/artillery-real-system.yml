@@ -1,0 +1,162 @@
+config:
+  target: http://localhost:3000
+  phases:
+    # Gradual ramp up for real system testing
+    - duration: 60
+      arrivalRate: 1
+      name: "Real system warmup"
+    - duration: 300
+      arrivalRate: 2  
+      name: "Real system ramp up"
+    - duration: 600
+      arrivalRate: 3
+      name: "Sustained real system load"
+    - duration: 120
+      arrivalRate: 1
+      name: "Real system cool down"
+
+  plugins:
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+
+  # Real system testing requires longer timeouts
+  timeout: 30
+  http:
+    timeout: 30
+
+scenarios:
+  # Real User Registration and Login Flow
+  - name: "Real User Registration Flow"
+    weight: 20
+    flow:
+      - post:
+          url: "/api/auth/register"
+          json:
+            email: "real-test-{{ $randomString() }}@example.com"
+            password: "RealTest123!"
+          capture:
+            - json: "$.access_token"
+              as: "authToken"
+            - json: "$.user.id"
+              as: "userId"
+          expect:
+            - statusCode: 200
+      - think: 2
+      
+  # Real User Login Flow  
+  - name: "Real User Login Flow"
+    weight: 30
+    flow:
+      # First register
+      - post:
+          url: "/api/auth/register"
+          json:
+            email: "real-login-test-{{ $randomString() }}@example.com"
+            password: "RealLoginTest123!"
+          capture:
+            - json: "$.user.email"
+              as: "userEmail"
+      - think: 1
+      # Then login
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "{{ userEmail }}"
+            password: "RealLoginTest123!"
+          capture:
+            - json: "$.access_token"
+              as: "authToken"
+          expect:
+            - statusCode: 200
+      - think: 2
+
+  # Real Document Upload and Chat Flow with Actual Processing
+  - name: "Real Document Upload and Chat Flow"  
+    weight: 40
+    flow:
+      # Login first
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "real-upload-test@example.com"
+            password: "RealUploadTest123!"
+          capture:
+            - json: "$.access_token"
+              as: "authToken"
+            - json: "$.user.id" 
+              as: "userId"
+      - think: 1
+      
+      # Upload document (real processing will take longer)
+      - post:
+          url: "/api/upload"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          formData:
+            file: "@./fixtures/sample-insurance-policy.pdf"
+          capture:
+            - json: "$.documentId"
+              as: "documentId"
+          expect:
+            - statusCode: 200
+      - think: 10  # Longer wait for real document processing
+      
+      # Send chat message (real AI processing will take longer)
+      - post:
+          url: "/api/chat"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            message: "What is my deductible based on my uploaded policy?"
+            conversationId: "real-test-{{ $uuid }}"
+            userId: "{{ userId }}"
+          expect:
+            - statusCode: 200
+            - hasProperty: "text"
+      - think: 5
+
+  # Real Session Management Flow
+  - name: "Real Session Management Flow"
+    weight: 10
+    flow:
+      # Login
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "real-session-test@example.com"
+            password: "RealSessionTest123!"
+          capture:
+            - json: "$.access_token"
+              as: "authToken"
+            - json: "$.refresh_token"
+              as: "refreshToken"
+      - think: 5
+      
+      # Validate session
+      - get:
+          url: "/api/auth/user"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: 200
+      - think: 10
+      
+      # Refresh token
+      - post:
+          url: "/api/auth/refresh"
+          json:
+            refresh_token: "{{ refreshToken }}"
+          capture:
+            - json: "$.access_token"
+              as: "newAuthToken"
+          expect:
+            - statusCode: 200
+      - think: 2
+      
+      # Use new token
+      - get:
+          url: "/api/auth/user"
+          headers:
+            Authorization: "Bearer {{ newAuthToken }}"
+          expect:
+            - statusCode: 200

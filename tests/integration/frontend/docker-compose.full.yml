@@ -1,0 +1,174 @@
+version: '3.8'
+
+services:
+  # Frontend (production-like build)
+  frontend:
+    build:
+      context: ../../ui
+      dockerfile: Dockerfile.test
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=test
+      - NEXT_PUBLIC_API_URL=http://api-server:8000
+      - NEXT_PUBLIC_SUPABASE_URL=http://supabase:54321
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+      - NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+    depends_on:
+      api-server:
+        condition: service_healthy
+      supabase:
+        condition: service_healthy
+    volumes:
+      - ../../ui:/app
+      - /app/node_modules
+      - ./fixtures:/app/fixtures
+    networks:
+      - full-integration
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Real API server (from existing backend)
+  api-server:
+    build:
+      context: ../..
+      dockerfile: api/upload_pipeline/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
+      - UPLOAD_PIPELINE_SUPABASE_URL=http://supabase:54321
+      - UPLOAD_PIPELINE_SUPABASE_ANON_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+      - UPLOAD_PIPELINE_SUPABASE_SERVICE_ROLE_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+      - UPLOAD_PIPELINE_LLAMAPARSE_API_URL=https://api.cloud.llamaindex.ai
+      - UPLOAD_PIPELINE_OPENAI_API_URL=https://api.openai.com
+      - UPLOAD_PIPELINE_ENVIRONMENT=test
+      - UPLOAD_PIPELINE_STORAGE_ENVIRONMENT=test
+      - UPLOAD_PIPELINE_STORAGE_URL=http://supabase:54321
+    depends_on:
+      postgres:
+        condition: service_healthy
+      supabase:
+        condition: service_healthy
+    networks:
+      - full-integration
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Real worker (from existing backend)
+  enhanced-base-worker:
+    build:
+      context: ../..
+      dockerfile: backend/workers/Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
+      - SUPABASE_URL=http://supabase:54321
+      - SUPABASE_ANON_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+      - SUPABASE_SERVICE_ROLE_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+      - LLAMAPARSE_API_URL=https://api.cloud.llamaindex.ai
+      - OPENAI_API_URL=https://api.openai.com
+      - UPLOAD_PIPELINE_ENVIRONMENT=test
+      - UPLOAD_PIPELINE_STORAGE_ENVIRONMENT=test
+      - UPLOAD_PIPELINE_STORAGE_URL=http://supabase:54321
+      - SERVICE_MODE=HYBRID
+      - LLAMAPARSE_API_KEY=llx-X9bRG4r7mq5Basype0fCvfvlj1372pDdQXi7KaxVqkRlkoSb
+      - OPENAI_API_KEY=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
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api-server:
+        condition: service_healthy
+      supabase:
+        condition: service_healthy
+    networks:
+      - full-integration
+    healthcheck:
+      test: ["CMD", "python", "-c", "from backend.workers.enhanced_base_worker import EnhancedBaseWorker; print('Enhanced worker import successful')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Supabase (real auth and database)
+  supabase:
+    image: supabase/supabase:latest
+    ports:
+      - "54321:54321"
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - JWT_SECRET=super-secret-jwt-token-with-at-least-32-characters-long
+      - ANON_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+      - SERVICE_ROLE_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../../../supabase/migrations:/docker-entrypoint-initdb.d
+      - supabase_data:/var/lib/postgresql/data
+    networks:
+      - full-integration
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:54321/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # PostgreSQL (real database)
+  postgres:
+    image: pgvector/pgvector:pg15
+    ports:
+      - "54322:5432"
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../../../supabase/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - full-integration
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Real LlamaParse API (external service)
+  # Note: This will use the actual LlamaParse API, not a mock
+  # The API server will connect to https://api.cloud.llamaindex.ai
+
+  # Real OpenAI API (external service)  
+  # Note: This will use the actual OpenAI API, not a mock
+  # The API server will connect to https://api.openai.com
+
+  # Local storage service for testing
+  local-storage:
+    build:
+      context: ../../../testing/mocks
+      dockerfile: storage.Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      - MOCK_STORAGE_PORT=5001
+    networks:
+      - full-integration
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  full-integration:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  supabase_data:
