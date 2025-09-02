@@ -1,0 +1,34 @@
+{
+  "established": "2025-09-02T02:18:49.362Z",
+  "loadTest": {
+    "targetConcurrentUsers": 5,
+    "targetResponseTime": 1000,
+    "targetErrorRate": 1,
+    "actualResponseTime": 322.2,
+    "actualErrorRate": 0,
+    "meetsTargets": true
+  },
+  "stressTest": {
+    "targetConcurrentUsers": 30,
+    "targetResponseTime": 5000,
+    "targetErrorRate": 5,
+    "actualResponseTime": 267.4,
+    "actualErrorRate": 0,
+    "meetsTargets": true
+  },
+  "authentication": {
+    "registrationTime": 322.2,
+    "loginTime": 322.2,
+    "sessionValidationTime": 500,
+    "tokenRefreshTime": 1000
+  },
+  "recommendations": {
+    "loadTest": [
+      "Performance meets targets - consider increasing load"
+    ],
+    "stressTest": [
+      "Monitor system resources during peak load",
+      "Implement graceful degradation for high load scenarios"
+    ]
+  }
+}
