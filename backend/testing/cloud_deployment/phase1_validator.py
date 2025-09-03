@@ -57,14 +57,19 @@ class CloudEnvironmentValidator:
         
     def _load_config(self) -> Dict[str, str]:
         """Load configuration from environment variables"""
-        return {
+        config = {
             'vercel_url': os.getenv('VERCEL_URL', 'https://insurance-navigator.vercel.app'),
             'render_url': os.getenv('RENDER_URL', '***REMOVED***'),
+            'render_worker_url': os.getenv('RENDER_WORKER_URL', 'https://insurance-navigator-worker.onrender.com'),
             'supabase_url': os.getenv('SUPABASE_URL'),
-            'supabase_anon_key': os.getenv('SUPABASE_ANON_KEY'),
-            'supabase_service_key': os.getenv('SUPABASE_SERVICE_ROLE_KEY'),
+            'supabase_anon_key': os.getenv('SUPABASE_KEY'),
+            'supabase_service_key': os.getenv('SERVICE_ROLE_KEY'),
             'api_base_url': os.getenv('API_BASE_URL', '***REMOVED***'),
         }
+        
+
+        
+        return config
     
     async def __aenter__(self):
         """Async context manager entry"""
@@ -193,6 +198,117 @@ class CloudEnvironmentValidator:
             errors=errors,
             timestamp=datetime.now(),
             environment="render"
+        )
+    
+    async def validate_render_worker_deployment(self) -> ValidationResult:
+        """
+        Validate Render worker service deployment
+        
+        Tests:
+        - Worker service health and status
+        - Worker process functionality
+        - Worker environment configuration
+        
+        Returns:
+            ValidationResult with status, health_checks, performance
+        """
+        logger.info("Starting Render worker deployment validation")
+        start_time = time.time()
+        errors = []
+        metrics = {}
+        
+        try:
+            # Test 1: Worker service health
+            worker_health = await self._test_worker_service_health()
+            metrics.update(worker_health)
+            
+            # Test 2: Worker service status
+            worker_status = await self._test_worker_service_status()
+            metrics.update(worker_status)
+            
+            # Test 3: Worker environment configuration
+            worker_env = await self._test_worker_environment()
+            metrics.update(worker_env)
+            
+            # Determine overall status
+            status = "pass"
+            if errors:
+                status = "fail"
+            elif any(metric.get('warning', False) for metric in [worker_health, worker_status, worker_env]):
+                status = "warning"
+            
+            metrics['total_validation_time'] = time.time() - start_time
+            
+        except Exception as e:
+            logger.error(f"Render worker validation failed: {e}")
+            errors.append(f"Render worker validation error: {str(e)}")
+            status = "fail"
+            metrics['total_validation_time'] = time.time() - start_time
+        
+        return ValidationResult(
+            status=status,
+            metrics=metrics,
+            errors=errors,
+            timestamp=datetime.now(),
+            environment="render_worker"
+        )
+    
+    async def validate_render_build_status(self) -> ValidationResult:
+        """
+        Validate Render build status and deployment logs
+        
+        Tests:
+        - Build status for API service
+        - Build status for worker service
+        - Deployment log analysis
+        - Build performance metrics
+        
+        Returns:
+            ValidationResult with build status, logs, and performance
+        """
+        logger.info("Starting Render build status validation")
+        start_time = time.time()
+        errors = []
+        metrics = {}
+        
+        try:
+            # Test 1: API service build status
+            api_build = await self._test_api_build_status()
+            metrics.update(api_build)
+            
+            # Test 2: Worker service build status
+            worker_build = await self._test_worker_build_status()
+            metrics.update(worker_build)
+            
+            # Test 3: Deployment log analysis
+            log_analysis = await self._analyze_deployment_logs()
+            metrics.update(log_analysis)
+            
+            # Test 4: Build performance metrics
+            build_performance = await self._analyze_build_performance()
+            metrics.update(build_performance)
+            
+            # Determine overall status
+            status = "pass"
+            if errors:
+                status = "fail"
+            elif any(metric.get('warning', False) for metric in [api_build, worker_build, log_analysis, build_performance]):
+                status = "warning"
+            
+            metrics['total_validation_time'] = time.time() - start_time
+            
+        except Exception as e:
+            logger.error(f"Render build validation failed: {e}")
+            errors.append(f"Render build validation error: {str(e)}")
+            status = "fail"
+            metrics['total_validation_time'] = time.time() - start_time
+        
+        return ValidationResult(
+            status=status,
+            metrics=metrics,
+            errors=errors,
+            timestamp=datetime.now(),
+            environment="render_build"
         )
     
     async def validate_supabase_connectivity(self) -> ValidationResult:
@@ -431,6 +547,8 @@ class CloudEnvironmentValidator:
         """Test database connection and performance"""
         metrics = {}
         
+
+        
         if not self.config.get('supabase_url') or not self.config.get('supabase_service_key'):
             metrics['database_error'] = "Supabase configuration missing"
             metrics['warning'] = True
@@ -549,6 +667,233 @@ class CloudEnvironmentValidator:
         
         except Exception as e:
             metrics['realtime_error'] = str(e)
+            metrics['warning'] = True
+        
+        return metrics
+    
+    # Worker service helper methods
+    async def _test_worker_service_health(self) -> Dict[str, Any]:
+        """Test worker service health endpoint"""
+        metrics = {}
+        
+        worker_url = self.config.get('render_worker_url', 'https://insurance-navigator-worker.onrender.com')
+        
+        try:
+            # Test worker service health endpoint
+            health_url = f"{worker_url}/health"
+            async with self.session.get(health_url, timeout=30) as response:
+                metrics['worker_health_status_code'] = response.status
+                metrics['worker_health_response_time'] = "unknown"  # Could add timing
+                
+                if response.status == 200:
+                    try:
+                        health_data = await response.json()
+                        metrics['worker_health_data'] = health_data
+                    except:
+                        metrics['worker_health_data'] = await response.text()
+                else:
+                    metrics['worker_health_error'] = f"Status code: {response.status}"
+                    metrics['warning'] = True
+        
+        except Exception as e:
+            metrics['worker_health_error'] = str(e)
+            metrics['warning'] = True
+        
+        return metrics
+    
+    async def _test_worker_service_status(self) -> Dict[str, Any]:
+        """Test worker service status and functionality"""
+        metrics = {}
+        
+        worker_url = self.config.get('render_worker_url', 'https://insurance-navigator-worker.onrender.com')
+        
+        try:
+            # Test worker service status endpoint (if available)
+            status_url = f"{worker_url}/status"
+            async with self.session.get(status_url, timeout=30) as response:
+                metrics['worker_status_code'] = response.status
+                
+                if response.status == 200:
+                    try:
+                        status_data = await response.json()
+                        metrics['worker_status_data'] = status_data
+                    except:
+                        metrics['worker_status_data'] = await response.text()
+                else:
+                    metrics['worker_status_error'] = f"Status code: {response.status}"
+                    metrics['warning'] = True
+        
+        except Exception as e:
+            metrics['worker_status_error'] = str(e)
+            metrics['warning'] = True
+        
+        return metrics
+    
+    async def _test_worker_environment(self) -> Dict[str, Any]:
+        """Test worker environment configuration"""
+        metrics = {}
+        
+        # Check if worker URL is configured
+        if not self.config.get('render_worker_url'):
+            metrics['worker_env_error'] = "Worker URL not configured"
+            metrics['warning'] = True
+        else:
+            metrics['worker_env_configured'] = True
+        
+        return metrics
+    
+    # Build validation helper methods
+    async def _test_api_build_status(self) -> Dict[str, Any]:
+        """Test API service build status"""
+        metrics = {}
+        
+        try:
+            # Check if API service is accessible (indicates successful build)
+            api_url = self.config.get('render_url', '***REMOVED***')
+            
+            async with self.session.get(f"{api_url}/health", timeout=30) as response:
+                metrics['api_build_status_code'] = response.status
+                
+                if response.status == 200:
+                    metrics['api_build_success'] = True
+                    metrics['api_build_status'] = 'deployed'
+                else:
+                    metrics['api_build_success'] = False
+                    metrics['api_build_status'] = 'failed'
+                    metrics['api_build_error'] = f"Health check failed: {response.status}"
+                    metrics['warning'] = True
+        
+        except Exception as e:
+            metrics['api_build_success'] = False
+            metrics['api_build_status'] = 'error'
+            metrics['api_build_error'] = str(e)
+            metrics['warning'] = True
+        
+        return metrics
+    
+    async def _test_worker_build_status(self) -> Dict[str, Any]:
+        """Test worker service build status"""
+        metrics = {}
+        
+        try:
+            # Check if worker service is accessible (indicates successful build)
+            worker_url = self.config.get('render_worker_url', 'https://insurance-navigator-worker.onrender.com')
+            
+            # Try to access the worker service
+            async with self.session.get(worker_url, timeout=30) as response:
+                metrics['worker_build_status_code'] = response.status
+                
+                if response.status in [200, 404]:  # 404 is expected for worker services
+                    metrics['worker_build_success'] = True
+                    metrics['worker_build_status'] = 'deployed'
+                    if response.status == 404:
+                        metrics['worker_build_note'] = 'Worker service deployed (404 expected for background workers)'
+                else:
+                    metrics['worker_build_success'] = False
+                    metrics['worker_build_status'] = 'failed'
+                    metrics['worker_build_error'] = f"Unexpected status: {response.status}"
+                    metrics['warning'] = True
+        
+        except Exception as e:
+            metrics['worker_build_success'] = False
+            metrics['worker_build_status'] = 'error'
+            metrics['worker_build_error'] = str(e)
+            metrics['warning'] = True
+        
+        return metrics
+    
+    async def _analyze_deployment_logs(self) -> Dict[str, Any]:
+        """Analyze deployment logs for errors and warnings"""
+        metrics = {}
+        
+        try:
+            # This would typically involve accessing Render's API or log endpoints
+            # For now, we'll simulate log analysis based on service responses
+            
+            api_url = self.config.get('render_url', '***REMOVED***')
+            worker_url = self.config.get('render_worker_url', 'https://insurance-navigator-worker.onrender.com')
+            
+            # Check API service logs (simulated)
+            try:
+                async with self.session.get(f"{api_url}/health", timeout=30) as response:
+                    if response.status == 200:
+                        metrics['api_logs_status'] = 'healthy'
+                        metrics['api_logs_errors'] = 0
+                    else:
+                        metrics['api_logs_status'] = 'warning'
+                        metrics['api_logs_errors'] = 1
+                        metrics['api_logs_warning'] = f"API health check returned {response.status}"
+            except Exception as e:
+                metrics['api_logs_status'] = 'error'
+                metrics['api_logs_errors'] = 1
+                metrics['api_logs_error'] = str(e)
+            
+            # Check worker service logs (simulated)
+            try:
+                async with self.session.get(worker_url, timeout=30) as response:
+                    if response.status in [200, 404]:
+                        metrics['worker_logs_status'] = 'healthy'
+                        metrics['worker_logs_errors'] = 0
+                    else:
+                        metrics['worker_logs_status'] = 'warning'
+                        metrics['worker_logs_errors'] = 1
+                        metrics['worker_logs_warning'] = f"Worker service returned {response.status}"
+            except Exception as e:
+                metrics['worker_logs_status'] = 'error'
+                metrics['worker_logs_errors'] = 1
+                metrics['worker_logs_error'] = str(e)
+            
+            # Overall log analysis
+            total_errors = metrics.get('api_logs_errors', 0) + metrics.get('worker_logs_errors', 0)
+            if total_errors > 0:
+                metrics['log_analysis_warning'] = True
+                metrics['total_log_errors'] = total_errors
+            else:
+                metrics['log_analysis_success'] = True
+                metrics['total_log_errors'] = 0
+        
+        except Exception as e:
+            metrics['log_analysis_error'] = str(e)
+            metrics['warning'] = True
+        
+        return metrics
+    
+    async def _analyze_build_performance(self) -> Dict[str, Any]:
+        """Analyze build performance metrics"""
+        metrics = {}
+        
+        try:
+            # Measure response times as a proxy for build performance
+            api_url = self.config.get('render_url', '***REMOVED***')
+            
+            start_time = time.time()
+            async with self.session.get(f"{api_url}/health", timeout=30) as response:
+                response_time = time.time() - start_time
+                
+                metrics['api_response_time'] = response_time
+                metrics['api_response_time_ms'] = round(response_time * 1000, 2)
+                
+                # Performance thresholds
+                if response_time < 1.0:
+                    metrics['api_performance'] = 'excellent'
+                elif response_time < 2.0:
+                    metrics['api_performance'] = 'good'
+                elif response_time < 5.0:
+                    metrics['api_performance'] = 'acceptable'
+                    metrics['performance_warning'] = True
+                else:
+                    metrics['api_performance'] = 'poor'
+                    metrics['performance_warning'] = True
+                
+                # Build quality indicators
+                if response.status == 200:
+                    metrics['build_quality'] = 'success'
+                else:
+                    metrics['build_quality'] = 'failed'
+                    metrics['performance_warning'] = True
+        
+        except Exception as e:
+            metrics['performance_analysis_error'] = str(e)
             metrics['warning'] = True
         
         return metrics

@@ -1,0 +1,98 @@
+{
+  "timestamp": "2025-09-03T10:38:04.767611",
+  "services": {
+    "api": {
+      "service_name": "insurance-navigator-api",
+      "service_id": "srv-d0v2nqvdiees73cejf0g",
+      "service_type": "web_service",
+      "service_url": "***REMOVED***",
+      "health_status": "healthy",
+      "stability_analysis": {
+        "stability_analysis_available": true,
+        "recent_events": [
+          {
+            "type": null,
+            "title": null,
+            "description": null,
+            "created_at": null,
+            "severity": "info"
+          }
+        ],
+        "failure_patterns": [],
+        "recovery_patterns": [],
+        "stability_issues": [],
+        "error": "Stability analysis error: 'NoneType' object has no attribute 'lower'"
+      },
+      "log_analysis": {
+        "log_analysis_available": false,
+        "recent_logs": [],
+        "error_logs": [],
+        "warning_logs": [],
+        "log_patterns": [],
+        "common_errors": [],
+        "note": "CLI-based log analysis not available, using API fallback"
+      },
+      "error_patterns": [],
+      "configuration_issues": [
+        "llamaparse service not configured",
+        "openai service not configured"
+      ],
+      "stability_score": 80,
+      "recommendations": [
+        "Fix configuration issues: llamaparse service not configured, openai service not configured"
+      ]
+    },
+    "worker": {
+      "service_name": "insurance_navigator",
+      "service_id": "srv-d2h5mr8dl3ps73fvvlog",
+      "service_type": "background_worker",
+      "service_url": "https://insurance-navigator-worker.onrender.com",
+      "health_status": "healthy",
+      "stability_analysis": {
+        "stability_analysis_available": true,
+        "recent_events": [
+          {
+            "type": null,
+            "title": null,
+            "description": null,
+            "created_at": null,
+            "severity": "info"
+          }
+        ],
+        "failure_patterns": [],
+        "recovery_patterns": [],
+        "stability_issues": [],
+        "error": "Stability analysis error: 'NoneType' object has no attribute 'lower'"
+      },
+      "log_analysis": {
+        "log_analysis_available": false,
+        "recent_logs": [],
+        "error_logs": [],
+        "warning_logs": [],
+        "log_patterns": [],
+        "common_errors": [],
+        "note": "CLI-based log analysis not available, using API fallback"
+      },
+      "error_patterns": [],
+      "configuration_issues": [
+        "Health endpoint returned 404"
+      ],
+      "stability_score": 85,
+      "recommendations": [
+        "Fix configuration issues: Health endpoint returned 404"
+      ]
+    }
+  },
+  "summary": {
+    "total_services": 2,
+    "healthy_services": 2,
+    "degraded_services": 0,
+    "unstable_services": 0,
+    "critical_services": 0,
+    "average_stability_score": 82.5,
+    "total_failures": 0,
+    "total_errors": 0,
+    "critical_issues": []
+  },
+  "recommendations": []
+}

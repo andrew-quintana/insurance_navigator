@@ -12,6 +12,10 @@ import sys
 import os
 from datetime import datetime
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load production environment variables
+load_dotenv('.env.production')
 
 # Add the backend directory to the Python path
 backend_dir = Path(__file__).parent.parent.parent / "backend"
@@ -50,6 +54,16 @@ class Phase1TestRunner:
             self.results['render'] = render_result.to_dict()
             self._print_test_result("Render", render_result)
             
+            print("\n⚙️  Testing Render Worker Service...")
+            worker_result = await validator.validate_render_worker_deployment()
+            self.results['render_worker'] = worker_result.to_dict()
+            self._print_test_result("Render Worker", worker_result)
+            
+            print("\n🔨 Testing Render Build Status & Deployment Logs...")
+            build_result = await validator.validate_render_build_status()
+            self.results['render_build'] = build_result.to_dict()
+            self._print_test_result("Render Build", build_result)
+            
             print("\n🗄️  Testing Supabase Database Connectivity...")
             supabase_result = await validator.validate_supabase_connectivity()
             self.results['supabase'] = supabase_result.to_dict()
@@ -71,15 +85,17 @@ class Phase1TestRunner:
         config = {
             'vercel_url': os.getenv('VERCEL_URL', 'https://insurance-navigator.vercel.app'),
             'render_url': os.getenv('RENDER_URL', '***REMOVED***'),
+            'render_worker_url': os.getenv('RENDER_WORKER_URL', 'https://insurance-navigator-worker.onrender.com'),
             'supabase_url': os.getenv('SUPABASE_URL'),
-            'supabase_anon_key': os.getenv('SUPABASE_ANON_KEY'),
-            'supabase_service_key': os.getenv('SUPABASE_SERVICE_ROLE_KEY'),
+            'supabase_anon_key': os.getenv('SUPABASE_KEY'),
+            'supabase_service_key': os.getenv('SERVICE_ROLE_KEY'),
             'api_base_url': os.getenv('API_BASE_URL', '***REMOVED***'),
         }
         
         print(f"Configuration loaded:")
         print(f"  Vercel URL: {config['vercel_url']}")
         print(f"  Render URL: {config['render_url']}")
+        print(f"  Render Worker URL: {config['render_worker_url']}")
         print(f"  Supabase URL: {config['supabase_url'] or 'Not configured'}")
         print(f"  API Base URL: {config['api_base_url']}")
         

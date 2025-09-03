@@ -1,0 +1,120 @@
+{
+  "timestamp": "2025-09-03T14:54:39.299990",
+  "test_id": "3dc86740-ec4b-487c-ae5d-7e80481f1a96",
+  "config": {
+    "vercel_url": "https://insurance-navigator.vercel.app",
+    "api_url": "***REMOVED***",
+    "worker_url": "https://insurance-navigator-worker.onrender.com",
+    "supabase_url": "***REMOVED***",
+    "supabase_key": "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpudnd6a2RibGtua2t6dHF5Zm51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2ODA0NTYsImV4cCI6MjA2NzI1NjQ1Nn0.k0QHYOgm4EilyyTml57kCGDpbikpEtJCzq-qzGYQZqY",
+    "supabase_service_key": "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpudnd6a2RibGtua2t6dHF5Zm51Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTY4MDQ1NiwiZXhwIjoyMDY3MjU2NDU2fQ.9Urox9-xr5TJz8a9LbSZsGUMcSTThc3QM6XDMJD-j-o"
+  },
+  "tests": {
+    "environment_validation": {
+      "status": "passed",
+      "checks": {
+        "vercel_url_configured": true,
+        "api_url_configured": true,
+        "supabase_url_configured": true,
+        "supabase_credentials": true
+      },
+      "errors": [],
+      "warnings": []
+    },
+    "service_health": {
+      "status": "failed",
+      "services": {
+        "api": {
+          "healthy": false,
+          "error": ""
+        },
+        "worker": {
+          "status_code": 404,
+          "accessible": true,
+          "note": "404 expected for background workers"
+        }
+      },
+      "errors": [
+        "API health check error: "
+      ],
+      "warnings": []
+    },
+    "frontend_accessibility": {
+      "status": "passed",
+      "checks": {
+        "main_page_accessible": true,
+        "main_page_status": 200,
+        "endpoint__api_health": {
+          "accessible": true,
+          "status": 404
+        },
+        "endpoint__api_upload": {
+          "accessible": true,
+          "status": 404
+        },
+        "endpoint__api_documents": {
+          "accessible": true,
+          "status": 404
+        }
+      },
+      "errors": [],
+      "warnings": []
+    },
+    "api_endpoints": {
+      "status": "error",
+      "endpoints": {},
+      "errors": [
+        "API endpoints test error: "
+      ],
+      "warnings": []
+    },
+    "database_connectivity": {
+      "status": "error",
+      "checks": {},
+      "errors": [
+        "Database connectivity test error: "
+      ],
+      "warnings": []
+    },
+    "document_upload_pipeline": {
+      "status": "error",
+      "upload_tests": {},
+      "errors": [
+        "Document upload pipeline test error: "
+      ],
+      "warnings": []
+    },
+    "worker_processing": {
+      "status": "passed",
+      "checks": {
+        "worker_accessible": true,
+        "worker_status": 404,
+        "worker_note": "404 expected for background worker"
+      },
+      "errors": [],
+      "warnings": []
+    },
+    "end_to_end_workflow": {
+      "status": "error",
+      "workflow_steps": {},
+      "errors": [
+        "End-to-end workflow test error: "
+      ],
+      "warnings": []
+    }
+  },
+  "summary": {
+    "total_tests": 8,
+    "passed_tests": 3,
+    "failed_tests": 1,
+    "warning_tests": 0,
+    "error_tests": 4,
+    "overall_status": "failed"
+  },
+  "performance_metrics": {
+    "total_execution_time": 0,
+    "average_response_time": 0,
+    "slowest_test": null,
+    "fastest_test": null
+  }
+}
