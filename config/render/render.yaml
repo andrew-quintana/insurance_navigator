@@ -2,10 +2,10 @@ services:
   - type: web
     name: insurance-navigator-api
     env: docker
-    plan: free
+    plan: starter
     dockerfilePath: ./Dockerfile
     region: oregon
-    branch: staging
+    branch: main
     port: 8000
     healthCheckPath: /health
     # Render optimizations for faster startup
@@ -16,7 +16,10 @@ services:
     healthCheckTimeout: 180
     numReplicas: 1
     autoscaling:
-      enabled: false
+      enabled: true
+      minInstances: 1
+      maxInstances: 3
+      targetCPUPercent: 70
     envVars:
       - key: SUPABASE_URL
         sync: false
