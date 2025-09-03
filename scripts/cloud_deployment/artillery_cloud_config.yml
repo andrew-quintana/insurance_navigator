@@ -1,0 +1,332 @@
+# Artillery.js Cloud Load Testing Configuration
+# Phase 2: Integration & Performance Testing
+# 
+# This configuration tests the cloud deployment against local integration baselines
+# Target: Match or exceed 322.2ms average response time and 4,814 successful requests
+
+config:
+  target: 'https://insurance-navigator.vercel.app'
+  phases:
+    # Phase 1: Warm-up (5 minutes)
+    - duration: 60
+      arrivalRate: 2
+      name: "Warm-up phase"
+    
+    # Phase 2: Normal load (10 minutes) - matches local baseline
+    - duration: 120
+      arrivalRate: 5
+      name: "Normal load phase"
+    
+    # Phase 3: Peak load (5 minutes) - stress testing
+    - duration: 60
+      arrivalRate: 10
+      name: "Peak load phase"
+    
+    # Phase 4: Sustained load (10 minutes) - endurance testing
+    - duration: 120
+      arrivalRate: 8
+      name: "Sustained load phase"
+    
+    # Phase 5: Cool-down (2 minutes)
+    - duration: 30
+      arrivalRate: 1
+      name: "Cool-down phase"
+  
+  # Performance thresholds based on local integration baseline
+  ensure:
+    # Response time thresholds (must be within 50% of local baseline)
+    p95: 450  # 95th percentile response time (local baseline: 450ms)
+    p99: 600  # 99th percentile response time (local baseline: 600ms)
+    max: 1000 # Maximum acceptable response time
+  
+  # HTTP configuration
+  http:
+    timeout: 30
+    pool: 10
+  
+  # Plugin configuration
+  plugins:
+    metrics-by-endpoint: {}
+    publish-metrics:
+      - type: json
+        path: './artillery_cloud_results.json'
+
+# Test scenarios covering all major user workflows
+scenarios:
+  # Scenario 1: Frontend Page Load (30% of traffic)
+  - name: "Frontend Page Load"
+    weight: 30
+    flow:
+      - get:
+          url: "/"
+          capture:
+            - json: "$.status"
+              as: "page_status"
+          expect:
+            - statusCode: 200
+            - hasHeader: "content-type"
+            - contentType: "text/html"
+      
+      # Test static assets
+      - get:
+          url: "/_next/static/css/app.css"
+          expect:
+            - statusCode: [200, 404]  # 404 is acceptable for missing assets
+      
+      # Test API health from frontend
+      - get:
+          url: "/api/health"
+          expect:
+            - statusCode: [200, 404]  # May not be available on frontend
+
+  # Scenario 2: Authentication Flow (25% of traffic)
+  - name: "Authentication Flow"
+    weight: 25
+    flow:
+      # Test Supabase auth health
+      - get:
+          url: "{{ $processEnvironment.SUPABASE_URL }}/auth/v1/health"
+          headers:
+            apikey: "{{ $processEnvironment.SUPABASE_ANON_KEY }}"
+          expect:
+            - statusCode: [200, 404]
+      
+      # Test auth endpoints accessibility
+      - get:
+          url: "{{ $processEnvironment.SUPABASE_URL }}/auth/v1/settings"
+          headers:
+            apikey: "{{ $processEnvironment.SUPABASE_ANON_KEY }}"
+          expect:
+            - statusCode: [200, 401, 404]  # 401 is expected without auth
+
+  # Scenario 3: API Health Checks (20% of traffic)
+  - name: "API Health Checks"
+    weight: 20
+    flow:
+      # Test main API health endpoint
+      - get:
+          url: "{{ $processEnvironment.API_URL }}/health"
+          expect:
+            - statusCode: 200
+            - contentType: "application/json"
+            - hasProperty: "status"
+            - equals:
+              - "{{ $json.status }}"
+              - "healthy"
+      
+      # Test API response time
+      - get:
+          url: "{{ $processEnvironment.API_URL }}/health"
+          capture:
+            - json: "$.timestamp"
+              as: "api_timestamp"
+          expect:
+            - statusCode: 200
+
+  # Scenario 4: Document Upload Simulation (15% of traffic)
+  - name: "Document Upload Simulation"
+    weight: 15
+    flow:
+      # Test upload endpoint accessibility (will require auth)
+      - post:
+          url: "{{ $processEnvironment.API_URL }}/upload-document-backend"
+          json:
+            filename: "test-document.pdf"
+            content_type: "application/pdf"
+            size: 1024
+          expect:
+            - statusCode: [200, 401, 403]  # 401/403 expected without auth
+      
+      # Test upload validation
+      - post:
+          url: "{{ $processEnvironment.API_URL }}/upload-document-backend"
+          json:
+            filename: ""
+            content_type: "application/pdf"
+            size: 0
+          expect:
+            - statusCode: [400, 401, 403]  # 400 for validation, 401/403 for auth
+
+  # Scenario 5: Chat/Conversation Simulation (10% of traffic)
+  - name: "Chat Simulation"
+    weight: 10
+    flow:
+      # Test chat endpoint accessibility (will require auth)
+      - post:
+          url: "{{ $processEnvironment.API_URL }}/chat"
+          json:
+            message: "What is the deductible for my policy?"
+            job_id: "test-job-id"
+          expect:
+            - statusCode: [200, 401, 403]  # 401/403 expected without auth
+      
+      # Test chat validation
+      - post:
+          url: "{{ $processEnvironment.API_URL }}/chat"
+          json:
+            message: ""
+            job_id: ""
+          expect:
+            - statusCode: [400, 401, 403]  # 400 for validation, 401/403 for auth
+
+# Environment variables (set these in your environment)
+# SUPABASE_URL=***REMOVED***
+# SUPABASE_ANON_KEY=your_supabase_anon_key
+# API_URL=***REMOVED***
+
+# Custom functions for dynamic data
+functions:
+  # Generate random test data
+  generateTestData: |
+    function() {
+      return {
+        filename: `test-document-${Math.random().toString(36).substr(2, 9)}.pdf`,
+        content_type: "application/pdf",
+        size: Math.floor(Math.random() * 10000) + 1000
+      };
+    }
+  
+  # Generate random chat messages
+  generateChatMessage: |
+    function() {
+      const messages = [
+        "What is the deductible for my policy?",
+        "Can you explain my coverage details?",
+        "What are my policy limits?",
+        "How do I file a claim?",
+        "What is my premium amount?"
+      ];
+      return messages[Math.floor(Math.random() * messages.length)];
+    }
+
+# Performance expectations based on local integration baseline
+# Local baseline: 322.2ms average response time, 4,814 successful requests
+# Cloud target: Match or exceed local performance
+expectations:
+  # Response time expectations
+  response_time:
+    avg: 500  # Allow 50% degradation for cloud latency
+    p95: 750  # 95th percentile
+    p99: 1000 # 99th percentile
+    max: 2000 # Maximum acceptable
+  
+  # Success rate expectations
+  success_rate:
+    min: 95  # Minimum 95% success rate
+  
+  # Throughput expectations
+  throughput:
+    min: 10  # Minimum 10 requests per second
+  
+  # Error rate expectations
+  error_rate:
+    max: 5   # Maximum 5% error rate
+
+# Reporting configuration
+reports:
+  # JSON report for analysis
+  - type: json
+    path: './artillery_cloud_detailed_results.json'
+  
+  # HTML report for visualization
+  - type: html
+    path: './artillery_cloud_report.html'
+  
+  # CSV report for data analysis
+  - type: csv
+    path: './artillery_cloud_metrics.csv'
+
+# Advanced configuration
+advanced:
+  # Connection pooling
+  connection_pool:
+    max_connections: 50
+    keep_alive: true
+  
+  # Request timeouts
+  timeouts:
+    request: 30
+    response: 30
+  
+  # Retry configuration
+  retries:
+    max_retries: 3
+    retry_delay: 1000
+  
+  # Rate limiting simulation
+  rate_limiting:
+    enabled: false  # Disable for load testing
+  
+  # SSL/TLS configuration
+  ssl:
+    verify: true
+    timeout: 10
+
+# Custom metrics collection
+custom_metrics:
+  # Track specific endpoints
+  endpoints:
+    - name: "frontend_load"
+      url: "/"
+      method: "GET"
+    
+    - name: "api_health"
+      url: "{{ $processEnvironment.API_URL }}/health"
+      method: "GET"
+    
+    - name: "auth_health"
+      url: "{{ $processEnvironment.SUPABASE_URL }}/auth/v1/health"
+      method: "GET"
+  
+  # Track performance by scenario
+  scenarios:
+    - name: "frontend_performance"
+      scenarios: ["Frontend Page Load"]
+    
+    - name: "api_performance"
+      scenarios: ["API Health Checks"]
+    
+    - name: "auth_performance"
+      scenarios: ["Authentication Flow"]
+
+# Load testing phases with specific goals
+load_phases:
+  # Baseline validation phase
+  baseline_validation:
+    duration: 300  # 5 minutes
+    arrival_rate: 5
+    goal: "Validate cloud performance matches local baseline"
+  
+  # Stress testing phase
+  stress_testing:
+    duration: 600  # 10 minutes
+    arrival_rate: 15
+    goal: "Test system behavior under stress"
+  
+  # Endurance testing phase
+  endurance_testing:
+    duration: 1800  # 30 minutes
+    arrival_rate: 8
+    goal: "Test system stability over extended period"
+
+# Performance comparison with local baseline
+baseline_comparison:
+  local_integration:
+    average_response_time: 322.2  # ms
+    total_requests: 4814
+    successful_requests: 4814
+    failed_requests: 0
+    success_rate: 100.0
+    p95_response_time: 450
+    p99_response_time: 600
+  
+  cloud_targets:
+    average_response_time: 500    # Allow 50% degradation
+    success_rate: 95.0           # Minimum 95% success
+    p95_response_time: 750       # Allow 67% degradation
+    p99_response_time: 1000      # Allow 67% degradation
+  
+  comparison_metrics:
+    response_time_acceptable_ratio: 1.5  # 50% degradation acceptable
+    success_rate_acceptable_ratio: 0.95  # 95% success rate minimum
+    throughput_acceptable_ratio: 0.8     # 80% of local throughput minimum
