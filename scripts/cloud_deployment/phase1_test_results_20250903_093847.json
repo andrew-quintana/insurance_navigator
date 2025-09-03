@@ -1,0 +1,85 @@
+{
+  "vercel": {
+    "status": "pass",
+    "metrics": {
+      "frontend_status_code": 200,
+      "frontend_response_time": "unknown",
+      "frontend_content_length": 30407,
+      "frontend_has_react": true,
+      "frontend_has_nextjs": true,
+      "environment_check_available": false,
+      "cdn_status_code": 404,
+      "cdn_cache_headers": {
+        "Accept-Ranges": "bytes",
+        "Access-Control-Allow-Origin": "*",
+        "Age": "0",
+        "Cache-Control": "public, max-age=0, must-revalidate",
+        "Content-Disposition": "inline; filename=\"404\"",
+        "Content-Encoding": "br",
+        "Content-Length": "4136",
+        "Content-Type": "text/html; charset=utf-8",
+        "Date": "Wed, 03 Sep 2025 16:36:43 GMT",
+        "Etag": "\"8e47022e25334344e3c85463623d7671\"",
+        "Last-Modified": "Wed, 03 Sep 2025 16:36:43 GMT",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Server": "Vercel",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-Matched-Path": "/404",
+        "X-Vercel-Cache": "HIT",
+        "X-Vercel-Id": "sfo1::m7vbl-1756917403489-0159b013aab1",
+        "X-Xss-Protection": "1; mode=block"
+      },
+      "cdn_cache_control": "public, max-age=0, must-revalidate",
+      "build_status_code": 404,
+      "build_accessible": true,
+      "total_validation_time": 1.481436014175415
+    },
+    "errors": [],
+    "timestamp": "2025-09-03T09:36:43.887782",
+    "environment": "vercel"
+  },
+  "render": {
+    "status": "warning",
+    "metrics": {
+      "health_error": "",
+      "warning": true,
+      "container_error": "",
+      "worker_error": "",
+      "backend_env_check_available": false,
+      "total_validation_time": 123.78155541419983
+    },
+    "errors": [],
+    "timestamp": "2025-09-03T09:38:47.670566",
+    "environment": "render"
+  },
+  "supabase": {
+    "status": "warning",
+    "metrics": {
+      "database_error": "Supabase configuration missing",
+      "warning": true,
+      "auth_error": "Supabase auth configuration missing",
+      "storage_error": "Supabase storage configuration missing",
+      "realtime_error": "Supabase URL missing",
+      "total_validation_time": 2.7894973754882812e-05
+    },
+    "errors": [],
+    "timestamp": "2025-09-03T09:38:47.671733",
+    "environment": "supabase"
+  },
+  "summary": {
+    "total_tests": 2,
+    "passed_tests": 1,
+    "failed_tests": 0,
+    "warning_tests": 2,
+    "pass_rate": 50.0,
+    "all_tests_passed": false,
+    "total_execution_time": 125.266097,
+    "start_time": "2025-09-03T09:36:42.406173",
+    "end_time": "2025-09-03T09:38:47.672270",
+    "phase1_complete": false,
+    "ready_for_phase2": false
+  }
+}

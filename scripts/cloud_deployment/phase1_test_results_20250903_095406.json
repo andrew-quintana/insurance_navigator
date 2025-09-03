@@ -1,0 +1,155 @@
+{
+  "vercel": {
+    "status": "pass",
+    "metrics": {
+      "frontend_status_code": 200,
+      "frontend_response_time": "unknown",
+      "frontend_content_length": 30407,
+      "frontend_has_react": true,
+      "frontend_has_nextjs": true,
+      "environment_check_available": false,
+      "cdn_status_code": 404,
+      "cdn_cache_headers": {
+        "Accept-Ranges": "bytes",
+        "Access-Control-Allow-Origin": "*",
+        "Age": "1041",
+        "Cache-Control": "public, max-age=0, must-revalidate",
+        "Content-Disposition": "inline; filename=\"404\"",
+        "Content-Encoding": "br",
+        "Content-Length": "4136",
+        "Content-Type": "text/html; charset=utf-8",
+        "Date": "Wed, 03 Sep 2025 16:54:05 GMT",
+        "Etag": "\"8e47022e25334344e3c85463623d7671\"",
+        "Last-Modified": "Wed, 03 Sep 2025 16:36:43 GMT",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Server": "Vercel",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-Matched-Path": "/404",
+        "X-Vercel-Cache": "HIT",
+        "X-Vercel-Id": "sfo1::zzxh4-1756918445036-f1999dda04eb",
+        "X-Xss-Protection": "1; mode=block"
+      },
+      "cdn_cache_control": "public, max-age=0, must-revalidate",
+      "build_status_code": 404,
+      "build_accessible": true,
+      "total_validation_time": 0.17206025123596191
+    },
+    "errors": [],
+    "timestamp": "2025-09-03T09:54:05.079454",
+    "environment": "vercel"
+  },
+  "render": {
+    "status": "warning",
+    "metrics": {
+      "health_status_code": 200,
+      "health_response_time": "unknown",
+      "health_data": {
+        "status": "degraded",
+        "timestamp": "2025-09-03T16:54:05.201217",
+        "services": {
+          "database": "healthy",
+          "supabase_auth": "healthy",
+          "llamaparse": "not_configured",
+          "openai": "not_configured"
+        },
+        "version": "3.0.0"
+      },
+      "container_status_code": 405,
+      "warning": true,
+      "container_error": "Status code: 405",
+      "worker_status_code": 405,
+      "worker_error": "Status code: 405",
+      "backend_env_check_available": false,
+      "total_validation_time": 0.41550207138061523
+    },
+    "errors": [],
+    "timestamp": "2025-09-03T09:54:05.496490",
+    "environment": "render"
+  },
+  "render_worker": {
+    "status": "warning",
+    "metrics": {
+      "worker_health_status_code": 404,
+      "worker_health_response_time": "unknown",
+      "worker_health_error": "Status code: 404",
+      "warning": true,
+      "worker_status_code": 404,
+      "worker_status_error": "Status code: 404",
+      "worker_env_configured": true,
+      "total_validation_time": 0.1844320297241211
+    },
+    "errors": [],
+    "timestamp": "2025-09-03T09:54:05.683962",
+    "environment": "render_worker"
+  },
+  "supabase": {
+    "status": "warning",
+    "metrics": {
+      "database_status_code": 200,
+      "database_response_time": "unknown",
+      "database_connected": true,
+      "auth_status_code": 200,
+      "auth_data": {
+        "external": {
+          "anonymous_users": false,
+          "apple": false,
+          "azure": false,
+          "bitbucket": false,
+          "discord": false,
+          "facebook": false,
+          "snapchat": false,
+          "figma": false,
+          "fly": false,
+          "github": false,
+          "gitlab": false,
+          "google": false,
+          "keycloak": false,
+          "kakao": false,
+          "linkedin": false,
+          "linkedin_oidc": false,
+          "notion": false,
+          "spotify": false,
+          "slack": false,
+          "slack_oidc": false,
+          "workos": false,
+          "twitch": false,
+          "twitter": false,
+          "email": true,
+          "phone": false,
+          "zoom": false
+        },
+        "disable_signup": false,
+        "mailer_autoconfirm": false,
+        "phone_autoconfirm": false,
+        "sms_provider": "twilio",
+        "saml_enabled": false
+      },
+      "auth_available": true,
+      "storage_status_code": 400,
+      "warning": true,
+      "storage_error": "Status code: 400",
+      "realtime_status_code": 401,
+      "realtime_error": "Status code: 401",
+      "total_validation_time": 0.7072410583496094
+    },
+    "errors": [],
+    "timestamp": "2025-09-03T09:54:06.391549",
+    "environment": "supabase"
+  },
+  "summary": {
+    "total_tests": 3,
+    "passed_tests": 1,
+    "failed_tests": 0,
+    "warning_tests": 3,
+    "pass_rate": 33.33333333333333,
+    "all_tests_passed": false,
+    "total_execution_time": 1.485898,
+    "start_time": "2025-09-03T09:54:04.907238",
+    "end_time": "2025-09-03T09:54:06.393136",
+    "phase1_complete": false,
+    "ready_for_phase2": false
+  }
+}

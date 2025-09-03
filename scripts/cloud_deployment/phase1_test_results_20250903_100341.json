@@ -1,0 +1,181 @@
+{
+  "vercel": {
+    "status": "pass",
+    "metrics": {
+      "frontend_status_code": 200,
+      "frontend_response_time": "unknown",
+      "frontend_content_length": 30407,
+      "frontend_has_react": true,
+      "frontend_has_nextjs": true,
+      "environment_check_available": false,
+      "cdn_status_code": 404,
+      "cdn_cache_headers": {
+        "Accept-Ranges": "bytes",
+        "Access-Control-Allow-Origin": "*",
+        "Age": "1616",
+        "Cache-Control": "public, max-age=0, must-revalidate",
+        "Content-Disposition": "inline; filename=\"404\"",
+        "Content-Encoding": "br",
+        "Content-Length": "4136",
+        "Content-Type": "text/html; charset=utf-8",
+        "Date": "Wed, 03 Sep 2025 17:03:39 GMT",
+        "Etag": "\"8e47022e25334344e3c85463623d7671\"",
+        "Last-Modified": "Wed, 03 Sep 2025 16:36:43 GMT",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Server": "Vercel",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-Matched-Path": "/404",
+        "X-Vercel-Cache": "HIT",
+        "X-Vercel-Id": "sfo1::b7grm-1756919019937-11e233f11882",
+        "X-Xss-Protection": "1; mode=block"
+      },
+      "cdn_cache_control": "public, max-age=0, must-revalidate",
+      "build_status_code": 404,
+      "build_accessible": true,
+      "total_validation_time": 0.1826777458190918
+    },
+    "errors": [],
+    "timestamp": "2025-09-03T10:03:39.963987",
+    "environment": "vercel"
+  },
+  "render": {
+    "status": "warning",
+    "metrics": {
+      "health_status_code": 200,
+      "health_response_time": "unknown",
+      "health_data": {
+        "status": "degraded",
+        "timestamp": "2025-09-03T17:03:14.880099",
+        "services": {
+          "database": "healthy",
+          "supabase_auth": "healthy",
+          "llamaparse": "not_configured",
+          "openai": "not_configured"
+        },
+        "version": "3.0.0"
+      },
+      "container_status_code": 405,
+      "warning": true,
+      "container_error": "Status code: 405",
+      "worker_status_code": 405,
+      "worker_error": "Status code: 405",
+      "backend_env_check_available": false,
+      "total_validation_time": 0.41483283042907715
+    },
+    "errors": [],
+    "timestamp": "2025-09-03T10:03:40.379953",
+    "environment": "render"
+  },
+  "render_worker": {
+    "status": "warning",
+    "metrics": {
+      "worker_health_status_code": 404,
+      "worker_health_response_time": "unknown",
+      "worker_health_error": "Status code: 404",
+      "warning": true,
+      "worker_status_code": 404,
+      "worker_status_error": "Status code: 404",
+      "worker_env_configured": true,
+      "total_validation_time": 0.29726696014404297
+    },
+    "errors": [],
+    "timestamp": "2025-09-03T10:03:40.677719",
+    "environment": "render_worker"
+  },
+  "render_build": {
+    "status": "pass",
+    "metrics": {
+      "api_build_status_code": 200,
+      "api_build_success": true,
+      "api_build_status": "deployed",
+      "worker_build_status_code": 404,
+      "worker_build_success": true,
+      "worker_build_status": "deployed",
+      "worker_build_note": "Worker service deployed (404 expected for background workers)",
+      "api_logs_status": "healthy",
+      "api_logs_errors": 0,
+      "worker_logs_status": "healthy",
+      "worker_logs_errors": 0,
+      "log_analysis_success": true,
+      "total_log_errors": 0,
+      "api_response_time": 0.08813595771789551,
+      "api_response_time_ms": 88.14,
+      "api_performance": "excellent",
+      "build_quality": "success",
+      "total_validation_time": 0.30167579650878906
+    },
+    "errors": [],
+    "timestamp": "2025-09-03T10:03:40.979605",
+    "environment": "render_build"
+  },
+  "supabase": {
+    "status": "warning",
+    "metrics": {
+      "database_status_code": 200,
+      "database_response_time": "unknown",
+      "database_connected": true,
+      "auth_status_code": 200,
+      "auth_data": {
+        "external": {
+          "anonymous_users": false,
+          "apple": false,
+          "azure": false,
+          "bitbucket": false,
+          "discord": false,
+          "facebook": false,
+          "snapchat": false,
+          "figma": false,
+          "fly": false,
+          "github": false,
+          "gitlab": false,
+          "google": false,
+          "keycloak": false,
+          "kakao": false,
+          "linkedin": false,
+          "linkedin_oidc": false,
+          "notion": false,
+          "spotify": false,
+          "slack": false,
+          "slack_oidc": false,
+          "workos": false,
+          "twitch": false,
+          "twitter": false,
+          "email": true,
+          "phone": false,
+          "zoom": false
+        },
+        "disable_signup": false,
+        "mailer_autoconfirm": false,
+        "phone_autoconfirm": false,
+        "sms_provider": "twilio",
+        "saml_enabled": false
+      },
+      "auth_available": true,
+      "storage_status_code": 400,
+      "warning": true,
+      "storage_error": "Status code: 400",
+      "realtime_status_code": 401,
+      "realtime_error": "Status code: 401",
+      "total_validation_time": 0.45856809616088867
+    },
+    "errors": [],
+    "timestamp": "2025-09-03T10:03:41.438506",
+    "environment": "supabase"
+  },
+  "summary": {
+    "total_tests": 4,
+    "passed_tests": 2,
+    "failed_tests": 0,
+    "warning_tests": 3,
+    "pass_rate": 50.0,
+    "all_tests_passed": false,
+    "total_execution_time": 1.65866,
+    "start_time": "2025-09-03T10:03:39.781134",
+    "end_time": "2025-09-03T10:03:41.439794",
+    "phase1_complete": false,
+    "ready_for_phase2": false
+  }
+}

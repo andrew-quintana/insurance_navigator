@@ -1,0 +1,206 @@
+{
+  "timestamp": "2025-09-03T10:27:09.386482",
+  "services": {
+    "api": {
+      "service_name": "insurance-navigator-api",
+      "service_id": "srv-d0v2nqvdiees73cejf0g",
+      "service_type": "web_service",
+      "service_url": "https://insurance-navigator-api.onrender.com",
+      "current_status": "healthy",
+      "health_check": {
+        "status": "healthy",
+        "health_response": {
+          "status": "degraded",
+          "timestamp": "2025-09-03T17:26:55.135816",
+          "services": {
+            "database": "healthy",
+            "supabase_auth": "healthy",
+            "llamaparse": "not_configured",
+            "openai": "not_configured"
+          },
+          "version": "3.0.0"
+        },
+        "response_time": 0.12492609024047852,
+        "status_code": 200,
+        "error": null
+      },
+      "deployment_status": {
+        "deployment_analysis_available": true,
+        "recent_deployments": [
+          {
+            "id": "dep-d2s6tk8dl3ps73bm3n9g",
+            "status": "build_failed",
+            "created_at": "2025-09-03T16:37:40.221775Z",
+            "finished_at": "2025-09-03T16:41:53.470401Z",
+            "commit_message": "Phase 1: Cloud deployment configuration and testing framework\n\n- Updated Vercel configuration for production deployment\n- Updated Render configuration with auto-scaling\n- Created cloud deployment testing framework\n- Fixed TypeScript issues in frontend\n- Added production environment configuration\n- Created comprehensive documentation for Phase 1"
+          },
+          {
+            "id": "dep-d1k6t6t6ubrc73f8i2s0",
+            "status": "live",
+            "created_at": "2025-07-05T00:15:24.446615Z",
+            "finished_at": "2025-07-05T00:28:43.769597Z",
+            "commit_message": "end of the last attempt - moving to manual impelemntation"
+          },
+          {
+            "id": "dep-d1in2595pdvs73bsp1a0",
+            "status": "deactivated",
+            "created_at": "2025-07-02T17:49:11.336918Z",
+            "finished_at": "2025-07-02T18:01:03.176194Z",
+            "commit_message": "fix: update health check to use database pool instance correctly"
+          },
+          {
+            "id": "dep-d1ime6qli9vc73cvs2cg",
+            "status": "update_failed",
+            "created_at": "2025-07-02T17:06:36.918797Z",
+            "finished_at": "2025-07-02T17:44:54.097223Z",
+            "commit_message": "fix: remove custom options from Supabase client creation to resolve headers attribute error"
+          },
+          {
+            "id": "dep-d1iltlali9vc73dhk7l0",
+            "status": "update_failed",
+            "created_at": "2025-07-02T16:31:19.059664Z",
+            "finished_at": "2025-07-02T17:00:55.447702Z",
+            "commit_message": "perf: optimize Docker build speed with improved caching and reduced context"
+          }
+        ],
+        "current_deployment": {
+          "id": "dep-d2s6tk8dl3ps73bm3n9g",
+          "status": "build_failed",
+          "created_at": "2025-09-03T16:37:40.221775Z",
+          "commit_message": "Phase 1: Cloud deployment configuration and testing framework\n\n- Updated Vercel configuration for production deployment\n- Updated Render configuration with auto-scaling\n- Created cloud deployment testing framework\n- Fixed TypeScript issues in frontend\n- Added production environment configuration\n- Created comprehensive documentation for Phase 1"
+        },
+        "deployment_issues": [
+          "Deployment dep-d2s6tk8dl3ps73bm3n9g failed: Phase 1: Cloud deployment configuration and testing framework\n\n- Updated Vercel configuration for production deployment\n- Updated Render configuration with auto-scaling\n- Created cloud deployment testing framework\n- Fixed TypeScript issues in frontend\n- Added production environment configuration\n- Created comprehensive documentation for Phase 1",
+          "Deployment dep-d1ime6qli9vc73cvs2cg failed: fix: remove custom options from Supabase client creation to resolve headers attribute error",
+          "Deployment dep-d1iltlali9vc73dhk7l0 failed: perf: optimize Docker build speed with improved caching and reduced context"
+        ]
+      },
+      "build_analysis": {
+        "build_analysis_available": true,
+        "build_issues": [
+          "Build process failed"
+        ],
+        "potential_causes": [
+          "Docker build errors",
+          "Missing dependencies",
+          "Environment variable issues",
+          "Dockerfile syntax errors",
+          "Resource constraints"
+        ],
+        "suggested_fixes": [
+          "Check Dockerfile syntax",
+          "Verify all dependencies are available",
+          "Check environment variable configuration",
+          "Review build logs for specific errors",
+          "Consider increasing build resources"
+        ]
+      },
+      "performance_metrics": {
+        "performance_analysis_available": true,
+        "response_times": [
+          0.07617878913879395,
+          0.05362987518310547,
+          0.061232805252075195
+        ],
+        "average_response_time": 0.06368048985799153,
+        "performance_grade": "excellent",
+        "performance_issues": []
+      },
+      "configuration_issues": [
+        "llamaparse service not configured",
+        "openai service not configured"
+      ],
+      "errors": [],
+      "warnings": []
+    },
+    "worker": {
+      "service_name": "insurance_navigator",
+      "service_id": "srv-d2h5mr8dl3ps73fvvlog",
+      "service_type": "background_worker",
+      "service_url": "https://insurance-navigator-worker.onrender.com",
+      "current_status": "deployed",
+      "health_check": {
+        "status": "deployed",
+        "health_response": null,
+        "response_time": 0.12020111083984375,
+        "status_code": 404,
+        "error": null,
+        "note": "Service deployed (404 expected for background workers)"
+      },
+      "deployment_status": {
+        "deployment_analysis_available": true,
+        "recent_deployments": [
+          {
+            "id": "dep-d2s75oa4d50c73dhpm50",
+            "status": "live",
+            "created_at": "2025-09-03T16:54:58.526129Z",
+            "finished_at": "2025-09-03T17:25:39.843653Z",
+            "commit_message": "Phase 1: Cloud deployment configuration and testing framework\n\n- Updated Vercel configuration for production deployment\n- Updated Render configuration with auto-scaling\n- Created cloud deployment testing framework\n- Fixed TypeScript issues in frontend\n- Added production environment configuration\n- Created comprehensive documentation for Phase 1"
+          },
+          {
+            "id": "dep-d2h5nsbuibrs73evllog",
+            "status": "deactivated",
+            "created_at": "2025-08-17T22:47:14.638968Z",
+            "finished_at": "2025-08-17T23:17:13.744076Z",
+            "commit_message": "end of the last attempt - moving to manual impelemntation"
+          },
+          {
+            "id": "dep-d2h5mrodl3ps73fvvm1g",
+            "status": "build_failed",
+            "created_at": "2025-08-17T22:45:04.406772Z",
+            "finished_at": "2025-08-17T22:45:34.56477Z",
+            "commit_message": "end of the last attempt - moving to manual impelemntation"
+          }
+        ],
+        "current_deployment": {
+          "id": "dep-d2s75oa4d50c73dhpm50",
+          "status": "live",
+          "created_at": "2025-09-03T16:54:58.526129Z",
+          "commit_message": "Phase 1: Cloud deployment configuration and testing framework\n\n- Updated Vercel configuration for production deployment\n- Updated Render configuration with auto-scaling\n- Created cloud deployment testing framework\n- Fixed TypeScript issues in frontend\n- Added production environment configuration\n- Created comprehensive documentation for Phase 1"
+        },
+        "deployment_issues": [
+          "Deployment dep-d2h5mrodl3ps73fvvm1g failed: end of the last attempt - moving to manual impelemntation"
+        ]
+      },
+      "build_analysis": {
+        "build_analysis_available": true,
+        "build_issues": [],
+        "potential_causes": [],
+        "suggested_fixes": []
+      },
+      "performance_metrics": {
+        "performance_analysis_available": true,
+        "response_times": [
+          0.04707026481628418,
+          0.04806709289550781,
+          0.05717873573303223
+        ],
+        "average_response_time": 0.05077203114827474,
+        "performance_grade": "excellent",
+        "performance_issues": []
+      },
+      "configuration_issues": [],
+      "errors": [],
+      "warnings": []
+    }
+  },
+  "summary": {
+    "total_services": 2,
+    "healthy_services": 1,
+    "degraded_services": 1,
+    "failed_services": 0,
+    "services_with_issues": 1,
+    "critical_issues": [
+      "llamaparse service not configured",
+      "openai service not configured"
+    ],
+    "build_issues": [
+      "Build process failed"
+    ],
+    "performance_issues": []
+  },
+  "recommendations": [
+    "insurance-navigator-api: Address build issues - Build process failed",
+    "insurance-navigator-api: Fix configuration issues - llamaparse service not configured, openai service not configured"
+  ]
+}

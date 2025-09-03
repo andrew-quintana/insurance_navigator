@@ -1,0 +1,110 @@
+{
+  "timestamp": "2025-09-03T10:20:44.031352",
+  "services": {
+    "api": {
+      "service_name": "insurance-navigator-api",
+      "service_type": "web",
+      "service_url": "https://insurance-navigator-api.onrender.com",
+      "build_status": "unknown",
+      "deployment_status": "failed",
+      "health_status": "error",
+      "performance_metrics": {
+        "response_times": [
+          11.158379077911377,
+          0.058960914611816406,
+          0.07020974159240723,
+          0.09133386611938477,
+          0.056015729904174805
+        ],
+        "average_response_time": 2.286979866027832,
+        "performance_grade": "acceptable",
+        "reliability_score": 100.0
+      },
+      "logs_analysis": {
+        "log_analysis_available": false,
+        "build_logs": {},
+        "deployment_logs": {},
+        "errors_found": [],
+        "warnings_found": [],
+        "error": "Service insurance-navigator-api not found in Render"
+      },
+      "errors": [],
+      "warnings": [],
+      "response_time": 0,
+      "status_code": 0,
+      "error": "",
+      "build_quality": {
+        "overall_score": 35.0,
+        "grade": "F",
+        "issues": [
+          "Service health check failed",
+          "Deployment logs not accessible"
+        ],
+        "recommendations": [
+          "Check service configuration and dependencies",
+          "Configure Render API key for log access"
+        ]
+      }
+    },
+    "worker": {
+      "service_name": "insurance-navigator-worker",
+      "service_type": "worker",
+      "service_url": "https://insurance-navigator-worker.onrender.com",
+      "build_status": "unknown",
+      "deployment_status": "deployed",
+      "health_status": "deployed",
+      "performance_metrics": {
+        "response_times": [
+          0.04841899871826172,
+          0.041174888610839844,
+          0.04429507255554199,
+          0.04335904121398926,
+          0.05150198936462402
+        ],
+        "average_response_time": 0.045749998092651366,
+        "performance_grade": "excellent",
+        "reliability_score": 0.0
+      },
+      "logs_analysis": {
+        "log_analysis_available": false,
+        "build_logs": {},
+        "deployment_logs": {},
+        "errors_found": [],
+        "warnings_found": [],
+        "error": "Service insurance-navigator-worker not found in Render"
+      },
+      "errors": [],
+      "warnings": [],
+      "response_time": 0.136016845703125,
+      "status_code": 404,
+      "note": "Service deployed (404 expected for background workers)",
+      "build_quality": {
+        "overall_score": 60.0,
+        "grade": "D",
+        "issues": [
+          "Low reliability score",
+          "Deployment logs not accessible"
+        ],
+        "recommendations": [
+          "Investigate intermittent failures",
+          "Configure Render API key for log access"
+        ]
+      }
+    }
+  },
+  "summary": {
+    "total_services": 2,
+    "healthy_services": 0,
+    "failed_services": 1,
+    "overall_grade": "F",
+    "critical_issues": [
+      "insurance-navigator-api: "
+    ],
+    "recommendations": [
+      "Check service configuration and dependencies",
+      "Configure Render API key for log access",
+      "Investigate intermittent failures",
+      "Configure Render API key for log access"
+    ]
+  }
+}
