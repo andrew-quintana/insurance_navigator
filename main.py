@@ -33,7 +33,7 @@ from config.database import db_pool
 
 # Database service imports
 from db.services.user_service import get_user_service, UserService
-from db.services.simple_auth_service_v2 import simple_auth_service_v2 as simple_auth_service
+from db.services.minimal_auth_service import minimal_auth_service as simple_auth_service
 from db.services.conversation_service import get_conversation_service, ConversationService
 from db.services.storage_service import get_storage_service, StorageService
 from db.services.document_service import DocumentService
@@ -479,8 +479,8 @@ async def login(request: Request, response: Response):
                 detail="Email and password are required"
             )
         
-        # Use simple authentication service (bypasses Supabase entirely)
-        auth_result = await simple_auth_service.authenticate_user_simple(email, password)
+        # Use minimal authentication service (bypasses all database operations)
+        auth_result = await simple_auth_service.authenticate_user_minimal(email, password)
         if not auth_result:
             logger.warning(f"❌ Authentication failed for user: {email}")
             raise HTTPException(
@@ -581,8 +581,8 @@ async def register(request: Dict[str, Any]):
     try:
         logger.info(f"🚀 Starting registration for: {request['email']}")
         
-        # Use simple authentication service (bypasses Supabase entirely)
-        auth_result = await simple_auth_service.create_user_simple(
+        # Use minimal authentication service (bypasses all database operations)
+        auth_result = await simple_auth_service.create_user_minimal(
             email=request["email"],
             password=request["password"],
             consent_version="1.0",
