@@ -33,7 +33,7 @@ from config.database import db_pool
 
 # Database service imports
 from db.services.user_service import get_user_service, UserService
-from db.services.simple_auth_service import simple_auth_service
+from db.services.simple_auth_service_v2 import simple_auth_service_v2 as simple_auth_service
 from db.services.conversation_service import get_conversation_service, ConversationService
 from db.services.storage_service import get_storage_service, StorageService
 from db.services.document_service import DocumentService
