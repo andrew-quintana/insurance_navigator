@@ -45,6 +45,10 @@ create policy "Users can update own profile" on public.users
 create policy "Service role can insert users" on public.users
     for insert with check (auth.role() = 'service_role');
 
+-- Allow anon role to insert users during registration
+create policy "Anon can insert users during registration" on public.users
+    for insert with check (auth.role() = 'anon');
+
 -- Service role can select all users (for admin operations)
 create policy "Service role can select all users" on public.users
     for select using (auth.role() = 'service_role');

@@ -30,6 +30,28 @@ Phase 4 has been successfully implemented with comprehensive production readines
 
 **Note**: This technical debt should be addressed before production deployment to ensure system stability.
 
+### **CRITICAL: Email Authentication System Issues**
+**Issue**: Email authentication system has multiple critical issues preventing production deployment
+**Impact**:
+- Email confirmation is completely bypassed in development mode
+- Supabase authentication integration is missing
+- SMTP configuration is not production-ready
+- Custom token system instead of proper JWT/Supabase sessions
+- Database schema issues from accidental erasure
+
+**Priority**: HIGH - Must be fixed before production
+**Status**: PARTIALLY ADDRESSED - Simple auth implemented for development
+**Action Required**:
+1. Deploy simple authentication system to get project working
+2. Set up production SMTP server (Resend/SendGrid)
+3. Implement proper email confirmation flow
+4. Integrate Supabase authentication properly
+5. Add proper security measures and monitoring
+
+**Technical Debt Document**: See `docs/technical_debt/EMAIL_AUTHENTICATION_DEBT.md` for detailed analysis and migration plan.
+
+**Note**: Current simple auth system is sufficient for development but MUST NOT be used in production without significant improvements.
+
 ## Core Implementation Components
 
 ### 1. Production Monitoring Infrastructure

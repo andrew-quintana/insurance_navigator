@@ -8,7 +8,8 @@ import os
 import logging
 import json
 from datetime import datetime
-from config.database import get_supabase_client as get_base_client
+from config.database import get_supabase_client as get_base_client, get_supabase_service_client
+from config.auth_config import auth_config
 import uuid
 
 # Configure logging
@@ -44,46 +45,69 @@ class UserService:
             logger.error(f"Error getting user by ID {user_id}: {str(e)}")
             return None
 
-    def create_user(
+    async def create_user(
         self,
         email: str,
         password: str,
         consent_version: str,
         consent_timestamp: str,
-        name: str = None  # Add name parameter with default value
+        name: str = None
     ) -> Dict[str, Any]:
-        """Create a new user with HIPAA compliance fields."""
+        """Create a new user with backend-only authentication (no email confirmation)."""
         try:
-            # Create auth user
-            auth_user = self.db.auth.sign_up({
+            logger.info(f"Creating user with email: {email} (backend-only auth)")
+            
+            # Check if test email is allowed
+            if not auth_config.is_test_email_allowed(email):
+                raise ValueError(f"Test email addresses not allowed: {email}")
+            
+            # Get service role client for user creation
+            service_client = await get_supabase_service_client()
+            logger.info("Service role client obtained successfully")
+            
+            # Create auth user using service role with auto-confirmation
+            auth_settings = auth_config.get_auth_settings()
+            logger.info(f"Auth settings: {auth_settings}")
+            
+            auth_user = service_client.auth.admin.create_user({
                 "email": email,
-                "password": password
+                "password": password,
+                "email_confirm": auth_settings['email_confirm'],  # Auto-confirm in development
+                "email_confirm_enabled": auth_settings['email_confirm_enabled']
             })
+            logger.info(f"Auth user created with ID: {auth_user.user.id}")
             
             # Create user record with HIPAA compliance fields
             user_data = {
                 "id": auth_user.user.id,
                 "email": email,
-                "name": name or email.split("@")[0],  # Use email prefix if name not provided
+                "name": name or email.split("@")[0],
                 "consent_version": consent_version,
                 "consent_timestamp": consent_timestamp,
-                "is_active": True
+                "is_active": True,
+                "email_confirmed": True,  # Mark as confirmed since we're bypassing email
+                "created_at": datetime.now().isoformat()
             }
+            logger.info(f"Inserting user data: {user_data}")
             
-            result = self.db.table(self.table).insert(user_data).execute()
+            result = service_client.table(self.table).insert(user_data).execute()
+            logger.info(f"User record insert result: {result}")
             
             if not result.data:
                 raise Exception("Failed to create user record")
             
+            logger.info(f"✅ User created successfully: {email}")
             return auth_user
             
         except Exception as e:
+            logger.error(f"Error in create_user: {str(e)}")
             # Cleanup on failure
-            if "auth_user" in locals():
+            if "auth_user" in locals() and "service_client" in locals():
                 try:
-                    self.db.auth.admin.delete_user(auth_user.user.id)
-                except:
-                    pass  # Best effort cleanup
+                    service_client.auth.admin.delete_user(auth_user.user.id)
+                    logger.info("Cleaned up failed user creation")
+                except Exception as cleanup_error:
+                    logger.warning(f"Cleanup failed: {cleanup_error}")
             raise Exception(f"Failed to create user: {str(e)}")
 
     def authenticate_user(self, email: str, password: str) -> Dict[str, Any]:
