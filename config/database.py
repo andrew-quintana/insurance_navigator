@@ -130,10 +130,10 @@ db_pool = DatabasePool()
 async def get_supabase_client() -> Client:
     """Get a Supabase client with retry logic"""
     supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_KEY")
+    supabase_key = os.getenv("SUPABASE_ANON_KEY")
     
     if not supabase_url or not supabase_key:
-        raise ValueError("SUPABASE_URL and SUPABASE_KEY environment variables must be set")
+        raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY environment variables must be set")
     
     try:
         # Create client without custom options - let the library handle defaults
