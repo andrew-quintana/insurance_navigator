@@ -35,8 +35,7 @@ def get_cors_config() -> Dict[str, Any]:
     allowed_origins.extend([origin.strip() for origin in env_origins if origin.strip()])
     
     return {
-        "allow_origins": allowed_origins,
-        "allow_origin_regex": r"https://(insurance-navigator|insurancenavigator)-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app",  # Updated regex to match both patterns
+        "allow_origins": ["*"],  # Temporarily allow all origins for testing
         "allow_credentials": True,
         "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
         "allow_headers": [
