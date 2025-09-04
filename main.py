@@ -616,11 +616,9 @@ async def register(request: Dict[str, Any]):
         )
     except Exception as e:
         logger.error(f"❌ Registration error for {request['email']}: {str(e)}")
-        import traceback
-        logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Registration failed: {str(e)}"
+            detail="Registration failed"
         )
 
 @app.get("/api/v1/status")

@@ -63,8 +63,8 @@ create index if not exists idx_upload_jobs_status_created
 create index if not exists idx_upload_jobs_document 
     on upload_pipeline.upload_jobs (document_id);
 
-create index if not exists idx_upload_jobs_user 
-    on upload_pipeline.upload_jobs (user_id);
+-- Note: user_id is accessed through document_id -> documents.user_id
+-- No direct user_id column in upload_jobs table
 
 -- -------------------------------
 -- CREATE document_chunk_buffer table for chunk staging
@@ -108,14 +108,28 @@ create table if not exists upload_pipeline.document_vector_buffer (
 );
 
 -- Indexes for vector buffer
-create index if not exists idx_vector_buffer_document 
-    on upload_pipeline.document_vector_buffer (document_id);
-
-create index if not exists idx_vector_buffer_batch 
-    on upload_pipeline.document_vector_buffer (batch_id);
-
-create index if not exists idx_vector_buffer_pending 
-    on upload_pipeline.document_vector_buffer (document_id, embed_model, embed_version);
+-- Check if document_id column exists before creating indexes
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns 
+               WHERE table_name = 'document_vector_buffer' 
+               AND table_schema = 'upload_pipeline' 
+               AND column_name = 'document_id') THEN
+        CREATE INDEX IF NOT EXISTS idx_vector_buffer_document 
+            ON upload_pipeline.document_vector_buffer (document_id);
+        
+        CREATE INDEX IF NOT EXISTS idx_vector_buffer_pending 
+            ON upload_pipeline.document_vector_buffer (document_id, embed_model, embed_version);
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns 
+               WHERE table_name = 'document_vector_buffer' 
+               AND table_schema = 'upload_pipeline' 
+               AND column_name = 'batch_id') THEN
+        CREATE INDEX IF NOT EXISTS idx_vector_buffer_batch 
+            ON upload_pipeline.document_vector_buffer (batch_id);
+    END IF;
+END $$;
 
 -- -------------------------------
 -- CREATE webhook_log table for replay protection
@@ -144,15 +158,18 @@ alter table upload_pipeline.document_vector_buffer enable row level security;
 alter table upload_pipeline.webhook_log enable row level security;
 
 -- Chunk buffer: no client access (workers only)
-create policy if not exists chunk_buffer_no_client on upload_pipeline.document_chunk_buffer
+drop policy if exists chunk_buffer_no_client on upload_pipeline.document_chunk_buffer;
+create policy chunk_buffer_no_client on upload_pipeline.document_chunk_buffer
     for all using (false);
 
 -- Vector buffer: no client access (workers only)
-create policy if not exists vector_buffer_no_client on upload_pipeline.document_vector_buffer
+drop policy if exists vector_buffer_no_client on upload_pipeline.document_vector_buffer;
+create policy vector_buffer_no_client on upload_pipeline.document_vector_buffer
     for all using (false);
 
 -- Webhook log: no client access (internal use only)
-create policy if not exists webhook_log_no_client on upload_pipeline.webhook_log
+drop policy if exists webhook_log_no_client on upload_pipeline.webhook_log;
+create policy webhook_log_no_client on upload_pipeline.webhook_log
     for all using (false);
 
 -- -------------------------------

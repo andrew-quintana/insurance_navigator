@@ -70,7 +70,7 @@ VALUES (
     'application/x-www-form-urlencoded',
     'multipart/form-data'
   ]
-);
+) ON CONFLICT (id) DO NOTHING;
 
 -- -------------------------------
 -- GRANT permissions

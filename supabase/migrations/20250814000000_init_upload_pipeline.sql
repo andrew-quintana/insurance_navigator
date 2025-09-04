@@ -81,10 +81,23 @@ create table upload_pipeline.document_chunks (
     unique (document_id, chunker_name, chunker_version, chunk_ord)
 );
 
--- HNSW index for vector similarity search
-create index if not exists idx_hnsw_chunks_te3s_v1
-    on upload_pipeline.document_chunks using hnsw (embedding)
-    where embed_model='text-embedding-3-small' and embed_version='1';
+-- Vector similarity search index
+-- Using ivfflat instead of hnsw for better compatibility
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') THEN
+        -- Create ivfflat index for vector similarity search
+        CREATE INDEX IF NOT EXISTS idx_vector_chunks_te3s_v1
+            ON upload_pipeline.document_chunks USING ivfflat (embedding vector_cosine_ops)
+            WHERE embed_model='text-embedding-3-small' AND embed_version='1';
+        RAISE NOTICE 'Vector similarity index created successfully';
+    ELSE
+        RAISE NOTICE 'Vector extension not available, skipping vector index creation';
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'Could not create vector index: %', SQLERRM;
+END $$;
 
 -- Storage optimization
 alter table upload_pipeline.document_chunks set (fillfactor=70);
