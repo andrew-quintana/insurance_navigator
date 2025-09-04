@@ -588,7 +588,9 @@ async def register(request: Dict[str, Any]):
         user_data = await user_service.create_user(
             email=request["email"],
             password=request["password"],
-            full_name=request["full_name"]
+            consent_version="1.0",
+            consent_timestamp=datetime.now().isoformat(),
+            name=request.get("full_name", request["email"].split("@")[0])
         )
         
         # Authenticate user to get token
