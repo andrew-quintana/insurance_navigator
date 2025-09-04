@@ -1,0 +1,173 @@
+{
+  "timestamp": "2025-09-03T17:02:25.003837",
+  "test_id": "phase3_comprehensive_1756944145",
+  "phase": "Phase 3: Security & Accessibility Validation",
+  "config": {
+    "vercel_url": "https://insurance-navigator.vercel.app",
+    "api_url": "***REMOVED***",
+    "worker_url": "https://insurance-navigator-worker.onrender.com",
+    "supabase_url": "***REMOVED***",
+    "DOCUMENT_ENCRYPTION_KEY": "test_key"
+  },
+  "security_validation": {
+    "timestamp": "2025-09-03T17:02:24.800459",
+    "test_id": "phase3_security_1756944144",
+    "config": {
+      "vercel_url": "https://insurance-navigator.vercel.app",
+      "api_url": "***REMOVED***",
+      "worker_url": "https://insurance-navigator-worker.onrender.com",
+      "supabase_url": "***REMOVED***",
+      "DOCUMENT_ENCRYPTION_KEY": "test_key"
+    },
+    "security_validation": {
+      "test_name": "comprehensive_security_validation",
+      "status": "fail",
+      "score": 0.7225,
+      "details": {
+        "authentication_security": {
+          "password_policy_score": 0.0,
+          "session_management_score": 0.9,
+          "brute_force_protection_score": 0.49999999999999994,
+          "token_security_score": 1.0,
+          "overall_score": 0.6,
+          "vulnerabilities": [
+            "Weak password policy implementation",
+            "Insufficient brute force protection"
+          ],
+          "recommendations": [
+            "Implement stronger password requirements",
+            "Implement rate limiting and account lockout"
+          ]
+        },
+        "data_protection": {
+          "encryption_transit_score": 0.9,
+          "encryption_rest_score": 0.9,
+          "data_isolation_score": 1.0,
+          "backup_security_score": 1.0,
+          "overall_score": 0.95,
+          "vulnerabilities": [],
+          "recommendations": []
+        },
+        "network_security": {
+          "https_enforcement_score": 1.0,
+          "cors_configuration_score": 0.4000000000000001,
+          "security_headers_score": 0.24999999999999992,
+          "rate_limiting_score": 0.4000000000000001,
+          "overall_score": 0.5125000000000001,
+          "vulnerabilities": [
+            "Insecure CORS configuration",
+            "Missing security headers",
+            "Insufficient rate limiting"
+          ],
+          "recommendations": [
+            "Implement secure CORS policies",
+            "Implement comprehensive security headers",
+            "Implement comprehensive rate limiting"
+          ]
+        }
+      },
+      "vulnerabilities": [
+        "Weak password policy implementation",
+        "Insufficient brute force protection",
+        "Insecure CORS configuration",
+        "Missing security headers",
+        "Insufficient rate limiting"
+      ],
+      "recommendations": [
+        "Implement stronger password requirements",
+        "Implement rate limiting and account lockout",
+        "Implement secure CORS policies",
+        "Implement comprehensive security headers",
+        "Implement comprehensive rate limiting"
+      ],
+      "timestamp": "2025-09-03T17:02:24.800312"
+    },
+    "summary": {
+      "total_tests": 1,
+      "passed_tests": 0,
+      "failed_tests": 1,
+      "warning_tests": 0,
+      "overall_status": "fail",
+      "overall_score": 0.7225
+    },
+    "execution_time": 0.5941998958587646
+  },
+  "accessibility_validation": {
+    "timestamp": "2025-09-03T17:02:25.003616",
+    "test_id": "phase3_accessibility_1756944145",
+    "config": {
+      "vercel_url": "https://insurance-navigator.vercel.app",
+      "api_url": "***REMOVED***",
+      "worker_url": "https://insurance-navigator-worker.onrender.com",
+      "supabase_url": "***REMOVED***",
+      "DOCUMENT_ENCRYPTION_KEY": "test_key"
+    },
+    "accessibility_validation": {
+      "test_name": "comprehensive_accessibility_validation",
+      "status": "pass",
+      "score": 0.836,
+      "details": {
+        "wcag_compliance": {
+          "color_contrast_score": 0.9,
+          "keyboard_navigation_score": 0.9,
+          "screen_reader_score": 0.7499999999999999,
+          "semantic_markup_score": 0.6000000000000001,
+          "form_accessibility_score": 1.0,
+          "overall_score": 0.8300000000000001,
+          "issues": [
+            "Insufficient screen reader support",
+            "Insufficient semantic markup"
+          ],
+          "recommendations": [
+            "Improve screen reader compatibility",
+            "Implement proper semantic HTML markup"
+          ]
+        },
+        "mobile_accessibility": {
+          "touch_target_score": 0.9,
+          "mobile_navigation_score": 0.9,
+          "responsive_design_score": 0.7000000000000001,
+          "mobile_screen_reader_score": 0.9,
+          "overall_score": 0.85,
+          "issues": [
+            "Insufficient responsive design"
+          ],
+          "recommendations": [
+            "Improve responsive design for accessibility"
+          ]
+        }
+      },
+      "issues": [
+        "Insufficient screen reader support",
+        "Insufficient semantic markup",
+        "Insufficient responsive design"
+      ],
+      "recommendations": [
+        "Improve screen reader compatibility",
+        "Implement proper semantic HTML markup",
+        "Improve responsive design for accessibility"
+      ],
+      "timestamp": "2025-09-03T17:02:25.003523"
+    },
+    "summary": {
+      "total_tests": 1,
+      "passed_tests": 1,
+      "failed_tests": 0,
+      "warning_tests": 0,
+      "overall_status": "pass",
+      "overall_score": 0.836
+    },
+    "execution_time": 0.20226311683654785
+  },
+  "summary": {
+    "total_tests": 2,
+    "passed_tests": 1,
+    "failed_tests": 1,
+    "warning_tests": 0,
+    "overall_status": "fail",
+    "overall_score": 0.77925,
+    "security_score": 0.7225,
+    "accessibility_score": 0.836
+  },
+  "execution_time": 0.7978899478912354
+}
