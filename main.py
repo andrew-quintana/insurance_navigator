@@ -33,6 +33,7 @@ from config.database import db_pool
 
 # Database service imports
 from db.services.user_service import get_user_service, UserService
+from db.services.simple_auth_service import simple_auth_service
 from db.services.conversation_service import get_conversation_service, ConversationService
 from db.services.storage_service import get_storage_service, StorageService
 from db.services.document_service import DocumentService
@@ -478,11 +479,8 @@ async def login(request: Request, response: Response):
                 detail="Email and password are required"
             )
         
-        # Get user service
-        user_service = await get_user_service()
-        
-        # Authenticate user
-        auth_result = await user_service.authenticate_user(email, password)
+        # Use simple authentication service (bypasses Supabase entirely)
+        auth_result = await simple_auth_service.authenticate_user_simple(email, password)
         if not auth_result:
             logger.warning(f"❌ Authentication failed for user: {email}")
             raise HTTPException(
@@ -579,13 +577,12 @@ async def add_cors_headers(request: Request, call_next):
 
 @app.post("/register", response_model=Dict[str, Any])
 async def register(request: Dict[str, Any]):
-    """Register a new user with database persistence."""
+    """Register a new user with development-only authentication (no email confirmation)."""
     try:
-        # Get user service
-        user_service = await get_user_service()
+        logger.info(f"🚀 Starting registration for: {request['email']}")
         
-        # Create user in database
-        user_data = await user_service.create_user(
+        # Use simple authentication service (bypasses Supabase entirely)
+        auth_result = await simple_auth_service.create_user_simple(
             email=request["email"],
             password=request["password"],
             consent_version="1.0",
@@ -593,20 +590,8 @@ async def register(request: Dict[str, Any]):
             name=request.get("full_name", request["email"].split("@")[0])
         )
         
-        # Authenticate user to get token
-        auth_result = await user_service.authenticate_user(request["email"], request["password"])
-        if not auth_result:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="User created but authentication failed"
-            )
-        
-        logger.info(f"✅ User registered successfully: {request['email']}")
-        return {
-            "access_token": auth_result["access_token"],
-            "token_type": "bearer",
-            "user": auth_result["user"]
-        }
+        logger.info(f"✅ User registered successfully with dev auth: {request['email']}")
+        return auth_result
         
     except ValueError as e:
         logger.warning(f"Registration failed for {request['email']}: {str(e)}")

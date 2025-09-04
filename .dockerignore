@@ -1,0 +1,69 @@
+# Git and version control
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+docs/
+*.md
+README*
+
+# Development files
+.env*
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+tests/
+coverage/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+
+# Node modules
+node_modules/
+npm-debug.log*
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker files (except the one being used)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Performance testing
+performance/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# IDE files
+*.sublime-*
+.vscode/
+.idea/
+
+# Large data files
+data/examples/
+*.pdf
+*.docx
+*.xlsx
+
+# Backup files
+*.bak
+*.backup

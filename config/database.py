@@ -146,6 +146,29 @@ async def get_supabase_client() -> Client:
         logger.warning(f"Database connection error: {str(e)}")
         raise
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=4, max=10)
+)
+async def get_supabase_service_client() -> Client:
+    """Get a Supabase client with service role privileges"""
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    
+    if not supabase_url or not supabase_service_key:
+        raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables must be set")
+    
+    try:
+        # Create client with service role key for admin operations
+        client = create_client(
+            supabase_url,
+            supabase_service_key
+        )
+        return client
+    except Exception as e:
+        logger.warning(f"Service role database connection error: {str(e)}")
+        raise
+
 @asynccontextmanager
 async def get_db() -> AsyncGenerator[Client, None]:
     """Async context manager for database access"""
