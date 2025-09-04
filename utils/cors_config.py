@@ -26,7 +26,8 @@ def get_cors_config() -> Dict[str, Any]:
             "https://insurance-navigator.vercel.app",  # Add production URL again to ensure it's included
             "https://insurance-navigator-e3j4jn4xj-andrew-quintanas-projects.vercel.app",  # Add the specific preview URL that's failing
             "https://insurance-navigator-k2ui23iaj-andrew-quintanas-projects.vercel.app",  # Add another preview URL from logs
-            "https://insurance-navigator-ajzpmcvgz-andrew-quintanas-projects.vercel.app"  # Add another preview URL from logs
+            "https://insurance-navigator-ajzpmcvgz-andrew-quintanas-projects.vercel.app",  # Add another preview URL from logs
+        "https://insurancenavigator-g94dl65f7-andrew-quintanas-projects.vercel.app"  # Current deployment URL
     ]
     
     # Add any additional origins from environment
@@ -35,7 +36,7 @@ def get_cors_config() -> Dict[str, Any]:
     
     return {
         "allow_origins": allowed_origins,
-        "allow_origin_regex": r"https://insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app",  # Updated regex to match any length hash
+        "allow_origin_regex": r"https://(insurance-navigator|insurancenavigator)-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app",  # Updated regex to match both patterns
         "allow_credentials": True,
         "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
         "allow_headers": [
