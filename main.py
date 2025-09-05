@@ -652,15 +652,11 @@ async def signup(request: SignupRequest):
         Dict containing user data and access token
     """
     try:
-        # Get user service
-        user_service = await get_user_service()
-        
-        # Create user
-        user_data = await user_service.create_user(
+        # Use auth adapter for user creation
+        user_data = await auth_adapter.create_user(
             email=request.email,
             password=request.password,
-            consent_version=request.consent_version,
-            consent_timestamp=request.consent_timestamp
+            name=request.email.split("@")[0]  # Use email prefix as name if not provided
         )
         
         return user_data
@@ -686,14 +682,17 @@ async def login(request: LoginRequest):
         Dict containing user data and session info
     """
     try:
-        # Get user service
-        user_service = await get_user_service()
-        
-        # Authenticate user
-        auth_data = await user_service.authenticate_user(
+        # Use auth adapter for authentication
+        auth_data = await auth_adapter.authenticate_user(
             email=request.email,
             password=request.password
         )
+        
+        if not auth_data:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
         
         return auth_data
         
@@ -707,7 +706,7 @@ async def login(request: LoginRequest):
         )
 
 @app.get("/auth/user")
-async def get_current_user(request: Request):
+async def get_auth_user(request: Request):
     """
     Get current user data from auth token.
     
@@ -730,11 +729,8 @@ async def get_current_user(request: Request):
             
         token = authorization.split(" ")[1]
         
-        # Get user service
-        user_service = await get_user_service()
-        
-        # Get user data
-        user_data = await user_service.get_user_from_token(token)
+        # Use auth adapter for token validation
+        user_data = auth_adapter.validate_token(token)
         
         if not user_data:
             raise HTTPException(
