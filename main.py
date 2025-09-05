@@ -33,7 +33,7 @@ from config.database import db_pool
 
 # Database service imports
 from db.services.user_service import get_user_service, UserService
-from db.services.improved_minimal_auth_service import improved_minimal_auth_service as simple_auth_service
+from db.services.auth_adapter import auth_adapter
 from db.services.conversation_service import get_conversation_service, ConversationService
 from db.services.storage_service import get_storage_service, StorageService
 from db.services.document_service import DocumentService
@@ -220,8 +220,8 @@ async def get_current_user(request: Request) -> Dict[str, Any]:
     access_token = auth_header.split(" ")[1]
     
     try:
-        # Use improved minimal auth service for token validation
-        user_data = simple_auth_service.validate_token(access_token)
+        # Use auth adapter for token validation
+        user_data = auth_adapter.validate_token(access_token)
         if not user_data:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -467,8 +467,8 @@ async def login(request: Request, response: Response):
                 detail="Email and password are required"
             )
         
-        # Use improved authentication service with validation
-        auth_result = await simple_auth_service.authenticate_user_minimal(email, password)
+        # Use auth adapter for authentication
+        auth_result = await auth_adapter.authenticate_user(email, password)
         if not auth_result:
             logger.warning(f"❌ Authentication failed for user: {email}")
             raise HTTPException(
@@ -503,16 +503,19 @@ async def login(request: Request, response: Response):
 async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_current_user)):
     """Get current user information."""
     try:
-        # Get user service
-        user_service = await get_user_service()
+        # Use auth adapter to get user info
+        user_data = await auth_adapter.get_user_info(current_user["id"])
         
-        # Get fresh user data
-        user_data = await user_service.get_user_by_id(current_user["id"])
+        # If no user data from backend, return the data from token validation
         if not user_data:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
+            # For minimal auth, return the user data from token validation
+            return {
+                "id": current_user["id"],
+                "email": current_user["email"],
+                "name": current_user.get("name", current_user["email"].split("@")[0]),
+                "created_at": current_user.get("iat", "2025-01-01T00:00:00Z"),
+                "auth_method": "minimal_auth"
+            }
             
         return user_data
         
@@ -580,12 +583,10 @@ async def register(request: Dict[str, Any]):
         
         logger.info(f"🚀 Starting registration for: {email}")
         
-        # Use improved authentication service with validation
-        auth_result = await simple_auth_service.create_user_minimal(
+        # Use auth adapter for user creation
+        auth_result = await auth_adapter.create_user(
             email=email,
             password=password,
-            consent_version="1.0",
-            consent_timestamp=datetime.now().isoformat(),
             name=name or email.split("@")[0]
         )
         
