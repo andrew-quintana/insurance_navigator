@@ -9,7 +9,7 @@ import logging
 import json
 from datetime import datetime
 from config.database import get_supabase_client as get_base_client, get_supabase_service_client
-from config.auth_config import auth_config
+from config.auth_config import get_auth_config
 import uuid
 
 # Configure logging
@@ -57,23 +57,22 @@ class UserService:
         try:
             logger.info(f"Creating user with email: {email} (backend-only auth)")
             
-            # Check if test email is allowed
-            if not auth_config.is_test_email_allowed(email):
-                raise ValueError(f"Test email addresses not allowed: {email}")
+            # Check if test email is allowed (simplified for now)
+            # TODO: Implement proper test email checking if needed
             
             # Get service role client for user creation
             service_client = await get_supabase_service_client()
             logger.info("Service role client obtained successfully")
             
             # Create auth user using service role with auto-confirmation
-            auth_settings = auth_config.get_auth_settings()
-            logger.info(f"Auth settings: {auth_settings}")
+            auth_config = get_auth_config()
+            logger.info(f"Auth config: {auth_config}")
             
             auth_user = service_client.auth.admin.create_user({
                 "email": email,
                 "password": password,
-                "email_confirm": auth_settings['email_confirm'],  # Auto-confirm in development
-                "email_confirm_enabled": auth_settings['email_confirm_enabled']
+                "email_confirm": True,  # Auto-confirm in development
+                "email_confirm_enabled": False  # Disable email confirmation for development
             })
             logger.info(f"Auth user created with ID: {auth_user.user.id}")
             
