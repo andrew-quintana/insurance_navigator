@@ -33,7 +33,7 @@ from config.database import db_pool
 
 # Database service imports
 from db.services.user_service import get_user_service, UserService
-from db.services.minimal_auth_service import minimal_auth_service as simple_auth_service
+from db.services.improved_minimal_auth_service import improved_minimal_auth_service as simple_auth_service
 from db.services.conversation_service import get_conversation_service, ConversationService
 from db.services.storage_service import get_storage_service, StorageService
 from db.services.document_service import DocumentService
@@ -465,12 +465,12 @@ async def shutdown_event():
 
 @app.post("/login")
 async def login(request: Request, response: Response):
-    """Login endpoint with proper error handling."""
+    """Login endpoint with validation and proper error handling."""
     try:
         # Get request body
         body = await request.json()
-        email = body.get("email")
-        password = body.get("password")
+        email = body.get("email", "").strip()
+        password = body.get("password", "")
         
         if not email or not password:
             logger.warning("Login attempt failed: Missing email or password")
@@ -479,7 +479,7 @@ async def login(request: Request, response: Response):
                 detail="Email and password are required"
             )
         
-        # Use minimal authentication service (bypasses all database operations)
+        # Use improved authentication service with validation
         auth_result = await simple_auth_service.authenticate_user_minimal(email, password)
         if not auth_result:
             logger.warning(f"❌ Authentication failed for user: {email}")
@@ -577,33 +577,46 @@ async def add_cors_headers(request: Request, call_next):
 
 @app.post("/register", response_model=Dict[str, Any])
 async def register(request: Dict[str, Any]):
-    """Register a new user with development-only authentication (no email confirmation)."""
+    """Register a new user with validation and duplicate checking."""
     try:
-        logger.info(f"🚀 Starting registration for: {request['email']}")
+        # Extract and validate required fields
+        email = request.get("email", "").strip()
+        password = request.get("password", "")
+        name = request.get("name", "").strip() or request.get("full_name", "").strip()
         
-        # Use minimal authentication service (bypasses all database operations)
+        if not email or not password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email and password are required"
+            )
+        
+        logger.info(f"🚀 Starting registration for: {email}")
+        
+        # Use improved authentication service with validation
         auth_result = await simple_auth_service.create_user_minimal(
-            email=request["email"],
-            password=request["password"],
+            email=email,
+            password=password,
             consent_version="1.0",
             consent_timestamp=datetime.now().isoformat(),
-            name=request.get("full_name", request["email"].split("@")[0])
+            name=name or email.split("@")[0]
         )
         
-        logger.info(f"✅ User registered successfully with dev auth: {request['email']}")
+        logger.info(f"✅ User registered successfully: {email}")
         return auth_result
         
+    except HTTPException:
+        raise
     except ValueError as e:
-        logger.warning(f"Registration failed for {request['email']}: {str(e)}")
+        logger.warning(f"Registration validation failed for {request.get('email', 'unknown')}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
     except Exception as e:
-        logger.error(f"❌ Registration error for {request['email']}: {str(e)}")
+        logger.error(f"❌ Registration error for {request.get('email', 'unknown')}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Registration failed"
+            detail="Registration failed. Please try again."
         )
 
 @app.get("/api/v1/status")
