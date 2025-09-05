@@ -1,0 +1,141 @@
+# Phase 1 Workflow Testing - Local Docker + Production Supabase
+# This configuration implements Phase 1 testing as specified in workflow_testing_spec.md
+# Uses local Docker services with production Supabase integration
+
+services:
+  # API Service - Containerized testing with production Supabase
+  api-server:
+    build:
+      context: .
+      dockerfile: api/upload_pipeline/Dockerfile
+    ports:
+      - "8000:8000"
+    network_mode: host
+    environment:
+      # Production Supabase Configuration
+      DATABASE_URL: ${DATABASE_URL}
+      UPLOAD_PIPELINE_SUPABASE_URL: ${SUPABASE_URL}
+      UPLOAD_PIPELINE_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      UPLOAD_PIPELINE_SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      # Mock external services for cost control
+      UPLOAD_PIPELINE_LLAMAPARSE_API_URL: http://mock-llamaparse:8001
+      UPLOAD_PIPELINE_OPENAI_API_URL: http://mock-openai:8002
+      UPLOAD_PIPELINE_ENVIRONMENT: development
+      UPLOAD_PIPELINE_STORAGE_ENVIRONMENT: production
+      UPLOAD_PIPELINE_STORAGE_URL: ${SUPABASE_URL}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Worker Service - Containerized testing with production Supabase
+  enhanced-base-worker:
+    build:
+      context: .
+      dockerfile: backend/workers/Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      # Production Supabase Configuration
+      DATABASE_URL: ${DATABASE_URL}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      # Mock external services for cost control
+      LLAMAPARSE_API_URL: http://mock-llamaparse:8001
+      OPENAI_API_URL: http://mock-openai:8002
+      UPLOAD_PIPELINE_ENVIRONMENT: development
+      UPLOAD_PIPELINE_STORAGE_ENVIRONMENT: production
+      UPLOAD_PIPELINE_STORAGE_URL: ${SUPABASE_URL}
+      # Enhanced worker configuration
+      SERVICE_MODE: HYBRID
+    depends_on:
+      api-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "from backend.workers.enhanced_base_worker import EnhancedBaseWorker; print('Enhanced worker import successful')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Frontend Service - Containerized testing (simplified for Phase 1)
+  # Note: Frontend testing is optional for Phase 1 core workflow validation
+  # frontend:
+  #   build:
+  #     context: ui
+  #     dockerfile: Dockerfile.test
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     NEXT_PUBLIC_API_URL: http://api-server:8000
+  #     NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_URL}
+  #     NEXT_PUBLIC_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+  #   depends_on:
+  #     api-server:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #   restart: unless-stopped
+
+  # Mock LlamaParse Service - Cost control for testing
+  mock-llamaparse:
+    build:
+      context: ./testing/mocks
+      dockerfile: llamaparse.Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      MOCK_LLAMAPARSE_DELAY: 2
+      MOCK_LLAMAPARSE_FAILURE_RATE: 0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Mock OpenAI Service - Cost control for testing
+  mock-openai:
+    build:
+      context: ./testing/mocks
+      dockerfile: openai.Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      MOCK_OPENAI_DELAY: 1
+      MOCK_OPENAI_FAILURE_RATE: 0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Monitoring Service - Health monitoring and metrics
+  monitoring:
+    build:
+      context: ./backend/monitoring
+      dockerfile: Dockerfile
+    ports:
+      - "3003:3000"
+    environment:
+      POSTGRES_URL: ${DATABASE_URL}
+      MONITORING_ENVIRONMENT: development
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+# Service Dependencies:
+# - All services depend on production Supabase availability
+# - API service must be healthy before worker and frontend start
+# - Health checks ensure service readiness before test execution
+# - Network isolation for security while maintaining external connectivity
