@@ -519,12 +519,9 @@ async def login(request: Request, response: Response):
 async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_current_user)):
     """Get current user information."""
     try:
-        # Use auth adapter to get user info (updated for deployment)
-        user_data = await auth_adapter.get_user_info(current_user["id"])
-        
-        # If no user data from backend, return the data from token validation
-        if not user_data:
-            # For minimal auth, return the user data from token validation
+        # For minimal auth, return the user data from token validation directly
+        # This avoids the database lookup that causes UUID errors
+        if current_user.get("id", "").startswith("minimal_"):
             return {
                 "id": current_user["id"],
                 "email": current_user["email"],
@@ -532,8 +529,23 @@ async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_curre
                 "created_at": current_user.get("iat", "2025-01-01T00:00:00Z"),
                 "auth_method": "minimal_auth"
             }
-            
-        return user_data
+        
+        # For other auth methods, use auth adapter
+        try:
+            user_data = await auth_adapter.get_user_info(current_user["id"])
+            if user_data:
+                return user_data
+        except Exception as e:
+            logger.warning(f"Auth adapter failed, falling back to token data: {e}")
+        
+        # Fallback to token data
+        return {
+            "id": current_user["id"],
+            "email": current_user["email"],
+            "name": current_user.get("name", current_user["email"].split("@")[0]),
+            "created_at": current_user.get("iat", "2025-01-01T00:00:00Z"),
+            "auth_method": "token_fallback"
+        }
         
     except HTTPException:
         raise
