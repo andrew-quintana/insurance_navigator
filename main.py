@@ -135,6 +135,22 @@ async def health_check_head():
     """Quick health check for HEAD requests."""
     return Response(status_code=200)
 
+@app.get("/debug-auth")
+async def debug_auth():
+    """Debug endpoint to check auth adapter status."""
+    try:
+        from db.services.auth_adapter import auth_adapter
+        return {
+            "auth_adapter_loaded": True,
+            "backend_type": auth_adapter.backend_type,
+            "test_user_info": await auth_adapter.get_user_info("test_id")
+        }
+    except Exception as e:
+        return {
+            "auth_adapter_loaded": False,
+            "error": str(e)
+        }
+
 @app.get("/health")
 async def health_check(request: Request):
     """Health check endpoint with caching to reduce database load."""
