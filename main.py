@@ -515,6 +515,42 @@ async def login(request: Request, response: Response):
         )
 
 # Add /me endpoint for session validation
+@app.post("/chat")
+async def chat_with_agent(
+    request: Request,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Chat endpoint for AI agent interaction."""
+    try:
+        data = await request.json()
+        message = data.get("message", "")
+        conversation_id = data.get("conversation_id", "")
+        
+        if not message:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Message is required"
+            )
+        
+        # For now, return a simple response
+        # TODO: Integrate with actual AI agent
+        response_text = f"I received your message: '{message}'. This is a placeholder response while we set up the AI agent."
+        
+        return {
+            "text": response_text,
+            "conversation_id": conversation_id or f"conv_{int(time.time())}",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Chat error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred"
+        )
+
 @app.get("/me")
 async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_current_user)):
     """Get current user information."""
