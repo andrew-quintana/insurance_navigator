@@ -503,7 +503,7 @@ async def login(request: Request, response: Response):
 async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_current_user)):
     """Get current user information."""
     try:
-        # Use auth adapter to get user info
+        # Use auth adapter to get user info (updated for deployment)
         user_data = await auth_adapter.get_user_info(current_user["id"])
         
         # If no user data from backend, return the data from token validation
