@@ -521,6 +521,7 @@ async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_curre
     try:
         # For minimal auth, return the user data from token validation directly
         # This avoids the database lookup that causes UUID errors
+        # Updated: 2025-09-05 - Force deployment
         if current_user.get("id", "").startswith("minimal_"):
             return {
                 "id": current_user["id"],
