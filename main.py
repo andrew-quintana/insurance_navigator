@@ -208,15 +208,8 @@ storage_service: Optional[StorageService] = None
 # Authentication utilities
 async def get_current_user(request: Request) -> Dict[str, Any]:
     """Extract and validate user from JWT token."""
-    global user_service_instance
-    
-    if not user_service_instance:
-        user_service_instance = await get_user_service()
-    
-    # Get tokens from Authorization and Refresh-Token headers
+    # Get tokens from Authorization header
     auth_header = request.headers.get("authorization")
-    refresh_token = request.headers.get("refresh-token")  # Optional refresh token header
-    expires_at = request.headers.get("expires-at")  # Optional expiration header
     
     if not auth_header or not auth_header.startswith("Bearer "):
         raise HTTPException(
@@ -227,15 +220,8 @@ async def get_current_user(request: Request) -> Dict[str, Any]:
     access_token = auth_header.split(" ")[1]
     
     try:
-        # Convert expires_at to int if provided
-        expires_at_int = int(expires_at) if expires_at else None
-        
-        # Validate token and get user
-        user_data = await user_service_instance.get_user_from_token(
-            token=access_token,
-            refresh_token=refresh_token,
-            expires_at=expires_at_int
-        )
+        # Use improved minimal auth service for token validation
+        user_data = simple_auth_service.validate_token(access_token)
         if not user_data:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -244,6 +230,8 @@ async def get_current_user(request: Request) -> Dict[str, Any]:
         
         return user_data
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Token validation error: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(

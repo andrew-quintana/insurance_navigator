@@ -5,6 +5,7 @@ This version includes proper input validation while maintaining simplicity.
 
 import hashlib
 import secrets
+import jwt
 from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 import logging
@@ -19,18 +20,54 @@ class ImprovedMinimalAuthService:
         self.secret_key = "improved-minimal-dev-secret-key"
         
     def generate_token(self, user_id: str, email: str) -> str:
-        """Generate a simple token for development."""
+        """Generate a proper JWT token for development."""
         payload = {
-            "user_id": user_id,
+            "sub": user_id,  # Subject (user ID)
             "email": email,
             "exp": int((datetime.now() + timedelta(hours=24)).timestamp()),
-            "iat": int(datetime.now().timestamp())
+            "iat": int(datetime.now().timestamp()),
+            "iss": "insurance-navigator-minimal-auth",  # Issuer
+            "aud": "insurance-navigator-users"  # Audience
         }
         
-        # Simple token generation
-        token_data = f"{user_id}:{email}:{payload['exp']}"
-        token = hashlib.sha256(f"{token_data}:{self.secret_key}".encode()).hexdigest()
-        return f"minimal.{token}"
+        # Generate proper JWT token
+        token = jwt.encode(payload, self.secret_key, algorithm="HS256")
+        return token
+    
+    def validate_token(self, token: str) -> Optional[Dict[str, Any]]:
+        """Validate a JWT token and return user data."""
+        try:
+            # Decode the JWT token
+            payload = jwt.decode(
+                token, 
+                self.secret_key, 
+                algorithms=["HS256"],
+                options={"verify_aud": False}  # Skip audience verification for MVP
+            )
+            
+            # Extract user data
+            user_id = payload.get("sub")
+            email = payload.get("email")
+            
+            if not user_id or not email:
+                return None
+                
+            return {
+                "id": user_id,
+                "email": email,
+                "exp": payload.get("exp"),
+                "iat": payload.get("iat")
+            }
+            
+        except jwt.ExpiredSignatureError:
+            logger.warning("Token has expired")
+            return None
+        except jwt.InvalidTokenError as e:
+            logger.warning(f"Invalid token: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Token validation error: {e}")
+            return None
     
     async def create_user_minimal(
         self,
