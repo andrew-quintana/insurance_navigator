@@ -1,0 +1,286 @@
+# Cloud Monitoring Configuration
+# Phase 2: Cloud Deployment Testing
+# Monitoring and alerting configuration for Render.com and Vercel deployments
+
+# Service Health Monitoring
+health_checks:
+  api:
+    url: "https://insurance-navigator-api-workflow-testing.onrender.com/health"
+    interval: 30  # seconds
+    timeout: 10   # seconds
+    retries: 3
+    expected_status: 200
+    alert_threshold: 3  # consecutive failures before alert
+    
+  frontend:
+    url: "https://insurance-navigator-frontend-workflow-testing.vercel.app/health"
+    interval: 30  # seconds
+    timeout: 10   # seconds
+    retries: 3
+    expected_status: 200
+    alert_threshold: 3  # consecutive failures before alert
+
+# Performance Monitoring
+performance_monitoring:
+  response_time:
+    api:
+      warning_threshold: 2.0  # seconds
+      critical_threshold: 5.0  # seconds
+    frontend:
+      warning_threshold: 1.0  # seconds
+      critical_threshold: 3.0  # seconds
+  
+  error_rate:
+    api:
+      warning_threshold: 0.01  # 1%
+      critical_threshold: 0.05  # 5%
+    frontend:
+      warning_threshold: 0.005  # 0.5%
+      critical_threshold: 0.02  # 2%
+  
+  success_rate:
+    api:
+      warning_threshold: 0.99  # 99%
+      critical_threshold: 0.95  # 95%
+    frontend:
+      warning_threshold: 0.995  # 99.5%
+      critical_threshold: 0.98  # 98%
+
+# External Service Monitoring
+external_services:
+  supabase:
+    health_endpoint: "***REMOVED***/rest/v1/"
+    timeout: 10
+    alert_on_failure: true
+    
+  openai:
+    health_endpoint: "https://api.openai.com/v1/models"
+    timeout: 10
+    alert_on_failure: true
+    
+  llamaparse:
+    health_endpoint: "https://api.cloud.llamaindex.ai/health"
+    timeout: 10
+    alert_on_failure: true
+
+# Cost Monitoring
+cost_monitoring:
+  daily_limit: 50.00  # USD
+  warning_threshold: 40.00  # USD
+  critical_threshold: 45.00  # USD
+  
+  api_usage:
+    openai:
+      cost_per_request: 0.01  # estimated
+      daily_limit: 100  # requests
+    llamaparse:
+      cost_per_request: 0.05  # estimated
+      daily_limit: 50  # requests
+
+# Alerting Configuration
+alerts:
+  channels:
+    email:
+      enabled: true
+      recipients:
+        - "dev-team@example.com"
+        - "ops-team@example.com"
+    
+    slack:
+      enabled: false
+      webhook_url: "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+      channel: "#alerts"
+    
+    webhook:
+      enabled: false
+      url: "https://your-webhook-endpoint.com/alerts"
+  
+  severity_levels:
+    info:
+      channels: ["email"]
+    warning:
+      channels: ["email", "slack"]
+    critical:
+      channels: ["email", "slack", "webhook"]
+  
+  alert_rules:
+    service_down:
+      condition: "health_check_failures >= alert_threshold"
+      severity: "critical"
+      message: "Service {service_name} is down"
+      
+    high_response_time:
+      condition: "response_time > warning_threshold"
+      severity: "warning"
+      message: "High response time detected for {service_name}: {response_time}s"
+      
+    high_error_rate:
+      condition: "error_rate > warning_threshold"
+      severity: "warning"
+      message: "High error rate detected for {service_name}: {error_rate}%"
+      
+    cost_threshold:
+      condition: "daily_cost > warning_threshold"
+      severity: "warning"
+      message: "Daily cost threshold exceeded: ${daily_cost}"
+      
+    external_service_failure:
+      condition: "external_service_failure == true"
+      severity: "critical"
+      message: "External service {service_name} is not responding"
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "json"
+  
+  services:
+    api:
+      log_level: "INFO"
+      enable_debug: true
+      enable_performance_logs: true
+      
+    frontend:
+      log_level: "INFO"
+      enable_debug: true
+      enable_performance_logs: true
+      
+    worker:
+      log_level: "INFO"
+      enable_debug: true
+      enable_performance_logs: true
+
+# Metrics Collection
+metrics:
+  collection_interval: 60  # seconds
+  
+  custom_metrics:
+    - name: "document_processing_time"
+      type: "histogram"
+      labels: ["service", "document_type"]
+      
+    - name: "api_request_duration"
+      type: "histogram"
+      labels: ["service", "endpoint", "method"]
+      
+    - name: "external_api_calls"
+      type: "counter"
+      labels: ["service", "api_name", "status"]
+      
+    - name: "database_connections"
+      type: "gauge"
+      labels: ["service", "connection_type"]
+      
+    - name: "memory_usage"
+      type: "gauge"
+      labels: ["service", "instance"]
+      
+    - name: "cpu_usage"
+      type: "gauge"
+      labels: ["service", "instance"]
+
+# Dashboard Configuration
+dashboards:
+  main:
+    title: "Workflow Testing Cloud Deployment"
+    refresh_interval: 30  # seconds
+    
+    panels:
+      - title: "Service Health"
+        type: "status"
+        services: ["api", "frontend"]
+        
+      - title: "Response Time Trends"
+        type: "line_chart"
+        metrics: ["response_time"]
+        time_range: "1h"
+        
+      - title: "Error Rate Trends"
+        type: "line_chart"
+        metrics: ["error_rate"]
+        time_range: "1h"
+        
+      - title: "External Service Status"
+        type: "status"
+        services: ["supabase", "openai", "llamaparse"]
+        
+      - title: "Cost Tracking"
+        type: "bar_chart"
+        metrics: ["daily_cost"]
+        time_range: "7d"
+        
+      - title: "Performance Metrics"
+        type: "table"
+        metrics: ["response_time_p50", "response_time_p95", "response_time_p99"]
+
+# Incident Response
+incident_response:
+  auto_recovery:
+    enabled: true
+    max_attempts: 3
+    retry_interval: 60  # seconds
+    
+  escalation:
+    levels:
+      - duration: "5m"
+        action: "notify_team"
+      - duration: "15m"
+        action: "escalate_to_lead"
+      - duration: "30m"
+        action: "escalate_to_manager"
+  
+  runbooks:
+    service_down:
+      - "Check service logs for errors"
+      - "Verify external service dependencies"
+      - "Check resource utilization"
+      - "Restart service if necessary"
+      
+    high_response_time:
+      - "Check database connection pool"
+      - "Verify external API response times"
+      - "Check for resource constraints"
+      - "Scale service if necessary"
+      
+    high_error_rate:
+      - "Analyze error logs for patterns"
+      - "Check external service status"
+      - "Verify input data validity"
+      - "Check for configuration issues"
+
+# Backup and Recovery
+backup:
+  database:
+    enabled: true
+    frequency: "daily"
+    retention_days: 7
+    
+  logs:
+    enabled: true
+    frequency: "hourly"
+    retention_days: 30
+    
+  configuration:
+    enabled: true
+    frequency: "daily"
+    retention_days: 90
+
+# Security Monitoring
+security:
+  failed_login_threshold: 5
+  suspicious_activity_threshold: 10
+  
+  monitoring:
+    - "authentication_failures"
+    - "unauthorized_access_attempts"
+    - "unusual_api_usage_patterns"
+    - "data_access_anomalies"
+  
+  alerts:
+    - condition: "failed_logins > failed_login_threshold"
+      severity: "warning"
+      message: "Multiple failed login attempts detected"
+      
+    - condition: "suspicious_activity > suspicious_activity_threshold"
+      severity: "critical"
+      message: "Suspicious activity detected in the system"

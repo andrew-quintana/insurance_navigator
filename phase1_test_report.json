@@ -1,0 +1,79 @@
+{
+  "phase": "Phase 1 Workflow Testing",
+  "timestamp": "2025-09-04T16:08:58.600886",
+  "summary": {
+    "total_tests": 8,
+    "passed_tests": 1,
+    "failed_tests": 7,
+    "success_rate": 12.5,
+    "total_duration": 31.96790647506714
+  },
+  "test_results": [
+    {
+      "test_name": "Environment Validation",
+      "passed": true,
+      "duration": 0.44217681884765625,
+      "error_message": null,
+      "metrics": null
+    },
+    {
+      "test_name": "Docker Services Startup",
+      "passed": false,
+      "duration": 11.331701278686523,
+      "error_message": "Failed to start services:  insurance_navigator-mock-openai  Built\n insurance_navigator-monitoring  Built\n insurance_navigator-api-server  Built\n insurance_navigator-enhanced-base-worker  Built\n insurance_navigator-mock-llamaparse  Built\n Network insurance_navigator_default  Creating\n Network insurance_navigator_default  Created\n Container insurance_navigator-mock-llamaparse-1  Creating\n Container insurance_navigator-mock-openai-1  Creating\n Container insurance_navigator-monitoring-1  Creating\n Container insurance_navigator-api-server-1  Creating\n Container insurance_navigator-monitoring-1  Created\n Container insurance_navigator-mock-llamaparse-1  Created\n api-server Published ports are discarded when using host network mode \n Container insurance_navigator-mock-openai-1  Created\n Container insurance_navigator-api-server-1  Created\n Container insurance_navigator-enhanced-base-worker-1  Creating\n Container insurance_navigator-enhanced-base-worker-1  Created\n Container insurance_navigator-mock-openai-1  Starting\n Container insurance_navigator-monitoring-1  Starting\n Container insurance_navigator-api-server-1  Starting\n Container insurance_navigator-mock-llamaparse-1  Starting\n Container insurance_navigator-api-server-1  Started\n Container insurance_navigator-api-server-1  Waiting\n Container insurance_navigator-mock-llamaparse-1  Started\n Container insurance_navigator-mock-openai-1  Started\n Container insurance_navigator-monitoring-1  Started\n Container insurance_navigator-api-server-1  Healthy\n Container insurance_navigator-enhanced-base-worker-1  Starting\nError response from daemon: failed to set up container networking: driver failed programming external connectivity on endpoint insurance_navigator-enhanced-base-worker-1 (a8d443121b6c10195aaff67a7b4aac2fffdad92d0dfd8e89267e7c6ec9316b5c): Bind for 0.0.0.0:8002 failed: port is already allocated\n",
+      "metrics": null
+    },
+    {
+      "test_name": "Service Health Checks",
+      "passed": false,
+      "duration": 20.17861008644104,
+      "error_message": null,
+      "metrics": {
+        "services_checked": 3,
+        "services_healthy": 1,
+        "supabase_connected": false
+      }
+    },
+    {
+      "test_name": "Document Upload Workflow",
+      "passed": false,
+      "duration": 0.0034749507904052734,
+      "error_message": "Cannot connect to host localhost:8000 ssl:default [Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 8000), [Errno 61] Connect call failed ('::1', 8000, 0, 0)]",
+      "metrics": null
+    },
+    {
+      "test_name": "Job Status Monitoring",
+      "passed": false,
+      "duration": 7.152557373046875e-06,
+      "error_message": "No test job IDs available for monitoring",
+      "metrics": null
+    },
+    {
+      "test_name": "Concurrent Processing",
+      "passed": false,
+      "duration": 0.009980201721191406,
+      "error_message": null,
+      "metrics": {
+        "total_uploads": 10,
+        "successful_uploads": 0,
+        "failed_uploads": 10,
+        "success_rate": 0.0,
+        "concurrent_time": 0.009980201721191406
+      }
+    },
+    {
+      "test_name": "Error Handling",
+      "passed": false,
+      "duration": 0.0012018680572509766,
+      "error_message": "Cannot connect to host localhost:8000 ssl:default [Multiple exceptions: [Errno 61] Connect call failed ('::1', 8000, 0, 0), [Errno 61] Connect call failed ('127.0.0.1', 8000)]",
+      "metrics": null
+    },
+    {
+      "test_name": "Performance Metrics",
+      "passed": false,
+      "duration": 0.0007541179656982422,
+      "error_message": "Cannot connect to host localhost:8000 ssl:default [Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 8000), [Errno 61] Connect call failed ('::1', 8000, 0, 0)]",
+      "metrics": null
+    }
+  ]
+}

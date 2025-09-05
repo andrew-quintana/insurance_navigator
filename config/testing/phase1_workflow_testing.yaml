@@ -1,0 +1,211 @@
+# Phase 1 Workflow Testing Configuration
+# Configuration for Phase 1 testing as specified in workflow_testing_spec.md
+
+# Test Environment Configuration
+environment:
+  name: "phase1-workflow-testing"
+  description: "Local Docker-based testing with production Supabase integration"
+  docker_compose_file: "docker-compose.phase1-workflow-testing.yml"
+  env_file: ".env.production"
+
+# Service Configuration
+services:
+  api:
+    name: "api-server"
+    url: "http://localhost:8000"
+    health_endpoint: "/health"
+    dockerfile: "api/upload_pipeline/Dockerfile"
+    port: 8000
+    
+  worker:
+    name: "enhanced-base-worker"
+    url: "http://localhost:8002"
+    health_endpoint: "/health"
+    dockerfile: "backend/workers/Dockerfile"
+    port: 8002
+    
+  frontend:
+    name: "frontend"
+    url: "http://localhost:3000"
+    health_endpoint: "/health"
+    dockerfile: "ui/Dockerfile.test"
+    port: 3000
+    
+  monitoring:
+    name: "monitoring"
+    url: "http://localhost:3001"
+    health_endpoint: "/health"
+    dockerfile: "monitoring/Dockerfile"
+    port: 3001
+
+# Test Configuration
+testing:
+  # Test Data
+  test_user_id_prefix: "phase1-test-user"
+  test_filename: "phase1-test-document.pdf"
+  test_file_size: 1048576  # 1MB
+  test_sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  
+  # Test Parameters
+  max_concurrent_tests: 10
+  health_check_timeout: 300  # 5 minutes
+  test_timeout: 1800  # 30 minutes
+  job_polling_interval: 10  # seconds
+  max_job_polls: 20
+  
+  # Performance Thresholds
+  max_api_response_time: 1000  # milliseconds
+  min_success_rate: 80  # percentage
+  
+  # Coverage Goals
+  min_code_coverage: 80  # percentage
+  min_critical_path_coverage: 95  # percentage
+
+# Test Phases
+phases:
+  - name: "Environment Validation"
+    description: "Validate environment setup and prerequisites"
+    tests:
+      - "check_env_file_exists"
+      - "check_docker_running"
+      - "check_docker_compose_file"
+      
+  - name: "Docker Services Startup"
+    description: "Start and validate Docker services"
+    tests:
+      - "stop_existing_services"
+      - "build_and_start_services"
+      - "wait_for_services_healthy"
+      
+  - name: "Service Health Checks"
+    description: "Verify all services are healthy and connected"
+    tests:
+      - "check_api_health"
+      - "check_worker_health"
+      - "check_frontend_health"
+      - "check_monitoring_health"
+      - "check_supabase_connectivity"
+      
+  - name: "Unit Tests"
+    description: "Execute unit tests for all components"
+    tests:
+      - "api_unit_tests"
+      - "worker_unit_tests"
+      - "frontend_unit_tests"
+      
+  - name: "Integration Tests"
+    description: "Test service-to-service communication"
+    tests:
+      - "frontend_simulation_tests"
+      - "api_worker_integration"
+      - "database_integration"
+      
+  - name: "End-to-End Tests"
+    description: "Test complete document workflow"
+    tests:
+      - "document_upload_workflow"
+      - "job_status_monitoring"
+      - "complete_processing_pipeline"
+      
+  - name: "Performance Tests"
+    description: "Load and performance testing"
+    tests:
+      - "concurrent_processing"
+      - "api_response_times"
+      - "resource_utilization"
+      
+  - name: "Error Handling Tests"
+    description: "Test error scenarios and recovery"
+    tests:
+      - "invalid_file_size_handling"
+      - "invalid_mime_type_handling"
+      - "rate_limiting"
+      - "service_failure_recovery"
+      
+  - name: "Coverage Analysis"
+    description: "Code coverage analysis and reporting"
+    tests:
+      - "api_coverage_analysis"
+      - "worker_coverage_analysis"
+      - "overall_coverage_report"
+
+# Mock Services Configuration
+mock_services:
+  llamaparse:
+    name: "mock-llamaparse"
+    url: "http://localhost:8001"
+    health_endpoint: "/health"
+    dockerfile: "testing/mocks/llamaparse.Dockerfile"
+    port: 8001
+    environment:
+      MOCK_LLAMAPARSE_DELAY: 2
+      MOCK_LLAMAPARSE_FAILURE_RATE: 0.0
+      
+  openai:
+    name: "mock-openai"
+    url: "http://localhost:8002"
+    health_endpoint: "/health"
+    dockerfile: "testing/mocks/openai.Dockerfile"
+    port: 8002
+    environment:
+      MOCK_OPENAI_DELAY: 1
+      MOCK_OPENAI_FAILURE_RATE: 0.0
+
+# Production Supabase Configuration
+supabase:
+  url: "https://[PROJECT_ID].supabase.co"
+  anon_key: "[PRODUCTION_ANON_KEY]"
+  service_role_key: "[PRODUCTION_SERVICE_ROLE_KEY]"
+  database_url: "postgresql://postgres:[PRODUCTION_PASSWORD]@[PRODUCTION_HOST]:5432/postgres"
+
+# Test Data Configuration
+test_data:
+  documents:
+    - name: "simulated_insurance_document.pdf"
+      path: "examples/simulated_insurance_document.pdf"
+      size: 1741  # bytes
+      mime_type: "application/pdf"
+      
+    - name: "scan_classic_hmo_parsed.pdf"
+      path: "examples/scan_classic_hmo_parsed.pdf"
+      size: 2516582  # bytes
+      mime_type: "application/pdf"
+      
+  edge_cases:
+    - name: "large_file.pdf"
+      size: 104857600  # 100MB (should be rejected)
+      
+    - name: "invalid_mime.txt"
+      mime_type: "text/plain"  # should be rejected
+      
+    - name: "corrupted.pdf"
+      description: "Corrupted PDF file for error handling"
+
+# Reporting Configuration
+reporting:
+  output_dir: "test_reports"
+  formats: ["json", "html", "junit"]
+  include_metrics: true
+  include_logs: true
+  include_coverage: true
+  
+  # Test result thresholds
+  thresholds:
+    success_rate: 80  # minimum success rate percentage
+    coverage_rate: 80  # minimum code coverage percentage
+    performance_threshold: 1000  # maximum API response time in ms
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(levelname)s - %(message)s"
+  file: "phase1_test_results.log"
+  console: true
+  
+# Cleanup Configuration
+cleanup:
+  remove_containers: true
+  remove_volumes: false
+  remove_networks: true
+  remove_images: false
+  remove_test_artifacts: true
