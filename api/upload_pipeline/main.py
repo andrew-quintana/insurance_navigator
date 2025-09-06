@@ -16,12 +16,12 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
 
-from config import get_config
-from database import get_database
-from auth import get_current_user, User
-from rate_limiter import RateLimiter
-from endpoints.upload import router as upload_router
-from endpoints.jobs import router as jobs_router
+from .config import get_config
+from .database import get_database
+from .auth import get_current_user, User
+from .rate_limiter import RateLimiter
+from .endpoints.upload import router as upload_router
+from .endpoints.jobs import router as jobs_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
