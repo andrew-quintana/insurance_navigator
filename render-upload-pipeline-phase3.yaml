@@ -1,0 +1,79 @@
+services:
+  - type: web
+    name: upload-pipeline-api-phase3
+    env: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile.upload-pipeline
+    region: oregon
+    branch: main
+    port: 8000
+    healthCheckPath: /health
+    healthCheckTimeout: 60
+    numReplicas: 1
+    autoscaling:
+      enabled: true
+      minInstances: 1
+      maxInstances: 3
+      targetCPUPercent: 70
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: LLAMAPARSE_API_KEY
+        sync: false
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
+
+  - type: worker
+    name: upload-pipeline-worker-phase3
+    env: docker
+    plan: starter
+    dockerfilePath: ./backend/workers/Dockerfile
+    region: oregon
+    branch: main
+    numReplicas: 1
+    autoscaling:
+      enabled: true
+      minInstances: 1
+      maxInstances: 2
+      targetCPUPercent: 80
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: LLAMAPARSE_API_KEY
+        sync: false
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
+      - key: WORKER_POLL_INTERVAL
+        value: "5"
+      - key: WORKER_MAX_JOBS
+        value: "10"
+      - key: WORKER_MAX_RETRIES
+        value: "3"

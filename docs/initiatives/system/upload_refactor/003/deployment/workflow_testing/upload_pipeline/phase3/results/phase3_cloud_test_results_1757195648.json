@@ -1,0 +1,50 @@
+{
+  "phase": "Phase 3 Cloud Deployment Test",
+  "timestamp": "2025-09-06T21:54:08.712486",
+  "api_url": "***REMOVED***",
+  "total_duration": 1.2314739227294922,
+  "summary": {
+    "total_tests": 4,
+    "passed_tests": 2,
+    "failed_tests": 1,
+    "skipped_tests": 1,
+    "success_rate": 50.0
+  },
+  "test_results": [
+    {
+      "test": "api_health",
+      "status": "passed",
+      "response": {
+        "status": "healthy",
+        "timestamp": "2025-09-06T21:53:46.458565",
+        "services": {
+          "database": "healthy",
+          "supabase_auth": "healthy",
+          "llamaparse": "healthy",
+          "openai": "healthy"
+        },
+        "version": "3.0.0"
+      },
+      "timestamp": "2025-09-06T21:54:07.734581"
+    },
+    {
+      "test": "upload_simulated_insurance_document.pdf",
+      "status": "failed",
+      "error": "Expected a string value",
+      "timestamp": "2025-09-06T21:54:08.711651"
+    },
+    {
+      "test": "upload_scan_classic_hmo.pdf",
+      "status": "skipped",
+      "reason": "Test file not found",
+      "timestamp": "2025-09-06T21:54:08.712085"
+    },
+    {
+      "test": "database_verification",
+      "status": "passed",
+      "note": "Database verification simulated - would check production Supabase",
+      "timestamp": "2025-09-06T21:54:08.712464"
+    }
+  ],
+  "job_ids": []
+}

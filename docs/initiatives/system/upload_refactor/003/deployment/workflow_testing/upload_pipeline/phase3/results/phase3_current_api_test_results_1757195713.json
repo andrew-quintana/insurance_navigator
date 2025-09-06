@@ -1,0 +1,81 @@
+{
+  "phase": "Phase 3 Current API Test",
+  "timestamp": "2025-09-06T21:55:13.190759",
+  "api_url": "***REMOVED***",
+  "api_version": "3.0.0",
+  "total_duration": 3.01495099067688,
+  "summary": {
+    "total_tests": 5,
+    "passed_tests": 4,
+    "failed_tests": 1,
+    "skipped_tests": 0,
+    "success_rate": 80.0
+  },
+  "test_results": [
+    {
+      "test": "api_health",
+      "status": "passed",
+      "response": {
+        "status": "healthy",
+        "timestamp": "2025-09-06T21:54:51.458830",
+        "services": {
+          "database": "healthy",
+          "supabase_auth": "healthy",
+          "llamaparse": "healthy",
+          "openai": "healthy"
+        },
+        "version": "3.0.0"
+      },
+      "timestamp": "2025-09-06T21:55:10.390176"
+    },
+    {
+      "test": "root_endpoint",
+      "status": "passed",
+      "response": {
+        "message": "Insurance Navigator API v3.0.0"
+      },
+      "timestamp": "2025-09-06T21:55:10.527528"
+    },
+    {
+      "test": "auth_endpoints",
+      "status": "passed",
+      "registration_response": {
+        "user": {
+          "id": "minimal_23a76e159312db86720d4863018549a8",
+          "email": "phase3-test-1757195710@example.com",
+          "name": "Phase 3 Test User"
+        },
+        "access_token": "***REMOVED***.eyJzdWIiOiJtaW5pbWFsXzIzYTc2ZTE1OTMxMmRiODY3MjBkNDg2MzAxODU0OWE4IiwiZW1haWwiOiJwaGFzZTMtdGVzdC0xNzU3MTk1NzEwQGV4YW1wbGUuY29tIiwiZXhwIjoxNzU3MjgyMTExLCJpYXQiOjE3NTcxOTU3MTEsImlzcyI6Imluc3VyYW5jZS1uYXZpZ2F0b3ItbWluaW1hbC1hdXRoIiwiYXVkIjoiaW5zdXJhbmNlLW5hdmlnYXRvci11c2VycyJ9.mVm0M413zFc5YxXiGUTFI84gsD2OWS45FaLLh4qNN1Y",
+        "token_type": "bearer"
+      },
+      "login_response": {
+        "access_token": "***REMOVED***.eyJzdWIiOiJtaW5pbWFsXzk1MWU2ZmRmNzUwODNkNDY4M2U0NzBiZTFlZTczZDU5IiwiZW1haWwiOiJwaGFzZTMtdGVzdC0xNzU3MTk1NzEwQGV4YW1wbGUuY29tIiwiZXhwIjoxNzU3MjgyMTEyLCJpYXQiOjE3NTcxOTU3MTIsImlzcyI6Imluc3VyYW5jZS1uYXZpZ2F0b3ItbWluaW1hbC1hdXRoIiwiYXVkIjoiaW5zdXJhbmNlLW5hdmlnYXRvci11c2VycyJ9.Aa0OOsnLx9I_wPtYZlDwXaLfuG-c3DGhGwhSTpgVJK0",
+        "token_type": "bearer",
+        "user": {
+          "id": "minimal_951e6fdf75083d4683e470be1ee73d59",
+          "email": "phase3-test-1757195710@example.com",
+          "name": "phase3-test-1757195710"
+        }
+      },
+      "timestamp": "2025-09-06T21:55:12.041667"
+    },
+    {
+      "test": "upload_endpoint",
+      "status": "failed",
+      "error": "Upload failed: HTTP 500 - {\"detail\":\"'StorageService' object has no attribute 'upload_document'\"}",
+      "timestamp": "2025-09-06T21:55:12.707250"
+    },
+    {
+      "test": "me_endpoint",
+      "status": "passed",
+      "response": {
+        "id": "minimal_3b9c764b6e0a5510564f17f9559386c2",
+        "email": "phase3-me-test-1757195712@example.com",
+        "name": "phase3-me-test-1757195712",
+        "created_at": 1757195713,
+        "auth_method": "minimal_auth"
+      },
+      "timestamp": "2025-09-06T21:55:13.190599"
+    }
+  ]
+}

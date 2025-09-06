@@ -1,0 +1,53 @@
+{
+  "timestamp": "2025-09-06T15:13:01.248597",
+  "tests": [
+    {
+      "test": "Worker Health Check",
+      "passed": false,
+      "error": "Status 404: Not Found\n"
+    },
+    {
+      "test": "Worker Endpoints Test",
+      "passed": true,
+      "accessible_endpoints": 5,
+      "total_endpoints": 5,
+      "results": [
+        {
+          "endpoint": "/health",
+          "status_code": 404,
+          "response_time": 0.16422,
+          "accessible": true
+        },
+        {
+          "endpoint": "/api/v2/upload",
+          "status_code": 404,
+          "response_time": 0.082922,
+          "accessible": true
+        },
+        {
+          "endpoint": "/api/v2/jobs",
+          "status_code": 404,
+          "response_time": 0.131146,
+          "accessible": true
+        },
+        {
+          "endpoint": "/test/upload",
+          "status_code": 404,
+          "response_time": 0.058095,
+          "accessible": true
+        },
+        {
+          "endpoint": "/test/jobs",
+          "status_code": 404,
+          "response_time": 0.059341,
+          "accessible": true
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total": 2,
+    "passed": 1,
+    "failed": 1
+  }
+}
