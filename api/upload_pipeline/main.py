@@ -91,7 +91,12 @@ async def lifespan(app: FastAPI):
     logger.info("Starting upload pipeline API...")
     
     # Initialize database connection
-    await get_database().initialize()
+    try:
+        await get_database().initialize()
+        logger.info("Database connection initialized successfully")
+    except Exception as e:
+        logger.warning(f"Database connection failed during startup: {e}")
+        logger.warning("API will start but database-dependent features may not work")
     
     # Initialize rate limiter
     rate_limiter.initialize()
@@ -189,19 +194,31 @@ async def test_jobs_endpoint(job_id: str):
 @app.get("/health")
 async def health_check():
     """Health check endpoint for monitoring."""
-    try:
-        # Check database connectivity
-        db = get_database()
-        await db.health_check()
-        
-        return {
-            "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat(),
-            "version": "2.0.0"
+    health_status = {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "2.0.0",
+        "services": {
+            "api": "healthy",
+            "database": "unknown"
         }
+    }
+    
+    # Check database connectivity
+    try:
+        db = get_database()
+        if await db.health_check():
+            health_status["services"]["database"] = "healthy"
+        else:
+            health_status["services"]["database"] = "unhealthy"
+            health_status["status"] = "degraded"
     except Exception as e:
-        logger.error("Health check failed", exc_info=True)
-        raise HTTPException(status_code=503, detail="Service unhealthy")
+        logger.warning(f"Database health check failed: {e}")
+        health_status["services"]["database"] = "unavailable"
+        health_status["status"] = "degraded"
+    
+    # Return 200 for degraded service (API still works)
+    return health_status
 
 
 # Include API routers
