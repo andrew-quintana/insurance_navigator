@@ -29,6 +29,7 @@ class DatabaseManager:
         try:
             # Parse connection string from Supabase URL
             db_url = self._parse_supabase_url()
+            logger.info(f"Attempting database connection to: {db_url[:50]}...")
             
             # Create connection pool
             self.pool = await create_pool(
