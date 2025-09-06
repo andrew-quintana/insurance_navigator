@@ -1,0 +1,76 @@
+services:
+  - type: web
+    name: upload-pipeline-api
+    env: python
+    plan: starter
+    region: oregon
+    branch: main
+    buildCommand: pip install -r api/upload_pipeline/requirements.txt
+    startCommand: uvicorn api.upload_pipeline.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    healthCheckTimeout: 60
+    numReplicas: 1
+    autoscaling:
+      enabled: true
+      minInstances: 1
+      maxInstances: 3
+      targetCPUPercent: 70
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: UPLOAD_PIPELINE_SUPABASE_URL
+        sync: false
+      - key: UPLOAD_PIPELINE_SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: LLAMAPARSE_API_KEY
+        sync: false
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
+
+  - type: worker
+    name: upload-pipeline-worker
+    env: python
+    plan: starter
+    region: oregon
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: PYTHONPATH=/opt/render/project/src/backend python backend/workers/runner.py
+    numReplicas: 1
+    autoscaling:
+      enabled: true
+      minInstances: 1
+      maxInstances: 2
+      targetCPUPercent: 80
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: LLAMAPARSE_API_KEY
+        sync: false
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
+      - key: WORKER_POLL_INTERVAL
+        value: "5"
+      - key: WORKER_MAX_JOBS
+        value: "10"
+      - key: WORKER_MAX_RETRIES
+        value: "3"
