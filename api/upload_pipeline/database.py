@@ -31,7 +31,7 @@ class DatabaseManager:
             db_url = self._parse_supabase_url()
             logger.info(f"Attempting database connection to: {db_url[:50]}...")
             
-            # Create connection pool
+            # Create connection pool with SSL configuration for Supabase
             self.pool = await create_pool(
                 db_url,
                 min_size=5,
@@ -39,7 +39,8 @@ class DatabaseManager:
                 command_timeout=60,
                 statement_cache_size=0,
                 max_cached_statement_lifetime=0,
-                setup=self._setup_connection
+                setup=self._setup_connection,
+                ssl="require"  # Require SSL for Supabase connections
             )
             
             logger.info("Database connection pool initialized successfully")
@@ -105,6 +106,10 @@ class DatabaseManager:
         # For local development, use DATABASE_URL directly
         db_url = os.getenv("DATABASE_URL")
         if db_url:
+            # Ensure SSL is enabled for Supabase connections
+            if "supabase.co" in db_url and "sslmode" not in db_url:
+                separator = "&" if "?" in db_url else "?"
+                db_url = f"{db_url}{separator}sslmode=require"
             return db_url
             
         # Extract database connection string from environment
@@ -121,8 +126,8 @@ class DatabaseManager:
             else:
                 host = supabase_url
             
-            # Construct PostgreSQL connection string
-            db_url = f"postgresql://postgres:{service_key}@{host}:5432/postgres"
+            # Construct PostgreSQL connection string with SSL
+            db_url = f"postgresql://postgres:{service_key}@{host}:5432/postgres?sslmode=require"
         
         return db_url
     

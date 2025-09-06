@@ -34,11 +34,11 @@ services:
       - key: SUPABASE_SERVICE_ROLE_KEY
         value: ***REMOVED***.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpudnd6a2RibGtua2t6dHF5Zm51Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTY4MDQ1NiwiZXhwIjoyMDY3MjU2NDU2fQ.9Urox9-xr5TJz8a9LbSZsGUMcSTThc3QM6XDMJD-j-o
       
-      # Database Configuration
+      # Database Configuration - Use pooler for better cloud connectivity
       - key: DATABASE_URL
-        value: postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres
+        value: postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres?sslmode=require
       - key: POOLER_URL
-        value: postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres
+        value: postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres?sslmode=require
       
       # Upload Pipeline Configuration
       - key: UPLOAD_PIPELINE_SUPABASE_URL
@@ -166,11 +166,11 @@ services:
       - key: SUPABASE_SERVICE_ROLE_KEY
         value: ***REMOVED***.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpudnd6a2RibGtua2t6dHF5Zm51Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTY4MDQ1NiwiZXhwIjoyMDY3MjU2NDU2fQ.9Urox9-xr5TJz8a9LbSZsGUMcSTThc3QM6XDMJD-j-o
       
-      # Database Configuration
+      # Database Configuration - Use pooler for better cloud connectivity
       - key: DATABASE_URL
-        value: postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres
+        value: postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres?sslmode=require
       - key: POOLER_URL
-        value: postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres
+        value: postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres?sslmode=require
       
       # External API Configuration
       - key: OPENAI_API_KEY
