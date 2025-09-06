@@ -12,7 +12,7 @@ import asyncpg
 from asyncpg import Pool, Connection
 from asyncpg.pool import create_pool
 
-from config import get_config
+from .config import get_config
 
 logger = logging.getLogger(__name__)
 
