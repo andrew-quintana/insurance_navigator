@@ -11,7 +11,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from pydantic import BaseModel
 
-from config import get_config
+from .config import get_config
 
 logger = logging.getLogger(__name__)
 
