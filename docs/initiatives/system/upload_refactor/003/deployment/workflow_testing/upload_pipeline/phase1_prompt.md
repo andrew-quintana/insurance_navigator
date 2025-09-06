@@ -1,4 +1,4 @@
-@InitialSpec
+@docs/initiatives/system/upload_refactor/003/deployment/workflow_testing/upload_pipeline/upload_pipeline_testing_spec.md
 
 ROLE: You are executing Phase 1 of the Upload Pipeline MVP test.
 
