@@ -229,14 +229,14 @@ class BaseWorker:
                 self.logger.info("🔍 Executing job query...")
                 job = await conn.fetchrow("""
                     WITH next_job AS (
-                        SELECT uj.job_id, uj.document_id, d.user_id, uj.stage, uj.state,
-                               uj.payload, uj.retry_count, uj.last_error, uj.created_at
+                        SELECT uj.job_id, uj.document_id, d.user_id, uj.status, uj.state,
+                               uj.progress, uj.retry_count, uj.last_error, uj.created_at
                         FROM upload_pipeline.upload_jobs uj
                         JOIN upload_pipeline.documents d ON uj.document_id = d.document_id
-                        WHERE (uj.stage IN (
+                        WHERE (uj.status IN (
                             'job_validated', 'parsing', 'parsed', 'parse_validated', 'chunking', 'chunked',
                             'embedding', 'embeddings_buffered'
-                        ) OR uj.stage = $1)
+                        ) OR uj.status = $1)
                         AND uj.state IN ('queued', 'working', 'retryable')
                         AND (
                             uj.last_error IS NULL 
@@ -405,13 +405,13 @@ class BaseWorker:
                 correlation_id=correlation_id
             )
             
-            # Get document details from payload
-            payload = job.get("payload", {})
-            storage_path = payload.get("storage_path")
-            mime_type = payload.get("mime", "application/pdf")
+            # Get document details from progress
+            progress = job.get("progress", {})
+            storage_path = progress.get("storage_path")
+            mime_type = progress.get("mime", "application/pdf")
             
             if not storage_path:
-                raise ValueError("No storage_path found in job payload")
+                raise ValueError("No storage_path found in job progress")
             
             # For Phase 3.3 testing, simulate successful parsing by advancing to 'parsed' stage
             # In production, this would involve actual LlamaParse API submission and webhook handling
@@ -543,7 +543,7 @@ class BaseWorker:
         job_id = job["job_id"]
         document_id = job["document_id"]
         
-        # Get chunks_version from payload or use default
+        # Get chunks_version from progress or use default
         chunks_version = job.get("chunks_version") or "markdown-simple@1"
         
         try:

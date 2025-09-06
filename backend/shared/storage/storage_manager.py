@@ -52,7 +52,7 @@ class StorageManager:
             return content
             
         except Exception as e:
-            logger.error(f"Failed to read blob", path=path, error=str(e))
+            logger.error(f"Failed to read blob: {path}, error: {str(e)}")
             return None
     
     async def write_blob(self, path: str, content: str, content_type: str = "text/plain") -> bool:

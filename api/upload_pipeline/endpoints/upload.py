@@ -203,7 +203,7 @@ async def _check_duplicate_document(user_id: str, file_sha256: str, db) -> Optio
     
     # Check if there's an active job for this document
     job_query = """
-        SELECT job_id, stage, state
+        SELECT job_id, status, state
         FROM upload_pipeline.upload_jobs
         WHERE document_id = $1 
         AND state IN ('queued', 'working', 'retryable')
@@ -293,7 +293,7 @@ async def _create_upload_job_for_duplicate(
     
     query = """
         INSERT INTO upload_pipeline.upload_jobs (
-            job_id, document_id, stage, state, payload, 
+            job_id, document_id, status, state, progress, 
             created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
     """
@@ -307,7 +307,7 @@ async def _create_upload_job_for_duplicate(
         query,
         job_id,
         document_id,
-        "queued",  # Start in queued state
+        "uploaded",  # Start in uploaded state
         "queued",
         json.dumps(payload_dict)  # Convert to JSON string for database storage
     )
@@ -334,7 +334,7 @@ async def _create_upload_job(
     
     query = """
         INSERT INTO upload_pipeline.upload_jobs (
-            job_id, document_id, stage, state, payload, 
+            job_id, document_id, status, state, progress, 
             created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
     """
@@ -348,7 +348,7 @@ async def _create_upload_job(
         query,
         job_id,
         document_id,
-        "queued",  # Start in queued state per updated stage progression
+        "uploaded",  # Start in uploaded state per updated stage progression
         "queued",
         json.dumps(payload_dict)  # Convert to JSON string for database storage
     )

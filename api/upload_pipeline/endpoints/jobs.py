@@ -56,7 +56,7 @@ async def get_job_status(
             )
         
         # Calculate progress percentages
-        progress = _calculate_job_progress(job_info["stage"])
+        progress = _calculate_job_progress(job_info["status"])
         
         # Format error information if present
         last_error = None
@@ -70,13 +70,13 @@ async def get_job_status(
             "Job status retrieved",
             user_id=current_user.user_id,
             job_id=job_id,
-            stage=job_info["stage"],
+            stage=job_info["status"],
             state=job_info["state"]
         )
         
         return JobStatusResponse(
             job_id=job_id,
-            stage=job_info["stage"],
+            stage=job_info["status"],
             state=job_info["state"],
             retry_count=job_info["retry_count"],
             progress=progress,
@@ -133,7 +133,7 @@ async def list_user_jobs(
         query = """
             SELECT 
                 uj.job_id,
-                uj.stage,
+                uj.status,
                 uj.state,
                 uj.retry_count,
                 uj.created_at,
@@ -165,7 +165,7 @@ async def list_user_jobs(
         for row in results:
             jobs.append({
                 "job_id": str(row["job_id"]),
-                "stage": row["stage"],
+                "stage": row["status"],
                 "state": row["state"],
                 "retry_count": row["retry_count"],
                 "document_id": str(row["document_id"]),
@@ -218,7 +218,7 @@ async def _get_job_with_authorization(job_id: str, user_id: str, db) -> Optional
     query = """
         SELECT 
             uj.job_id,
-            uj.stage,
+            uj.status,
             uj.state,
             uj.retry_count,
             uj.last_error,

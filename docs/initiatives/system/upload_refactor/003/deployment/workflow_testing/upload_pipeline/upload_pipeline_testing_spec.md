@@ -48,6 +48,73 @@ We need confidence that both small test files and large real-world insurance doc
 - **MVP Demo Checkpoint**: Successful completion of Phase 3 with a full document upload pipeline running in the cloud.  
 - **Acceptance Criteria**: End-to-end success demonstrated with one real document, verified outputs across all storage layers (blob, parsed/chunked, embeddings, metadata/vector DB).  
 
+## Upload Pipeline Workflow
+
+The document upload pipeline follows a specific sequence of status transitions, each representing a distinct processing stage:
+
+### Pipeline Status Flow
+
+1. **`uploaded`** - Initial state after file upload
+   - Frontend (or simulated frontend) uses signed URL to upload file to blob storage
+   - Document stored in `files` bucket with path: `files/user/{userId}/raw/{datetime}_{hash}.{ext}`
+
+2. **`upload_validated`** - Worker validates uploaded document
+   - Worker recognizes `uploaded` state and computes hash of uploaded file
+   - Checks for duplicate documents by comparing hashes
+   - If duplicate found: deletes duplicate file and completes job
+   - If unique: proceeds to next stage
+
+3. **`parse_queued`** - Document queued for parsing
+   - Worker sends document to LlamaParse API for parsing
+   - Provides signed URL for parsed markdown file upload
+   - Sets up webhook to receive parsing completion notification
+   - LlamaParse will upload parsed markdown and call webhook
+
+4. **`parsed`** - Document parsing completed
+   - LlamaParse webhook updates job status to `parsed`
+   - Parsed markdown file stored in `parsed` bucket
+   - Ready for validation stage
+
+5. **`parse_validated`** - Parsed document validated
+   - Worker validates parsed markdown document
+   - Checks for duplicate parsed content via hashing
+   - Ensures parsed content integrity
+
+6. **`chunks_stored`** - Document chunked and stored
+   - Document split into chunks and stored in `document_chunks` table
+   - Each chunk hashed to prevent duplicates
+   - Chunks ready for embedding generation
+
+7. **`embedding_in_progress`** - Embeddings being generated
+   - Cyclical process working through all document chunks
+   - Only processes chunks without existing vectors
+   - Resumable if worker or database crashes mid-process
+
+8. **`embedded`** - Embeddings completed
+   - All chunk embeddings generated and stored
+   - Vector embeddings ready for search/retrieval
+
+9. **`complete`** - Processing completed successfully
+   - Final status indicating successful end-to-end processing
+   - All artifacts created and validated
+
+### Worker Responsibilities
+
+The enhanced worker must handle all status transitions:
+- **`uploaded` → `upload_validated`**: Validate file hash, check for duplicates
+- **`upload_validated` → `parse_queued`**: Send to LlamaParse API
+- **`parsed` → `parse_validated`**: Validate parsed content
+- **`parse_validated` → `chunks_stored`**: Create and store document chunks
+- **`chunks_stored` → `embedding_in_progress`**: Generate embeddings for chunks
+- **`embedding_in_progress` → `embedded`**: Complete embedding generation
+- **`embedded` → `complete`**: Mark processing complete
+
+### External API Integration
+
+- **LlamaParse API**: Handles document parsing via webhook pattern
+- **OpenAI Embeddings API**: Generates vector embeddings for chunks
+- **Supabase Storage**: Stores raw files, parsed markdown, and other artifacts
+
 ## Integration Points
 - Blob storage (document persistence).  
 - Parsing + chunking service.  
