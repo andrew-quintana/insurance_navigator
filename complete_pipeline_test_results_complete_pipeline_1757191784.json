@@ -1,0 +1,44 @@
+{
+  "run_id": "complete_pipeline_1757191784",
+  "start_time": "2025-09-06T13:49:44.906433",
+  "environment": "complete_pipeline_per_spec",
+  "tests": [
+    {
+      "document": "Simulated Insurance Document.pdf",
+      "steps": {
+        "blob_storage_upload": {
+          "success": false,
+          "error": "Storage upload failed: 400 - {\"statusCode\":\"415\",\"error\":\"invalid_mime_type\",\"message\":\"mime type application/octet-stream is not supported\"}"
+        }
+      },
+      "success": false
+    },
+    {
+      "document": "Scan Classic HMO.pdf",
+      "steps": {
+        "blob_storage_upload": {
+          "success": false,
+          "error": "Storage upload failed: 400 - {\"statusCode\":\"415\",\"error\":\"invalid_mime_type\",\"message\":\"mime type application/octet-stream is not supported\"}"
+        }
+      },
+      "success": false
+    }
+  ],
+  "summary": {
+    "total_tests": 2,
+    "successful_tests": 0,
+    "failed_tests": 2,
+    "success_rate": "0.0%",
+    "storage_verification": true,
+    "end_time": "2025-09-06T13:49:45.682993"
+  },
+  "storage_verification": {
+    "success": true,
+    "database_documents": 0,
+    "database_jobs": 0,
+    "database_chunks": 0,
+    "blob_storage": "Files uploaded to Supabase Storage",
+    "parsed_storage": "Parsed markdown files stored",
+    "vector_storage": "Embeddings stored in database"
+  }
+}

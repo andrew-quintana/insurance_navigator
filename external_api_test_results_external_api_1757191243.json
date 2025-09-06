@@ -1,0 +1,76 @@
+{
+  "run_id": "external_api_1757191243",
+  "start_time": "2025-09-06T13:40:43.014561",
+  "environment": "real_external_apis",
+  "tests": [
+    {
+      "document": "Simulated Insurance Document.pdf",
+      "connectivity": {
+        "llamaparse": {
+          "success": true,
+          "status_code": 200
+        },
+        "openai": {
+          "success": true,
+          "embedding_models": 3
+        }
+      },
+      "parsing": null,
+      "embedding": null,
+      "complete_pipeline": {
+        "success": false,
+        "error": "Parsing failed: Failed to submit job: 404 - {\"detail\":\"Not Found\"}"
+      },
+      "success": false
+    },
+    {
+      "document": "Scan Classic HMO.pdf",
+      "connectivity": {
+        "llamaparse": {
+          "success": true,
+          "status_code": 200
+        },
+        "openai": {
+          "success": true,
+          "embedding_models": 3
+        }
+      },
+      "parsing": null,
+      "embedding": null,
+      "complete_pipeline": {
+        "success": false,
+        "error": "Parsing failed: Failed to submit job: 404 - {\"detail\":\"Not Found\"}"
+      },
+      "success": false
+    }
+  ],
+  "summary": {
+    "total_tests": 2,
+    "successful_tests": 0,
+    "failed_tests": 2,
+    "success_rate": "0.0%",
+    "api_connectivity": {
+      "llamaparse": true,
+      "openai": true
+    },
+    "webhook_simulation": true,
+    "end_time": "2025-09-06T13:40:44.682129"
+  },
+  "webhook_test": {
+    "success": true,
+    "webhook_payload": {
+      "job_id": "3a9792ed-71b7-44ac-ae3a-bd3bd1fb5433",
+      "status": "SUCCESS",
+      "result": {
+        "markdown": "This is a simulated parsed document content.",
+        "metadata": {
+          "pages": 1,
+          "language": "en",
+          "confidence": 0.95
+        }
+      },
+      "timestamp": "2025-09-06T13:40:44.681906"
+    },
+    "processing_time": "simulated"
+  }
+}

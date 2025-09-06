@@ -1,0 +1,34 @@
+{
+  "run_id": "phase2_1757190752",
+  "start_time": "2025-09-06T13:32:32.819571",
+  "environment": "local_api_worker_production_db",
+  "tests": [
+    {
+      "document": "Simulated Insurance Document.pdf",
+      "upload": {
+        "success": false,
+        "error": "HTTP 500"
+      },
+      "processing": null,
+      "artifacts": null,
+      "success": false
+    },
+    {
+      "document": "Scan Classic HMO.pdf",
+      "upload": {
+        "success": false,
+        "error": "HTTP 500"
+      },
+      "processing": null,
+      "artifacts": null,
+      "success": false
+    }
+  ],
+  "summary": {
+    "total_tests": 2,
+    "successful_tests": 0,
+    "failed_tests": 2,
+    "success_rate": "0.0%",
+    "end_time": "2025-09-06T13:32:33.305006"
+  }
+}

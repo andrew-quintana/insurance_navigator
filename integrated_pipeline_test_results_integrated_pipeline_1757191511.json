@@ -1,0 +1,68 @@
+{
+  "run_id": "integrated_pipeline_1757191511",
+  "start_time": "2025-09-06T13:45:11.834069",
+  "environment": "integrated_pipeline_production",
+  "tests": [
+    {
+      "document": "Simulated Insurance Document.pdf",
+      "steps": {
+        "upload": {
+          "success": true,
+          "document_id": "1a3bef07-7327-4c5e-ba8f-04c6dc745573",
+          "file_hash": "1c35c6fdcea9d9951f35367b117753fe15d3773d6e4ee5deb2dfa2e6a2e6c086",
+          "file_size": 63
+        },
+        "job_creation": {
+          "success": true,
+          "job_id": "8253eed3-3e05-45e4-85fc-00ba1cec2b42"
+        },
+        "status_transitions": {
+          "uploaded_to_upload_validated": {
+            "success": false,
+            "error": "new row for relation \"upload_jobs\" violates check constraint \"ck_upload_jobs_status\"\nDETAIL:  Failing row contains (8253eed3-3e05-45e4-85fc-00ba1cec2b42, 1a3bef07-7327-4c5e-ba8f-04c6dc745573, queued, 0, null, 2025-09-06 20:45:12.03503+00, 2025-09-06 20:45:12.055751+00, upload_validated, {\"percent\": 100}, null, markdown-simple@1, text-embedding-3-small, 1)."
+          }
+        }
+      },
+      "success": false
+    },
+    {
+      "document": "Scan Classic HMO.pdf",
+      "steps": {
+        "upload": {
+          "success": true,
+          "document_id": "d33cfe15-bc1e-4219-8650-b80cb22baefc",
+          "file_hash": "f2fe085b4da3080f3ff28bd08b344ee985aca5f96a8b7306787737de146518c1",
+          "file_size": 46
+        },
+        "job_creation": {
+          "success": true,
+          "job_id": "555cb98a-68a4-42d4-83b8-72c789353757"
+        },
+        "status_transitions": {
+          "uploaded_to_upload_validated": {
+            "success": false,
+            "error": "new row for relation \"upload_jobs\" violates check constraint \"ck_upload_jobs_status\"\nDETAIL:  Failing row contains (555cb98a-68a4-42d4-83b8-72c789353757, d33cfe15-bc1e-4219-8650-b80cb22baefc, queued, 0, null, 2025-09-06 20:45:12.090984+00, 2025-09-06 20:45:12.100736+00, upload_validated, {\"percent\": 100}, null, markdown-simple@1, text-embedding-3-small, 1)."
+          }
+        }
+      },
+      "success": false
+    }
+  ],
+  "summary": {
+    "total_tests": 2,
+    "successful_tests": 0,
+    "failed_tests": 2,
+    "success_rate": "0.0%",
+    "database_verification": true,
+    "end_time": "2025-09-06T13:45:12.189222"
+  },
+  "database_verification": {
+    "success": true,
+    "document_count": 2,
+    "job_count": 2,
+    "chunk_count": 0,
+    "status_distribution": {
+      "uploaded": 2
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "run_id": "integrated_pipeline_1757191446",
+  "start_time": "2025-09-06T13:44:06.531862",
+  "environment": "integrated_pipeline_production",
+  "tests": [
+    {
+      "document": "Simulated Insurance Document.pdf",
+      "steps": {
+        "upload": {
+          "success": false,
+          "error": "column \"id\" of relation \"documents\" does not exist"
+        }
+      },
+      "success": false
+    },
+    {
+      "document": "Scan Classic HMO.pdf",
+      "steps": {
+        "upload": {
+          "success": false,
+          "error": "column \"id\" of relation \"documents\" does not exist"
+        }
+      },
+      "success": false
+    }
+  ],
+  "summary": {
+    "total_tests": 2,
+    "successful_tests": 0,
+    "failed_tests": 2,
+    "success_rate": "0.0%",
+    "database_verification": false,
+    "end_time": "2025-09-06T13:44:06.823851"
+  },
+  "database_verification": {
+    "success": false,
+    "error": "column \"file_name\" does not exist\nHINT:  Perhaps you meant to reference the column \"documents.filename\"."
+  }
+}

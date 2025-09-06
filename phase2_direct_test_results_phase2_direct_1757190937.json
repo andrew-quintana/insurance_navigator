@@ -1,0 +1,34 @@
+{
+  "run_id": "phase2_direct_1757190937",
+  "start_time": "2025-09-06T13:35:37.391461",
+  "environment": "direct_production_db_test",
+  "tests": [
+    {
+      "document": "Simulated Insurance Document.pdf",
+      "document_creation": {
+        "success": false,
+        "error": "duplicate key value violates unique constraint \"uq_user_filehash\"\nDETAIL:  Key (user_id, file_sha256)=(766e8693-7fd5-465e-9ee4-4a9b3a696480, d03f5acd0bc3d78f17d79cc9470b5ba2d2cbabd425d642e6638e74d6080cfd6c) already exists."
+      },
+      "status_transitions": null,
+      "chunk_creation": null,
+      "success": false
+    },
+    {
+      "document": "Scan Classic HMO.pdf",
+      "document_creation": {
+        "success": false,
+        "error": "duplicate key value violates unique constraint \"uq_user_filehash\"\nDETAIL:  Key (user_id, file_sha256)=(766e8693-7fd5-465e-9ee4-4a9b3a696480, 19b313cbc5969793c358555d301d1bea53374b2a1c059080c8e9ff0b427828fe) already exists."
+      },
+      "status_transitions": null,
+      "chunk_creation": null,
+      "success": false
+    }
+  ],
+  "summary": {
+    "total_tests": 2,
+    "successful_tests": 0,
+    "failed_tests": 2,
+    "success_rate": "0.0%",
+    "end_time": "2025-09-06T13:35:37.763305"
+  }
+}

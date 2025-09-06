@@ -1,0 +1,76 @@
+{
+  "run_id": "simple_external_api_1757191318",
+  "start_time": "2025-09-06T13:41:58.948224",
+  "environment": "real_external_apis_simple",
+  "tests": [
+    {
+      "test": "openai_models",
+      "result": {
+        "success": true,
+        "total_models": 86,
+        "embedding_models": 3,
+        "embedding_model_ids": [
+          "text-embedding-3-small",
+          "text-embedding-3-large",
+          "text-embedding-ada-002"
+        ]
+      }
+    },
+    {
+      "test": "openai_embedding_simple",
+      "result": {
+        "success": true,
+        "dimensions": 1536,
+        "model": "text-embedding-3-small",
+        "usage": {
+          "prompt_tokens": 10,
+          "total_tokens": 10
+        },
+        "embedding_preview": [
+          0.008903897,
+          0.032467544,
+          0.016140398,
+          0.015953649,
+          -0.026304847
+        ]
+      }
+    },
+    {
+      "test": "openai_embedding_batch",
+      "result": {
+        "success": true,
+        "embedding_count": 3,
+        "model": "text-embedding-3-small",
+        "usage": {
+          "prompt_tokens": 15,
+          "total_tokens": 15
+        },
+        "dimensions": 1536
+      }
+    },
+    {
+      "test": "rate_limiting",
+      "result": {
+        "success": true,
+        "requests_made": 5,
+        "successful_requests": 5,
+        "rate_limited": false
+      }
+    },
+    {
+      "test": "llamaparse_connectivity",
+      "result": {
+        "success": true,
+        "job_count": 239,
+        "status_code": 200
+      }
+    }
+  ],
+  "summary": {
+    "total_tests": 5,
+    "successful_tests": 5,
+    "failed_tests": 0,
+    "success_rate": "100.0%",
+    "end_time": "2025-09-06T13:42:05.739318"
+  }
+}

@@ -1,0 +1,234 @@
+{
+  "run_id": "integrated_pipeline_1757191534",
+  "start_time": "2025-09-06T13:45:34.435631",
+  "environment": "integrated_pipeline_production",
+  "tests": [
+    {
+      "document": "Simulated Insurance Document.pdf",
+      "steps": {
+        "upload": {
+          "success": true,
+          "document_id": "8573d616-b0c7-4a0c-8574-fe2178c60cc9",
+          "file_hash": "6d91a2daf0f1234936d9b38432837671d1998894c00344d1b7694ab249ea558e",
+          "file_size": 63
+        },
+        "job_creation": {
+          "success": true,
+          "job_id": "5739fc74-c998-4b34-90ee-92c66ddb1d93"
+        },
+        "status_transitions": {
+          "uploaded_to_parse_queued": {
+            "success": true,
+            "new_status": "parse_queued",
+            "progress": "{\"percent\": 100}"
+          },
+          "parse_queued_to_parsed": {
+            "success": true,
+            "new_status": "parsed",
+            "progress": "{\"percent\": 50}"
+          },
+          "parsed_to_parse_validated": {
+            "success": true,
+            "new_status": "parse_validated",
+            "progress": "{\"percent\": 100}"
+          },
+          "parse_validated_to_chunking": {
+            "success": true,
+            "new_status": "chunking",
+            "progress": "{\"percent\": 100}"
+          },
+          "chunking_to_chunks_stored": {
+            "success": true,
+            "new_status": "chunks_stored",
+            "progress": "{\"percent\": 100}"
+          }
+        },
+        "chunk_creation": {
+          "success": true,
+          "chunks_created": 3,
+          "chunk_embeddings": [
+            {
+              "chunk_id": "7b51d9e2-5134-4011-9f49-7f6345aa3bec",
+              "chunk_index": 0,
+              "dimensions": 1536,
+              "embedding_preview": [
+                0.012034832,
+                0.034723014,
+                -0.04776739,
+                0.010965512,
+                -0.024561152
+              ]
+            },
+            {
+              "chunk_id": "eaba9fae-41cf-4442-b386-f72631413bdb",
+              "chunk_index": 1,
+              "dimensions": 1536,
+              "embedding_preview": [
+                0.0061397497,
+                0.033571225,
+                -0.043835904,
+                0.0032859913,
+                -0.029105952
+              ]
+            },
+            {
+              "chunk_id": "5332ed5d-6881-4b58-aa8a-d82ec1e564bb",
+              "chunk_index": 2,
+              "dimensions": 1536,
+              "embedding_preview": [
+                8.563344e-05,
+                0.033543706,
+                -0.04726007,
+                -0.00589083,
+                -0.018786611
+              ]
+            }
+          ]
+        },
+        "embedding_queued": {
+          "success": true,
+          "new_status": "embedding_queued",
+          "progress": "{\"percent\": 100}"
+        },
+        "embedding_in_progress": {
+          "success": true,
+          "new_status": "embedding_in_progress",
+          "progress": "{\"percent\": 100}"
+        },
+        "embeddings_stored": {
+          "success": true,
+          "new_status": "embeddings_stored",
+          "progress": "{\"percent\": 100}"
+        },
+        "completion": {
+          "success": true,
+          "new_status": "complete",
+          "progress": "{\"percent\": 100}"
+        }
+      },
+      "success": true
+    },
+    {
+      "document": "Scan Classic HMO.pdf",
+      "steps": {
+        "upload": {
+          "success": true,
+          "document_id": "8d89313e-f1c6-4349-8e09-ea335857cbde",
+          "file_hash": "d46c8fab71a8f653b36664487f90966e4165300e67a551e60fd95c23e49357a3",
+          "file_size": 46
+        },
+        "job_creation": {
+          "success": true,
+          "job_id": "ef513a58-6394-4054-9b87-38ebbdc79c77"
+        },
+        "status_transitions": {
+          "uploaded_to_parse_queued": {
+            "success": true,
+            "new_status": "parse_queued",
+            "progress": "{\"percent\": 100}"
+          },
+          "parse_queued_to_parsed": {
+            "success": true,
+            "new_status": "parsed",
+            "progress": "{\"percent\": 50}"
+          },
+          "parsed_to_parse_validated": {
+            "success": true,
+            "new_status": "parse_validated",
+            "progress": "{\"percent\": 100}"
+          },
+          "parse_validated_to_chunking": {
+            "success": true,
+            "new_status": "chunking",
+            "progress": "{\"percent\": 100}"
+          },
+          "chunking_to_chunks_stored": {
+            "success": true,
+            "new_status": "chunks_stored",
+            "progress": "{\"percent\": 100}"
+          }
+        },
+        "chunk_creation": {
+          "success": true,
+          "chunks_created": 3,
+          "chunk_embeddings": [
+            {
+              "chunk_id": "a95647b9-1f18-422b-86ce-f661b95c5c14",
+              "chunk_index": 0,
+              "dimensions": 1536,
+              "embedding_preview": [
+                0.012063066,
+                0.051149692,
+                -0.023165103,
+                0.002083425,
+                -0.011675785
+              ]
+            },
+            {
+              "chunk_id": "a4d4954b-a90d-4ffe-a858-2768263c7ed6",
+              "chunk_index": 1,
+              "dimensions": 1536,
+              "embedding_preview": [
+                0.012144357,
+                0.058217645,
+                -0.014510986,
+                -0.004664504,
+                -0.010139597
+              ]
+            },
+            {
+              "chunk_id": "602789ca-d07e-4e8e-a79d-01bf421050c1",
+              "chunk_index": 2,
+              "dimensions": 1536,
+              "embedding_preview": [
+                0.007896082,
+                0.056156196,
+                -0.02891224,
+                -0.004987185,
+                -0.00576831
+              ]
+            }
+          ]
+        },
+        "embedding_queued": {
+          "success": true,
+          "new_status": "embedding_queued",
+          "progress": "{\"percent\": 100}"
+        },
+        "embedding_in_progress": {
+          "success": true,
+          "new_status": "embedding_in_progress",
+          "progress": "{\"percent\": 100}"
+        },
+        "embeddings_stored": {
+          "success": true,
+          "new_status": "embeddings_stored",
+          "progress": "{\"percent\": 100}"
+        },
+        "completion": {
+          "success": true,
+          "new_status": "complete",
+          "progress": "{\"percent\": 100}"
+        }
+      },
+      "success": true
+    }
+  ],
+  "summary": {
+    "total_tests": 2,
+    "successful_tests": 2,
+    "failed_tests": 0,
+    "success_rate": "100.0%",
+    "database_verification": true,
+    "end_time": "2025-09-06T13:45:37.311500"
+  },
+  "database_verification": {
+    "success": true,
+    "document_count": 2,
+    "job_count": 2,
+    "chunk_count": 6,
+    "status_distribution": {
+      "complete": 2
+    }
+  }
+}
