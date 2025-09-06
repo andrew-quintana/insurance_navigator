@@ -2,6 +2,8 @@
 vibe_coding_directive.md
 .env
 .env.*
+env
+env.*
 !.env.template
 .cursorignore
 .cursorrules

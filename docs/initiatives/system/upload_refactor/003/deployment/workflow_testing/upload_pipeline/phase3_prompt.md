@@ -5,6 +5,11 @@ ROLE: Execute Phase 3.
 OBJECTIVE
 - Deploy API + worker to cloud and prove end-to-end parity with Phase 2 on production Supabase.
 
+PRIOR WORK
+- @docs/initiatives/system/upload_refactor/003/deployment/workflow_testing/upload_pipeline/phase2/reports/PHASE2_WEBHOOK_COMPLETION_REPORT.md
+- @docs/initiatives/system/upload_refactor/003/deployment/workflow_testing/upload_pipeline/phase2/reports/PHASE2_TO_PHASE3_HANDOFF.md
+- @docs/initiatives/system/upload_refactor/003/deployment/workflow_testing/upload_pipeline/phase2/reports/PHASE2_COMPLETE_SUMMARY.md
+
 ENVIRONMENT
 - API + worker: cloud deployments
 - Database: production Supabase

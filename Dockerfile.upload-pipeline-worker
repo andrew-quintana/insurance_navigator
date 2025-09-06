@@ -1,0 +1,48 @@
+# Multi-stage build for faster deployment
+FROM python:3.11-slim as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install Python dependencies with caching
+COPY api/upload_pipeline/requirements.txt /tmp/requirements.txt
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r /tmp/requirements.txt
+
+# Final stage - smaller image
+FROM python:3.11-slim
+
+# Install only runtime dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+WORKDIR /app
+
+# Copy pre-built dependencies
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Copy upload pipeline API code
+COPY api/upload_pipeline/ ./api/upload_pipeline/
+COPY config/ ./config/
+COPY database/ ./database/
+COPY auth/ ./auth/
+COPY rate_limiter.py ./rate_limiter.py
+
+# Set Python path to include the current directory
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Optimized health check
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=2 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Run the upload pipeline API as a worker service
+# This will run the FastAPI app in the background worker
+CMD ["uvicorn", "api.upload_pipeline.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

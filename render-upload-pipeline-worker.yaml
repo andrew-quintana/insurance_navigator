@@ -1,0 +1,62 @@
+services:
+  - type: worker
+    name: upload-pipeline-worker
+    env: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile.upload-pipeline-worker
+    region: oregon
+    branch: main
+    # Worker-specific settings for upload pipeline API
+    numReplicas: 1
+    autoscaling:
+      enabled: true
+      minInstances: 1
+      maxInstances: 2
+      targetCPUPercent: 80
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: LLAMAPARSE_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ASYNCPG_DISABLE_PREPARED_STATEMENTS
+        value: "1"
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: SECURITY_BYPASS_ENABLED
+        value: false
+      - key: API_BASE_URL
+        value: https://insurance-navigator-api.onrender.com
+      # Upload pipeline specific settings
+      - key: UPLOAD_PIPELINE_ENVIRONMENT
+        value: production
+      - key: UPLOAD_PIPELINE_SUPABASE_URL
+        sync: false
+      - key: UPLOAD_PIPELINE_SUPABASE_ANON_KEY
+        sync: false
+      - key: UPLOAD_PIPELINE_SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: UPLOAD_PIPELINE_STORAGE_ENVIRONMENT
+        value: production
+      # Worker optimizations
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
+      - key: WORKER_POLL_INTERVAL
+        value: "5"
+      - key: WORKER_MAX_JOBS
+        value: "10"
+      - key: WORKER_MAX_RETRIES
+        value: "3"
