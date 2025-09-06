@@ -1,0 +1,27 @@
+@InitialSpec
+
+ROLE: Execute Phase 3.
+
+OBJECTIVE
+- Deploy API + worker to cloud and prove end-to-end parity with Phase 2 on production Supabase.
+
+ENVIRONMENT
+- API + worker: cloud deployments
+- Database: production Supabase
+- Storage: production blob storage (test bucket/container)
+
+STEPS
+1) Deploy artifacts; surface URLs/versions.
+2) Run both PDFs through the cloud endpoints.
+3) Validate all artifacts + DB rows; compare to Phase 2.
+
+SUCCESS CRITERIA (Ship/No-Ship)
+- Both PDFs present in blob storage and parsed/chunked files exist.
+- Embeddings generated via OpenAI model.
+- Document metadata + chunk + vector rows created.
+- Behavior matches local runs (within acceptable variance).
+
+REPORT BACK
+- Public/console endpoints, build IDs.
+- Evidence links/IDs, row counts, timings.
+- Any cloud-only issues + remediation.
