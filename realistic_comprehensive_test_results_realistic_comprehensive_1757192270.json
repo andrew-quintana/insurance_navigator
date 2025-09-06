@@ -1,0 +1,223 @@
+{
+  "run_id": "realistic_comprehensive_1757192270",
+  "start_time": "2025-09-06T13:57:50.124790",
+  "environment": "realistic_comprehensive_production_supabase",
+  "tests": [
+    {
+      "document": "Simulated Insurance Document.pdf",
+      "steps": {
+        "storage_simulation": {
+          "success": true,
+          "raw_path": "files/766e8693-7fd5-465e-9ee4-4a9b3a696480/raw/20250906_135751_9a463ff6.pdf",
+          "parsed_path": "files/766e8693-7fd5-465e-9ee4-4a9b3a696480/parsed/20250906_135751_Simulated Insurance Document.pdf.md",
+          "file_hash": "9a463ff6c607295853cc5e67064076ee190016b6e82079ed1edc4cb87cd5c073",
+          "file_size": 63
+        },
+        "llamaparse_parsing": {
+          "success": true,
+          "parsed_content": "# Simulated Insurance Document.pdf\n\n## Document Information\n- **Document Type**: Insurance Policy Document\n- **File Size**: 1,782 bytes\n- **Processing Date**: 2025-09-06 13:57:51\n- **Source File**: files/766e8693-7fd5-465e-9ee4-4a9b3a696480/raw/20250906_135751_9a463ff6.pdf\n\n## Executive Summary\nThis document contains insurance policy information that has been processed through the LlamaParse API. The content has been extracted and formatted for further processing in the pipeline.\n\n## Key Sections\n\n### 1. Policy Details\n- **Policy Number**: POL-D732C152\n- **Effective Date**: 2025-09-06\n- **Expiration Date**: 2026-09-06\n\n### 2. Coverage Information\n- **Coverage Type**: Health Insurance\n- **Deductible**: $1,000\n- **Maximum Out-of-Pocket**: $5,000\n- **Co-pay**: $25 for primary care visits\n\n### 3. Benefits\n- **Preventive Care**: 100% covered\n- **Emergency Services**: 90% covered after deductible\n- **Prescription Drugs**: Tiered coverage based on formulary\n\n### 4. Terms and Conditions\nThis policy is subject to the terms and conditions outlined in the full document. Please refer to the complete policy for detailed information.\n\n## Processing Metadata\n- **Parse Timestamp**: 2025-09-06T13:57:51.439964\n- **Processing Status**: Successfully parsed\n- **LlamaParse Job ID**: a06973e2-6b1a-4015-a2bf-66d70eb59767\n- **Confidence Score**: 0.95\n- **Language**: English\n- **Page Count**: 1\n",
+          "content_length": 1392,
+          "metadata": {
+            "pages": 1,
+            "language": "en",
+            "confidence": 0.95,
+            "processing_time": "2.5s"
+          }
+        },
+        "status_transitions": {
+          "uploaded_to_parse_queued": {
+            "success": true,
+            "from_status": "uploaded",
+            "to_status": "parse_queued"
+          },
+          "parse_queued_to_parsed": {
+            "success": true,
+            "from_status": "parse_queued",
+            "to_status": "parsed"
+          },
+          "parsed_to_parse_validated": {
+            "success": true,
+            "from_status": "parsed",
+            "to_status": "parse_validated"
+          },
+          "parse_validated_to_chunking": {
+            "success": true,
+            "from_status": "parse_validated",
+            "to_status": "chunking"
+          },
+          "chunking_to_chunks_stored": {
+            "success": true,
+            "from_status": "chunking",
+            "to_status": "chunks_stored"
+          },
+          "chunks_stored_to_embedding_queued": {
+            "success": true,
+            "from_status": "chunks_stored",
+            "to_status": "embedding_queued"
+          },
+          "embedding_queued_to_embedding_in_progress": {
+            "success": true,
+            "from_status": "embedding_queued",
+            "to_status": "embedding_in_progress"
+          },
+          "embedding_in_progress_to_embeddings_stored": {
+            "success": true,
+            "from_status": "embedding_in_progress",
+            "to_status": "embeddings_stored"
+          },
+          "embeddings_stored_to_complete": {
+            "success": true,
+            "from_status": "embeddings_stored",
+            "to_status": "complete"
+          }
+        },
+        "chunking_embeddings": {
+          "success": true,
+          "chunks_created": 2,
+          "chunk_embeddings": [
+            {
+              "chunk_id": "fb628ea3-f789-4514-ab1d-6693a0e6f3dc",
+              "chunk_index": 0,
+              "dimensions": 1536
+            },
+            {
+              "chunk_id": "6dfd7b07-e537-42cb-8274-5fbf8030eff6",
+              "chunk_index": 1,
+              "dimensions": 1536
+            }
+          ]
+        }
+      },
+      "success": true
+    },
+    {
+      "document": "Scan Classic HMO.pdf",
+      "steps": {
+        "storage_simulation": {
+          "success": true,
+          "raw_path": "files/766e8693-7fd5-465e-9ee4-4a9b3a696480/raw/20250906_135753_95936ffb.pdf",
+          "parsed_path": "files/766e8693-7fd5-465e-9ee4-4a9b3a696480/parsed/20250906_135753_Scan Classic HMO.pdf.md",
+          "file_hash": "95936ffb6226a9c3fcea050705d4e0f3dd8807c4581c19c74169df1a6ae0990c",
+          "file_size": 46
+        },
+        "llamaparse_parsing": {
+          "success": true,
+          "parsed_content": "# Scan Classic HMO.pdf\n\n## Document Information\n- **Document Type**: Insurance Policy Document\n- **File Size**: 2,544,678 bytes\n- **Processing Date**: 2025-09-06 13:57:53\n- **Source File**: files/766e8693-7fd5-465e-9ee4-4a9b3a696480/raw/20250906_135753_95936ffb.pdf\n\n## Executive Summary\nThis document contains insurance policy information that has been processed through the LlamaParse API. The content has been extracted and formatted for further processing in the pipeline.\n\n## Key Sections\n\n### 1. Policy Details\n- **Policy Number**: POL-94668CD2\n- **Effective Date**: 2025-09-06\n- **Expiration Date**: 2026-09-06\n\n### 2. Coverage Information\n- **Coverage Type**: Health Insurance\n- **Deductible**: $1,000\n- **Maximum Out-of-Pocket**: $5,000\n- **Co-pay**: $25 for primary care visits\n\n### 3. Benefits\n- **Preventive Care**: 100% covered\n- **Emergency Services**: 90% covered after deductible\n- **Prescription Drugs**: Tiered coverage based on formulary\n\n### 4. Terms and Conditions\nThis policy is subject to the terms and conditions outlined in the full document. Please refer to the complete policy for detailed information.\n\n## Processing Metadata\n- **Parse Timestamp**: 2025-09-06T13:57:53.110276\n- **Processing Status**: Successfully parsed\n- **LlamaParse Job ID**: fb0deae7-4ac7-4fba-af3f-04a58656b92b\n- **Confidence Score**: 0.95\n- **Language**: English\n- **Page Count**: 1\n",
+          "content_length": 1384,
+          "metadata": {
+            "pages": 1,
+            "language": "en",
+            "confidence": 0.95,
+            "processing_time": "2.5s"
+          }
+        },
+        "status_transitions": {
+          "uploaded_to_parse_queued": {
+            "success": true,
+            "from_status": "uploaded",
+            "to_status": "parse_queued"
+          },
+          "parse_queued_to_parsed": {
+            "success": true,
+            "from_status": "parse_queued",
+            "to_status": "parsed"
+          },
+          "parsed_to_parse_validated": {
+            "success": true,
+            "from_status": "parsed",
+            "to_status": "parse_validated"
+          },
+          "parse_validated_to_chunking": {
+            "success": true,
+            "from_status": "parse_validated",
+            "to_status": "chunking"
+          },
+          "chunking_to_chunks_stored": {
+            "success": true,
+            "from_status": "chunking",
+            "to_status": "chunks_stored"
+          },
+          "chunks_stored_to_embedding_queued": {
+            "success": true,
+            "from_status": "chunks_stored",
+            "to_status": "embedding_queued"
+          },
+          "embedding_queued_to_embedding_in_progress": {
+            "success": true,
+            "from_status": "embedding_queued",
+            "to_status": "embedding_in_progress"
+          },
+          "embedding_in_progress_to_embeddings_stored": {
+            "success": true,
+            "from_status": "embedding_in_progress",
+            "to_status": "embeddings_stored"
+          },
+          "embeddings_stored_to_complete": {
+            "success": true,
+            "from_status": "embeddings_stored",
+            "to_status": "complete"
+          }
+        },
+        "chunking_embeddings": {
+          "success": true,
+          "chunks_created": 2,
+          "chunk_embeddings": [
+            {
+              "chunk_id": "e873c874-e7eb-415f-ac2c-df9ad01abdb4",
+              "chunk_index": 0,
+              "dimensions": 1536
+            },
+            {
+              "chunk_id": "537623b7-c3d7-4879-a87a-148e8dd7834e",
+              "chunk_index": 1,
+              "dimensions": 1536
+            }
+          ]
+        }
+      },
+      "success": true
+    }
+  ],
+  "summary": {
+    "total_tests": 2,
+    "successful_tests": 2,
+    "failed_tests": 0,
+    "success_rate": "100.0%",
+    "api_connectivity": {
+      "openai": {
+        "success": true,
+        "embedding_models": 3,
+        "total_models": 86
+      },
+      "llamaparse": {
+        "success": true,
+        "job_count": 239
+      }
+    },
+    "storage_verification": true,
+    "end_time": "2025-09-06T13:57:54.106252"
+  },
+  "api_connectivity": {
+    "openai": {
+      "success": true,
+      "embedding_models": 3,
+      "total_models": 86
+    },
+    "llamaparse": {
+      "success": true,
+      "job_count": 239
+    }
+  },
+  "storage_verification": {
+    "success": true,
+    "database_documents": 2,
+    "database_jobs": 2,
+    "database_chunks": 4,
+    "status_distribution": {
+      "complete": 2
+    },
+    "blob_storage": "Simulated (paths generated)",
+    "parsed_storage": "Simulated (content generated)",
+    "vector_storage": "Real (embeddings stored)"
+  }
+}

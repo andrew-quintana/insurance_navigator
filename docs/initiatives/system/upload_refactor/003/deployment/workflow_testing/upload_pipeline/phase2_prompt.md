@@ -15,6 +15,7 @@ GUARDS
 
 STEPS
 1) Point services to production Supabase (test schema), migrate if required.
+    - rework the production Supabase schema to match the Supabase instance used in phase 1 so that they match in functionality
 2) Re-run both PDFs; collect artifacts.
 3) Compare behavior vs Phase 1 (counts, latencies, error types).
 

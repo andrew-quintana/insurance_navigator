@@ -1,0 +1,42 @@
+{
+  "run_id": "integrated_pipeline_1757191498",
+  "start_time": "2025-09-06T13:44:58.560265",
+  "environment": "integrated_pipeline_production",
+  "tests": [
+    {
+      "document": "Simulated Insurance Document.pdf",
+      "steps": {
+        "upload": {
+          "success": false,
+          "error": "duplicate key value violates unique constraint \"uq_user_filehash\"\nDETAIL:  Key (user_id, file_sha256)=(766e8693-7fd5-465e-9ee4-4a9b3a696480, d03f5acd0bc3d78f17d79cc9470b5ba2d2cbabd425d642e6638e74d6080cfd6c) already exists."
+        }
+      },
+      "success": false
+    },
+    {
+      "document": "Scan Classic HMO.pdf",
+      "steps": {
+        "upload": {
+          "success": false,
+          "error": "duplicate key value violates unique constraint \"uq_user_filehash\"\nDETAIL:  Key (user_id, file_sha256)=(766e8693-7fd5-465e-9ee4-4a9b3a696480, 19b313cbc5969793c358555d301d1bea53374b2a1c059080c8e9ff0b427828fe) already exists."
+        }
+      },
+      "success": false
+    }
+  ],
+  "summary": {
+    "total_tests": 2,
+    "successful_tests": 0,
+    "failed_tests": 2,
+    "success_rate": "0.0%",
+    "database_verification": true,
+    "end_time": "2025-09-06T13:44:58.914659"
+  },
+  "database_verification": {
+    "success": true,
+    "document_count": 0,
+    "job_count": 0,
+    "chunk_count": 0,
+    "status_distribution": {}
+  }
+}

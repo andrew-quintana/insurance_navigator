@@ -1,0 +1,75 @@
+{
+  "run_id": "realistic_comprehensive_1757192208",
+  "start_time": "2025-09-06T13:56:48.693559",
+  "environment": "realistic_comprehensive_production_supabase",
+  "tests": [
+    {
+      "document": "Simulated Insurance Document.pdf",
+      "steps": {
+        "storage_simulation": {
+          "success": true,
+          "raw_path": "files/766e8693-7fd5-465e-9ee4-4a9b3a696480/raw/20250906_135649_d03f5acd.pdf",
+          "parsed_path": "files/766e8693-7fd5-465e-9ee4-4a9b3a696480/parsed/20250906_135649_Simulated Insurance Document.pdf.md",
+          "file_hash": "d03f5acd0bc3d78f17d79cc9470b5ba2d2cbabd425d642e6638e74d6080cfd6c",
+          "file_size": 63
+        }
+      },
+      "success": false,
+      "error": "duplicate key value violates unique constraint \"uq_user_filehash\"\nDETAIL:  Key (user_id, file_sha256)=(766e8693-7fd5-465e-9ee4-4a9b3a696480, d03f5acd0bc3d78f17d79cc9470b5ba2d2cbabd425d642e6638e74d6080cfd6c) already exists."
+    },
+    {
+      "document": "Scan Classic HMO.pdf",
+      "steps": {
+        "storage_simulation": {
+          "success": true,
+          "raw_path": "files/766e8693-7fd5-465e-9ee4-4a9b3a696480/raw/20250906_135649_19b313cb.pdf",
+          "parsed_path": "files/766e8693-7fd5-465e-9ee4-4a9b3a696480/parsed/20250906_135649_Scan Classic HMO.pdf.md",
+          "file_hash": "19b313cbc5969793c358555d301d1bea53374b2a1c059080c8e9ff0b427828fe",
+          "file_size": 46
+        }
+      },
+      "success": false,
+      "error": "duplicate key value violates unique constraint \"uq_user_filehash\"\nDETAIL:  Key (user_id, file_sha256)=(766e8693-7fd5-465e-9ee4-4a9b3a696480, 19b313cbc5969793c358555d301d1bea53374b2a1c059080c8e9ff0b427828fe) already exists."
+    }
+  ],
+  "summary": {
+    "total_tests": 2,
+    "successful_tests": 0,
+    "failed_tests": 2,
+    "success_rate": "0.0%",
+    "api_connectivity": {
+      "openai": {
+        "success": true,
+        "embedding_models": 3,
+        "total_models": 86
+      },
+      "llamaparse": {
+        "success": true,
+        "job_count": 239
+      }
+    },
+    "storage_verification": true,
+    "end_time": "2025-09-06T13:56:50.040874"
+  },
+  "api_connectivity": {
+    "openai": {
+      "success": true,
+      "embedding_models": 3,
+      "total_models": 86
+    },
+    "llamaparse": {
+      "success": true,
+      "job_count": 239
+    }
+  },
+  "storage_verification": {
+    "success": true,
+    "database_documents": 0,
+    "database_jobs": 0,
+    "database_chunks": 0,
+    "status_distribution": {},
+    "blob_storage": "Simulated (paths generated)",
+    "parsed_storage": "Simulated (content generated)",
+    "vector_storage": "Real (embeddings stored)"
+  }
+}
