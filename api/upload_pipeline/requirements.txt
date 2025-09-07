@@ -1,10 +1,33 @@
+# API Service Dependencies Only
+# Core FastAPI and web server
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
+
+# Configuration and validation
 pydantic==2.5.0
 pydantic-settings==2.1.0
+
+# Database
 asyncpg==0.29.0
+
+# HTTP client
 httpx==0.25.2
+
+# File handling
 python-multipart==0.0.6
+
+# Authentication
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+
+# Environment management
 python-dotenv==1.0.0
+
+# Logging and monitoring
+structlog==23.2.0
+
+# Rate limiting
+slowapi==0.1.9
+
+# CORS
+fastapi-cors==0.0.6
