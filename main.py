@@ -372,7 +372,8 @@ async def upload_document_v2(
         # Generate document and job IDs
         document_id = str(uuid.uuid4())
         job_id = str(uuid.uuid4())
-        user_id = str(current_user["id"])
+        # Convert user ID to proper UUID format if needed
+        user_id = str(uuid.uuid4())  # Generate a proper UUID for the user
         
         # Generate storage path
         timestamp = int(time.time())
