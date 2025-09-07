@@ -69,14 +69,9 @@ check_service_status() {
 deploy_with_monitoring() {
     print_status "Starting API service deployment with enhanced monitoring..."
     
-    # Check if service exists
-    if check_service_status; then
-        print_status "Updating existing service..."
-        render service update "$API_SERVICE_NAME" --config "$RENDER_CONFIG"
-    else
-        print_status "Creating new service..."
-        render service create --config "$RENDER_CONFIG"
-    fi
+    # Deploy using Render config file
+    print_status "Deploying service using Render configuration..."
+    render deploy --config "$RENDER_CONFIG"
     
     print_success "Deployment triggered successfully!"
 }
