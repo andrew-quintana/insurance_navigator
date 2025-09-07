@@ -30,7 +30,8 @@ class DatabaseManager:
                 min_size=self.min_size,
                 max_size=self.max_size,
                 command_timeout=60,
-                ssl=ssl_config
+                ssl=ssl_config,
+                statement_cache_size=0  # Fix pgbouncer prepared statement issue
             )
             logger.info(f"Database pool initialized with {self.min_size}-{self.max_size} connections")
             
