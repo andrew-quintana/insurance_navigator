@@ -168,7 +168,7 @@ export default function ChatPage() {
         
         if (!token) return
 
-        const response = await fetch(`${apiBaseUrl}/document-status/${userInfo.id}`, {
+        const response = await fetch(`${apiBaseUrl}/jobs?state=done`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/json',
@@ -179,15 +179,17 @@ export default function ChatPage() {
           const data = await response.json()
           
           // Handle any completed documents
-          data.completed_documents?.forEach((doc: any) => {
-            const completionMessage: Message = {
-              id: Date.now(),
-              sender: "bot",
-              text: `🎉 **Document Processing Complete!**\n\nYour document "${doc.filename || 'unknown'}" has been successfully processed and is ready for questions!\n\n**Ready to help!** What would you like to know about your document?`
+          data.jobs?.forEach((job: any) => {
+            if (job.state === 'done' && job.stage === 'complete') {
+              const completionMessage: Message = {
+                id: Date.now(),
+                sender: "bot",
+                text: `🎉 **Document Processing Complete!**\n\nYour document "${job.filename || 'unknown'}" has been successfully processed and is ready for questions!\n\n**Ready to help!** What would you like to know about your document?`
+              }
+              
+              setMessages(prev => [...prev, completionMessage])
+              updateActivity()
             }
-            
-            setMessages(prev => [...prev, completionMessage])
-            updateActivity()
           })
         }
       } catch (error) {
