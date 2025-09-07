@@ -1,0 +1,77 @@
+{
+  "total_tests": 2,
+  "passed": 1,
+  "failed": 1,
+  "success_rate": 50.0,
+  "total_time": 0.3260650634765625,
+  "performance_grade": "A",
+  "test_results": [
+    {
+      "test": "api_health",
+      "status": "passed",
+      "response_time": 0.16363191604614258,
+      "data": {
+        "status": "healthy",
+        "timestamp": "2025-09-07T00:35:26.852931",
+        "services": {
+          "database": "healthy",
+          "supabase_auth": "healthy",
+          "llamaparse": "healthy",
+          "openai": "healthy"
+        },
+        "version": "3.0.0"
+      },
+      "rca_analysis": {
+        "response_time_acceptable": true,
+        "status_code_correct": true,
+        "database_healthy": true,
+        "all_services_healthy": true
+      }
+    },
+    {
+      "test": "complete_pipeline",
+      "status": "failed",
+      "failed_stage": "upload",
+      "stages": [
+        {
+          "stage": "upload",
+          "result": {
+            "test": "upload_endpoint",
+            "status": "failed",
+            "error": "HTTP 401",
+            "response": "{\"detail\":\"Missing or invalid authorization header\"}",
+            "rca_analysis": {
+              "status_code_issue": true,
+              "possible_causes": [
+                "File format not supported",
+                "File size too large",
+                "Authentication required",
+                "Service configuration issues"
+              ]
+            }
+          }
+        }
+      ],
+      "rca_analysis": {
+        "failure_point": "upload",
+        "upload_result": {
+          "test": "upload_endpoint",
+          "status": "failed",
+          "error": "HTTP 401",
+          "response": "{\"detail\":\"Missing or invalid authorization header\"}",
+          "rca_analysis": {
+            "status_code_issue": true,
+            "possible_causes": [
+              "File format not supported",
+              "File size too large",
+              "Authentication required",
+              "Service configuration issues"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "timestamp": "2025-09-06T17:35:44.672443",
+  "api_url": "https://insurance-navigator-api.onrender.com"
+}
