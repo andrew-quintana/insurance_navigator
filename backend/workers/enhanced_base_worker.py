@@ -457,10 +457,10 @@ This content is consistent across all documents for duplicate testing.
                     canonical_path = existing["parsed_path"]
                     parsed_path = canonical_path
                     
-                    # Update job status to complete (duplicate handled)
+                    # Update job status to duplicate (duplicate handled)
                     await conn.execute("""
                         UPDATE upload_pipeline.upload_jobs
-                        SET status = 'complete', state = 'done', updated_at = now()
+                        SET status = 'duplicate', state = 'done', updated_at = now()
                         WHERE job_id = $1
                     """, job_id)
                     
