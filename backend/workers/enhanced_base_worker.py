@@ -399,8 +399,8 @@ class EnhancedBaseWorker:
         try:
             # For testing, we'll simulate reading parsed content from storage
             # In production, this would read from actual storage
-            # Use consistent content to test duplicate detection
-            parsed_content = """# Mock Parsed Document
+            # Use unique content for each document to avoid duplicate detection during testing
+            parsed_content = f"""# Mock Parsed Document {document_id}
 
 This is a mock parsed document for testing purposes.
 
@@ -413,7 +413,9 @@ Additional content to ensure multiple chunks are generated for embedding testing
 ## Section 3: Conclusion
 Final section to complete the document structure.
 
-This content is consistent across all documents for duplicate testing.
+Document ID: {document_id}
+Processing timestamp: {datetime.utcnow().isoformat()}
+Unique content for testing: {uuid.uuid4().hex}
 """
             
             if not parsed_content or len(parsed_content.strip()) == 0:
