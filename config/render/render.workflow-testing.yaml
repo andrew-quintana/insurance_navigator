@@ -9,6 +9,7 @@ services:
     env: docker
     plan: starter
     dockerfilePath: ./api/upload_pipeline/Dockerfile
+    dockerContext: .
     region: oregon
     branch: main
     port: 8000
