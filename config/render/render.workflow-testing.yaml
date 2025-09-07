@@ -11,7 +11,7 @@ services:
     dockerfilePath: ./api/upload_pipeline/Dockerfile
     dockerContext: .
     region: oregon
-    branch: main
+    branch: deployment/cloud-infrastructure
     port: 8000
     healthCheckPath: /health
     # Render optimizations for faster startup
@@ -150,7 +150,7 @@ services:
     plan: starter
     dockerfilePath: ./backend/workers/Dockerfile
     region: oregon
-    branch: main
+    branch: deployment/cloud-infrastructure
     # Worker-specific settings
     numReplicas: 1
     autoscaling:
