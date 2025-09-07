@@ -1,0 +1,26 @@
+{
+  "test_type": "Frontend Client Simulation",
+  "timestamp": "2025-09-07T15:12:09.831195",
+  "api_url": "https://insurance-navigator-api.onrender.com",
+  "total_duration": 30.095049142837524,
+  "overall_success": false,
+  "summary": {
+    "total_steps": 1,
+    "passed_steps": 0,
+    "failed_steps": 1,
+    "success_rate": 0.0
+  },
+  "workflow_results": [
+    {
+      "step": "register_user",
+      "status": "failed",
+      "error": "",
+      "timestamp": "2025-09-07T15:12:09.829424"
+    }
+  ],
+  "test_metadata": {
+    "user_id": null,
+    "document_id": null,
+    "job_id": null
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "test_type": "Frontend Client Simulation",
+  "timestamp": "2025-09-07T15:39:41.175254",
+  "api_url": "https://insurance-navigator-api.onrender.com",
+  "total_duration": 1.8663899898529053,
+  "overall_success": false,
+  "summary": {
+    "total_steps": 3,
+    "passed_steps": 2,
+    "failed_steps": 1,
+    "success_rate": 66.66666666666666
+  },
+  "workflow_results": [
+    {
+      "step": "register_user",
+      "status": "passed",
+      "user_id": "minimal_fc8ad03f8ca5a279af5c20a6ccf2e7d5",
+      "response": {
+        "user": {
+          "id": "minimal_fc8ad03f8ca5a279af5c20a6ccf2e7d5",
+          "email": "frontend-test-1757259579@example.com",
+          "name": "Frontend Test User"
+        },
+        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJtaW5pbWFsX2ZjOGFkMDNmOGNhNWEyNzlhZjVjMjBhNmNjZjJlN2Q1IiwiZW1haWwiOiJmcm9udGVuZC10ZXN0LTE3NTcyNTk1NzlAZXhhbXBsZS5jb20iLCJleHAiOjE3NTczNDU5ODAsImlhdCI6MTc1NzI1OTU4MCwiaXNzIjoiaW5zdXJhbmNlLW5hdmlnYXRvci1taW5pbWFsLWF1dGgiLCJhdWQiOiJpbnN1cmFuY2UtbmF2aWdhdG9yLXVzZXJzIn0.WNr8oW8ObsJaQ6bSN-B4Wc6EYeB0wH3-jzPlPETuoXA",
+        "token_type": "bearer"
+      },
+      "timestamp": "2025-09-07T15:39:40.861733"
+    },
+    {
+      "step": "login_user",
+      "status": "passed",
+      "user_id": "minimal_cb79c5a4910f0d582c4f63997955c6bd",
+      "access_token": "eyJhbGciOiJIUzI1NiIs...",
+      "timestamp": "2025-09-07T15:39:40.988636"
+    },
+    {
+      "step": "initiate_upload",
+      "status": "failed",
+      "error": "HTTP 500: {\"detail\":\"'StorageService' object has no attribute 'upload_document'\"}",
+      "timestamp": "2025-09-07T15:39:41.175058"
+    }
+  ],
+  "test_metadata": {
+    "user_id": "minimal_cb79c5a4910f0d582c4f63997955c6bd",
+    "document_id": null,
+    "job_id": null
+  }
+}
