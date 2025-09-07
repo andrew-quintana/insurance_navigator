@@ -19,11 +19,14 @@ class DatabaseManager:
     async def initialize(self):
         """Initialize the connection pool"""
         try:
+            # Add SSL configuration for Supabase
+            ssl_config = "require" if "supabase.com" in self.database_url else None
             self.pool = await asyncpg.create_pool(
                 self.database_url,
                 min_size=self.min_size,
                 max_size=self.max_size,
-                command_timeout=60
+                command_timeout=60,
+                ssl=ssl_config
             )
             logger.info(f"Database pool initialized with {self.min_size}-{self.max_size} connections")
             

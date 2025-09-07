@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Dict, Any
 
 # Cloud service URLs
-API_BASE_URL = "https://insurance-navigator-api-workflow-testing.onrender.com"
+API_BASE_URL = "***REMOVED***"
 
 class Phase3CloudTester:
     """Test the cloud-deployed API service."""
