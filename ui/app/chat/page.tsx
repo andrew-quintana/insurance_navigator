@@ -155,58 +155,10 @@ export default function ChatPage() {
     setSessionWarning("") // Clear any session warnings
   }
 
-  // Set up document status polling
-  useEffect(() => {
-    if (!isAuthenticated || !userInfo?.id) return
-
-    let pollInterval: NodeJS.Timeout | null = null
-
-    const checkDocumentStatus = async () => {
-      try {
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
-        const token = localStorage.getItem("token")
-        
-        if (!token) return
-
-        const response = await fetch(`${apiBaseUrl}/api/v2/jobs?state=done`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-          },
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          
-          // Handle any completed documents
-          data.jobs?.forEach((job: any) => {
-            if (job.state === 'done' && job.stage === 'complete') {
-              const completionMessage: Message = {
-                id: Date.now(),
-                sender: "bot",
-                text: `🎉 **Document Processing Complete!**\n\nYour document "${job.filename || 'unknown'}" has been successfully processed and is ready for questions!\n\n**Ready to help!** What would you like to know about your document?`
-              }
-              
-              setMessages(prev => [...prev, completionMessage])
-              updateActivity()
-            }
-          })
-        }
-      } catch (error) {
-        console.error('Error checking document status:', error)
-      }
-    }
-
-    // Start polling every 10 seconds
-    pollInterval = setInterval(checkDocumentStatus, 10000)
-
-    // Cleanup
-    return () => {
-      if (pollInterval) {
-        clearInterval(pollInterval)
-      }
-    }
-  }, [isAuthenticated, userInfo?.id])
+  // TODO: Document status polling temporarily disabled due to API endpoint issues
+  // This will be re-enabled once the /api/v2/jobs endpoint is properly implemented
+  // For now, uploads work correctly but status notifications are not shown
+  // Technical debt: Implement proper job status polling for document completion notifications
 
   // Auto-scroll to the bottom of messages
   useEffect(() => {
