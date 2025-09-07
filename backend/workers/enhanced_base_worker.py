@@ -934,10 +934,10 @@ Processing timestamp: {datetime.utcnow().isoformat()}
                     self.logger.warning("Failed to delete duplicate file from storage", 
                                       error=str(e), raw_path=doc["raw_path"])
                 
-                # Update job status to complete (duplicate handled)
+                # Update job status to duplicate (duplicate handled)
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
-                    SET status = 'complete', state = 'done', updated_at = now()
+                    SET status = 'duplicate', state = 'done', updated_at = now()
                     WHERE job_id = $1
                 """, job_id)
                 
