@@ -168,7 +168,7 @@ export default function ChatPage() {
         
         if (!token) return
 
-        const response = await fetch(`${apiBaseUrl}/jobs?state=done`, {
+        const response = await fetch(`${apiBaseUrl}/api/v2/jobs?state=done`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/json',
