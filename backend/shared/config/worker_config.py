@@ -58,9 +58,13 @@ class WorkerConfig:
     @classmethod
     def from_environment(cls) -> 'WorkerConfig':
         """Create configuration from environment variables"""
+        database_url = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/accessa_dev")
+        print(f"DEBUG: WorkerConfig database_url from env: {database_url[:50]}...")
+        print(f"DEBUG: WorkerConfig DATABASE_URL env var: {os.getenv('DATABASE_URL', 'NOT_SET')[:50]}...")
+        
         return cls(
             # Database
-            database_url=os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/accessa_dev"),
+            database_url=database_url,
             
             # Supabase
             supabase_url=os.getenv("SUPABASE_URL", "http://localhost:5000"),

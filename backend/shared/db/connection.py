@@ -21,6 +21,10 @@ class DatabaseManager:
         try:
             # Add SSL configuration for Supabase
             ssl_config = "require" if "supabase.com" in self.database_url else None
+            logger.info(f"Initializing database pool with URL: {self.database_url[:50]}...")
+            logger.info(f"SSL configuration: {ssl_config}")
+            logger.info(f"Pool size: {self.min_size}-{self.max_size}")
+            
             self.pool = await asyncpg.create_pool(
                 self.database_url,
                 min_size=self.min_size,
