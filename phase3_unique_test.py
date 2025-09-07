@@ -74,8 +74,8 @@ async def test_unique_pipeline():
         stage_transitions = []
         start_time = datetime.utcnow()
         
-        # Monitor for up to 10 minutes
-        for attempt in range(120):  # 120 * 5 seconds = 10 minutes
+        # Monitor for up to 10 minutes with very frequent checks
+        for attempt in range(1200):  # 1200 * 0.5 seconds = 10 minutes
             result = await conn.fetchrow("""
                 SELECT state, status, updated_at, last_error, progress
                 FROM upload_pipeline.upload_jobs 
@@ -115,7 +115,7 @@ async def test_unique_pipeline():
                 print("❌ No job found")
                 break
                 
-            await asyncio.sleep(5)  # Check every 5 seconds
+            await asyncio.sleep(0.5)  # Check every 0.5 seconds for very fast detection
         
         # Verify we went through ALL expected stages
         print("\n📊 Pipeline Stage Analysis:")
