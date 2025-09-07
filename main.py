@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import json
 import time
@@ -282,104 +282,171 @@ async def get_document_status(
             detail=f"Failed to get status: {str(e)}"
         )
 
-# Document upload endpoint
+# Upload Pipeline Models
+class UploadRequest(BaseModel):
+    filename: str = Field(..., description="Name of the file to upload")
+    bytes_len: int = Field(..., description="Size of the file in bytes")
+    mime: str = Field(..., description="MIME type of the file")
+    sha256: str = Field(..., description="SHA256 hash of the file content")
+    ocr: bool = Field(default=False, description="Whether to perform OCR on the file")
+
+class UploadResponse(BaseModel):
+    job_id: str = Field(..., description="Unique identifier for the upload job")
+    document_id: str = Field(..., description="Unique identifier for the document")
+    signed_url: str = Field(..., description="Signed URL for uploading the file")
+    upload_expires_at: datetime = Field(..., description="When the signed URL expires")
+
+# Upload Pipeline Database Functions
+async def get_upload_pipeline_db():
+    """Get database connection for upload pipeline operations."""
+    import asyncpg
+    from dotenv import load_dotenv
+    
+    load_dotenv('.env.production')
+    database_url = os.getenv('DATABASE_URL')
+    
+    if not database_url:
+        raise HTTPException(status_code=500, detail="Database configuration missing")
+    
+    return await asyncpg.connect(database_url)
+
+async def generate_signed_url(storage_path: str, ttl_seconds: int = 3600) -> str:
+    """Generate a signed URL for file upload."""
+    # For now, return a mock signed URL - in production this would use Supabase storage
+    return f"https://storage.supabase.co/files/{storage_path}?signed=true&ttl={ttl_seconds}"
+
+async def create_document_record(conn, document_id: str, user_id: str, filename: str, 
+                               mime: str, bytes_len: int, file_sha256: str, raw_path: str):
+    """Create a document record in the upload_pipeline.documents table."""
+    await conn.execute("""
+        INSERT INTO upload_pipeline.documents (
+            document_id, user_id, filename, mime, bytes_len, 
+            file_sha256, raw_path, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+    """, document_id, user_id, filename, mime, bytes_len, file_sha256, raw_path)
+
+async def create_upload_job(conn, job_id: str, document_id: str, user_id: str, 
+                          request: UploadRequest, raw_path: str):
+    """Create an upload job in the upload_pipeline.upload_jobs table."""
+    payload = {
+        "user_id": user_id,
+        "document_id": document_id,
+        "file_sha256": request.sha256,
+        "bytes_len": request.bytes_len,
+        "mime": request.mime,
+        "storage_path": raw_path
+    }
+    
+    await conn.execute("""
+        INSERT INTO upload_pipeline.upload_jobs (
+            job_id, document_id, status, state, progress, 
+            created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+    """, job_id, document_id, "uploaded", "queued", json.dumps(payload))
+
+# New Upload Pipeline Endpoint
+@app.post("/api/v2/upload", response_model=UploadResponse)
+async def upload_document_v2(
+    request: UploadRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """
+    Upload a new document for processing using the upload pipeline.
+    
+    This endpoint:
+    1. Validates the upload request
+    2. Creates a new document record
+    3. Initializes a job in the queue
+    4. Returns a signed URL for file upload
+    """
+    logger.info(f"📄 Upload pipeline request received - File: {request.filename}, Size: {request.bytes_len}, User: {current_user['email']}")
+    
+    try:
+        # Validate file size
+        if request.bytes_len > 50 * 1024 * 1024:  # 50MB limit
+            logger.error(f"❌ File too large: {request.bytes_len} bytes")
+            raise HTTPException(status_code=413, detail="File too large. Maximum size is 50MB")
+            
+        logger.info(f"✅ File size validated: {request.bytes_len} bytes")
+        
+        # Generate document and job IDs
+        document_id = str(uuid.uuid4())
+        job_id = str(uuid.uuid4())
+        user_id = str(current_user["id"])
+        
+        # Generate storage path
+        timestamp = int(time.time())
+        file_hash = hashlib.md5(document_id.encode()).hexdigest()[:8]
+        file_ext = request.filename.split('.')[-1] if '.' in request.filename else 'pdf'
+        raw_path = f"files/user/{user_id}/raw/{timestamp}_{file_hash}.{file_ext}"
+        
+        logger.info(f"📄 Generated storage path: {raw_path}")
+        
+        # Connect to database
+        conn = await get_upload_pipeline_db()
+        
+        try:
+            # Create document record
+            await create_document_record(
+                conn, document_id, user_id, request.filename, 
+                request.mime, request.bytes_len, request.sha256, raw_path
+            )
+            logger.info(f"✅ Document record created: {document_id}")
+            
+            # Create upload job
+            await create_upload_job(conn, job_id, document_id, user_id, request, raw_path)
+            logger.info(f"✅ Upload job created: {job_id}")
+            
+            # Generate signed URL
+            signed_url = await generate_signed_url(raw_path, 3600)  # 1 hour TTL
+            upload_expires_at = datetime.utcnow() + timedelta(seconds=3600)
+            
+            logger.info(f"✅ Signed URL generated: {signed_url[:50]}...")
+            
+            return UploadResponse(
+                job_id=job_id,
+                document_id=document_id,
+                signed_url=signed_url,
+                upload_expires_at=upload_expires_at
+            )
+            
+        finally:
+            await conn.close()
+        
+    except Exception as e:
+        logger.error(f"❌ Upload pipeline failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Legacy endpoint for backward compatibility
 @app.post("/upload-document-backend")
 async def upload_document_backend(
     file: UploadFile = File(...),
     policy_id: str = Form(...),
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    """Handle document upload with simplified processing."""
-    logger.info(f"📄 Upload request received - File: {file.filename}, Size: {file.size if hasattr(file, 'size') else 'unknown'}, User: {current_user['email']}")
+    """Legacy upload endpoint - redirects to new upload pipeline."""
+    logger.info(f"📄 Legacy upload request received - File: {file.filename}, User: {current_user['email']}")
     
     try:
-        # Validate file size
+        # Read file content
         contents = await file.read()
         file_size = len(contents)
+        file_sha256 = hashlib.sha256(contents).hexdigest()
         
-        if file_size > 50 * 1024 * 1024:  # 50MB limit
-            logger.error(f"❌ File too large: {file_size} bytes")
-            raise HTTPException(status_code=413, detail="File too large. Maximum size is 50MB")
-            
-        logger.info(f"✅ File size validated: {file_size} bytes")
-        
-        # Get storage service
-        storage_service = await get_storage_service()
-        
-        # Upload document
-        logger.info(f"🔄 Starting document upload for {file.filename}")
-        upload_result = await storage_service.upload_document(
-            user_id=str(current_user["id"]),
-            file_content=contents,
+        # Create upload request
+        upload_request = UploadRequest(
             filename=file.filename,
-            content_type=file.content_type or "application/octet-stream"
+            bytes_len=file_size,
+            mime=file.content_type or "application/octet-stream",
+            sha256=file_sha256,
+            ocr=False
         )
         
-        logger.info(f"✅ Document upload completed: {upload_result}")
-        
-        # Call upload-handler Edge Function
-        supabase_url = os.getenv('SUPABASE_URL')
-        supabase_service_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
-        
-        if not supabase_url or not supabase_service_key:
-            raise HTTPException(status_code=500, detail="Missing Supabase configuration")
-            
-        # Extract project ref from Supabase URL (format: https://[project-ref].supabase.co)
-        try:
-            project_ref = supabase_url.replace('https://', '').split('.')[0]
-            upload_handler_url = f"https://{project_ref}.functions.supabase.co/upload-handler"
-            logger.info(f"🔗 Constructed upload-handler URL: {upload_handler_url}")
-        except Exception as e:
-            logger.error(f"❌ Failed to construct upload-handler URL: {e}")
-            raise HTTPException(status_code=500, detail="Invalid Supabase configuration")
-        
-        logger.info(f"🔄 Calling upload-handler function for document {upload_result['document_id']}")
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                upload_handler_url,
-                headers={
-                    'Authorization': f'Bearer {supabase_service_key}',
-                    'Content-Type': 'application/json',
-                    'X-User-ID': str(current_user["id"])
-                },
-                json={
-                    'userId': str(current_user["id"]),
-                    'filename': file.filename,
-                    'fileSize': file_size,
-                    'contentType': file.content_type or "application/octet-stream",
-                    'storagePath': upload_result['path']
-                }
-            ) as response:
-                response_data = await response.json()
-                if response.status != 200:
-                    error_text = await response.text()
-                    logger.error(f"❌ Upload-handler call failed: {response.status} - {error_text}")
-                    raise HTTPException(
-                        status_code=500,
-                        detail=f"Document upload succeeded but processing failed: {error_text}"
-                    )
-                
-                if not response_data.get('success'):
-                    logger.error(f"❌ Upload-handler returned error: {response_data.get('error')}")
-                    raise HTTPException(
-                        status_code=500,
-                        detail=f"Document processing failed: {response_data.get('error')}"
-                    )
-                
-                logger.info(f"✅ Upload-handler started processing: {response_data}")
-                
-        return {
-            "success": True,
-            "document_id": upload_result["document_id"],
-            "filename": file.filename,
-            "status": "processing",
-            "chunks_processed": 0,
-            "total_chunks": 1
-        }
+        # Call the new upload pipeline endpoint
+        return await upload_document_v2(upload_request, current_user)
         
     except Exception as e:
-        logger.error(f"❌ Upload failed: {str(e)}")
+        logger.error(f"❌ Legacy upload failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 async def notify_document_status(
