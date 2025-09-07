@@ -134,23 +134,7 @@ export default function DocumentUpload({
         })(),
       })
 
-      // If new endpoint not available (405), fallback to existing endpoint
-      if (uploadResponse.status === 405) {
-        console.log('🔄 New endpoint not deployed yet, using fallback...')
-        uploadUrl = `${apiBaseUrl}/upload-policy`
-
-      const formData = new FormData()
-      formData.append('file', selectedFile)
-      formData.append('policy_id', selectedFile.name.replace(/\.[^/.]+$/, ""))
-
-        uploadResponse = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
-      })
-      }
+      // No fallback needed - /upload-document-backend is the correct endpoint
 
       if (!uploadResponse.ok) {
         // Enhanced error handling for common issues
