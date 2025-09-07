@@ -1,0 +1,505 @@
+{
+  "config": {
+    "configFile": "/Users/aq_home/1Projects/accessa/insurance_navigator/playwright.config.ts",
+    "rootDir": "/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 4
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/results.json"
+        }
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "test-results/results.xml"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/Users/aq_home/1Projects/accessa/insurance_navigator/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/aq_home/1Projects/accessa/insurance_navigator/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/aq_home/1Projects/accessa/insurance_navigator/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/aq_home/1Projects/accessa/insurance_navigator/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "Mobile Chrome",
+        "name": "Mobile Chrome",
+        "testDir": "/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/aq_home/1Projects/accessa/insurance_navigator/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "Mobile Safari",
+        "name": "Mobile Safari",
+        "testDir": "/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.55.0",
+    "workers": 4,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "frontend-upload-test.spec.ts",
+      "file": "frontend-upload-test.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Frontend Upload Pipeline",
+          "file": "frontend-upload-test.spec.ts",
+          "line": 205,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Complete upload workflow - Registration, Login, Upload, Processing",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 7112,
+                      "error": {
+                        "message": "Error: expect.toBeVisible: Error: strict mode violation: locator('text=Login').or(locator('text=Sign In')).or(locator('text=Get Started')).or(locator('[data-testid=\"login-button\"]')) resolved to 3 elements:\n    1) <button class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background shadow-sm hover:text-accent-foreground h-9 px-4 py-2 text-teal-700 border-teal-700 hover:bg-teal-50\">…</button> aka getByRole('button', { name: 'Sign In' })\n    2) <button class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 shadow h-9 px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white\">Get Started</button> aka getByRole('link', { name: 'Get Started' }).getByRole('button')\n    3) <button class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 bg-terracotta hover:bg-terracotta-600 text-white px-8 py-6 text-lg rounded-xl shadow-lg transition-all\">…</button> aka locator('section').filter({ hasText: 'Navigate Medicare with' }).getByRole('button')\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Login').or(locator('text=Sign In')).or(locator('text=Get Started')).or(locator('[data-testid=\"login-button\"]'))\u001b[22m\n",
+                        "stack": "Error: expect.toBeVisible: Error: strict mode violation: locator('text=Login').or(locator('text=Sign In')).or(locator('text=Get Started')).or(locator('[data-testid=\"login-button\"]')) resolved to 3 elements:\n    1) <button class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background shadow-sm hover:text-accent-foreground h-9 px-4 py-2 text-teal-700 border-teal-700 hover:bg-teal-50\">…</button> aka getByRole('button', { name: 'Sign In' })\n    2) <button class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 shadow h-9 px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white\">Get Started</button> aka getByRole('link', { name: 'Get Started' }).getByRole('button')\n    3) <button class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 bg-terracotta hover:bg-terracotta-600 text-white px-8 py-6 text-lg rounded-xl shadow-lg transition-all\">…</button> aka locator('section').filter({ hasText: 'Navigate Medicare with' }).getByRole('button')\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Login').or(locator('text=Sign In')).or(locator('text=Get Started')).or(locator('[data-testid=\"login-button\"]'))\u001b[22m\n\n    at registerUser (/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts:87:28)\n    at /Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts:228:5",
+                        "location": {
+                          "file": "/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts",
+                          "column": 28,
+                          "line": 87
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 85 |\u001b[39m   \u001b[90m// Look for login/register button or navigation\u001b[39m\n \u001b[90m 86 |\u001b[39m   \u001b[36mconst\u001b[39m authButton \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Login'\u001b[39m)\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Sign In'\u001b[39m))\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Get Started'\u001b[39m))\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'[data-testid=\"login-button\"]'\u001b[39m))\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 87 |\u001b[39m   \u001b[36mawait\u001b[39m expect(authButton)\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                            \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 88 |\u001b[39m   \u001b[36mawait\u001b[39m authButton\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m 89 |\u001b[39m   \n \u001b[90m 90 |\u001b[39m   \u001b[90m// Look for register/signup link or form\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts",
+                            "column": 28,
+                            "line": 87
+                          },
+                          "message": "Error: expect.toBeVisible: Error: strict mode violation: locator('text=Login').or(locator('text=Sign In')).or(locator('text=Get Started')).or(locator('[data-testid=\"login-button\"]')) resolved to 3 elements:\n    1) <button class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background shadow-sm hover:text-accent-foreground h-9 px-4 py-2 text-teal-700 border-teal-700 hover:bg-teal-50\">…</button> aka getByRole('button', { name: 'Sign In' })\n    2) <button class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 shadow h-9 px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white\">Get Started</button> aka getByRole('link', { name: 'Get Started' }).getByRole('button')\n    3) <button class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 bg-terracotta hover:bg-terracotta-600 text-white px-8 py-6 text-lg rounded-xl shadow-lg transition-all\">…</button> aka locator('section').filter({ hasText: 'Navigate Medicare with' }).getByRole('button')\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Login').or(locator('text=Sign In')).or(locator('text=Get Started')).or(locator('[data-testid=\"login-button\"]'))\u001b[22m\n\n\n\u001b[0m \u001b[90m 85 |\u001b[39m   \u001b[90m// Look for login/register button or navigation\u001b[39m\n \u001b[90m 86 |\u001b[39m   \u001b[36mconst\u001b[39m authButton \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Login'\u001b[39m)\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Sign In'\u001b[39m))\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Get Started'\u001b[39m))\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'[data-testid=\"login-button\"]'\u001b[39m))\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 87 |\u001b[39m   \u001b[36mawait\u001b[39m expect(authButton)\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                            \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 88 |\u001b[39m   \u001b[36mawait\u001b[39m authButton\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m 89 |\u001b[39m   \n \u001b[90m 90 |\u001b[39m   \u001b[90m// Look for register/signup link or form\u001b[39m\u001b[0m\n\u001b[2m    at registerUser (/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts:87:28)\u001b[22m\n\u001b[2m    at /Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts:228:5\u001b[22m"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "�� Created test file: /tmp/frontend_test_document.pdf\n"
+                        },
+                        {
+                          "text": "🚀 Starting complete frontend upload workflow test\n"
+                        },
+                        {
+                          "text": "🔐 Registering test user...\n"
+                        },
+                        {
+                          "text": "⚠️ Could not clean up test file: Error: ENOENT: no such file or directory, unlink '/tmp/frontend_test_document.pdf'\n\u001b[90m    at Object.unlink (node:internal/fs/promises:1066:10)\u001b[39m\n    at \u001b[90m/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mtests/playwright/frontend-upload-test.spec.ts:217:7\n    at \u001b[90m/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/testInfo.js:326:11\n    at TimeoutManager.withRunnable \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/timeoutManager.js:67:14\u001b[90m)\u001b[39m\n    at TestInfoImpl._runWithTimeout \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/testInfo.js:324:7\u001b[90m)\u001b[39m\n    at FixtureRunner.resolveParametersAndRunFunction \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/fixtureRunner.js:220:5\u001b[90m)\u001b[39m\n    at \u001b[90m/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/workerMain.js:428:13\n    at TestInfoImpl._runAsStep \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/testInfo.js:315:7\u001b[90m)\u001b[39m\n    at WorkerMain._runAllHooksForSuite \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/workerMain.js:423:9\u001b[90m)\u001b[39m\n    at WorkerMain._runAfterAllHooksForSuite \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/workerMain.js:453:5\u001b[90m)\u001b[39m\n    at \u001b[90m/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/workerMain.js:339:13\n    at TestInfoImpl._runAsStep \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/testInfo.js:315:7\u001b[90m)\u001b[39m\n    at WorkerMain._runTest \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/workerMain.js:317:5\u001b[90m)\u001b[39m\n    at WorkerMain.runTestGroup \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/workerMain.js:194:11\u001b[90m)\u001b[39m\n    at process.<anonymous> \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/common/process.js:65:22\u001b[90m)\u001b[39m {\n  errno: \u001b[33m-2\u001b[39m,\n  code: \u001b[32m'ENOENT'\u001b[39m,\n  syscall: \u001b[32m'unlink'\u001b[39m,\n  path: \u001b[32m'/tmp/frontend_test_document.pdf'\u001b[39m\n}\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-07T21:20:01.690Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/aq_home/1Projects/accessa/insurance_navigator/test-results/frontend-upload-test-Front-de4c3-ion-Login-Upload-Processing-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/aq_home/1Projects/accessa/insurance_navigator/test-results/frontend-upload-test-Front-de4c3-ion-Login-Upload-Processing-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/aq_home/1Projects/accessa/insurance_navigator/test-results/frontend-upload-test-Front-de4c3-ion-Login-Upload-Processing-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts",
+                        "column": 28,
+                        "line": 87
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "fac334339771f892b1aa-b03dc53a2848c34c3f86",
+              "file": "frontend-upload-test.spec.ts",
+              "line": 224,
+              "column": 7
+            },
+            {
+              "title": "Upload with existing user - Login, Upload, Processing",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "failed",
+                      "duration": 5193,
+                      "error": {
+                        "message": "Error: locator.click: Error: strict mode violation: locator('button[type=\"submit\"]').or(locator('text=Login')).or(locator('text=Sign In')) resolved to 3 elements:\n    1) <h1 class=\"text-xl font-semibold text-teal-800 mx-auto pr-8\">Sign In</h1> aka getByRole('heading', { name: 'Sign In' })\n    2) <p class=\"text-gray-600\">Sign in to your Medicare Navigator account</p> aka getByText('Sign in to your Medicare')\n    3) <button type=\"submit\" class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 shadow h-9 px-4 w-full bg-teal-700 hover:bg-teal-800 text-white py-3 rounded-lg font-medium transition-colors\">Sign In</button> aka getByRole('button', { name: 'Sign In' })\n\nCall log:\n\u001b[2m  - waiting for locator('button[type=\"submit\"]').or(locator('text=Login')).or(locator('text=Sign In'))\u001b[22m\n",
+                        "stack": "Error: locator.click: Error: strict mode violation: locator('button[type=\"submit\"]').or(locator('text=Login')).or(locator('text=Sign In')) resolved to 3 elements:\n    1) <h1 class=\"text-xl font-semibold text-teal-800 mx-auto pr-8\">Sign In</h1> aka getByRole('heading', { name: 'Sign In' })\n    2) <p class=\"text-gray-600\">Sign in to your Medicare Navigator account</p> aka getByText('Sign in to your Medicare')\n    3) <button type=\"submit\" class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 shadow h-9 px-4 w-full bg-teal-700 hover:bg-teal-800 text-white py-3 rounded-lg font-medium transition-colors\">Sign In</button> aka getByRole('button', { name: 'Sign In' })\n\nCall log:\n\u001b[2m  - waiting for locator('button[type=\"submit\"]').or(locator('text=Login')).or(locator('text=Sign In'))\u001b[22m\n\n    at loginUser (/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts:127:22)\n    at /Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts:246:5",
+                        "location": {
+                          "file": "/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts",
+                          "column": 22,
+                          "line": 127
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 125 |\u001b[39m   \u001b[90m// Submit login\u001b[39m\n \u001b[90m 126 |\u001b[39m   \u001b[36mconst\u001b[39m submitButton \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Login'\u001b[39m))\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Sign In'\u001b[39m))\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 127 |\u001b[39m   \u001b[36mawait\u001b[39m submitButton\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 128 |\u001b[39m   \n \u001b[90m 129 |\u001b[39m   \u001b[90m// Wait for successful login\u001b[39m\n \u001b[90m 130 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Welcome'\u001b[39m)\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Dashboard'\u001b[39m))\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Chat'\u001b[39m)))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts",
+                            "column": 22,
+                            "line": 127
+                          },
+                          "message": "Error: locator.click: Error: strict mode violation: locator('button[type=\"submit\"]').or(locator('text=Login')).or(locator('text=Sign In')) resolved to 3 elements:\n    1) <h1 class=\"text-xl font-semibold text-teal-800 mx-auto pr-8\">Sign In</h1> aka getByRole('heading', { name: 'Sign In' })\n    2) <p class=\"text-gray-600\">Sign in to your Medicare Navigator account</p> aka getByText('Sign in to your Medicare')\n    3) <button type=\"submit\" class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 shadow h-9 px-4 w-full bg-teal-700 hover:bg-teal-800 text-white py-3 rounded-lg font-medium transition-colors\">Sign In</button> aka getByRole('button', { name: 'Sign In' })\n\nCall log:\n\u001b[2m  - waiting for locator('button[type=\"submit\"]').or(locator('text=Login')).or(locator('text=Sign In'))\u001b[22m\n\n\n\u001b[0m \u001b[90m 125 |\u001b[39m   \u001b[90m// Submit login\u001b[39m\n \u001b[90m 126 |\u001b[39m   \u001b[36mconst\u001b[39m submitButton \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Login'\u001b[39m))\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Sign In'\u001b[39m))\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 127 |\u001b[39m   \u001b[36mawait\u001b[39m submitButton\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 128 |\u001b[39m   \n \u001b[90m 129 |\u001b[39m   \u001b[90m// Wait for successful login\u001b[39m\n \u001b[90m 130 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Welcome'\u001b[39m)\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Dashboard'\u001b[39m))\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Chat'\u001b[39m)))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at loginUser (/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts:127:22)\u001b[22m\n\u001b[2m    at /Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts:246:5\u001b[22m"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "�� Created test file: /tmp/frontend_test_document.pdf\n"
+                        },
+                        {
+                          "text": "🚀 Starting upload with existing user test\n"
+                        },
+                        {
+                          "text": "🔑 Logging in user...\n"
+                        },
+                        {
+                          "text": "🧹 Cleaned up test file\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-07T21:20:01.950Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/aq_home/1Projects/accessa/insurance_navigator/test-results/frontend-upload-test-Front-fd11d-r---Login-Upload-Processing-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/aq_home/1Projects/accessa/insurance_navigator/test-results/frontend-upload-test-Front-fd11d-r---Login-Upload-Processing-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/aq_home/1Projects/accessa/insurance_navigator/test-results/frontend-upload-test-Front-fd11d-r---Login-Upload-Processing-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts",
+                        "column": 22,
+                        "line": 127
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "fac334339771f892b1aa-8be3dbba75bbf9928a5d",
+              "file": "frontend-upload-test.spec.ts",
+              "line": 242,
+              "column": 7
+            },
+            {
+              "title": "Error handling - Invalid file type",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "failed",
+                      "duration": 5231,
+                      "error": {
+                        "message": "Error: locator.click: Error: strict mode violation: locator('button[type=\"submit\"]').or(locator('text=Login')).or(locator('text=Sign In')) resolved to 3 elements:\n    1) <h1 class=\"text-xl font-semibold text-teal-800 mx-auto pr-8\">Sign In</h1> aka getByRole('heading', { name: 'Sign In' })\n    2) <p class=\"text-gray-600\">Sign in to your Medicare Navigator account</p> aka getByText('Sign in to your Medicare')\n    3) <button type=\"submit\" class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 shadow h-9 px-4 w-full bg-teal-700 hover:bg-teal-800 text-white py-3 rounded-lg font-medium transition-colors\">Sign In</button> aka getByRole('button', { name: 'Sign In' })\n\nCall log:\n\u001b[2m  - waiting for locator('button[type=\"submit\"]').or(locator('text=Login')).or(locator('text=Sign In'))\u001b[22m\n",
+                        "stack": "Error: locator.click: Error: strict mode violation: locator('button[type=\"submit\"]').or(locator('text=Login')).or(locator('text=Sign In')) resolved to 3 elements:\n    1) <h1 class=\"text-xl font-semibold text-teal-800 mx-auto pr-8\">Sign In</h1> aka getByRole('heading', { name: 'Sign In' })\n    2) <p class=\"text-gray-600\">Sign in to your Medicare Navigator account</p> aka getByText('Sign in to your Medicare')\n    3) <button type=\"submit\" class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 shadow h-9 px-4 w-full bg-teal-700 hover:bg-teal-800 text-white py-3 rounded-lg font-medium transition-colors\">Sign In</button> aka getByRole('button', { name: 'Sign In' })\n\nCall log:\n\u001b[2m  - waiting for locator('button[type=\"submit\"]').or(locator('text=Login')).or(locator('text=Sign In'))\u001b[22m\n\n    at loginUser (/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts:127:22)\n    at /Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts:266:7",
+                        "location": {
+                          "file": "/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts",
+                          "column": 22,
+                          "line": 127
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 125 |\u001b[39m   \u001b[90m// Submit login\u001b[39m\n \u001b[90m 126 |\u001b[39m   \u001b[36mconst\u001b[39m submitButton \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Login'\u001b[39m))\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Sign In'\u001b[39m))\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 127 |\u001b[39m   \u001b[36mawait\u001b[39m submitButton\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 128 |\u001b[39m   \n \u001b[90m 129 |\u001b[39m   \u001b[90m// Wait for successful login\u001b[39m\n \u001b[90m 130 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Welcome'\u001b[39m)\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Dashboard'\u001b[39m))\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Chat'\u001b[39m)))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts",
+                            "column": 22,
+                            "line": 127
+                          },
+                          "message": "Error: locator.click: Error: strict mode violation: locator('button[type=\"submit\"]').or(locator('text=Login')).or(locator('text=Sign In')) resolved to 3 elements:\n    1) <h1 class=\"text-xl font-semibold text-teal-800 mx-auto pr-8\">Sign In</h1> aka getByRole('heading', { name: 'Sign In' })\n    2) <p class=\"text-gray-600\">Sign in to your Medicare Navigator account</p> aka getByText('Sign in to your Medicare')\n    3) <button type=\"submit\" class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 shadow h-9 px-4 w-full bg-teal-700 hover:bg-teal-800 text-white py-3 rounded-lg font-medium transition-colors\">Sign In</button> aka getByRole('button', { name: 'Sign In' })\n\nCall log:\n\u001b[2m  - waiting for locator('button[type=\"submit\"]').or(locator('text=Login')).or(locator('text=Sign In'))\u001b[22m\n\n\n\u001b[0m \u001b[90m 125 |\u001b[39m   \u001b[90m// Submit login\u001b[39m\n \u001b[90m 126 |\u001b[39m   \u001b[36mconst\u001b[39m submitButton \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Login'\u001b[39m))\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Sign In'\u001b[39m))\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 127 |\u001b[39m   \u001b[36mawait\u001b[39m submitButton\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 128 |\u001b[39m   \n \u001b[90m 129 |\u001b[39m   \u001b[90m// Wait for successful login\u001b[39m\n \u001b[90m 130 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Welcome'\u001b[39m)\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Dashboard'\u001b[39m))\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Chat'\u001b[39m)))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at loginUser (/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts:127:22)\u001b[22m\n\u001b[2m    at /Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts:266:7\u001b[22m"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "�� Created test file: /tmp/frontend_test_document.pdf\n"
+                        },
+                        {
+                          "text": "🚀 Starting error handling test\n"
+                        },
+                        {
+                          "text": "🔑 Logging in user...\n"
+                        },
+                        {
+                          "text": "⚠️ Could not clean up test file: Error: ENOENT: no such file or directory, unlink '/tmp/frontend_test_document.pdf'\n\u001b[90m    at Object.unlink (node:internal/fs/promises:1066:10)\u001b[39m\n    at \u001b[90m/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mtests/playwright/frontend-upload-test.spec.ts:217:7\n    at \u001b[90m/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/testInfo.js:326:11\n    at TimeoutManager.withRunnable \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/timeoutManager.js:67:14\u001b[90m)\u001b[39m\n    at TestInfoImpl._runWithTimeout \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/testInfo.js:324:7\u001b[90m)\u001b[39m\n    at FixtureRunner.resolveParametersAndRunFunction \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/fixtureRunner.js:220:5\u001b[90m)\u001b[39m\n    at \u001b[90m/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/workerMain.js:428:13\n    at TestInfoImpl._runAsStep \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/testInfo.js:315:7\u001b[90m)\u001b[39m\n    at WorkerMain._runAllHooksForSuite \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/workerMain.js:423:9\u001b[90m)\u001b[39m\n    at WorkerMain._runAfterAllHooksForSuite \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/workerMain.js:453:5\u001b[90m)\u001b[39m\n    at \u001b[90m/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/workerMain.js:339:13\n    at TestInfoImpl._runAsStep \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/testInfo.js:315:7\u001b[90m)\u001b[39m\n    at WorkerMain._runTest \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/workerMain.js:317:5\u001b[90m)\u001b[39m\n    at WorkerMain.runTestGroup \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/workerMain.js:194:11\u001b[90m)\u001b[39m\n    at process.<anonymous> \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/common/process.js:65:22\u001b[90m)\u001b[39m {\n  errno: \u001b[33m-2\u001b[39m,\n  code: \u001b[32m'ENOENT'\u001b[39m,\n  syscall: \u001b[32m'unlink'\u001b[39m,\n  path: \u001b[32m'/tmp/frontend_test_document.pdf'\u001b[39m\n}\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-07T21:20:01.734Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/aq_home/1Projects/accessa/insurance_navigator/test-results/frontend-upload-test-Front-b54b7-andling---Invalid-file-type-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/aq_home/1Projects/accessa/insurance_navigator/test-results/frontend-upload-test-Front-b54b7-andling---Invalid-file-type-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/aq_home/1Projects/accessa/insurance_navigator/test-results/frontend-upload-test-Front-b54b7-andling---Invalid-file-type-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts",
+                        "column": 22,
+                        "line": 127
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "fac334339771f892b1aa-a90217827845a64c3376",
+              "file": "frontend-upload-test.spec.ts",
+              "line": 257,
+              "column": 7
+            },
+            {
+              "title": "UI responsiveness - Mobile viewport",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "failed",
+                      "duration": 5716,
+                      "error": {
+                        "message": "Error: locator.click: Error: strict mode violation: locator('button[type=\"submit\"]').or(locator('text=Login')).or(locator('text=Sign In')) resolved to 3 elements:\n    1) <h1 class=\"text-xl font-semibold text-teal-800 mx-auto pr-8\">Sign In</h1> aka getByRole('heading', { name: 'Sign In' })\n    2) <p class=\"text-gray-600\">Sign in to your Medicare Navigator account</p> aka getByText('Sign in to your Medicare')\n    3) <button type=\"submit\" class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 shadow h-9 px-4 w-full bg-teal-700 hover:bg-teal-800 text-white py-3 rounded-lg font-medium transition-colors\">Sign In</button> aka getByRole('button', { name: 'Sign In' })\n\nCall log:\n\u001b[2m  - waiting for locator('button[type=\"submit\"]').or(locator('text=Login')).or(locator('text=Sign In'))\u001b[22m\n",
+                        "stack": "Error: locator.click: Error: strict mode violation: locator('button[type=\"submit\"]').or(locator('text=Login')).or(locator('text=Sign In')) resolved to 3 elements:\n    1) <h1 class=\"text-xl font-semibold text-teal-800 mx-auto pr-8\">Sign In</h1> aka getByRole('heading', { name: 'Sign In' })\n    2) <p class=\"text-gray-600\">Sign in to your Medicare Navigator account</p> aka getByText('Sign in to your Medicare')\n    3) <button type=\"submit\" class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 shadow h-9 px-4 w-full bg-teal-700 hover:bg-teal-800 text-white py-3 rounded-lg font-medium transition-colors\">Sign In</button> aka getByRole('button', { name: 'Sign In' })\n\nCall log:\n\u001b[2m  - waiting for locator('button[type=\"submit\"]').or(locator('text=Login')).or(locator('text=Sign In'))\u001b[22m\n\n    at loginUser (/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts:127:22)\n    at /Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts:298:5",
+                        "location": {
+                          "file": "/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts",
+                          "column": 22,
+                          "line": 127
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 125 |\u001b[39m   \u001b[90m// Submit login\u001b[39m\n \u001b[90m 126 |\u001b[39m   \u001b[36mconst\u001b[39m submitButton \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Login'\u001b[39m))\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Sign In'\u001b[39m))\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 127 |\u001b[39m   \u001b[36mawait\u001b[39m submitButton\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 128 |\u001b[39m   \n \u001b[90m 129 |\u001b[39m   \u001b[90m// Wait for successful login\u001b[39m\n \u001b[90m 130 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Welcome'\u001b[39m)\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Dashboard'\u001b[39m))\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Chat'\u001b[39m)))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts",
+                            "column": 22,
+                            "line": 127
+                          },
+                          "message": "Error: locator.click: Error: strict mode violation: locator('button[type=\"submit\"]').or(locator('text=Login')).or(locator('text=Sign In')) resolved to 3 elements:\n    1) <h1 class=\"text-xl font-semibold text-teal-800 mx-auto pr-8\">Sign In</h1> aka getByRole('heading', { name: 'Sign In' })\n    2) <p class=\"text-gray-600\">Sign in to your Medicare Navigator account</p> aka getByText('Sign in to your Medicare')\n    3) <button type=\"submit\" class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 shadow h-9 px-4 w-full bg-teal-700 hover:bg-teal-800 text-white py-3 rounded-lg font-medium transition-colors\">Sign In</button> aka getByRole('button', { name: 'Sign In' })\n\nCall log:\n\u001b[2m  - waiting for locator('button[type=\"submit\"]').or(locator('text=Login')).or(locator('text=Sign In'))\u001b[22m\n\n\n\u001b[0m \u001b[90m 125 |\u001b[39m   \u001b[90m// Submit login\u001b[39m\n \u001b[90m 126 |\u001b[39m   \u001b[36mconst\u001b[39m submitButton \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'button[type=\"submit\"]'\u001b[39m)\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Login'\u001b[39m))\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Sign In'\u001b[39m))\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 127 |\u001b[39m   \u001b[36mawait\u001b[39m submitButton\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 128 |\u001b[39m   \n \u001b[90m 129 |\u001b[39m   \u001b[90m// Wait for successful login\u001b[39m\n \u001b[90m 130 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Welcome'\u001b[39m)\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Dashboard'\u001b[39m))\u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'text=Chat'\u001b[39m)))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at loginUser (/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts:127:22)\u001b[22m\n\u001b[2m    at /Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts:298:5\u001b[22m"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "�� Created test file: /tmp/frontend_test_document.pdf\n"
+                        },
+                        {
+                          "text": "🚀 Starting mobile responsiveness test\n"
+                        },
+                        {
+                          "text": "🔑 Logging in user...\n"
+                        },
+                        {
+                          "text": "⚠️ Could not clean up test file: Error: ENOENT: no such file or directory, unlink '/tmp/frontend_test_document.pdf'\n\u001b[90m    at Object.unlink (node:internal/fs/promises:1066:10)\u001b[39m\n    at \u001b[90m/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mtests/playwright/frontend-upload-test.spec.ts:217:7\n    at \u001b[90m/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/testInfo.js:326:11\n    at TimeoutManager.withRunnable \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/timeoutManager.js:67:14\u001b[90m)\u001b[39m\n    at TestInfoImpl._runWithTimeout \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/testInfo.js:324:7\u001b[90m)\u001b[39m\n    at FixtureRunner.resolveParametersAndRunFunction \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/fixtureRunner.js:220:5\u001b[90m)\u001b[39m\n    at \u001b[90m/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/workerMain.js:428:13\n    at TestInfoImpl._runAsStep \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/testInfo.js:315:7\u001b[90m)\u001b[39m\n    at WorkerMain._runAllHooksForSuite \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/workerMain.js:423:9\u001b[90m)\u001b[39m\n    at WorkerMain._runAfterAllHooksForSuite \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/workerMain.js:453:5\u001b[90m)\u001b[39m\n    at \u001b[90m/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/workerMain.js:339:13\n    at TestInfoImpl._runAsStep \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/testInfo.js:315:7\u001b[90m)\u001b[39m\n    at WorkerMain._runTest \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/workerMain.js:317:5\u001b[90m)\u001b[39m\n    at WorkerMain.runTestGroup \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/worker/workerMain.js:194:11\u001b[90m)\u001b[39m\n    at process.<anonymous> \u001b[90m(/Users/aq_home/1Projects/accessa/insurance_navigator/\u001b[39mnode_modules/\u001b[4mplaywright\u001b[24m/lib/common/process.js:65:22\u001b[90m)\u001b[39m {\n  errno: \u001b[33m-2\u001b[39m,\n  code: \u001b[32m'ENOENT'\u001b[39m,\n  syscall: \u001b[32m'unlink'\u001b[39m,\n  path: \u001b[32m'/tmp/frontend_test_document.pdf'\u001b[39m\n}\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-07T21:20:01.806Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/aq_home/1Projects/accessa/insurance_navigator/test-results/frontend-upload-test-Front-14264-nsiveness---Mobile-viewport-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/aq_home/1Projects/accessa/insurance_navigator/test-results/frontend-upload-test-Front-14264-nsiveness---Mobile-viewport-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/aq_home/1Projects/accessa/insurance_navigator/test-results/frontend-upload-test-Front-14264-nsiveness---Mobile-viewport-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/aq_home/1Projects/accessa/insurance_navigator/tests/playwright/frontend-upload-test.spec.ts",
+                        "column": 22,
+                        "line": 127
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "fac334339771f892b1aa-41769f4f6726f7cb9fc4",
+              "file": "frontend-upload-test.spec.ts",
+              "line": 291,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-09-07T21:20:00.233Z",
+    "duration": 10654.734999999999,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 4,
+    "flaky": 0
+  }
+}

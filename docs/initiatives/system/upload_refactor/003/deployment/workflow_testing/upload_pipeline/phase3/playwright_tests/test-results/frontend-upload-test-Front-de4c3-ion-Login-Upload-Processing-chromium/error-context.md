@@ -1,0 +1,129 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]: Accessa
+        - text: Medicare Navigator
+      - generic [ref=e6]:
+        - link "Sign In" [ref=e7] [cursor=pointer]:
+          - /url: /login
+          - button "Sign In" [ref=e8] [cursor=pointer]:
+            - img
+            - text: Sign In
+        - link "Get Started" [ref=e9] [cursor=pointer]:
+          - /url: /register
+          - button "Get Started" [ref=e10] [cursor=pointer]
+    - generic [ref=e11]:
+      - img "Watercolor illustration of a medical facility in a serene landscape" [ref=e14]
+      - generic [ref=e16]:
+        - heading "Navigate Medicare with Confidence" [level=1] [ref=e17]
+        - paragraph [ref=e18]: Get personalized questions to ask your doctor, understand your insurance plan, and feel more in control — all in one secure place.
+        - button "Get Started" [ref=e19] [cursor=pointer]:
+          - text: Get Started
+          - img
+    - generic [ref=e21]:
+      - generic [ref=e22]:
+        - heading "Sample Output" [level=2] [ref=e23]
+        - generic [ref=e24]:
+          - paragraph [ref=e26]: “I’ve been having lower back pain for a few weeks — what should I ask my doctor during my Medicare visit?”
+          - generic [ref=e27]:
+            - generic [ref=e28]:
+              - heading "What to track before your visit:" [level=3] [ref=e29]
+              - list [ref=e30]:
+                - listitem [ref=e31]:
+                  - img [ref=e32]
+                  - generic [ref=e35]: Symptoms
+                - listitem [ref=e36]:
+                  - img [ref=e37]
+                  - generic [ref=e40]: Duration
+                - listitem [ref=e41]:
+                  - img [ref=e42]
+                  - generic [ref=e45]: Patterns
+                - listitem [ref=e46]:
+                  - img [ref=e47]
+                  - generic [ref=e50]: What helps or worsens
+                - listitem [ref=e51]:
+                  - img [ref=e52]
+                  - generic [ref=e55]: Mobility changes
+            - generic [ref=e56]:
+              - heading "Questions to ask your PCP:" [level=3] [ref=e57]
+              - list [ref=e58]:
+                - listitem [ref=e59]:
+                  - img [ref=e60]
+                  - generic [ref=e63]: Causes
+                - listitem [ref=e64]:
+                  - img [ref=e65]
+                  - generic [ref=e68]: Medicare Part B coverage for imaging
+                - listitem [ref=e69]:
+                  - img [ref=e70]
+                  - generic [ref=e73]: Exercises
+                - listitem [ref=e74]:
+                  - img [ref=e75]
+                  - generic [ref=e78]: Red flag symptoms
+            - generic [ref=e79]:
+              - heading "What to expect:" [level=3] [ref=e80]
+              - list [ref=e81]:
+                - listitem [ref=e82]:
+                  - img [ref=e83]
+                  - generic [ref=e86]: Referrals
+                - listitem [ref=e87]:
+                  - img [ref=e88]
+                  - generic [ref=e91]: Coverage through Medicare Part B
+                - listitem [ref=e92]:
+                  - img [ref=e93]
+                  - generic [ref=e96]: Next steps
+            - paragraph [ref=e97]: Some next steps may depend on what’s covered with your Medicare Part B insurance.
+      - generic [ref=e98]:
+        - heading "How It Works" [level=2] [ref=e99]
+        - generic [ref=e100]:
+          - generic [ref=e101]:
+            - img [ref=e103]
+            - generic [ref=e106]:
+              - heading "Step 1" [level=3] [ref=e107]
+              - paragraph [ref=e108]: Upload your Medicare plan or start with a question
+          - generic [ref=e109]:
+            - img [ref=e111]
+            - generic [ref=e113]:
+              - heading "Step 2" [level=3] [ref=e114]
+              - paragraph [ref=e115]: Chat securely with our Medicare Navigator
+          - generic [ref=e116]:
+            - img [ref=e118]
+            - generic [ref=e121]:
+              - heading "Step 3" [level=3] [ref=e122]
+              - paragraph [ref=e123]: Keep track of insights anytime
+        - generic [ref=e124]:
+          - generic:
+            - paragraph [ref=e127]: Demo Video
+            - paragraph [ref=e128]: Coming Soon
+        - paragraph [ref=e129]: See how Medicare Navigator helps you stay one step ahead.
+    - generic [ref=e130]:
+      - heading "What’s Coming" [level=2] [ref=e131]
+      - paragraph [ref=e132]: More tools coming soon to help you plan, prepare, and follow up on care.
+      - generic [ref=e133]:
+        - generic [ref=e134]:
+          - img [ref=e136]
+          - heading "Doctor’s Office Scheduling" [level=3] [ref=e138]
+          - paragraph [ref=e139]: Easily request appointments through Medicare Navigator, with scheduling and doctor research handled automatically through the chat.
+        - generic [ref=e140]:
+          - img [ref=e142]
+          - heading "Claim Evaluation and Filing" [level=3] [ref=e144]
+          - paragraph [ref=e145]: Optimize your healthcare benefits with our compliant assessment tools that help determine claim eligibility and streamline the filing process.
+        - generic [ref=e146]:
+          - img [ref=e148]
+          - heading "Symptom Tracking" [level=3] [ref=e150]
+          - paragraph [ref=e151]: Easily log and organize your symptoms through simple conversations, creating a clear record your doctor can review during visits.
+    - contentinfo [ref=e152]:
+      - generic [ref=e153]:
+        - generic [ref=e154]:
+          - generic [ref=e156]: Accessa
+          - generic [ref=e157]:
+            - link "Terms" [ref=e158] [cursor=pointer]:
+              - /url: /terms
+            - link "Privacy" [ref=e159] [cursor=pointer]:
+              - /url: /privacy
+        - generic [ref=e160]: Medicare Navigator is a platform built by Accessa to support better healthcare navigation.
+  - alert [ref=e161]
+```
