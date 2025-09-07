@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import DocumentUploadServerless from './DocumentUploadServerless'
+import DocumentUpload from './DocumentUpload'
 
 interface UploadResponse {
   success: boolean
@@ -49,7 +49,7 @@ export default function DocumentUploadModal({
           </DialogTitle>
         </DialogHeader>
         
-        <DocumentUploadServerless
+        <DocumentUpload
           onUploadSuccess={handleUploadSuccess}
           onUploadError={handleUploadError}
           className="border-0 shadow-none"
