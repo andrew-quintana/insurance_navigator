@@ -47,12 +47,14 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Set working directory
 WORKDIR /app
 
-# Copy only necessary application files (more efficient than copying everything)
+# Copy all necessary application files
 COPY main.py .
 COPY config/ ./config/
 COPY db/ ./db/
 COPY backend/ ./backend/
 COPY shared/ ./shared/
+COPY utils/ ./utils/
+COPY agents/ ./agents/
 
 # Create non-root user for security
 RUN useradd --create-home --shell /bin/bash app && \
