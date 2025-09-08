@@ -267,26 +267,27 @@ class PatientNavigatorChatInterface:
             result = await self.supervisor_workflow.execute(workflow_input)
             
             # Extract routing decision from result
-            if hasattr(result, 'routing_decision'):
+            if hasattr(result, 'prescribed_workflows') and result.prescribed_workflows:
+                # Use the first prescribed workflow as the recommended workflow
+                recommended_workflow = result.prescribed_workflows[0].value
                 return {
-                    "recommended_workflow": result.routing_decision.workflow_type,
-                    "confidence": result.routing_decision.confidence,
-                    "reasoning": result.routing_decision.reasoning
+                    "recommended_workflow": recommended_workflow,
+                    "confidence": getattr(result, 'confidence_score', 0.8),
+                    "reasoning": f"Supervisor workflow prescribed: {recommended_workflow}"
                 }
-            elif hasattr(result, 'final_state') and hasattr(result.final_state, 'routing_decision'):
-                # Handle case where result is wrapped in final_state
-                routing = result.final_state.routing_decision
+            elif hasattr(result, 'routing_decision'):
+                # Fallback to routing decision (which is just a string)
                 return {
-                    "recommended_workflow": routing.workflow_type,
-                    "confidence": getattr(routing, 'confidence', 0.8),
-                    "reasoning": getattr(routing, 'reasoning', 'Supervisor workflow routing decision')
+                    "recommended_workflow": "information_retrieval",  # Default workflow
+                    "confidence": 0.8,
+                    "reasoning": f"Supervisor workflow routing decision: {result.routing_decision}"
                 }
             else:
-                # Fallback if routing decision not available
+                # Fallback if no workflow information available
                 return {
                     "recommended_workflow": "information_retrieval",
                     "confidence": 0.8,
-                    "reasoning": "Supervisor workflow completed but no routing decision available"
+                    "reasoning": "Supervisor workflow completed but no workflow information available"
                 }
                 
         except Exception as e:
