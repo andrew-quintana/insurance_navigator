@@ -1,4 +1,4 @@
-# Simple Dockerfile for Render - uses simplified requirements
+# Render-Fixed Dockerfile - Simple and reliable
 FROM python:3.11-slim
 
 # Install system dependencies
@@ -13,21 +13,14 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-# Copy simplified requirements
-COPY config/python/requirements-render.txt /tmp/requirements.txt
+# Copy requirements
+COPY config/python/requirements-prod.txt /tmp/requirements.txt
 
-# Configure pip for better network handling
-RUN pip config set global.timeout 600 && \
-    pip config set global.retries 10
-
-# Upgrade pip
+# Upgrade pip first
 RUN pip install --upgrade pip
 
-# Install requirements with maximum retry and timeout
-RUN pip install --no-cache-dir \
-    --timeout=600 \
-    --retries=10 \
-    -r /tmp/requirements.txt
+# Install requirements with basic retry
+RUN pip install --no-cache-dir --timeout=300 --retries=3 -r /tmp/requirements.txt
 
 # Copy application code
 COPY main.py .
