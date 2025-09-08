@@ -200,13 +200,13 @@ Expert Query Reframe:
             # Retrieve chunks using RAG system
             chunks = await self.rag_tool.retrieve_chunks(query_embedding)
             
-            # Filter chunks by similarity threshold
+            # Filter chunks by similarity threshold (adjusted for real OpenAI embeddings)
             filtered_chunks = [
                 chunk for chunk in chunks 
-                if chunk.similarity and chunk.similarity >= 0.7
+                if chunk.similarity and chunk.similarity >= 0.4
             ]
             
-            self.logger.info(f"Retrieved {len(chunks)} chunks, filtered to {len(filtered_chunks)} with similarity >= 0.7")
+            self.logger.info(f"Retrieved {len(chunks)} chunks, filtered to {len(filtered_chunks)} with similarity >= 0.4")
             
             return filtered_chunks
             
@@ -216,7 +216,7 @@ Expert Query Reframe:
     
     async def _generate_embedding(self, text: str) -> List[float]:
         """
-        Generate embedding for text using embedding service.
+        Generate embedding for text using OpenAI text-embedding-3-small.
         
         Args:
             text: Text to embed
@@ -224,13 +224,43 @@ Expert Query Reframe:
         Returns:
             List of floats representing the embedding
         """
-        # TODO: Implement actual embedding generation
-        # For MVP, return a placeholder embedding
-        # In production, this would call an embedding service
+        try:
+            import openai
+            import os
+            
+            # Set OpenAI API key if not already set
+            if not openai.api_key:
+                openai.api_key = os.getenv('OPENAI_API_KEY')
+            
+            if not openai.api_key:
+                self.logger.warning("OPENAI_API_KEY not found, falling back to mock embedding")
+                return self._generate_mock_embedding(text)
+            
+            # Generate real OpenAI embedding
+            response = openai.embeddings.create(
+                model="text-embedding-3-small",
+                input=text
+            )
+            return response.data[0].embedding
+            
+        except Exception as e:
+            self.logger.warning(f"OpenAI embedding failed ({e}), falling back to mock embedding")
+            return self._generate_mock_embedding(text)
+    
+    def _generate_mock_embedding(self, text: str) -> List[float]:
+        """
+        Generate mock embedding for fallback when OpenAI is unavailable.
+        
+        Args:
+            text: Text to embed
+            
+        Returns:
+            List of floats representing the embedding
+        """
         import hashlib
         import struct
         
-        # Simple hash-based embedding for MVP
+        # Simple hash-based embedding for fallback
         hash_obj = hashlib.md5(text.encode())
         hash_bytes = hash_obj.digest()
         
