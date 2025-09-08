@@ -1,0 +1,278 @@
+{
+  "test_name": "Phase 2 Direct RAG Integration",
+  "timestamp": 1757343773.090434,
+  "test_user_id": "phase2_test_user_001",
+  "tests": {
+    "chat_interface_initialization": {
+      "status": "PASS",
+      "message": "Chat interface initialized successfully",
+      "interface_type": "PatientNavigatorChatInterface"
+    },
+    "rag_query_processing": {
+      "status": "PASS",
+      "message": "RAG query processing completed with 100.0% success rate",
+      "success_rate": 1.0,
+      "average_processing_time": 8.593800401687622,
+      "total_queries": 5,
+      "successful_queries": 5,
+      "query_results": [
+        {
+          "query": "What is my deductible?",
+          "status": "PASS",
+          "processing_time": 13.513314962387085,
+          "response_length": 631,
+          "analysis": {
+            "insurance_content_count": 3,
+            "relevance_score": 0.25,
+            "completeness_score": 1.0,
+            "response_length": 631
+          },
+          "response": "I apologize, but I wasn't able to find the information about your annual deductible in our available documents. The deductible is an important part of your insurance coverage, as it's the amount you h..."
+        },
+        {
+          "query": "What are my copays for doctor visits?",
+          "status": "PASS",
+          "processing_time": 4.165132999420166,
+          "response_length": 981,
+          "analysis": {
+            "insurance_content_count": 7,
+            "relevance_score": 0.2857142857142857,
+            "completeness_score": 1.0,
+            "response_length": 981
+          },
+          "response": "I apologize, but I wasn't able to find the information about your cost-sharing for physician visits in our available documents. Understanding your insurance coverage can be confusing, and I want to ma..."
+        },
+        {
+          "query": "What services are covered under my plan?",
+          "status": "PASS",
+          "processing_time": 3.9127800464630127,
+          "response_length": 937,
+          "analysis": {
+            "insurance_content_count": 3,
+            "relevance_score": 0.5714285714285714,
+            "completeness_score": 1.0,
+            "response_length": 937
+          },
+          "response": "I'm sorry, but I wasn't able to find the details about which services are covered under your insurance plan in our available information. Navigating insurance coverage can be really confusing, and I w..."
+        },
+        {
+          "query": "How do I find a doctor in my network?",
+          "status": "PASS",
+          "processing_time": 3.5797550678253174,
+          "response_length": 967,
+          "analysis": {
+            "insurance_content_count": 4,
+            "relevance_score": 0.5555555555555556,
+            "completeness_score": 1.0,
+            "response_length": 967
+          },
+          "response": "I'm sorry, but I wasn't able to find the information you're looking for about finding a doctor in your insurance network. Navigating insurance coverage can be really confusing, and I want to make sure..."
+        },
+        {
+          "query": "What are my prescription drug benefits?",
+          "status": "PASS",
+          "processing_time": 17.79801893234253,
+          "response_length": 946,
+          "analysis": {
+            "insurance_content_count": 5,
+            "relevance_score": 0.3333333333333333,
+            "completeness_score": 1.0,
+            "response_length": 946
+          },
+          "response": "I apologize, but I wasn't able to find the details about your prescription drug benefits in the information available to me. Navigating insurance coverage can be really confusing, and I want to make s..."
+        }
+      ]
+    },
+    "insurance_content_retrieval": {
+      "status": "FAIL",
+      "message": "Insurance content retrieval completed with 50.0% success rate",
+      "content_success_rate": 0.5,
+      "average_content_score": 0.55625,
+      "total_tests": 4,
+      "successful_tests": 2,
+      "content_results": [
+        {
+          "query": "What is my deductible amount?",
+          "content_type": "specific_value",
+          "status": "FAIL",
+          "content_score": 0.47,
+          "keyword_matches": 2,
+          "response_length": 629,
+          "response": "I'm sorry, but I wasn't able to find the information about your annual deductible in our available documents. The deductible is an important part of your insurance coverage, as it's the amount you hav..."
+        },
+        {
+          "query": "What are my copays for different types of visits?",
+          "content_type": "comparative",
+          "status": "PASS",
+          "content_score": 0.585,
+          "keyword_matches": 3,
+          "response_length": 1095,
+          "response": "I'm sorry, but I wasn't able to find the details about your cost-sharing for different types of medical visits in the information available to me. I know navigating insurance coverage can be really co..."
+        },
+        {
+          "query": "What services are covered under my plan?",
+          "content_type": "comprehensive",
+          "status": "PASS",
+          "content_score": 0.76,
+          "keyword_matches": 4,
+          "response_length": 967,
+          "response": "I'm sorry, but I wasn't able to find the details about your specific insurance coverage in the information available to me. Navigating health insurance can be really confusing and frustrating, and I w..."
+        },
+        {
+          "query": "How do I find a doctor in my network?",
+          "content_type": "procedural",
+          "status": "FAIL",
+          "content_score": 0.41,
+          "keyword_matches": 2,
+          "response_length": 944,
+          "response": "I'm sorry, but I wasn't able to find the specific details about your insurance coverage that you're looking for. Navigating health insurance can be really confusing and frustrating, and I want to make..."
+        }
+      ]
+    },
+    "response_quality_assessment": {
+      "status": "PASS",
+      "message": "Response quality assessment completed with 0.71 average quality score",
+      "average_quality_score": 0.7128472222222222,
+      "average_clarity": 0.8791666666666667,
+      "average_completeness": 1.0,
+      "average_relevance": 0.34722222222222215,
+      "average_empathy": 0.625,
+      "total_tests": 4,
+      "quality_results": [
+        {
+          "query": "Can you explain my insurance benefits in simple terms?",
+          "quality_score": 0.7090277777777778,
+          "clarity": 0.8777777777777779,
+          "completeness": 1.0,
+          "relevance": 0.3333333333333333,
+          "empathy": 0.625,
+          "response_length": 944,
+          "response": "I'm sorry, but I wasn't able to find the specific details about your insurance coverage that you're looking for. Navigating health insurance can be really confusing and frustrating, and I want to make sure I provide you with the most accurate and helpful guidance possible.\n\nTo get a clear understand..."
+        },
+        {
+          "query": "What should I do if I need to see a specialist?",
+          "quality_score": 0.75625,
+          "clarity": 0.9,
+          "completeness": 1.0,
+          "relevance": 0.5,
+          "empathy": 0.625,
+          "response_length": 918,
+          "response": "I'm sorry, but I don't have all the details about your specific insurance coverage and benefits. Navigating health insurance can be really confusing and frustrating, and I want to make sure I provide you with the most accurate and helpful information possible.\n\nTo get a clear understanding of your p..."
+        },
+        {
+          "query": "How much will I pay for a routine checkup?",
+          "quality_score": 0.6756944444444445,
+          "clarity": 0.8555555555555555,
+          "completeness": 1.0,
+          "relevance": 0.2222222222222222,
+          "empathy": 0.625,
+          "response_length": 983,
+          "response": "I understand you have some questions about your insurance coverage, and I want to make sure I provide you with the most accurate and helpful information possible. Unfortunately, I don't have all the details about your specific plan benefits in our available documents. Navigating health insurance can..."
+        },
+        {
+          "query": "What happens if I go to an out-of-network doctor?",
+          "quality_score": 0.7104166666666667,
+          "clarity": 0.8833333333333334,
+          "completeness": 1.0,
+          "relevance": 0.3333333333333333,
+          "empathy": 0.625,
+          "response_length": 939,
+          "response": "I'm sorry, but I don't have all the details about your specific insurance plan and coverage. Navigating health insurance can be really confusing and frustrating, and I want to make sure I provide you with the most accurate and helpful information possible.\n\nTo get a clear understanding of your plan ..."
+        }
+      ]
+    },
+    "multilingual_rag_support": {
+      "status": "PASS",
+      "message": "Multilingual RAG support completed with 66.7% success rate",
+      "translation_success_rate": 0.6666666666666666,
+      "total_tests": 3,
+      "successful_translations": 2,
+      "multilingual_results": [
+        {
+          "query": "\u00bfCu\u00e1les son mis beneficios de seguro?",
+          "language": "es",
+          "status": "PASS",
+          "translation_success": true,
+          "english_content_found": 0,
+          "response_length": 871,
+          "response": "Entiendo que puede ser frustrante no tener toda la informaci\u00f3n sobre sus beneficios de seguro a la mano. Navegar por la cobertura de seguro de salud puede ser realmente confuso y abrumador.\n\nPara obte..."
+        },
+        {
+          "query": "Quel est mon montant de franchise?",
+          "language": "fr",
+          "status": "FAIL",
+          "translation_success": false,
+          "english_content_found": 0,
+          "response_length": 1033,
+          "response": "Je comprends que vous ayez des questions sur vos avantages d'assurance et que cela puisse \u00eatre frustrant de ne pas avoir toutes les informations \u00e0 port\u00e9e de main. La navigation dans la couverture d'as..."
+        },
+        {
+          "query": "Was sind meine Zuzahlungen?",
+          "language": "de",
+          "status": "PASS",
+          "translation_success": true,
+          "english_content_found": 1,
+          "response_length": 775,
+          "response": "I'm sorry, but I don't have all the details about your specific insurance plan and coverage. Navigating health insurance can be really confusing and frustrating, and I want to make sure I provide you ..."
+        }
+      ]
+    },
+    "rag_performance": {
+      "status": "PASS",
+      "message": "RAG performance test completed with 5/5 successful queries",
+      "total_time": 15.786675930023193,
+      "concurrent_queries": 5,
+      "successful_queries": 5,
+      "failed_queries": 0,
+      "exceptions": 0,
+      "average_query_time": 12.171793222427368,
+      "max_query_time": 15.785263061523438,
+      "min_query_time": 8.62531304359436,
+      "throughput": 0.3167227871252472,
+      "query_results": [
+        {
+          "query_index": 0,
+          "query": "What is my deductible?",
+          "status": "PASS",
+          "processing_time": 12.055377960205078,
+          "response_length": 503,
+          "response": "expert_reframe='the user is requesting assistance with: what is my annual deductible?' direct_answer..."
+        },
+        {
+          "query_index": 1,
+          "query": "What are my copays?",
+          "status": "PASS",
+          "processing_time": 8.62531304359436,
+          "response_length": 989,
+          "response": "I understand you have some important questions about your insurance coverage, and I want to make sur..."
+        },
+        {
+          "query_index": 2,
+          "query": "What services are covered?",
+          "status": "PASS",
+          "processing_time": 10.308315992355347,
+          "response_length": 500,
+          "response": "expert_reframe='the user is requesting assistance with: what services are covered?' direct_answer='N..."
+        },
+        {
+          "query_index": 3,
+          "query": "How do I find a doctor?",
+          "status": "PASS",
+          "processing_time": 14.084696054458618,
+          "response_length": 500,
+          "response": "expert_reframe='the user is requesting assistance with: how do i find a physician?' direct_answer='N..."
+        },
+        {
+          "query_index": 4,
+          "query": "What are my prescription benefits?",
+          "status": "PASS",
+          "processing_time": 15.785263061523438,
+          "response_length": 522,
+          "response": "expert_reframe='the user is requesting assistance with: what are my prescription drug benefits benef..."
+        }
+      ]
+    }
+  },
+  "overall_status": "FAIL",
+  "total_time": 105.66660189628601
+}

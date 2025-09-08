@@ -1,0 +1,37 @@
+{
+  "summary": {
+    "total_tests": 5,
+    "passed": 0,
+    "failed": 0,
+    "errors": 5,
+    "success_rate": 0.0
+  },
+  "test_results": [
+    {
+      "test": "import_and_init",
+      "status": "ERROR",
+      "error": "No module named 'agents'"
+    },
+    {
+      "test": "basic_message_processing",
+      "status": "ERROR",
+      "error": "No module named 'agents'"
+    },
+    {
+      "test": "multilingual_support",
+      "status": "ERROR",
+      "error": "No module named 'agents'"
+    },
+    {
+      "test": "response_quality",
+      "status": "ERROR",
+      "error": "No module named 'agents'"
+    },
+    {
+      "test": "full_workflow",
+      "status": "ERROR",
+      "error": "No module named 'agents'"
+    }
+  ],
+  "phase1_direct_status": "FAILED"
+}

@@ -1,0 +1,186 @@
+{
+  "phase1_integration_test_summary": {
+    "timestamp": "2025-09-07T10:45:00Z",
+    "overall_status": "PARTIALLY_SUCCESSFUL",
+    "test_duration_minutes": 45,
+    "test_environment": "local_development",
+    "test_document": "examples/test_insurance_document.pdf",
+    "real_services_used": true,
+    "mock_services_used": false,
+    
+    "performance_metrics": {
+      "average_response_time_seconds": 7.64,
+      "minimum_response_time_seconds": 4.06,
+      "maximum_response_time_seconds": 13.33,
+      "phase1_requirement_seconds": 5.0,
+      "performance_status": "FAILED",
+      "meets_5s_requirement": false,
+      "meets_10s_max": false
+    },
+    
+    "quality_metrics": {
+      "average_confidence": 0.90,
+      "minimum_response_length_chars": 777,
+      "maximum_response_length_chars": 1044,
+      "quality_status": "PASSED",
+      "meets_length_requirement": true,
+      "meets_confidence_requirement": true
+    },
+    
+    "test_results": {
+      "total_tests": 5,
+      "passed_tests": 5,
+      "failed_tests": 0,
+      "success_rate": 1.0,
+      "error_rate": 0.0
+    },
+    
+    "phase1_success_criteria": {
+      "chat_endpoint_functional": true,
+      "agent_communication": true,
+      "local_backend_connection": true,
+      "local_database_rag": false,
+      "end_to_end_flow": true,
+      "response_time_under_5s": false,
+      "rag_retrieval_under_2s": false,
+      "error_rate_under_5pct": true,
+      "throughput_acceptable": true,
+      "response_relevance": true,
+      "rag_integration_working": false,
+      "context_preservation": true,
+      "error_handling": true
+    },
+    
+    "criteria_summary": {
+      "total_criteria": 14,
+      "passed_criteria": 8,
+      "failed_criteria": 6,
+      "success_rate": 0.57
+    },
+    
+    "key_findings": {
+      "strengths": [
+        "Complete agentic workflow integration",
+        "Real LLM and embedding services used",
+        "Full response generation without truncation",
+        "Multilingual support working",
+        "High-quality empathetic responses",
+        "Graceful error handling",
+        "Zero error rate"
+      ],
+      "issues": [
+        "Performance exceeds requirements (7.64s vs 5s target)",
+        "RAG integration not functional (0 chunks retrieved)",
+        "Document processing pipeline not integrated",
+        "Maximum response time too high (13.33s)"
+      ]
+    },
+    
+    "technical_verification": {
+      "real_llm_services": true,
+      "real_embedding_services": true,
+      "claude_haiku_api_calls": true,
+      "openai_embeddings_api_calls": true,
+      "multilingual_processing": true,
+      "complex_reasoning": true,
+      "full_response_generation": true,
+      "no_response_truncation": true
+    },
+    
+    "rag_analysis": {
+      "chunks_retrieved": 0,
+      "similarity_threshold": 0.4,
+      "document_processing_status": "not_integrated",
+      "test_document_accessible": false,
+      "database_connectivity": "unknown",
+      "recommendations": [
+        "Lower similarity threshold to 0.2-0.3",
+        "Integrate document upload pipeline",
+        "Process test insurance document",
+        "Verify database connectivity"
+      ]
+    },
+    
+    "performance_analysis": {
+      "bottlenecks_identified": [
+        "LLM API call latency",
+        "Workflow prescription processing",
+        "Output processing enhancement"
+      ],
+      "optimization_opportunities": [
+        "Implement response caching",
+        "Optimize prompt length",
+        "Async processing for non-critical components",
+        "Reduce API call overhead"
+      ]
+    },
+    
+    "recommendations": {
+      "immediate_actions": [
+        "Fix RAG integration and document processing",
+        "Optimize performance to meet <5s requirement",
+        "Integrate document upload pipeline",
+        "Lower similarity threshold for better retrieval"
+      ],
+      "phase1_completion_requirements": [
+        "Average response time <5s",
+        "Document chunks retrievable",
+        "Test document accessible to RAG system"
+      ],
+      "next_phase_preparation": [
+        "Complete Phase 1 fixes",
+        "Proceed to Phase 2 testing",
+        "Test with production database",
+        "Validate enhanced performance"
+      ]
+    },
+    
+    "test_queries": [
+      {
+        "query": "What does my insurance cover for doctor visits?",
+        "response_time": 8.66,
+        "response_length": 784,
+        "confidence": 0.90,
+        "status": "passed"
+      },
+      {
+        "query": "What is my coverage for emergency room visits?",
+        "response_time": 13.33,
+        "response_length": 777,
+        "confidence": 0.90,
+        "status": "passed"
+      },
+      {
+        "query": "What are my prescription drug benefits and copays?",
+        "response_time": 7.41,
+        "response_length": 890,
+        "confidence": 0.90,
+        "status": "passed"
+      },
+      {
+        "query": "¿Cuáles son mis beneficios de seguro médico?",
+        "response_time": 4.74,
+        "response_length": 877,
+        "confidence": 0.90,
+        "status": "passed"
+      },
+      {
+        "query": "I need help understanding my insurance benefits for both primary care and specialist visits, including copays and deductibles. Can you also help me optimize my healthcare costs?",
+        "response_time": 4.06,
+        "response_length": 1044,
+        "confidence": 0.90,
+        "status": "passed"
+      }
+    ],
+    
+    "conclusion": {
+      "status": "PARTIALLY_SUCCESSFUL",
+      "core_functionality": "working",
+      "performance_issues": "critical",
+      "rag_integration": "not_functional",
+      "production_readiness": "not_ready",
+      "phase1_completion": "requires_fixes",
+      "recommendation": "Address performance and RAG integration before Phase 2"
+    }
+  }
+}
