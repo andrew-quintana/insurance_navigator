@@ -1,7 +1,7 @@
 """
 Centralized CORS Configuration for FastAPI
 """
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import os
 import re
 
@@ -60,7 +60,7 @@ def get_cors_config() -> Dict[str, Any]:
         "max_age": 7200  # 2 hours
     }
 
-def get_cors_headers(origin: str | None = None) -> Dict[str, str]:
+def get_cors_headers(origin: Optional[str] = None) -> Dict[str, str]:
     """Get CORS headers for a specific origin."""
     if not origin:
         return {}
