@@ -600,14 +600,37 @@ async def chat_with_agent(
                 detail="Message is required"
             )
         
-        # For now, return a simple response
-        # TODO: Integrate with actual AI agent
-        response_text = f"I received your message: '{message}'. This is a placeholder response while we set up the AI agent."
+        # Import and initialize the Patient Navigator Chat Interface
+        from agents.patient_navigator.chat_interface import PatientNavigatorChatInterface, ChatMessage
+        
+        # Initialize chat interface (this will be cached in production)
+        chat_interface = PatientNavigatorChatInterface()
+        
+        # Create chat message
+        chat_message = ChatMessage(
+            user_id=current_user.get("id", "unknown"),
+            content=message,
+            timestamp=time.time(),
+            message_type="text",
+            language="en",
+            metadata={
+                "conversation_id": conversation_id,
+                "user_email": current_user.get("email", ""),
+                "user_name": current_user.get("name", "")
+            }
+        )
+        
+        # Process message through agent workflows
+        response = await chat_interface.process_message(chat_message)
         
         return {
-            "text": response_text,
+            "text": response.content,
             "conversation_id": conversation_id or f"conv_{int(time.time())}",
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
+            "sources": response.agent_sources,
+            "confidence": response.confidence,
+            "processing_time": response.processing_time,
+            "metadata": response.metadata
         }
         
     except HTTPException:
