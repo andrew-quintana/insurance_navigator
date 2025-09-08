@@ -22,15 +22,12 @@ RUN pip install --upgrade pip --timeout=300 --retries=5
 RUN pip install --no-cache-dir \
     --timeout=300 \
     --retries=5 \
-    --retry-delay=2 \
-    --retry-backoff-multiplier=2 \
     -r /tmp/requirements.txt || \
     (echo "First attempt failed, retrying with different strategy..." && \
+     sleep 5 && \
      pip install --no-cache-dir \
      --timeout=600 \
      --retries=3 \
-     --retry-delay=5 \
-     --retry-backoff-multiplier=3 \
      -r /tmp/requirements.txt)
 
 # Final stage - smaller image
