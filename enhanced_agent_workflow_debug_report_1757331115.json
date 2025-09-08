@@ -1,0 +1,72 @@
+{
+  "timestamp": "2025-09-08T04:31:55.516604",
+  "test_message": "What is the deductible for my insurance policy?",
+  "user_id": "debug_user_1757331111",
+  "workflow_steps": [
+    {
+      "step": "input_processing",
+      "success": true,
+      "output_type": "<class 'agents.patient_navigator.input_processing.types.AgentPrompt'>",
+      "timestamp": 1757331112.944649
+    },
+    {
+      "step": "workflow_routing",
+      "success": true,
+      "output_type": "<class 'list'>",
+      "timestamp": 1757331114.162729
+    },
+    {
+      "step": "output_processing",
+      "success": true,
+      "output_type": "<class 'agents.patient_navigator.chat_interface.ChatResponse'>",
+      "timestamp": 1757331115.515288
+    }
+  ],
+  "response_analysis": {
+    "content": "I'm sorry, it looks like there was an issue processing your request. Please try again and I'll do my best to assist you. If the problem persists, don't hesitate to reach out for further help.",
+    "content_length": 191,
+    "agent_sources": [
+      "information_retrieval"
+    ],
+    "confidence": 0.9,
+    "processing_time": 2.67319917678833,
+    "metadata": {
+      "config_used": {
+        "llm_model": "claude-3-haiku",
+        "request_timeout": 30.0,
+        "max_input_length": 10000,
+        "max_concurrent_requests": 10,
+        "default_tone": "warm_empathetic",
+        "enable_tone_adaptation": true,
+        "min_empathy_score": 0.7,
+        "max_agent_outputs": 10,
+        "enable_content_consolidation": true,
+        "enable_plain_language": true,
+        "min_response_quality": 0.8,
+        "max_processing_time": 5.0,
+        "enable_fallback": true,
+        "fallback_to_original": true,
+        "max_retry_attempts": 2
+      },
+      "input_agent_count": 1,
+      "user_context_provided": true,
+      "llm_used": true,
+      "model_used": "claude-3-haiku-20240307"
+    }
+  },
+  "quality_indicators": {
+    "is_generic_error": false,
+    "is_short_response": false,
+    "has_agent_sources": true,
+    "has_metadata": true,
+    "confidence_threshold_met": true,
+    "processing_time_acceptable": true
+  },
+  "workflow_analysis": {
+    "input_processing_success": true,
+    "workflow_routing_success": true,
+    "output_processing_success": true,
+    "total_steps": 3,
+    "successful_steps": 3
+  }
+}

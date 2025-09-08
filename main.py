@@ -588,11 +588,13 @@ async def chat_with_agent(
     request: Request,
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    """Chat endpoint for AI agent interaction."""
+    """Chat endpoint for AI agent interaction with full agentic workflow integration."""
     try:
         data = await request.json()
         message = data.get("message", "")
         conversation_id = data.get("conversation_id", "")
+        user_language = data.get("user_language", "auto")
+        context = data.get("context", {})
         
         if not message:
             raise HTTPException(
@@ -600,24 +602,80 @@ async def chat_with_agent(
                 detail="Message is required"
             )
         
-        # For now, return a simple response
-        # TODO: Integrate with actual AI agent
-        response_text = f"I received your message: '{message}'. This is a placeholder response while we set up the AI agent."
+        # Import the chat interface
+        from agents.patient_navigator.chat_interface import PatientNavigatorChatInterface, ChatMessage
         
+        # Initialize chat interface (singleton pattern for efficiency)
+        if not hasattr(chat_with_agent, '_chat_interface'):
+            chat_with_agent._chat_interface = PatientNavigatorChatInterface()
+        
+        chat_interface = chat_with_agent._chat_interface
+        
+        # Create ChatMessage object
+        chat_message = ChatMessage(
+            user_id=current_user.get("user_id", "anonymous"),
+            content=message,
+            timestamp=time.time(),
+            message_type="text",
+            language=user_language if user_language != "auto" else "en",
+            metadata={
+                "conversation_id": conversation_id,
+                "context": context,
+                "api_request": True
+            }
+        )
+        
+        # Process message through the complete agentic workflow
+        response = await chat_interface.process_message(chat_message)
+        
+        # Return enhanced response with metadata
         return {
-            "text": response_text,
+            "text": response.content,
+            "response": response.content,  # For backward compatibility
             "conversation_id": conversation_id or f"conv_{int(time.time())}",
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
+            "metadata": {
+                "processing_time": response.processing_time,
+                "confidence": response.confidence,
+                "agent_sources": response.agent_sources,
+                "input_processing": {
+                    "original_language": user_language,
+                    "translation_applied": user_language != "en" and user_language != "auto"
+                },
+                "agent_processing": {
+                    "agents_used": response.agent_sources,
+                    "processing_time_ms": int(response.processing_time * 1000)
+                },
+                "output_formatting": {
+                    "tone_applied": "empathetic",
+                    "readability_level": "8th_grade",
+                    "next_steps_included": "next_steps" in response.metadata
+                }
+            },
+            "next_steps": response.metadata.get("next_steps", []),
+            "sources": response.agent_sources
         }
         
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Chat error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred"
-        )
+        # Return graceful error response
+        return {
+            "text": "I apologize, but I encountered an error processing your request. Please try again in a moment.",
+            "response": "I apologize, but I encountered an error processing your request. Please try again in a moment.",
+            "conversation_id": conversation_id or f"conv_{int(time.time())}",
+            "timestamp": datetime.now().isoformat(),
+            "metadata": {
+                "processing_time": 0.0,
+                "confidence": 0.0,
+                "agent_sources": ["system"],
+                "error": str(e),
+                "error_type": "processing_error"
+            },
+            "next_steps": ["Please try rephrasing your question", "Contact support if the issue persists"],
+            "sources": ["system"]
+        }
 
 @app.get("/me")
 async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_current_user)):
