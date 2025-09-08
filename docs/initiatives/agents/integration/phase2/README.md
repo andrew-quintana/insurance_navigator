@@ -1,9 +1,10 @@
 # Phase 2 - Local Backend with Production Database RAG Integration
-## Agents Integration Testing via /chat Endpoint
+## Agents Integration Verification via /chat Endpoint
 
-**Status**: 📋 **READY FOR TESTING**  
+**Status**: 📋 **READY FOR VERIFICATION**  
 **Date**: September 7, 2025  
-**Objective**: Run local backend services against production database for RAG functionality to validate schema/configuration parity via /chat endpoint
+**Objective**: Verify integrated agentic system with production database for RAG functionality to validate schema/configuration parity via /chat endpoint
+**Dependencies**: ✅ **Phase 0 & 1 must be 100% complete** - Integration implemented and locally verified
 
 ---
 
@@ -221,6 +222,63 @@ TEST_DATA_PREFIX=${RUN_ID}
 - **Test Data Isolation**: Clear separation of test and production data
 - **Backup Verification**: Ensure backup systems are functional
 - **Rollback Procedures**: Document rollback procedures
+
+---
+
+## Implementation References
+
+### **Required Reading for Phase 2 Production Database Integration**
+
+Phase 2 focuses on verifying the integrated system works with production database while maintaining local services for debugging:
+
+#### **Input Workflow Production Database Integration**
+- **`@docs/initiatives/agents/patient_navigator/input_workflow/TODO001_phase2_notes.md`** - Production database integration approach
+- **`@docs/initiatives/agents/patient_navigator/input_workflow/TODO001_phase2_decisions.md`** - Schema compatibility decisions
+- **`@docs/initiatives/agents/patient_navigator/input_workflow/TODO001_phase2_handoff.md`** - Phase 2 production readiness
+- **`@docs/initiatives/agents/patient_navigator/input_workflow/TODO001_phase2_test_update.md`** - Production testing approach
+
+#### **Output Workflow Production Enhancements**
+- **`@docs/initiatives/agents/patient_navigator/output_workflow/PHASE2_FINAL_COMPLETION.md`** - Production deployment readiness
+- **`@docs/initiatives/agents/patient_navigator/output_workflow/PHASE2_COMPLETION_SUMMARY.md`** - Phase 2 achievements and production features
+- **`@docs/initiatives/agents/patient_navigator/output_workflow/PHASE2_IMPLEMENTATION_PROMPT.md`** - Production integration patterns
+
+#### **Hybrid Architecture References**
+- **`@docs/initiatives/agents/patient_navigator/input_workflow/CONTEXT.md`** - Hybrid local/production architecture considerations
+- **`@docs/initiatives/agents/patient_navigator/input_workflow/PRD001.md`** - Production database requirements and validation
+- **`@docs/initiatives/agents/patient_navigator/output_workflow/CONTEXT.md`** - Production data integration principles
+
+#### **Schema Compatibility and Migration**
+- **`@docs/initiatives/agents/patient_navigator/input_workflow/TODO001_phase3_decisions.md`** - Production schema decisions
+- **`@docs/initiatives/agents/patient_navigator/input_workflow/SECURITY_REVIEW.md`** - Security considerations for production database access
+
+#### **Performance Comparison References**
+- **`@docs/initiatives/agents/patient_navigator/input_workflow/PHASE3_STATUS.md`** - Baseline performance metrics for comparison
+- **`@docs/initiatives/agents/patient_navigator/output_workflow/DEPLOYMENT_GUIDE.md`** - Production performance monitoring
+
+### **Production Database Integration Patterns**
+
+#### **Connection and Configuration**
+- **`@docs/initiatives/agents/patient_navigator/input_workflow/TODO001_phase3_handoff.md`** - Production configuration requirements
+- **`@docs/initiatives/agents/patient_navigator/output_workflow/README.md`** - Environment configuration examples
+
+#### **Data Quality and Consistency**
+- **`@docs/initiatives/agents/patient_navigator/input_workflow/TODO001_phase3_testing.md`** - Data validation testing patterns
+- **`@docs/initiatives/agents/patient_navigator/output_workflow/PRD001.md`** - Response quality with production data
+
+#### **Error Handling and Fallbacks**
+- **`@docs/initiatives/agents/patient_navigator/input_workflow/TODO001_phase3_test_update.md`** - Error handling patterns
+- **`@docs/initiatives/agents/patient_navigator/output_workflow/@TODO001_phase1_decisions.md`** - Fallback mechanism decisions
+
+### **Phase 2 Specific Validation**
+
+#### **Schema Parity Validation**
+For ensuring local and production database compatibility:
+- **`@docs/initiatives/agents/patient_navigator/input_workflow/TODO001_phase2_decisions.md`** - Schema compatibility approach
+- **`@docs/initiatives/agents/patient_navigator/input_workflow/PHASE3_IMPLEMENTATION.md`** - Database interaction patterns
+
+#### **Enhanced RAG Testing**
+- **`@docs/initiatives/agents/patient_navigator/input_workflow/PRD001.md`** - RAG enhancement requirements
+- **`@docs/initiatives/agents/patient_navigator/output_workflow/RFC001.md`** - Knowledge integration technical design
 
 ---
 
