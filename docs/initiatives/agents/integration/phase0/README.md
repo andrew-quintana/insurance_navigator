@@ -135,6 +135,7 @@ Agent Outputs (technical/fragmented)
 
 #### **Integration Tasks** (`implementation/`)
 - **`chat_orchestrator.py`** - Simple orchestrator to coordinate existing workflows
+  - exists at /agents/patient_navigator/chat_interface.py
 - **`workflow_connectors.py`** - Connectors to existing input/output workflows
 - **`chat_endpoint_enhancement.py`** - Minimal changes to existing chat endpoint
 - **`integration_config.py`** - Configuration for workflow connections
