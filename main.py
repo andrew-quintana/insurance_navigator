@@ -613,7 +613,7 @@ async def chat_with_agent(
         
         # Create ChatMessage object
         chat_message = ChatMessage(
-            user_id=current_user.get("user_id", "anonymous"),
+            user_id=current_user.get("id", "anonymous"),
             content=message,
             timestamp=time.time(),
             message_type="text",
