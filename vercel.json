@@ -5,14 +5,6 @@
   "installCommand": "cd ui && npm install --legacy-peer-deps",
   "framework": "nextjs",
   "regions": ["iad1"],
-  "functions": {
-    "ui/app/**/*.tsx": {
-      "maxDuration": 30
-    },
-    "ui/app/**/*.ts": {
-      "maxDuration": 30
-    }
-  },
   "rewrites": [
     {
       "source": "/api/(.*)",
