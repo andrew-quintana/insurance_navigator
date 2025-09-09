@@ -13,7 +13,7 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy requirements and install Python dependencies with robust error handling
-COPY config/python/requirements-prod.txt /tmp/requirements.txt
+COPY config/python/requirements.txt /tmp/requirements.txt
 
 # Install pip with retry and timeout configurations
 RUN pip install --upgrade pip --timeout=300 --retries=5
