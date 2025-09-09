@@ -1,0 +1,42 @@
+{
+  "test_name": "Phase 2 Real Upload Pipeline Integration",
+  "timestamp": 1757374607.342984,
+  "test_user_id": "a592d779-9728-4dd9-9766-f40c8cc3f650",
+  "tests": {
+    "upload_endpoint": {
+      "status": "FAIL",
+      "message": "Upload endpoint test failed: Cannot connect to host localhost:8000 ssl:default [Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 8000), [Errno 61] Connect call failed ('::1', 8000, 0, 0)]",
+      "error": "Cannot connect to host localhost:8000 ssl:default [Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 8000), [Errno 61] Connect call failed ('::1', 8000, 0, 0)]"
+    },
+    "user_authentication": {
+      "status": "FAIL",
+      "message": "User authentication test failed: Cannot connect to host localhost:8000 ssl:default [Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 8000), [Errno 61] Connect call failed ('::1', 8000, 0, 0)]",
+      "error": "Cannot connect to host localhost:8000 ssl:default [Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 8000), [Errno 61] Connect call failed ('::1', 8000, 0, 0)]"
+    },
+    "document_upload": {
+      "status": "FAIL",
+      "message": "Document upload test failed: Cannot connect to host localhost:8000 ssl:default [Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 8000), [Errno 61] Connect call failed ('::1', 8000, 0, 0)]",
+      "error": "Cannot connect to host localhost:8000 ssl:default [Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 8000), [Errno 61] Connect call failed ('::1', 8000, 0, 0)]"
+    },
+    "document_processing": {
+      "status": "FAIL",
+      "message": "No upload job ID available for processing test"
+    },
+    "rag_integration": {
+      "status": "FAIL",
+      "message": "RAG integration test failed: Cannot connect to host localhost:8000 ssl:default [Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 8000), [Errno 61] Connect call failed ('::1', 8000, 0, 0)]",
+      "error": "Cannot connect to host localhost:8000 ssl:default [Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 8000), [Errno 61] Connect call failed ('::1', 8000, 0, 0)]"
+    },
+    "end_to_end_workflow": {
+      "status": "FAIL",
+      "message": "End-to-end workflow failed at upload step",
+      "upload_result": {
+        "status": "FAIL",
+        "message": "Document upload test failed: Cannot connect to host localhost:8000 ssl:default [Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 8000), [Errno 61] Connect call failed ('::1', 8000, 0, 0)]",
+        "error": "Cannot connect to host localhost:8000 ssl:default [Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 8000), [Errno 61] Connect call failed ('::1', 8000, 0, 0)]"
+      }
+    }
+  },
+  "overall_status": "FAIL",
+  "total_time": 0.011228084564208984
+}

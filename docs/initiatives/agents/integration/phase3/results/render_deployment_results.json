@@ -1,0 +1,148 @@
+{
+  "test_name": "Phase 3 Render Deployment Test",
+  "timestamp": "2025-09-08T16:37:17.389663",
+  "tests": [
+    {
+      "name": "API Service Health",
+      "status": "PASSED",
+      "duration": 0.20937895774841309,
+      "details": {
+        "success": true,
+        "api_accessible": true,
+        "health_status": "healthy",
+        "response_time": 0.191599,
+        "render_deployment": true
+      }
+    },
+    {
+      "name": "Worker Service Health",
+      "status": "PASSED",
+      "duration": 0.2349839210510254,
+      "details": {
+        "success": true,
+        "worker_accessible": true,
+        "status_code": 404,
+        "note": "Worker accessible but no health endpoint"
+      }
+    },
+    {
+      "name": "User Authentication",
+      "status": "PASSED",
+      "duration": 1.465775966644287,
+      "details": {
+        "success": true,
+        "user_created": true,
+        "login_successful": true,
+        "has_access_token": true,
+        "render_authentication": true
+      }
+    },
+    {
+      "name": "Chat Endpoint Functionality",
+      "status": "PASSED",
+      "duration": 0.4455280303955078,
+      "details": {
+        "success": true,
+        "status_code": 200,
+        "response_time": 0.434187,
+        "has_response_text": true,
+        "response_length": 94,
+        "has_sources": true,
+        "has_confidence": false,
+        "conversation_id": "render_test_conv_1757374639",
+        "render_chat_functionality": true
+      }
+    },
+    {
+      "name": "RAG Integration",
+      "status": "PASSED",
+      "duration": 0.698756217956543,
+      "details": {
+        "success": true,
+        "total_queries": 5,
+        "successful_queries": 5,
+        "success_rate": 100.0,
+        "rag_results": [
+          {
+            "query": "What is health insurance?",
+            "success": true,
+            "response_time": 0.24387407302856445,
+            "response_length": 94,
+            "has_sources": true,
+            "source_count": 1,
+            "confidence": null
+          },
+          {
+            "query": "How do I file a claim?",
+            "success": true,
+            "response_time": 0.1123514175415039,
+            "response_length": 94,
+            "has_sources": true,
+            "source_count": 1,
+            "confidence": null
+          },
+          {
+            "query": "What's the difference between HMO and PPO?",
+            "success": true,
+            "response_time": 0.09565997123718262,
+            "response_length": 94,
+            "has_sources": true,
+            "source_count": 1,
+            "confidence": null
+          },
+          {
+            "query": "How do I find a doctor in my network?",
+            "success": true,
+            "response_time": 0.10105013847351074,
+            "response_length": 94,
+            "has_sources": true,
+            "source_count": 1,
+            "confidence": null
+          },
+          {
+            "query": "What is covered under my plan?",
+            "success": true,
+            "response_time": 0.13803505897521973,
+            "response_length": 94,
+            "has_sources": true,
+            "source_count": 1,
+            "confidence": null
+          }
+        ],
+        "render_rag_integration": true
+      }
+    },
+    {
+      "name": "Performance Metrics",
+      "status": "PASSED",
+      "duration": 0.6640057563781738,
+      "details": {
+        "success": true,
+        "performance_metrics": {
+          "total_queries": 5,
+          "successful_requests": 5,
+          "success_rate": 100.0,
+          "average_response_time": 0.12984771728515626,
+          "median_response_time": 0.14430785179138184,
+          "min_response_time": 0.06142687797546387,
+          "max_response_time": 0.18399477005004883,
+          "response_times": [
+            0.16116905212402344,
+            0.18399477005004883,
+            0.09834003448486328,
+            0.06142687797546387,
+            0.14430785179138184
+          ]
+        },
+        "meets_targets": true,
+        "render_performance": true
+      }
+    }
+  ],
+  "summary": {
+    "total_tests": 6,
+    "passed": 6,
+    "failed": 0,
+    "success_rate": 100.0
+  }
+}

@@ -194,11 +194,8 @@ Expert Query Reframe:
             # Initialize RAG tool with user context
             self.rag_tool = RAGTool(user_id=user_id, config=RetrievalConfig.default())
             
-            # Generate embedding for expert query
-            query_embedding = await self._generate_embedding(expert_query)
-            
-            # Retrieve chunks using RAG system
-            chunks = await self.rag_tool.retrieve_chunks(query_embedding)
+            # Use RAG tool's built-in text-to-chunks method (handles embedding generation internally)
+            chunks = await self.rag_tool.retrieve_chunks_from_text(expert_query)
             
             # Filter chunks by similarity threshold (adjusted for real OpenAI embeddings)
             filtered_chunks = [
@@ -214,68 +211,6 @@ Expert Query Reframe:
             self.logger.error(f"Error in RAG retrieval: {e}")
             return []
     
-    async def _generate_embedding(self, text: str) -> List[float]:
-        """
-        Generate embedding for text using OpenAI text-embedding-3-small.
-        
-        Args:
-            text: Text to embed
-            
-        Returns:
-            List of floats representing the embedding
-        """
-        try:
-            import openai
-            import os
-            
-            # Set OpenAI API key if not already set
-            if not openai.api_key:
-                openai.api_key = os.getenv('OPENAI_API_KEY')
-            
-            if not openai.api_key:
-                self.logger.warning("OPENAI_API_KEY not found, falling back to mock embedding")
-                return self._generate_mock_embedding(text)
-            
-            # Generate real OpenAI embedding
-            response = openai.embeddings.create(
-                model="text-embedding-3-small",
-                input=text
-            )
-            return response.data[0].embedding
-            
-        except Exception as e:
-            self.logger.warning(f"OpenAI embedding failed ({e}), falling back to mock embedding")
-            return self._generate_mock_embedding(text)
-    
-    def _generate_mock_embedding(self, text: str) -> List[float]:
-        """
-        Generate mock embedding for fallback when OpenAI is unavailable.
-        
-        Args:
-            text: Text to embed
-            
-        Returns:
-            List of floats representing the embedding
-        """
-        import hashlib
-        import struct
-        
-        # Simple hash-based embedding for fallback
-        hash_obj = hashlib.md5(text.encode())
-        hash_bytes = hash_obj.digest()
-        
-        # Convert to list of floats (simplified embedding)
-        embedding = []
-        for i in range(0, len(hash_bytes), 4):
-            if i + 4 <= len(hash_bytes):
-                float_val = struct.unpack('f', hash_bytes[i:i+4])[0]
-                embedding.append(float_val)
-        
-        # Pad to 1536 dimensions (OpenAI text-embedding-3-small)
-        while len(embedding) < 1536:
-            embedding.append(0.0)
-        
-        return embedding[:1536]
     
     async def _generate_response_variants(self, chunks: List[ChunkWithContext], user_query: str, expert_query: str) -> List[str]:
         """

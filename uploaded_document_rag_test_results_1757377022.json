@@ -1,0 +1,27 @@
+{
+  "What is my deductible?": {
+    "response": "No relevant information found in the available documents.",
+    "chunks_count": 0,
+    "chunks": []
+  },
+  "What are the coverage details?": {
+    "response": "No relevant information found in the available documents.",
+    "chunks_count": 0,
+    "chunks": []
+  },
+  "What is covered under this policy?": {
+    "response": "No relevant information found in the available documents.",
+    "chunks_count": 0,
+    "chunks": []
+  },
+  "What are the exclusions?": {
+    "response": "No relevant information found in the available documents.",
+    "chunks_count": 0,
+    "chunks": []
+  },
+  "How much will I pay out of pocket?": {
+    "response": "No relevant information found in the available documents.",
+    "chunks_count": 0,
+    "chunks": []
+  }
+}

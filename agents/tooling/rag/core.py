@@ -104,18 +104,19 @@ class RAGTool:
             # Convert Python list to PostgreSQL vector format
             vector_string = '[' + ','.join(str(x) for x in query_embedding) + ']'
             
+            # Use a different approach for asyncpg - cast the parameter directly
             sql = f"""
                 SELECT dc.chunk_id, dc.document_id, dc.chunk_ord as chunk_index, dc.text as content,
                        NULL as section_path, NULL as section_title,
                        NULL as page_start, NULL as page_end,
                        NULL as tokens,
-                       1 - (dc.embedding <=> $1::vector) as similarity
+                       1 - (dc.embedding <=> $1::vector(1536)) as similarity
                 FROM {schema}.document_chunks dc
                 JOIN {schema}.documents d ON dc.document_id = d.document_id
                 WHERE d.user_id = $2
                   AND dc.embedding IS NOT NULL
-                  AND 1 - (dc.embedding <=> $1::vector) > $3
-                ORDER BY dc.embedding <=> $1::vector
+                  AND 1 - (dc.embedding <=> $1::vector(1536)) > $3
+                ORDER BY dc.embedding <=> $1::vector(1536)
                 LIMIT $4
             """
             rows = await conn.fetch(sql, vector_string, self.user_id, self.config.similarity_threshold, self.config.max_chunks)
@@ -146,6 +147,82 @@ class RAGTool:
         finally:
             if conn:
                 await conn.close()
+
+    async def retrieve_chunks_from_text(self, query_text: str) -> List[ChunkWithContext]:
+        """
+        Retrieve document chunks most similar to the query text, generating embedding internally.
+        This is the main method that should be used by agents - it handles embedding generation internally.
+        
+        Args:
+            query_text: Natural language query text
+        Returns:
+            List of ChunkWithContext objects
+        """
+        try:
+            # Step 1: Generate embedding for the query text (MUST happen first)
+            query_embedding = await self._generate_embedding(query_text)
+            
+            # Step 2: Use the generated embedding to perform similarity search
+            return await self.retrieve_chunks(query_embedding)
+            
+        except Exception as e:
+            self.logger.error(f"RAGTool text retrieval error: {e}")
+            return []
+
+    async def _generate_embedding(self, text: str) -> List[float]:
+        """
+        Generate embedding for text using OpenAI text-embedding-3-small model.
+        
+        Args:
+            text: Text to embed
+        Returns:
+            List of floats representing the embedding
+        """
+        try:
+            import openai
+            import os
+            
+            # Set OpenAI API key if not already set
+            if not openai.api_key:
+                openai.api_key = os.getenv('OPENAI_API_KEY')
+            
+            if not openai.api_key:
+                self.logger.warning("OPENAI_API_KEY not found, falling back to mock embedding")
+                return self._generate_mock_embedding(text)
+            
+            # Generate real OpenAI embedding
+            response = openai.embeddings.create(
+                model="text-embedding-3-small",
+                input=text
+            )
+            return response.data[0].embedding
+            
+        except Exception as e:
+            self.logger.warning(f"OpenAI embedding failed ({e}), falling back to mock embedding")
+            return self._generate_mock_embedding(text)
+    
+    def _generate_mock_embedding(self, text: str) -> List[float]:
+        """
+        Generate a mock embedding for testing purposes.
+        
+        Args:
+            text: Text to embed
+        Returns:
+            List of floats representing a mock embedding
+        """
+        # Generate a deterministic mock embedding based on text content
+        import hashlib
+        import random
+        
+        # Use text hash as seed for deterministic mock embeddings
+        text_hash = hashlib.md5(text.encode()).hexdigest()
+        random.seed(int(text_hash[:8], 16))
+        
+        # Generate 1536-dimensional mock embedding
+        mock_embedding = [random.uniform(-1, 1) for _ in range(1536)]
+        
+        self.logger.warning(f"Using mock embedding for text: {text[:50]}...")
+        return mock_embedding
 
     async def _get_db_conn(self) -> Any:
         """
