@@ -60,3 +60,9 @@ services:
         value: "10"
       - key: WORKER_MAX_RETRIES
         value: "3"
+      - key: SERVICE_MODE
+        value: "real"
+      - key: LLAMAPARSE_API_URL
+        value: "https://api.cloud.llamaindex.ai"
+      - key: OPENAI_API_URL
+        value: "https://api.openai.com"

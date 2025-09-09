@@ -69,17 +69,17 @@ class WorkerConfig:
             database_url=database_url,
             
             # Supabase
-            supabase_url=os.getenv("SUPABASE_URL", "http://localhost:5000"),
+            supabase_url=os.getenv("SUPABASE_URL", "https://znvwzkdblknkkztqyfnu.supabase.co"),
             supabase_anon_key=os.getenv("SUPABASE_ANON_KEY", ""),
             supabase_service_role_key=os.getenv("SUPABASE_SERVICE_ROLE_KEY", ""),
             
             # LlamaParse
-            llamaparse_api_url=os.getenv("LLAMAPARSE_API_URL", "http://localhost:8001"),
-            llamaparse_api_key=os.getenv("LLAMAPARSE_API_KEY", "mock_key_local_development"),
+            llamaparse_api_url=os.getenv("LLAMAPARSE_API_URL", "https://api.cloud.llamaindex.ai"),
+            llamaparse_api_key=os.getenv("LLAMAPARSE_API_KEY", ""),
             
             # OpenAI
-            openai_api_url=os.getenv("OPENAI_API_URL", "http://localhost:8002"),
-            openai_api_key=os.getenv("OPENAI_API_KEY", "mock_key_local_development"),
+            openai_api_url=os.getenv("OPENAI_API_URL", "https://api.openai.com"),
+            openai_api_key=os.getenv("OPENAI_API_KEY", ""),
             openai_model=os.getenv("OPENAI_MODEL", "text-embedding-3-small"),
             
             # Worker settings
@@ -188,8 +188,10 @@ class WorkerConfig:
     
     def get_service_router_config(self) -> Dict[str, Any]:
         """Get service router configuration"""
+        # Use REAL mode in production, HYBRID in development
+        mode = "REAL" if os.getenv("ENVIRONMENT", "development") == "production" else "HYBRID"
         return {
-            "mode": "HYBRID",  # Default to hybrid mode
+            "mode": mode,
             "llamaparse_config": self.get_llamaparse_config(),
             "openai_config": self.get_openai_config(),
             "fallback_enabled": True,
