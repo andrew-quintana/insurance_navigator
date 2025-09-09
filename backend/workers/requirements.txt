@@ -14,6 +14,9 @@ structlog>=23.0.0
 # Configuration and validation
 pydantic>=2.0.0
 
+# Utilities
+psutil>=5.9.0
+
 # Development and testing
 pytest>=7.0.0
 pytest-asyncio>=0.21.0

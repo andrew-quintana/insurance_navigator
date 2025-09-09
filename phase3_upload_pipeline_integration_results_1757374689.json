@@ -1,0 +1,106 @@
+{
+  "test_name": "Phase 3 Upload Pipeline Integration Test",
+  "timestamp": 1757374687.859045,
+  "test_user_id": "00bac3b2-ff1e-4c73-8cf9-2b6adcbbd4d5",
+  "test_email": "test_user_1757374687@example.com",
+  "tests": {
+    "API Availability": {
+      "status": "PASSED",
+      "duration": 0.18320918083190918,
+      "details": {
+        "status": "available",
+        "response_time": "unknown"
+      }
+    },
+    "User Registration": {
+      "status": "PASSED",
+      "duration": 0.5211420059204102,
+      "details": {
+        "user_id": null,
+        "email": "test_user_1757374687@example.com"
+      }
+    },
+    "User Authentication": {
+      "status": "PASSED",
+      "duration": 0.1597588062286377,
+      "details": {
+        "authenticated": true,
+        "token_available": true
+      }
+    },
+    "Upload Endpoint Availability": {
+      "status": "PASSED",
+      "duration": 0.1185760498046875,
+      "details": {
+        "endpoint_available": true,
+        "method_supported": "POST"
+      }
+    },
+    "Document Upload": {
+      "status": "FAILED",
+      "duration": 0.14310979843139648,
+      "error": "Upload failed: 422 - {\"detail\":[{\"type\":\"model_attributes_type\",\"loc\":[\"body\"],\"msg\":\"Input should be a valid dictionary or object to extract fields from\",\"input\":\"--8324ac3116fd4bdab9abb2ed14c9f66b\\r\\nContent-Type: text/plain\\r\\nContent-Disposition: form-data; name=\\\"file\\\"; filename=\\\"test_insurance_document.txt\\\"\\r\\n\\r\\n\\n        Insurance Policy Document\\n        \\n        Policy Number: TEST-12345\\n        Policyholder: Test User\\n        Coverage Type: Health Insurance\\n        Premium: $500/month\\n        Deductible: $1000\\n        Coverage Period: 2024-2025\\n        \\n        This is a test insurance document for Phase 3 upload pipeline testing.\\n        The document contains sample insurance information for testing purposes.\\n        \\r\\n--8324ac3116fd4bdab9abb2ed14c9f66b\\r\\nContent-Type: text/plain; charset=utf-8\\r\\nContent-Disposition: form-data; name=\\\"user_id\\\"\\r\\n\\r\\n00bac3b2-ff1e-4c73-8cf9-2b6adcbbd4d5\\r\\n--8324ac3116fd4bdab9abb2ed14c9f66b--\\r\\n\",\"url\":\"https://errors.pydantic.dev/2.6/v/model_attributes_type\"}]}"
+    },
+    "Job Status Tracking": {
+      "status": "FAILED",
+      "duration": 1.9073486328125e-06,
+      "error": "No upload job ID available"
+    },
+    "RAG Integration": {
+      "status": "PASSED",
+      "duration": 0.6212406158447266,
+      "details": {
+        "queries_tested": 4,
+        "successful_responses": 4,
+        "relevant_responses": 0,
+        "query_results": [
+          {
+            "query": "What is the policy number?",
+            "response_received": true,
+            "response_length": 94,
+            "relevant_info_found": false,
+            "response_preview": "I apologize, but I encountered an error processing your request. Please try again in a moment."
+          },
+          {
+            "query": "What is the coverage type?",
+            "response_received": true,
+            "response_length": 94,
+            "relevant_info_found": false,
+            "response_preview": "I apologize, but I encountered an error processing your request. Please try again in a moment."
+          },
+          {
+            "query": "What is the premium amount?",
+            "response_received": true,
+            "response_length": 94,
+            "relevant_info_found": false,
+            "response_preview": "I apologize, but I encountered an error processing your request. Please try again in a moment."
+          },
+          {
+            "query": "What is the deductible?",
+            "response_received": true,
+            "response_length": 94,
+            "relevant_info_found": false,
+            "response_preview": "I apologize, but I encountered an error processing your request. Please try again in a moment."
+          }
+        ]
+      }
+    },
+    "End-to-End Workflow": {
+      "status": "PASSED",
+      "duration": 8.821487426757812e-06,
+      "details": {
+        "workflow_complete": true,
+        "completed_steps": [],
+        "failed_steps": [],
+        "completion_rate": 0.0
+      }
+    }
+  },
+  "summary": {
+    "total_tests": 8,
+    "passed_tests": 6,
+    "failed_tests": 2,
+    "success_rate": 75.0,
+    "overall_status": "FAILED"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "What is my deductible?": {
+    "error": "'InformationRetrievalOutput' object has no attribute 'response'"
+  },
+  "What are the coverage details?": {
+    "error": "'InformationRetrievalOutput' object has no attribute 'response'"
+  },
+  "What is covered under this policy?": {
+    "error": "'InformationRetrievalOutput' object has no attribute 'response'"
+  },
+  "What are the exclusions?": {
+    "error": "'InformationRetrievalOutput' object has no attribute 'response'"
+  },
+  "How much will I pay out of pocket?": {
+    "error": "'InformationRetrievalOutput' object has no attribute 'response'"
+  }
+}

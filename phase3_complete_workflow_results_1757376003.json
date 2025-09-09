@@ -1,0 +1,86 @@
+{
+  "test_name": "Phase 3 Complete Workflow Test",
+  "timestamp": 1757376000.361612,
+  "test_user_id": "5efc5650-3144-4d2c-9f0b-c860b1625028",
+  "test_email": "workflow_test_1757376000@example.com",
+  "tests": {
+    "User Registration": {
+      "status": "PASSED",
+      "duration": 0.6936759948730469,
+      "details": {
+        "status_code": 200,
+        "response": {
+          "user": {
+            "id": "minimal_dc8d85395d235d3342c312d8dd418445",
+            "email": "workflow_test_1757376000@example.com",
+            "name": "workflow_test_1757376000"
+          },
+          "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJtaW5pbWFsX2RjOGQ4NTM5NWQyMzVkMzM0MmMzMTJkOGRkNDE4NDQ1IiwiZW1haWwiOiJ3b3JrZmxvd190ZXN0XzE3NTczNzYwMDBAZXhhbXBsZS5jb20iLCJleHAiOjE3NTc0NjI0MDEsImlhdCI6MTc1NzM3NjAwMSwiaXNzIjoiaW5zdXJhbmNlLW5hdmlnYXRvci1taW5pbWFsLWF1dGgiLCJhdWQiOiJpbnN1cmFuY2UtbmF2aWdhdG9yLXVzZXJzIn0._pD9FF_Ta-_TcH3bhSfEMZZRJdqaizVt1OLt9sv-Bis",
+          "token_type": "bearer"
+        },
+        "user_id": "5efc5650-3144-4d2c-9f0b-c860b1625028",
+        "email": "workflow_test_1757376000@example.com"
+      }
+    },
+    "User Login": {
+      "status": "PASSED",
+      "duration": 0.14895892143249512,
+      "details": {
+        "status_code": 200,
+        "response": {
+          "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJtaW5pbWFsX2VhNTI3NThjN2M5OGZhYTI2ZTVlMmU5MTI1MzU3ZmMyIiwiZW1haWwiOiJ3b3JrZmxvd190ZXN0XzE3NTczNzYwMDBAZXhhbXBsZS5jb20iLCJleHAiOjE3NTc0NjI0MDEsImlhdCI6MTc1NzM3NjAwMSwiaXNzIjoiaW5zdXJhbmNlLW5hdmlnYXRvci1taW5pbWFsLWF1dGgiLCJhdWQiOiJpbnN1cmFuY2UtbmF2aWdhdG9yLXVzZXJzIn0.8_Pa3BOrHzP1JE9KDs1qCYwVv40gvemt1Dth5MQCtzg",
+          "token_type": "bearer",
+          "user": {
+            "id": "minimal_ea52758c7c98faa26e5e2e9125357fc2",
+            "email": "workflow_test_1757376000@example.com",
+            "name": "workflow_test_1757376000"
+          }
+        },
+        "auth_token_received": true
+      }
+    },
+    "Document Upload": {
+      "status": "FAILED",
+      "duration": 0.1998291015625,
+      "error": "Document upload failed: Upload failed: 500 - {\"detail\":\"Internal server error\"}"
+    },
+    "Document Processing Wait": {
+      "status": "FAILED",
+      "duration": 6.9141387939453125e-06,
+      "error": "Document processing wait failed: No document ID available"
+    },
+    "RAG Similarity Search": {
+      "status": "FAILED",
+      "duration": 3.814697265625e-06,
+      "error": "RAG similarity search failed: No document ID available"
+    },
+    "Direct RAG System": {
+      "status": "PASSED",
+      "duration": 2.428698778152466,
+      "details": {
+        "queries_tested": 3,
+        "query_results": {
+          "What is my deductible?": {
+            "chunks_retrieved": 0,
+            "chunks": []
+          },
+          "What does my insurance cover?": {
+            "chunks_retrieved": 0,
+            "chunks": []
+          },
+          "How much do I pay for doctor visits?": {
+            "chunks_retrieved": 0,
+            "chunks": []
+          }
+        }
+      }
+    }
+  },
+  "summary": {
+    "total_tests": 6,
+    "passed_tests": 3,
+    "failed_tests": 3,
+    "success_rate": 50.0,
+    "overall_status": "FAILED"
+  }
+}
