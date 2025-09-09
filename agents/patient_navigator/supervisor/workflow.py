@@ -286,7 +286,7 @@ class SupervisorWorkflow:
             
             return state
     
-    async def _route_to_workflow_execution(self, state: SupervisorState) -> str:
+    def _route_to_workflow_execution(self, state: SupervisorState) -> str:
         """
         Route to appropriate workflow execution based on routing decision and prescribed workflows.
         
