@@ -6,6 +6,7 @@ This version includes proper input validation while maintaining simplicity.
 import hashlib
 import secrets
 import jwt
+import uuid
 from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 import logging
@@ -100,8 +101,8 @@ class ImprovedMinimalAuthService:
                 logger.warning(f"Registration failed - email already exists: {validated_data['email']}")
                 raise ValueError("Email already registered")
             
-            # Generate a simple user ID
-            user_id = f"minimal_{secrets.token_hex(16)}"
+            # Generate a proper UUID for user ID
+            user_id = str(uuid.uuid4())
             
             # Hash password for storage (even in minimal mode, we should hash)
             password_hash = hashlib.sha256(password.encode()).hexdigest()
@@ -145,8 +146,8 @@ class ImprovedMinimalAuthService:
             validated_data = validation_result["data"]
             
             # For MVP, we'll use a simple approach but still validate inputs
-            # Generate a simple user ID
-            user_id = f"minimal_{secrets.token_hex(16)}"
+            # Generate a proper UUID for user ID
+            user_id = str(uuid.uuid4())
             token = self.generate_token(user_id, validated_data["email"])
             
             logger.info(f"✅ Improved minimal user authenticated: {validated_data['email']}")

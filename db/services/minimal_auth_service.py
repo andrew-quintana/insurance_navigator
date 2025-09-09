@@ -5,6 +5,7 @@ This is a temporary solution to get the project working.
 
 import hashlib
 import secrets
+import uuid
 from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 import logging
@@ -43,8 +44,8 @@ class MinimalAuthService:
         try:
             logger.info(f"Creating user with MINIMAL auth: {email}")
             
-            # Generate a simple user ID
-            user_id = f"minimal_{secrets.token_hex(16)}"
+            # Generate a proper UUID for user ID
+            user_id = str(uuid.uuid4())
             
             # Generate token
             token = self.generate_token(user_id, email)
