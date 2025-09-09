@@ -2,10 +2,10 @@
 # Only essential dependencies for core API functionality
 
 # Core API Framework
-fastapi==0.110.0
-uvicorn[standard]==0.27.1
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
 python-multipart==0.0.9
-pydantic==2.6.3
+pydantic==2.5.0
 pydantic-settings>=2.0.0,<3.0.0
 
 # Database Essentials
@@ -25,16 +25,16 @@ pyOpenSSL>=23.0.0
 # HTTP Client Essentials
 aiohttp>=3.8.0
 requests>=2.31.0
-httpx==0.23.0
+httpx==0.25.2
 
 # Environment
 python-dotenv==1.0.1
 
 # Document Processing & AI
-langchain==0.1.9
-langchain-core==0.1.27
-langchain-anthropic==0.1.1
-langchain-openai==0.0.8
+langchain==0.2.17
+langchain-core==0.2.43
+langchain-anthropic==0.1.23
+langchain-openai==0.3.16
 langgraph==0.4.0
 llama-index-core==0.10.11.post1
 llama-index-llms-openai==0.1.6
@@ -42,8 +42,8 @@ llama-index-embeddings-openai==0.1.6
 llama-index-readers-file==0.1.5
 llama-index-readers-llama-parse==0.1.3
 llama-index-vector-stores-chroma==0.1.2
-supabase==1.0.3
-anthropic==0.34.2
+supabase==2.15.1
+anthropic==0.50.0
 PyPDF2>=3.0.0
 
 # Vector/Search
