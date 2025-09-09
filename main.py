@@ -612,17 +612,8 @@ async def chat_with_agent(
         chat_interface = chat_with_agent._chat_interface
         
         # Create ChatMessage object
-        # Handle minimal auth user IDs by stripping the 'minimal_' prefix
-        raw_user_id = current_user.get("id", "anonymous")
-        if raw_user_id.startswith("minimal_"):
-            # For minimal auth, we need to map to an actual UUID in the database
-            # For now, use a default test user ID that has documents
-            user_id = "936551b6-b7a4-4d3d-9fe0-a491794fd66b"  # Known user with documents
-        else:
-            user_id = raw_user_id
-            
         chat_message = ChatMessage(
-            user_id=user_id,
+            user_id=current_user.get("id", "anonymous"),
             content=message,
             timestamp=time.time(),
             message_type="text",
