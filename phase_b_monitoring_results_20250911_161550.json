@@ -1,0 +1,260 @@
+{
+  "timestamp": "2025-09-11T16:15:50.737430",
+  "metrics": [
+    {
+      "name": "uuid_generation_success_rate",
+      "value": 0.32142857142857145,
+      "timestamp": "2025-09-11 16:15:50.303924",
+      "tags": {
+        "type": "uuid_generation"
+      },
+      "unit": "percentage"
+    },
+    {
+      "name": "uuid_mismatch_rate",
+      "value": 0.6785714285714286,
+      "timestamp": "2025-09-11 16:15:50.303924",
+      "tags": {
+        "type": "uuid_consistency"
+      },
+      "unit": "percentage"
+    },
+    {
+      "name": "pipeline_consistency_rate",
+      "value": 0.6785714285714286,
+      "timestamp": "2025-09-11 16:15:50.303924",
+      "tags": {
+        "type": "pipeline_health"
+      },
+      "unit": "percentage"
+    },
+    {
+      "name": "rag_retrieval_success_rate",
+      "value": 0.0,
+      "timestamp": "2025-09-11 16:15:50.303924",
+      "tags": {
+        "type": "rag_functionality"
+      },
+      "unit": "percentage"
+    },
+    {
+      "name": "document_processing_status",
+      "value": 41,
+      "timestamp": "2025-09-11 16:15:50.303924",
+      "tags": {
+        "status": "complete"
+      },
+      "unit": "count"
+    },
+    {
+      "name": "document_processing_status",
+      "value": 1,
+      "timestamp": "2025-09-11 16:15:50.303924",
+      "tags": {
+        "status": "null"
+      },
+      "unit": "count"
+    },
+    {
+      "name": "document_processing_status",
+      "value": 8,
+      "timestamp": "2025-09-11 16:15:50.303924",
+      "tags": {
+        "status": "duplicate_parsed"
+      },
+      "unit": "count"
+    },
+    {
+      "name": "document_processing_status",
+      "value": 6,
+      "timestamp": "2025-09-11 16:15:50.303924",
+      "tags": {
+        "status": "duplicate"
+      },
+      "unit": "count"
+    },
+    {
+      "name": "total_chunks",
+      "value": 56,
+      "timestamp": "2025-09-11 16:15:50.303924",
+      "tags": {
+        "type": "chunk_metrics"
+      },
+      "unit": "count"
+    },
+    {
+      "name": "avg_chunks_per_document",
+      "value": "1.7857142857142857",
+      "timestamp": "2025-09-11 16:15:50.303924",
+      "tags": {
+        "type": "chunk_metrics"
+      },
+      "unit": "count"
+    },
+    {
+      "name": "affected_users_count",
+      "value": 27,
+      "timestamp": "2025-09-11 16:15:50.303924",
+      "tags": {
+        "type": "user_impact"
+      },
+      "unit": "count"
+    }
+  ],
+  "alerts": [
+    {
+      "alert_id": "uuid_gen_failure_1757607350",
+      "level": "AlertLevel.ERROR",
+      "message": "UUID generation failure rate 67.86% exceeds threshold 5.00%",
+      "timestamp": "2025-09-11 16:15:50.602509",
+      "metric_name": "uuid_generation_success_rate",
+      "threshold": 0.05,
+      "current_value": 0.6785714285714286,
+      "resolved": false
+    },
+    {
+      "alert_id": "uuid_mismatch_1757607350",
+      "level": "AlertLevel.CRITICAL",
+      "message": "UUID mismatch rate 67.86% exceeds threshold 1.00%",
+      "timestamp": "2025-09-11 16:15:50.602509",
+      "metric_name": "uuid_mismatch_rate",
+      "threshold": 0.01,
+      "current_value": 0.6785714285714286,
+      "resolved": false
+    },
+    {
+      "alert_id": "pipeline_inconsistency_1757607350",
+      "level": "AlertLevel.WARNING",
+      "message": "Pipeline consistency rate 67.86% is below acceptable threshold",
+      "timestamp": "2025-09-11 16:15:50.602509",
+      "metric_name": "pipeline_consistency_rate",
+      "threshold": 0.8,
+      "current_value": 0.6785714285714286,
+      "resolved": false
+    },
+    {
+      "alert_id": "rag_failure_1757607350",
+      "level": "AlertLevel.CRITICAL",
+      "message": "RAG retrieval failure rate 100.00% exceeds threshold 10.00%",
+      "timestamp": "2025-09-11 16:15:50.602509",
+      "metric_name": "rag_retrieval_success_rate",
+      "threshold": 0.1,
+      "current_value": 1.0,
+      "resolved": false
+    }
+  ],
+  "dashboard": {
+    "timestamp": "2025-09-11T16:15:50.736917",
+    "migration_progress": {
+      "total_documents": 56,
+      "migrated_documents": 18,
+      "pending_documents": 38,
+      "progress_percentage": 32.142857142857146,
+      "status": "in_progress"
+    },
+    "recent_activity": [
+      {
+        "date": "2025-09-11",
+        "documents_created": 18,
+        "deterministic_docs": 18,
+        "random_docs": 0
+      },
+      {
+        "date": "2025-09-10",
+        "documents_created": 2,
+        "deterministic_docs": 0,
+        "random_docs": 2
+      },
+      {
+        "date": "2025-09-09",
+        "documents_created": 2,
+        "deterministic_docs": 0,
+        "random_docs": 2
+      },
+      {
+        "date": "2025-09-07",
+        "documents_created": 25,
+        "deterministic_docs": 0,
+        "random_docs": 25
+      },
+      {
+        "date": "2025-09-06",
+        "documents_created": 9,
+        "deterministic_docs": 0,
+        "random_docs": 9
+      }
+    ],
+    "user_impact": [
+      {
+        "user_id": "766e8693-7fd5-465e-9ee4-4a9b3a696480",
+        "total_documents": 9,
+        "deterministic_docs": 0,
+        "random_docs": 9,
+        "migration_status": "pending"
+      },
+      {
+        "user_id": "e6114f0c-df44-41e6-a5df-33d69f95bab1",
+        "total_documents": 3,
+        "deterministic_docs": 0,
+        "random_docs": 3,
+        "migration_status": "pending"
+      },
+      {
+        "user_id": "936551b6-b7a4-4d3d-9fe0-a491794fd66b",
+        "total_documents": 2,
+        "deterministic_docs": 0,
+        "random_docs": 2,
+        "migration_status": "pending"
+      },
+      {
+        "user_id": "32caa4ce-6da7-4d5e-a3cb-a0224d77d85c",
+        "total_documents": 1,
+        "deterministic_docs": 1,
+        "random_docs": 0,
+        "migration_status": "completed"
+      },
+      {
+        "user_id": "c7d3d111-60c7-4130-8396-f063e785d553",
+        "total_documents": 1,
+        "deterministic_docs": 0,
+        "random_docs": 1,
+        "migration_status": "pending"
+      },
+      {
+        "user_id": "728f5f39-2695-445a-8f9e-415cc3f38814",
+        "total_documents": 1,
+        "deterministic_docs": 0,
+        "random_docs": 1,
+        "migration_status": "pending"
+      },
+      {
+        "user_id": "2bab3edf-d58b-4618-83d8-81d6ae3dd5d3",
+        "total_documents": 1,
+        "deterministic_docs": 0,
+        "random_docs": 1,
+        "migration_status": "pending"
+      },
+      {
+        "user_id": "b5896e5f-699b-486d-9a95-bb8a846b2b2c",
+        "total_documents": 1,
+        "deterministic_docs": 0,
+        "random_docs": 1,
+        "migration_status": "pending"
+      },
+      {
+        "user_id": "09ae84cf-8c51-4bae-b5e1-61136ceb82c9",
+        "total_documents": 1,
+        "deterministic_docs": 1,
+        "random_docs": 0,
+        "migration_status": "completed"
+      },
+      {
+        "user_id": "9fd8ec50-acba-4e9b-9044-587e01421731",
+        "total_documents": 1,
+        "deterministic_docs": 1,
+        "random_docs": 0,
+        "migration_status": "completed"
+      }
+    ]
+  }
+}

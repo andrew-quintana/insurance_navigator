@@ -1,0 +1,413 @@
+{
+  "timestamp": "2025-09-11T16:18:04.600339",
+  "uuid_consistency": {
+    "total_documents": 18,
+    "uuidv5_documents": 0,
+    "uuidv4_documents": 0,
+    "invalid_documents": 18,
+    "total_chunks": 27,
+    "uuidv5_chunks": 0,
+    "uuidv4_chunks": 0,
+    "invalid_chunks": 27,
+    "deterministic_percentage": 0.0,
+    "chunk_deterministic_percentage": 0.0,
+    "deterministic_validation": {
+      "document_validation": {
+        "correct": 0,
+        "incorrect": 18,
+        "errors": [
+          {
+            "document_id": "83fc702a-57e8-529b-9cd7-2a0bfc12a1d5",
+            "expected": "83fc702a-57e8-529b-9cd7-2a0bfc12a1d5",
+            "filename": "test_document.pdf"
+          },
+          {
+            "document_id": "63aee840-48c0-5422-a01b-bb5f68f55b8f",
+            "expected": "63aee840-48c0-5422-a01b-bb5f68f55b8f",
+            "filename": "test_upload.pdf"
+          },
+          {
+            "document_id": "e337d966-eaa6-58cf-900b-175af04068d5",
+            "expected": "e337d966-eaa6-58cf-900b-175af04068d5",
+            "filename": "test_document.pdf"
+          },
+          {
+            "document_id": "000d0618-33c6-5cf2-a124-9e01cef98a01",
+            "expected": "000d0618-33c6-5cf2-a124-9e01cef98a01",
+            "filename": "test_upload.pdf"
+          },
+          {
+            "document_id": "8d06b29b-a3b1-5952-babc-0f14f9639ee9",
+            "expected": "8d06b29b-a3b1-5952-babc-0f14f9639ee9",
+            "filename": "test_insurance_document.pdf"
+          },
+          {
+            "document_id": "c4018581-6086-5f95-b456-1fc2160fe2a8",
+            "expected": "c4018581-6086-5f95-b456-1fc2160fe2a8",
+            "filename": "test_serverless_processing.pdf"
+          },
+          {
+            "document_id": "2e6f4b58-65df-5e5f-a0c6-fe4658574d5c",
+            "expected": "2e6f4b58-65df-5e5f-a0c6-fe4658574d5c",
+            "filename": "scan_classic_hmo_parsed.pdf"
+          },
+          {
+            "document_id": "049de9cc-f23b-5a8f-94f3-14c8daacae26",
+            "expected": "049de9cc-f23b-5a8f-94f3-14c8daacae26",
+            "filename": "simulated_insurance_document.pdf"
+          },
+          {
+            "document_id": "1f6d166f-4b0c-50f3-ae1d-ab290a64a46a",
+            "expected": "1f6d166f-4b0c-50f3-ae1d-ab290a64a46a",
+            "filename": "scan_classic_hmo.pdf"
+          },
+          {
+            "document_id": "87a36d5d-cdf0-53fc-b200-727cabc9c710",
+            "expected": "87a36d5d-cdf0-53fc-b200-727cabc9c710",
+            "filename": "test_document.pdf"
+          },
+          {
+            "document_id": "290eaaa8-eed1-5ae3-ad81-c6152e34e74c",
+            "expected": "290eaaa8-eed1-5ae3-ad81-c6152e34e74c",
+            "filename": "test_upload.pdf"
+          },
+          {
+            "document_id": "922de009-c94a-52be-a5f9-445be83a361b",
+            "expected": "922de009-c94a-52be-a5f9-445be83a361b",
+            "filename": "test_document.pdf"
+          },
+          {
+            "document_id": "02b48d68-e2dc-5277-b4c7-04041a85026e",
+            "expected": "02b48d68-e2dc-5277-b4c7-04041a85026e",
+            "filename": "test_upload.pdf"
+          },
+          {
+            "document_id": "025aacc8-ab5d-5ff5-9e02-db48b1f2b94b",
+            "expected": "025aacc8-ab5d-5ff5-9e02-db48b1f2b94b",
+            "filename": "test_insurance_document.pdf"
+          },
+          {
+            "document_id": "83d2692c-fb12-5c44-8340-d8793889c48b",
+            "expected": "83d2692c-fb12-5c44-8340-d8793889c48b",
+            "filename": "test_serverless_processing.pdf"
+          },
+          {
+            "document_id": "f1d792fd-ba12-5e27-916b-4a0785740715",
+            "expected": "f1d792fd-ba12-5e27-916b-4a0785740715",
+            "filename": "scan_classic_hmo_parsed.pdf"
+          },
+          {
+            "document_id": "fc6e6eb2-ac05-5e6c-8ed7-96d3b1357d11",
+            "expected": "fc6e6eb2-ac05-5e6c-8ed7-96d3b1357d11",
+            "filename": "simulated_insurance_document.pdf"
+          },
+          {
+            "document_id": "01612035-b466-5434-b673-e3a072ea653d",
+            "expected": "01612035-b466-5434-b673-e3a072ea653d",
+            "filename": "scan_classic_hmo.pdf"
+          }
+        ]
+      },
+      "chunk_validation": {
+        "correct": 0,
+        "incorrect": 27,
+        "errors": [
+          {
+            "chunk_id": "1be575e5-89e5-5cc1-aa53-df3b297159d6",
+            "expected": "1be575e5-89e5-5cc1-aa53-df3b297159d6",
+            "document_id": "83fc702a-57e8-529b-9cd7-2a0bfc12a1d5"
+          },
+          {
+            "chunk_id": "2c74e1ad-7d77-58fc-8c08-e7f3fa91e43f",
+            "expected": "2c74e1ad-7d77-58fc-8c08-e7f3fa91e43f",
+            "document_id": "83fc702a-57e8-529b-9cd7-2a0bfc12a1d5"
+          },
+          {
+            "chunk_id": "802530d2-d619-5d13-9daa-c594e2f7d557",
+            "expected": "802530d2-d619-5d13-9daa-c594e2f7d557",
+            "document_id": "83fc702a-57e8-529b-9cd7-2a0bfc12a1d5"
+          },
+          {
+            "chunk_id": "72bb6d79-66d3-58fb-8011-05712e519fbf",
+            "expected": "72bb6d79-66d3-58fb-8011-05712e519fbf",
+            "document_id": "63aee840-48c0-5422-a01b-bb5f68f55b8f"
+          },
+          {
+            "chunk_id": "a7772db8-95d7-5419-88cb-1f9b1ccc9660",
+            "expected": "a7772db8-95d7-5419-88cb-1f9b1ccc9660",
+            "document_id": "63aee840-48c0-5422-a01b-bb5f68f55b8f"
+          },
+          {
+            "chunk_id": "b9454f14-fe8d-54d1-baec-cde18adb6119",
+            "expected": "b9454f14-fe8d-54d1-baec-cde18adb6119",
+            "document_id": "63aee840-48c0-5422-a01b-bb5f68f55b8f"
+          },
+          {
+            "chunk_id": "49d8708a-60f9-5896-a30e-8d15798ea8a2",
+            "expected": "49d8708a-60f9-5896-a30e-8d15798ea8a2",
+            "document_id": "e337d966-eaa6-58cf-900b-175af04068d5"
+          },
+          {
+            "chunk_id": "31884952-9ff9-5803-837b-734eff6b7edd",
+            "expected": "31884952-9ff9-5803-837b-734eff6b7edd",
+            "document_id": "e337d966-eaa6-58cf-900b-175af04068d5"
+          },
+          {
+            "chunk_id": "342b7182-ff19-5f11-8f09-b4b928c47325",
+            "expected": "342b7182-ff19-5f11-8f09-b4b928c47325",
+            "document_id": "e337d966-eaa6-58cf-900b-175af04068d5"
+          },
+          {
+            "chunk_id": "c622643f-6dc8-5b04-b0d9-9c42bc4a41ae",
+            "expected": "c622643f-6dc8-5b04-b0d9-9c42bc4a41ae",
+            "document_id": "000d0618-33c6-5cf2-a124-9e01cef98a01"
+          },
+          {
+            "chunk_id": "f48ed8a6-29b7-5766-aad1-abce0d726a4f",
+            "expected": "f48ed8a6-29b7-5766-aad1-abce0d726a4f",
+            "document_id": "000d0618-33c6-5cf2-a124-9e01cef98a01"
+          },
+          {
+            "chunk_id": "cde64006-987c-5c73-90e9-c0080d113632",
+            "expected": "cde64006-987c-5c73-90e9-c0080d113632",
+            "document_id": "000d0618-33c6-5cf2-a124-9e01cef98a01"
+          },
+          {
+            "chunk_id": "9080b7fd-8e67-55e1-a3f3-a38ec965bd15",
+            "expected": "9080b7fd-8e67-55e1-a3f3-a38ec965bd15",
+            "document_id": "8d06b29b-a3b1-5952-babc-0f14f9639ee9"
+          },
+          {
+            "chunk_id": "328082d8-417c-5edd-b384-f49b4c3d67d2",
+            "expected": "328082d8-417c-5edd-b384-f49b4c3d67d2",
+            "document_id": "8d06b29b-a3b1-5952-babc-0f14f9639ee9"
+          },
+          {
+            "chunk_id": "c4ff3443-a7c9-5a14-bb1a-5089f27c6b43",
+            "expected": "c4ff3443-a7c9-5a14-bb1a-5089f27c6b43",
+            "document_id": "8d06b29b-a3b1-5952-babc-0f14f9639ee9"
+          },
+          {
+            "chunk_id": "7f0eacf3-7c2b-536c-90ba-e887b10af938",
+            "expected": "7f0eacf3-7c2b-536c-90ba-e887b10af938",
+            "document_id": "c4018581-6086-5f95-b456-1fc2160fe2a8"
+          },
+          {
+            "chunk_id": "ff6f6922-b8c1-5f10-be87-db1aeb7afaa9",
+            "expected": "ff6f6922-b8c1-5f10-be87-db1aeb7afaa9",
+            "document_id": "c4018581-6086-5f95-b456-1fc2160fe2a8"
+          },
+          {
+            "chunk_id": "bb5b2411-3826-58e9-8bd1-8efc5da7845b",
+            "expected": "bb5b2411-3826-58e9-8bd1-8efc5da7845b",
+            "document_id": "c4018581-6086-5f95-b456-1fc2160fe2a8"
+          },
+          {
+            "chunk_id": "53b14901-af1c-566b-bb6b-a8ffe89b3217",
+            "expected": "53b14901-af1c-566b-bb6b-a8ffe89b3217",
+            "document_id": "2e6f4b58-65df-5e5f-a0c6-fe4658574d5c"
+          },
+          {
+            "chunk_id": "7c6ba940-fdbe-5a06-a61c-ab0c4a64004f",
+            "expected": "7c6ba940-fdbe-5a06-a61c-ab0c4a64004f",
+            "document_id": "2e6f4b58-65df-5e5f-a0c6-fe4658574d5c"
+          },
+          {
+            "chunk_id": "49a0d683-d232-50e7-aec2-a2f6f53a379e",
+            "expected": "49a0d683-d232-50e7-aec2-a2f6f53a379e",
+            "document_id": "2e6f4b58-65df-5e5f-a0c6-fe4658574d5c"
+          },
+          {
+            "chunk_id": "57d32b99-cc33-5d06-ad08-4a8d67a5387e",
+            "expected": "57d32b99-cc33-5d06-ad08-4a8d67a5387e",
+            "document_id": "049de9cc-f23b-5a8f-94f3-14c8daacae26"
+          },
+          {
+            "chunk_id": "d5be1abd-1483-53ed-8947-e2108e2aab21",
+            "expected": "d5be1abd-1483-53ed-8947-e2108e2aab21",
+            "document_id": "049de9cc-f23b-5a8f-94f3-14c8daacae26"
+          },
+          {
+            "chunk_id": "d2141925-a810-59ca-b33b-978df43c3243",
+            "expected": "d2141925-a810-59ca-b33b-978df43c3243",
+            "document_id": "049de9cc-f23b-5a8f-94f3-14c8daacae26"
+          },
+          {
+            "chunk_id": "472523ab-54c5-5b4e-aa69-7a9505591aa0",
+            "expected": "472523ab-54c5-5b4e-aa69-7a9505591aa0",
+            "document_id": "1f6d166f-4b0c-50f3-ae1d-ab290a64a46a"
+          },
+          {
+            "chunk_id": "be66072c-97bf-598b-924a-c36cb97a0b5a",
+            "expected": "be66072c-97bf-598b-924a-c36cb97a0b5a",
+            "document_id": "1f6d166f-4b0c-50f3-ae1d-ab290a64a46a"
+          },
+          {
+            "chunk_id": "1caaa7c4-6384-5022-b742-2a42aa695320",
+            "expected": "1caaa7c4-6384-5022-b742-2a42aa695320",
+            "document_id": "1f6d166f-4b0c-50f3-ae1d-ab290a64a46a"
+          }
+        ]
+      }
+    }
+  },
+  "data_integrity": {
+    "orphaned_chunks": 0,
+    "orphaned_jobs": 0,
+    "orphaned_events": 0,
+    "documents_without_chunks": 9,
+    "duplicate_documents": 0,
+    "duplicate_chunks": 0,
+    "total_issues": 9,
+    "integrity_score": 10
+  },
+  "rag_functionality": {
+    "total_documents": 18,
+    "accessible_documents": 9,
+    "inaccessible_documents": 9,
+    "documents_with_chunks": 9,
+    "documents_without_chunks": 9,
+    "rag_success_rate": 50.0,
+    "test_results": [
+      {
+        "document_id": "83fc702a-57e8-529b-9cd7-2a0bfc12a1d5",
+        "filename": "test_document.pdf",
+        "chunk_count": 3,
+        "accessible": true,
+        "rag_working": true
+      },
+      {
+        "document_id": "63aee840-48c0-5422-a01b-bb5f68f55b8f",
+        "filename": "test_upload.pdf",
+        "chunk_count": 3,
+        "accessible": true,
+        "rag_working": true
+      },
+      {
+        "document_id": "e337d966-eaa6-58cf-900b-175af04068d5",
+        "filename": "test_document.pdf",
+        "chunk_count": 3,
+        "accessible": true,
+        "rag_working": true
+      },
+      {
+        "document_id": "000d0618-33c6-5cf2-a124-9e01cef98a01",
+        "filename": "test_upload.pdf",
+        "chunk_count": 3,
+        "accessible": true,
+        "rag_working": true
+      },
+      {
+        "document_id": "8d06b29b-a3b1-5952-babc-0f14f9639ee9",
+        "filename": "test_insurance_document.pdf",
+        "chunk_count": 3,
+        "accessible": true,
+        "rag_working": true
+      },
+      {
+        "document_id": "c4018581-6086-5f95-b456-1fc2160fe2a8",
+        "filename": "test_serverless_processing.pdf",
+        "chunk_count": 3,
+        "accessible": true,
+        "rag_working": true
+      },
+      {
+        "document_id": "2e6f4b58-65df-5e5f-a0c6-fe4658574d5c",
+        "filename": "scan_classic_hmo_parsed.pdf",
+        "chunk_count": 3,
+        "accessible": true,
+        "rag_working": true
+      },
+      {
+        "document_id": "049de9cc-f23b-5a8f-94f3-14c8daacae26",
+        "filename": "simulated_insurance_document.pdf",
+        "chunk_count": 3,
+        "accessible": true,
+        "rag_working": true
+      },
+      {
+        "document_id": "1f6d166f-4b0c-50f3-ae1d-ab290a64a46a",
+        "filename": "scan_classic_hmo.pdf",
+        "chunk_count": 3,
+        "accessible": true,
+        "rag_working": true
+      },
+      {
+        "document_id": "87a36d5d-cdf0-53fc-b200-727cabc9c710",
+        "filename": "test_document.pdf",
+        "chunk_count": 0,
+        "accessible": false,
+        "rag_working": false
+      },
+      {
+        "document_id": "290eaaa8-eed1-5ae3-ad81-c6152e34e74c",
+        "filename": "test_upload.pdf",
+        "chunk_count": 0,
+        "accessible": false,
+        "rag_working": false
+      },
+      {
+        "document_id": "922de009-c94a-52be-a5f9-445be83a361b",
+        "filename": "test_document.pdf",
+        "chunk_count": 0,
+        "accessible": false,
+        "rag_working": false
+      },
+      {
+        "document_id": "02b48d68-e2dc-5277-b4c7-04041a85026e",
+        "filename": "test_upload.pdf",
+        "chunk_count": 0,
+        "accessible": false,
+        "rag_working": false
+      },
+      {
+        "document_id": "025aacc8-ab5d-5ff5-9e02-db48b1f2b94b",
+        "filename": "test_insurance_document.pdf",
+        "chunk_count": 0,
+        "accessible": false,
+        "rag_working": false
+      },
+      {
+        "document_id": "83d2692c-fb12-5c44-8340-d8793889c48b",
+        "filename": "test_serverless_processing.pdf",
+        "chunk_count": 0,
+        "accessible": false,
+        "rag_working": false
+      },
+      {
+        "document_id": "f1d792fd-ba12-5e27-916b-4a0785740715",
+        "filename": "scan_classic_hmo_parsed.pdf",
+        "chunk_count": 0,
+        "accessible": false,
+        "rag_working": false
+      },
+      {
+        "document_id": "fc6e6eb2-ac05-5e6c-8ed7-96d3b1357d11",
+        "filename": "simulated_insurance_document.pdf",
+        "chunk_count": 0,
+        "accessible": false,
+        "rag_working": false
+      },
+      {
+        "document_id": "01612035-b466-5434-b673-e3a072ea653d",
+        "filename": "scan_classic_hmo.pdf",
+        "chunk_count": 0,
+        "accessible": false,
+        "rag_working": false
+      }
+    ]
+  },
+  "performance_metrics": {
+    "avg_processing_time_seconds": "0.000003388888888888888888888888889",
+    "total_processed_documents": 18,
+    "total_chunks": 27,
+    "avg_chunk_length": "39.2222222222222222",
+    "documents_with_chunks": 9,
+    "total_storage_bytes": "10203568",
+    "total_documents": 18,
+    "avg_document_size_bytes": "566864.8888888888888888888889"
+  },
+  "overall_score": 20.0,
+  "status": "NEEDS_IMPROVEMENT",
+  "success": true
+}
