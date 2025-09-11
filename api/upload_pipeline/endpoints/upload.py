@@ -88,8 +88,8 @@ async def upload_document(
                 upload_expires_at=existing_document["upload_expires_at"]
             )
         
-        # Generate new document ID
-        document_id = generate_document_id()
+        # Generate new document ID using deterministic approach
+        document_id = generate_document_id(str(current_user.user_id), request.sha256)
         
         # Generate storage path
         raw_path = generate_storage_path(
