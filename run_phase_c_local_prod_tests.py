@@ -113,13 +113,13 @@ class LocalProdTestExecutor:
         print("🚀 Starting Phase C Tests - Local Backend + Production Supabase")
         print("=" * 80)
         
+        # Set up environment first
+        self._setup_environment()
+        
         # Check prerequisites
         if not self._check_prerequisites():
             print("❌ Prerequisites check failed. Please resolve issues before running tests.")
             return None
-        
-        # Set up environment
-        self._setup_environment()
         
         # Create test runner
         tester = LocalBackendProductionSupabaseTester()
