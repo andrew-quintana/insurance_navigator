@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
-Phase C Testing with Local Backend + Production Supabase
-Test UUID standardization using local backend services with production Supabase database.
+Phase C Database-Only Testing
+Test UUID standardization with production Supabase database only.
 
-This configuration allows testing the complete UUID pipeline with real production data
-while using local backend services for easier debugging and development.
+This test focuses on database operations without requiring the local backend.
 """
 
 import asyncio
@@ -14,29 +13,28 @@ import sys
 import time
 from datetime import datetime
 from typing import Dict, List, Any, Optional
-import aiohttp
 import asyncpg
 from pathlib import Path
 
 # Add project root to path
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 from utils.uuid_generation import UUIDGenerator
 
 
-class LocalBackendProductionSupabaseTester:
-    """Tests UUID standardization with local backend and production Supabase."""
+class DatabaseOnlyTester:
+    """Tests UUID standardization with production Supabase database only."""
     
     def __init__(self):
         self.results = {
             "test_timestamp": datetime.now().isoformat(),
             "phase": "C",
-            "test_name": "Phase C: Local Backend + Production Supabase Testing",
+            "test_name": "Phase C: Database-Only Testing",
             "configuration": {
-                "backend": "local",
+                "backend": "none",
                 "database": "production_supabase",
-                "environment": "hybrid_testing"
+                "environment": "database_only_testing"
             },
             "tests": {},
             "summary": {
@@ -47,119 +45,52 @@ class LocalBackendProductionSupabaseTester:
             }
         }
         
-        # Local backend endpoints
-        self.api_base_url = "http://localhost:8000"
-        self.upload_endpoint = f"{self.api_base_url}/upload"
-        self.chat_endpoint = f"{self.api_base_url}/chat"
-        self.health_endpoint = f"{self.api_base_url}/health"
-        
         # Production Supabase configuration
         self.supabase_url = "***REMOVED***"
         self.database_url = "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres"
-        self.pooler_url = "postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
         
         # Set up environment variables
         self._setup_environment()
         
     def _setup_environment(self):
-        """Set up environment variables for local backend + production Supabase."""
+        """Set up environment variables for production Supabase."""
         # Production Supabase configuration
         os.environ["SUPABASE_URL"] = self.supabase_url
         os.environ["SUPABASE_ANON_KEY"] = "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpudnd6a2RibGtua2t6dHF5Zm51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2ODA0NTYsImV4cCI6MjA2NzI1NjQ1Nn0.k0QHYOgm4EilyyTml57kCGDpbikpEtJCzq-qzGYQZqY"
         os.environ["SUPABASE_SERVICE_ROLE_KEY"] = "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpudnd6a2RibGtua2t6dHF5Zm51Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTY4MDQ1NiwiZXhwIjoyMDY3MjU2NDU2fQ.9Urox9-xr5TJz8a9LbSZsGUMcSTThc3QM6XDMJD-j-o"
         os.environ["DATABASE_URL"] = self.database_url
         
-        # Local backend configuration
-        os.environ["API_BASE_URL"] = self.api_base_url
-        os.environ["ENVIRONMENT"] = "development"
-        os.environ["RAG_MODE"] = "production"
-        os.environ["KNOWLEDGE_BASE"] = "production"
-        
-        # External API keys (from production)
-        os.environ["OPENAI_API_KEY"] = "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"
-        os.environ["LLAMAPARSE_API_KEY"] = "llx-X9bRG4r7mq5Basype0fCvfvlj1372pDdQXi7KaxVqkRlkoSb"
-        
     async def run_all_tests(self):
-        """Execute all tests with local backend + production Supabase."""
-        print("🚀 Starting Phase C: Local Backend + Production Supabase Testing")
+        """Execute all database-only tests."""
+        print("🚀 Starting Phase C: Database-Only Testing")
         print("=" * 80)
         print("Configuration:")
-        print(f"  Backend: Local ({self.api_base_url})")
+        print(f"  Backend: None (database-only testing)")
         print(f"  Database: Production Supabase ({self.supabase_url})")
-        print(f"  Environment: Hybrid Testing")
+        print(f"  Environment: Database-Only Testing")
         print("=" * 80)
         
-        # Test 1: Local Backend Health Check
-        await self.test_local_backend_health()
-        
-        # Test 2: Production Supabase Connection
+        # Test 1: Production Supabase Connection
         await self.test_production_supabase_connection()
         
-        # Test 3: UUID Generation with Production Database
+        # Test 2: UUID Generation with Production Database
         await self.test_uuid_generation_production_database()
         
-        # Test 4: End-to-End Upload Pipeline
-        await self.test_end_to_end_upload_pipeline()
-        
-        # Test 5: RAG Retrieval with Production Data
-        await self.test_rag_retrieval_production_data()
-        
-        # Test 6: Multi-User UUID Isolation
+        # Test 3: Multi-User UUID Isolation
         await self.test_multi_user_uuid_isolation()
         
-        # Test 7: Performance with Production Database
+        # Test 4: Performance with Production Database
         await self.test_performance_production_database()
         
-        # Test 8: Error Handling and Recovery
+        # Test 5: Error Handling and Recovery
         await self.test_error_handling_recovery()
         
+        # Test 6: Database Schema Validation
+        await self.test_database_schema_validation()
+        
         # Generate final report
-        self.generate_final_report()
+        return self.generate_final_report()
         
-    async def test_local_backend_health(self):
-        """Test local backend health and availability."""
-        test_name = "local_backend_health"
-        print(f"\n🏥 Testing local backend health...")
-        
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(self.health_endpoint, timeout=10) as response:
-                    if response.status == 200:
-                        health_data = await response.json()
-                        self.results["tests"][test_name] = {
-                            "status": "PASS",
-                            "details": {
-                                "status_code": response.status,
-                                "response": health_data,
-                                "endpoint": self.health_endpoint
-                            }
-                        }
-                        print("✅ Local backend health: PASSED")
-                    else:
-                        self.results["tests"][test_name] = {
-                            "status": "FAIL",
-                            "details": {
-                                "status_code": response.status,
-                                "error": f"Health check failed with status {response.status}"
-                            }
-                        }
-                        print(f"❌ Local backend health: FAILED (Status: {response.status})")
-                        self.results["summary"]["critical_failures"] += 1
-                        
-        except Exception as e:
-            self.results["tests"][test_name] = {
-                "status": "ERROR",
-                "error": str(e)
-            }
-            print(f"❌ Local backend health: ERROR - {str(e)}")
-            self.results["summary"]["critical_failures"] += 1
-        
-        self.results["summary"]["total_tests"] += 1
-        if self.results["tests"].get(test_name, {}).get("status") == "PASS":
-            self.results["summary"]["passed"] += 1
-        else:
-            self.results["summary"]["failed"] += 1
-    
     async def test_production_supabase_connection(self):
         """Test production Supabase database connection."""
         test_name = "production_supabase_connection"
@@ -302,193 +233,6 @@ class LocalBackendProductionSupabaseTester:
                 "error": str(e)
             }
             print(f"❌ UUID generation with production database: ERROR - {str(e)}")
-            self.results["summary"]["critical_failures"] += 1
-        
-        self.results["summary"]["total_tests"] += 1
-        if self.results["tests"].get(test_name, {}).get("status") == "PASS":
-            self.results["summary"]["passed"] += 1
-        else:
-            self.results["summary"]["failed"] += 1
-    
-    async def test_end_to_end_upload_pipeline(self):
-        """Test end-to-end upload pipeline with local backend and production database."""
-        test_name = "end_to_end_upload_pipeline"
-        print(f"\n📤 Testing end-to-end upload pipeline...")
-        
-        try:
-            # Test data
-            test_user_id = "e2e_test_user"
-            test_content = "This is a test document for end-to-end upload pipeline testing with production Supabase."
-            test_content_hash = "e2e_test_hash_12345"
-            
-            # Generate deterministic document UUID
-            document_uuid = UUIDGenerator.document_uuid(test_user_id, test_content_hash)
-            
-            # Simulate upload request
-            upload_data = {
-                "content": test_content,
-                "sha256": test_content_hash,
-                "user_id": test_user_id,
-                "document_id": document_uuid
-            }
-            
-            # Test upload endpoint (simulated)
-            async with aiohttp.ClientSession() as session:
-                try:
-                    async with session.post(
-                        self.upload_endpoint,
-                        json=upload_data,
-                        timeout=30
-                    ) as response:
-                        if response.status in [200, 201]:
-                            upload_result = await response.json()
-                            
-                            # Verify document was stored in production database
-                            conn = await asyncpg.connect(self.database_url)
-                            try:
-                                stored_document = await conn.fetchrow("""
-                                    SELECT document_id, user_id, file_sha256, status
-                                    FROM upload_pipeline.documents 
-                                    WHERE document_id = $1
-                                """, document_uuid)
-                                
-                                if stored_document:
-                                    stored_uuid = str(stored_document['document_id'])
-                                    is_consistent = stored_uuid == document_uuid
-                                    
-                                    self.results["tests"][test_name] = {
-                                        "status": "PASS" if is_consistent else "FAIL",
-                                        "details": {
-                                            "upload_response_status": response.status,
-                                            "upload_result": upload_result,
-                                            "document_uuid": document_uuid,
-                                            "stored_uuid": stored_uuid,
-                                            "is_consistent": is_consistent,
-                                            "stored_document": dict(stored_document)
-                                        }
-                                    }
-                                    
-                                    if is_consistent:
-                                        print("✅ End-to-end upload pipeline: PASSED")
-                                    else:
-                                        print("❌ End-to-end upload pipeline: FAILED")
-                                        self.results["summary"]["critical_failures"] += 1
-                                else:
-                                    self.results["tests"][test_name] = {
-                                        "status": "FAIL",
-                                        "details": {"error": "Document not found in production database"}
-                                    }
-                                    print("❌ End-to-end upload pipeline: FAILED")
-                                    self.results["summary"]["critical_failures"] += 1
-                                    
-                            finally:
-                                await conn.close()
-                        else:
-                            self.results["tests"][test_name] = {
-                                "status": "FAIL",
-                                "details": {
-                                    "error": f"Upload failed with status {response.status}",
-                                    "response_text": await response.text()
-                                }
-                            }
-                            print(f"❌ End-to-end upload pipeline: FAILED (Status: {response.status})")
-                            self.results["summary"]["critical_failures"] += 1
-                            
-                except asyncio.TimeoutError:
-                    self.results["tests"][test_name] = {
-                        "status": "ERROR",
-                        "error": "Upload request timed out"
-                    }
-                    print("❌ End-to-end upload pipeline: ERROR - Timeout")
-                    self.results["summary"]["critical_failures"] += 1
-                    
-        except Exception as e:
-            self.results["tests"][test_name] = {
-                "status": "ERROR",
-                "error": str(e)
-            }
-            print(f"❌ End-to-end upload pipeline: ERROR - {str(e)}")
-            self.results["summary"]["critical_failures"] += 1
-        
-        self.results["summary"]["total_tests"] += 1
-        if self.results["tests"].get(test_name, {}).get("status") == "PASS":
-            self.results["summary"]["passed"] += 1
-        else:
-            self.results["summary"]["failed"] += 1
-    
-    async def test_rag_retrieval_production_data(self):
-        """Test RAG retrieval with production data."""
-        test_name = "rag_retrieval_production_data"
-        print(f"\n🔍 Testing RAG retrieval with production data...")
-        
-        try:
-            # Test query
-            test_query = "What documents are available for testing?"
-            
-            # Test chat endpoint (simulated)
-            chat_data = {
-                "message": test_query,
-                "user_id": "test_user_rag"
-            }
-            
-            async with aiohttp.ClientSession() as session:
-                try:
-                    async with session.post(
-                        self.chat_endpoint,
-                        json=chat_data,
-                        timeout=30
-                    ) as response:
-                        if response.status == 200:
-                            chat_result = await response.json()
-                            
-                            # Verify response contains expected elements
-                            has_response = "response" in chat_result or "answer" in chat_result
-                            has_uuid_references = any(
-                                "document_id" in str(chat_result) or 
-                                "uuid" in str(chat_result).lower()
-                            )
-                            
-                            self.results["tests"][test_name] = {
-                                "status": "PASS" if has_response else "FAIL",
-                                "details": {
-                                    "chat_response_status": response.status,
-                                    "chat_result": chat_result,
-                                    "has_response": has_response,
-                                    "has_uuid_references": has_uuid_references,
-                                    "query": test_query
-                                }
-                            }
-                            
-                            if has_response:
-                                print("✅ RAG retrieval with production data: PASSED")
-                            else:
-                                print("❌ RAG retrieval with production data: FAILED")
-                                self.results["summary"]["critical_failures"] += 1
-                        else:
-                            self.results["tests"][test_name] = {
-                                "status": "FAIL",
-                                "details": {
-                                    "error": f"Chat request failed with status {response.status}",
-                                    "response_text": await response.text()
-                                }
-                            }
-                            print(f"❌ RAG retrieval with production data: FAILED (Status: {response.status})")
-                            self.results["summary"]["critical_failures"] += 1
-                            
-                except asyncio.TimeoutError:
-                    self.results["tests"][test_name] = {
-                        "status": "ERROR",
-                        "error": "Chat request timed out"
-                    }
-                    print("❌ RAG retrieval with production data: ERROR - Timeout")
-                    self.results["summary"]["critical_failures"] += 1
-                    
-        except Exception as e:
-            self.results["tests"][test_name] = {
-                "status": "ERROR",
-                "error": str(e)
-            }
-            print(f"❌ RAG retrieval with production data: ERROR - {str(e)}")
             self.results["summary"]["critical_failures"] += 1
         
         self.results["summary"]["total_tests"] += 1
@@ -797,10 +541,80 @@ class LocalBackendProductionSupabaseTester:
         else:
             self.results["summary"]["failed"] += 1
     
+    async def test_database_schema_validation(self):
+        """Test database schema validation."""
+        test_name = "database_schema_validation"
+        print(f"\n📋 Testing database schema validation...")
+        
+        try:
+            conn = await asyncpg.connect(self.database_url)
+            try:
+                # Check upload_pipeline.documents table schema
+                schema_result = await conn.fetch("""
+                    SELECT column_name, data_type, is_nullable 
+                    FROM information_schema.columns 
+                    WHERE table_schema = 'upload_pipeline' 
+                    AND table_name = 'documents'
+                    ORDER BY ordinal_position
+                """)
+                
+                # Check for required columns
+                required_columns = ['document_id', 'user_id', 'file_sha256', 'processing_status', 'created_at']
+                schema_columns = [row['column_name'] for row in schema_result]
+                
+                missing_columns = [col for col in required_columns if col not in schema_columns]
+                has_required_columns = len(missing_columns) == 0
+                
+                # Check data types
+                document_id_type = next((row['data_type'] for row in schema_result if row['column_name'] == 'document_id'), None)
+                user_id_type = next((row['data_type'] for row in schema_result if row['column_name'] == 'user_id'), None)
+                
+                correct_types = (
+                    document_id_type == 'uuid' and 
+                    user_id_type == 'uuid'
+                )
+                
+                self.results["tests"][test_name] = {
+                    "status": "PASS" if has_required_columns and correct_types else "FAIL",
+                    "details": {
+                        "schema_columns": schema_columns,
+                        "required_columns": required_columns,
+                        "missing_columns": missing_columns,
+                        "has_required_columns": has_required_columns,
+                        "document_id_type": document_id_type,
+                        "user_id_type": user_id_type,
+                        "correct_types": correct_types,
+                        "full_schema": [dict(row) for row in schema_result]
+                    }
+                }
+                
+                if has_required_columns and correct_types:
+                    print("✅ Database schema validation: PASSED")
+                else:
+                    print("❌ Database schema validation: FAILED")
+                    self.results["summary"]["critical_failures"] += 1
+                    
+            finally:
+                await conn.close()
+                
+        except Exception as e:
+            self.results["tests"][test_name] = {
+                "status": "ERROR",
+                "error": str(e)
+            }
+            print(f"❌ Database schema validation: ERROR - {str(e)}")
+            self.results["summary"]["critical_failures"] += 1
+        
+        self.results["summary"]["total_tests"] += 1
+        if self.results["tests"].get(test_name, {}).get("status") == "PASS":
+            self.results["summary"]["passed"] += 1
+        else:
+            self.results["summary"]["failed"] += 1
+    
     def generate_final_report(self):
         """Generate final test report."""
         print("\n" + "=" * 80)
-        print("📋 PHASE C: LOCAL BACKEND + PRODUCTION SUPABASE TEST REPORT")
+        print("📋 PHASE C: DATABASE-ONLY TEST REPORT")
         print("=" * 80)
         
         total_tests = self.results["summary"]["total_tests"]
@@ -808,7 +622,7 @@ class LocalBackendProductionSupabaseTester:
         failed_tests = self.results["summary"]["failed"]
         critical_failures = self.results["summary"]["critical_failures"]
         
-        print(f"Configuration: Local Backend + Production Supabase")
+        print(f"Configuration: Database-Only Testing")
         print(f"Total Tests: {total_tests}")
         print(f"Passed: {passed_tests}")
         print(f"Failed: {failed_tests}")
@@ -823,10 +637,10 @@ class LocalBackendProductionSupabaseTester:
             print("UUID standardization mostly working but some issues need attention.")
         else:
             print(f"\n✅ ALL TESTS PASSED")
-            print("UUID standardization is working correctly with local backend and production Supabase.")
+            print("UUID standardization is working correctly with production Supabase database.")
         
         # Save results to file
-        results_file = f"phase_c_local_backend_production_supabase_{int(time.time())}.json"
+        results_file = f"phase_c_database_only_test_{int(time.time())}.json"
         with open(results_file, 'w') as f:
             json.dump(self.results, f, indent=2)
         
@@ -837,7 +651,7 @@ class LocalBackendProductionSupabaseTester:
 
 async def main():
     """Main execution function."""
-    tester = LocalBackendProductionSupabaseTester()
+    tester = DatabaseOnlyTester()
     results = await tester.run_all_tests()
     
     # Exit with appropriate code
