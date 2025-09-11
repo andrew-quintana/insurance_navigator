@@ -369,11 +369,17 @@ async def upload_document_v2(
             
         logger.info(f"✅ File size validated: {request.bytes_len} bytes")
         
-        # Generate document and job IDs
-        document_id = str(uuid.uuid4())
-        job_id = str(uuid.uuid4())
-        # Convert user ID to proper UUID format if needed
-        user_id = str(uuid.uuid4())  # Generate a proper UUID for the user
+        # Generate document and job IDs using deterministic approach
+        from utils.uuid_generation import UUIDGenerator
+        
+        # Use actual authenticated user ID (not a random UUID)
+        user_id = current_user['id']
+        
+        # Generate deterministic document ID based on user and content hash
+        document_id = UUIDGenerator.document_uuid(user_id, request.sha256)
+        
+        # Job IDs can remain random for ephemeral tracking
+        job_id = UUIDGenerator.job_uuid()
         
         # Generate storage path
         timestamp = int(time.time())

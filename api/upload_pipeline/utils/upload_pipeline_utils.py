@@ -11,9 +11,22 @@ from typing import Dict, Any, Optional
 logger = logging.getLogger(__name__)
 
 
-def generate_document_id() -> str:
-    """Generate a unique document ID."""
-    return str(uuid.uuid4())
+def generate_document_id(user_id: str, content_hash: str) -> str:
+    """
+    Generate a deterministic document ID based on user and content.
+    
+    This ensures consistency with processing workers that expect
+    deterministic UUIDs for document lookup.
+    
+    Args:
+        user_id: The authenticated user's ID
+        content_hash: SHA256 hash of the document content
+        
+    Returns:
+        Deterministic UUIDv5 string
+    """
+    from utils.uuid_generation import UUIDGenerator
+    return UUIDGenerator.document_uuid(user_id, content_hash)
 
 
 def generate_storage_path(user_id: str, document_id: str, filename: str) -> str:
