@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-09-11T16:02:07.711909",
+  "phase": "B.1.1 - Data Inventory and Analysis",
+  "documents": [],
+  "migration_impact": {
+    "total_documents": 0,
+    "uuidv4_documents": 0,
+    "uuidv5_documents": 0,
+    "orphaned_chunks": 0,
+    "affected_users": 0,
+    "storage_impact_mb": 0.0,
+    "high_priority_documents": 0,
+    "recent_documents": 0,
+    "failed_pipeline_documents": 0
+  },
+  "user_impact": {},
+  "pipeline_failures": {
+    "uuid_mismatch_documents": 0,
+    "uploaded_never_processed": 0,
+    "processed_but_no_chunks": 0,
+    "chunks_but_not_embedded": 0,
+    "recent_failures": 0
+  },
+  "recommendations": [
+    "MINIMAL MIGRATION: <50% of documents use random UUIDs - recommend forward-only fix",
+    "STORAGE IMPACT: Low storage footprint - migration should be fast"
+  ]
+}

@@ -1,0 +1,179 @@
+{
+  "timestamp": "2025-09-11T16:16:43.440313",
+  "metrics": [
+    {
+      "name": "uuid_generation_success_rate",
+      "value": 1.0,
+      "timestamp": "2025-09-11 16:16:42.996896",
+      "tags": {
+        "type": "uuid_generation"
+      },
+      "unit": "percentage"
+    },
+    {
+      "name": "uuid_mismatch_rate",
+      "value": 0.0,
+      "timestamp": "2025-09-11 16:16:42.996896",
+      "tags": {
+        "type": "uuid_consistency"
+      },
+      "unit": "percentage"
+    },
+    {
+      "name": "pipeline_consistency_rate",
+      "value": 0.5,
+      "timestamp": "2025-09-11 16:16:42.996896",
+      "tags": {
+        "type": "pipeline_health"
+      },
+      "unit": "percentage"
+    },
+    {
+      "name": "rag_retrieval_success_rate",
+      "value": 1.0,
+      "timestamp": "2025-09-11 16:16:42.996896",
+      "tags": {
+        "type": "rag_functionality"
+      },
+      "unit": "percentage"
+    },
+    {
+      "name": "document_processing_status",
+      "value": 18,
+      "timestamp": "2025-09-11 16:16:42.996896",
+      "tags": {
+        "status": "complete"
+      },
+      "unit": "count"
+    },
+    {
+      "name": "total_chunks",
+      "value": 18,
+      "timestamp": "2025-09-11 16:16:42.996896",
+      "tags": {
+        "type": "chunk_metrics"
+      },
+      "unit": "count"
+    },
+    {
+      "name": "avg_chunks_per_document",
+      "value": "1.5000000000000000",
+      "timestamp": "2025-09-11 16:16:42.996896",
+      "tags": {
+        "type": "chunk_metrics"
+      },
+      "unit": "count"
+    },
+    {
+      "name": "affected_users_count",
+      "value": 0,
+      "timestamp": "2025-09-11 16:16:42.996896",
+      "tags": {
+        "type": "user_impact"
+      },
+      "unit": "count"
+    }
+  ],
+  "alerts": [
+    {
+      "alert_id": "pipeline_inconsistency_1757607403",
+      "level": "AlertLevel.WARNING",
+      "message": "Pipeline consistency rate 50.00% is below acceptable threshold",
+      "timestamp": "2025-09-11 16:16:43.311309",
+      "metric_name": "pipeline_consistency_rate",
+      "threshold": 0.8,
+      "current_value": 0.5,
+      "resolved": false
+    }
+  ],
+  "dashboard": {
+    "timestamp": "2025-09-11T16:16:43.440129",
+    "migration_progress": {
+      "total_documents": 18,
+      "migrated_documents": 18,
+      "pending_documents": 0,
+      "progress_percentage": 100.0,
+      "status": "completed"
+    },
+    "recent_activity": [
+      {
+        "date": "2025-09-11",
+        "documents_created": 18,
+        "deterministic_docs": 18,
+        "random_docs": 0
+      }
+    ],
+    "user_impact": [
+      {
+        "user_id": "9fd8ec50-acba-4e9b-9044-587e01421731",
+        "total_documents": 1,
+        "deterministic_docs": 1,
+        "random_docs": 0,
+        "migration_status": "completed"
+      },
+      {
+        "user_id": "09ae84cf-8c51-4bae-b5e1-61136ceb82c9",
+        "total_documents": 1,
+        "deterministic_docs": 1,
+        "random_docs": 0,
+        "migration_status": "completed"
+      },
+      {
+        "user_id": "9ca9fb5f-778a-494b-8cb1-b199cf18d078",
+        "total_documents": 1,
+        "deterministic_docs": 1,
+        "random_docs": 0,
+        "migration_status": "completed"
+      },
+      {
+        "user_id": "56882e68-54d5-491b-b45d-fa84b08dbaba",
+        "total_documents": 1,
+        "deterministic_docs": 1,
+        "random_docs": 0,
+        "migration_status": "completed"
+      },
+      {
+        "user_id": "38f2f1e6-97cb-40f0-b89b-7dbad522f481",
+        "total_documents": 1,
+        "deterministic_docs": 1,
+        "random_docs": 0,
+        "migration_status": "completed"
+      },
+      {
+        "user_id": "dcd7c8ea-fb40-488b-b7b5-fb3d1620b19a",
+        "total_documents": 1,
+        "deterministic_docs": 1,
+        "random_docs": 0,
+        "migration_status": "completed"
+      },
+      {
+        "user_id": "22557d89-16ed-4c12-b768-2043cc45ace9",
+        "total_documents": 1,
+        "deterministic_docs": 1,
+        "random_docs": 0,
+        "migration_status": "completed"
+      },
+      {
+        "user_id": "d04db2c7-e2d8-4242-bf68-8e3e8068aca4",
+        "total_documents": 1,
+        "deterministic_docs": 1,
+        "random_docs": 0,
+        "migration_status": "completed"
+      },
+      {
+        "user_id": "ac4db937-3678-4a14-a00a-358e913e8438",
+        "total_documents": 1,
+        "deterministic_docs": 1,
+        "random_docs": 0,
+        "migration_status": "completed"
+      },
+      {
+        "user_id": "72c7103a-3fb5-4b80-ad50-49706b873781",
+        "total_documents": 1,
+        "deterministic_docs": 1,
+        "random_docs": 0,
+        "migration_status": "completed"
+      }
+    ]
+  }
+}

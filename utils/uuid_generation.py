@@ -143,3 +143,4 @@ def generate_chunk_id(document_id: str, chunker: str, version: str, ordinal: int
 def generate_job_id() -> str:
     """Convenience function for job UUID generation."""
     return UUIDGenerator.job_uuid()
+

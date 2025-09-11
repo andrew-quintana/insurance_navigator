@@ -1,0 +1,82 @@
+{
+  "timestamp": "2025-09-11T16:13:55.722257",
+  "pre_reset_summary": {
+    "documents": 38,
+    "chunks": 73,
+    "jobs": 106,
+    "events": 0,
+    "buffer_entries": 0,
+    "storage_files": {},
+    "timestamp": "2025-09-11T16:13:54.750057"
+  },
+  "post_reset_summary": {
+    "documents": 47,
+    "chunks": 73,
+    "jobs": 106,
+    "events": 0,
+    "buffer_entries": 0,
+    "storage_files": {},
+    "timestamp": "2025-09-11T16:13:55.721793"
+  },
+  "repopulate_results": {
+    "successful_uploads": 0,
+    "failed_uploads": 9,
+    "upload_results": [
+      {
+        "filename": "scan_classic_hmo.pdf",
+        "status": "failed",
+        "error": "invalid input for query argument $11: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,... (expected str, got list)"
+      },
+      {
+        "filename": "simulated_insurance_document.pdf",
+        "status": "failed",
+        "error": "invalid input for query argument $11: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,... (expected str, got list)"
+      },
+      {
+        "filename": "scan_classic_hmo_parsed.pdf",
+        "status": "failed",
+        "error": "invalid input for query argument $11: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,... (expected str, got list)"
+      },
+      {
+        "filename": "test_serverless_processing.pdf",
+        "status": "failed",
+        "error": "invalid input for query argument $11: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,... (expected str, got list)"
+      },
+      {
+        "filename": "test_insurance_document.pdf",
+        "status": "failed",
+        "error": "invalid input for query argument $11: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,... (expected str, got list)"
+      },
+      {
+        "filename": "test_upload.pdf",
+        "status": "failed",
+        "error": "invalid input for query argument $11: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,... (expected str, got list)"
+      },
+      {
+        "filename": "test_document.pdf",
+        "status": "failed",
+        "error": "invalid input for query argument $11: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,... (expected str, got list)"
+      },
+      {
+        "filename": "test_upload.pdf",
+        "status": "failed",
+        "error": "invalid input for query argument $11: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,... (expected str, got list)"
+      },
+      {
+        "filename": "test_document.pdf",
+        "status": "failed",
+        "error": "invalid input for query argument $11: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,... (expected str, got list)"
+      }
+    ]
+  },
+  "validation_results": {
+    "total_documents": 47,
+    "uuidv5_documents": 0,
+    "uuidv4_documents": 0,
+    "total_chunks": 73,
+    "uuidv5_chunks": 0,
+    "deterministic_percentage": 0.0,
+    "chunk_deterministic_percentage": 0.0
+  },
+  "success": true
+}

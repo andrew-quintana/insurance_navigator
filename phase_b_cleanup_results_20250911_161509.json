@@ -1,0 +1,10 @@
+{
+  "timestamp": "2025-09-11T16:15:09.255171",
+  "old_documents_found": 38,
+  "cleaned_documents": 16,
+  "failed_cleanups": 22,
+  "final_summary": {
+    "error": "connection is closed"
+  },
+  "success": false
+}

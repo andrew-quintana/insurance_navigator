@@ -1,0 +1,15 @@
+{
+  "timestamp": "2025-09-11T16:16:38.255136",
+  "before": {
+    "total_documents": 56,
+    "random_documents": 38,
+    "deterministic_documents": 18
+  },
+  "after": {
+    "total_documents": 18,
+    "random_documents": 0,
+    "deterministic_documents": 18
+  },
+  "deleted_documents": 38,
+  "success": true
+}
