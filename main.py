@@ -608,8 +608,21 @@ async def chat_with_agent(
                 detail="Message is required"
             )
         
-        # Import the chat interface
-        from agents.patient_navigator.chat_interface import PatientNavigatorChatInterface, ChatMessage
+        # Import the chat interface using safe imports
+        from utils.import_utilities import (
+            safe_import_patient_navigator_chat_interface,
+            safe_import_chat_message
+        )
+        
+        PatientNavigatorChatInterface = safe_import_patient_navigator_chat_interface()
+        ChatMessage = safe_import_chat_message()
+        
+        if not PatientNavigatorChatInterface or not ChatMessage:
+            logger.error("Failed to import required chat interface classes")
+            raise HTTPException(
+                status_code=500, 
+                detail="Chat service temporarily unavailable - missing required components"
+            )
         
         # Initialize chat interface (singleton pattern for efficiency)
         if not hasattr(chat_with_agent, '_chat_interface'):
@@ -953,6 +966,95 @@ async def get_auth_user(request: Request):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
+
+
+@app.get("/debug/rag-similarity/{user_id}")
+async def debug_rag_similarity(
+    user_id: str,
+    query: str = "What is my deductible?",
+    threshold: float = 0.4,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """
+    Debug endpoint to analyze RAG similarity scores with histogram.
+    
+    This endpoint helps understand why RAG retrieval might be returning 0 chunks
+    by showing the distribution of similarity scores.
+    """
+    try:
+        from utils.import_utilities import (
+            safe_import_rag_tool,
+            safe_import_retrieval_config
+        )
+        from utils.similarity_histogram import get_similarity_statistics
+        
+        RAGTool = safe_import_rag_tool()
+        RetrievalConfig = safe_import_retrieval_config()
+        
+        if not RAGTool or not RetrievalConfig:
+            raise HTTPException(
+                status_code=500,
+                detail="RAG tool not available"
+            )
+        
+        # Initialize RAG tool with lower threshold for debugging
+        config = RetrievalConfig(similarity_threshold=0.0, max_chunks=50)
+        rag_tool = RAGTool(user_id, config)
+        
+        # Retrieve chunks with no threshold filtering
+        chunks = await rag_tool.retrieve_chunks_from_text(query)
+        
+        # Extract similarity scores
+        similarities = [chunk.similarity for chunk in chunks if chunk.similarity is not None]
+        
+        # Generate histogram data
+        histogram_data = get_similarity_statistics(similarities, threshold)
+        
+        # Filter chunks by threshold
+        filtered_chunks = [
+            chunk for chunk in chunks 
+            if chunk.similarity and chunk.similarity >= threshold
+        ]
+        
+        # Prepare response
+        response = {
+            "query": query,
+            "user_id": user_id,
+            "threshold": threshold,
+            "total_chunks": len(chunks),
+            "filtered_chunks": len(filtered_chunks),
+            "similarity_statistics": histogram_data["statistics"],
+            "histogram_buckets": [
+                {
+                    "range": f"[{bucket.min_similarity:.3f}-{bucket.max_similarity:.3f}]",
+                    "count": bucket.count,
+                    "percentage": bucket.percentage
+                }
+                for bucket in histogram_data["buckets"]
+            ],
+            "above_threshold": histogram_data["above_threshold"],
+            "below_threshold": histogram_data["below_threshold"],
+            "threshold_percentage": histogram_data["threshold_percentage"],
+            "chunk_details": [
+                {
+                    "chunk_id": str(chunk.id)[:8],
+                    "similarity": chunk.similarity,
+                    "content_preview": chunk.content[:100] + "..." if len(chunk.content) > 100 else chunk.content,
+                    "above_threshold": chunk.similarity >= threshold if chunk.similarity else False
+                }
+                for chunk in chunks[:10]  # Limit to first 10 chunks for response size
+            ]
+        }
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Debug RAG similarity error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Debug analysis failed: {str(e)}"
+        )
+
 
 if __name__ == "__main__":
     import uvicorn
