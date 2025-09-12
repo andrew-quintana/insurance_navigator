@@ -425,15 +425,15 @@ Unique content for testing: {uuid.uuid4().hex}
             normalized_content = self._normalize_markdown(parsed_content)
             content_sha = self._compute_sha256(normalized_content)
             
-            # Check for duplicate parsed content
+            # Check for duplicate parsed content (only within same user)
             async with self.db.get_db_connection() as conn:
                 existing = await conn.fetchrow("""
                     SELECT d.document_id, d.parsed_path, d.filename
                     FROM upload_pipeline.documents d
-                    WHERE d.parsed_sha256 = $1 AND d.document_id != $2
+                    WHERE d.parsed_sha256 = $1 AND d.document_id != $2 AND d.user_id = $3
                     ORDER BY d.created_at ASC
                     LIMIT 1
-                """, content_sha, document_id)
+                """, content_sha, document_id, user_id)
                 
                 if existing:
                     # Duplicate parsed content found
@@ -912,15 +912,15 @@ Processing timestamp: {datetime.utcnow().isoformat()}
             if not doc:
                 raise ValueError(f"Document {document_id} not found")
             
-            # Check for duplicate documents by hash
+            # Check for duplicate documents by hash (only within same user)
             duplicate_query = """
                 SELECT document_id, filename, created_at
                 FROM upload_pipeline.documents 
-                WHERE file_sha256 = $1 AND document_id != $2
+                WHERE file_sha256 = $1 AND document_id != $2 AND user_id = $3
                 ORDER BY created_at ASC
                 LIMIT 1
             """
-            duplicate = await conn.fetchrow(duplicate_query, doc["file_sha256"], document_id)
+            duplicate = await conn.fetchrow(duplicate_query, doc["file_sha256"], document_id, user_id)
             
             if duplicate:
                 self.logger.info("Duplicate document found, cleaning up", 
