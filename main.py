@@ -27,7 +27,11 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import hashlib
 from utils.cors_config import get_cors_config, get_cors_headers
 import re
-import psycopg2
+try:
+    import psycopg2
+except ImportError:
+    print("Warning: psycopg2 not available, using asyncpg for database connections")
+    psycopg2 = None
 import traceback
 from config.database import db_pool
 
