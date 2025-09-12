@@ -210,10 +210,10 @@ Expert Query Reframe:
             # Filter chunks by similarity threshold (adjusted for real OpenAI embeddings)
             filtered_chunks = [
                 chunk for chunk in chunks 
-                if chunk.similarity and chunk.similarity >= 0.1
+                if chunk.similarity and chunk.similarity >= 0.3
             ]
             
-            self.logger.info(f"Retrieved {len(chunks)} chunks, filtered to {len(filtered_chunks)} with similarity >= 0.1")
+            self.logger.info(f"Retrieved {len(chunks)} chunks, filtered to {len(filtered_chunks)} with similarity >= 0.3")
             
             return filtered_chunks
             
