@@ -27,7 +27,7 @@ class RetrievalConfig:
         max_chunks: Maximum number of chunks to return.
         token_budget: Maximum total tokens for all returned chunks.
     """
-    similarity_threshold: float = 0.1
+    similarity_threshold: float = 0.3
     max_chunks: int = 10
     token_budget: int = 4000
 
