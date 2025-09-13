@@ -117,18 +117,19 @@ class RealLlamaParseService(ServiceInterface):
             start_time = datetime.utcnow()
             
             # Test API connectivity with a simple request
-            # LlamaParse doesn't have a simple health endpoint, so we'll test with models or status
-            response = await self.client.get(f"{self.base_url}/v1/status")
+            # LlamaParse doesn't have a simple health endpoint, so we'll test with parsing upload
+            response = await self.client.post(f"{self.base_url}/parsing/upload", json={})
             
             response_time = (datetime.utcnow() - start_time).total_seconds() * 1000
             
             # Update health status
+            # 400 means API is working but needs proper parameters, 401/403 means auth issues but API is up
             self.health_status = ServiceHealth(
-                is_healthy=response.status_code in [200, 401, 403],  # 401/403 means API is up
+                is_healthy=response.status_code in [200, 400, 401, 403],  # 400/401/403 means API is up
                 last_check=now,
                 response_time_ms=response_time,
-                error_count=0 if response.status_code in [200, 401, 403] else 1,
-                last_error=None if response.status_code in [200, 401, 403] else f"HTTP {response.status_code}"
+                error_count=0 if response.status_code in [200, 400, 401, 403] else 1,
+                last_error=None if response.status_code in [200, 400, 401, 403] else f"HTTP {response.status_code}"
             )
             
             self.last_health_check = now
