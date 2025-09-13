@@ -22,7 +22,7 @@ import traceback
 from shared.db import DatabaseManager
 from shared.storage import StorageManager
 from shared.storage.mock_storage import MockStorageManager
-from shared.external import LlamaParseClient, OpenAIClient
+from shared.external import RealLlamaParseService, OpenAIClient
 from shared.external.service_router import ServiceRouter, ServiceMode
 from shared.logging import StructuredLogger
 from shared.config import WorkerConfig
