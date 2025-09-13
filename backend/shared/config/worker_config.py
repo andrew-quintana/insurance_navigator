@@ -74,8 +74,8 @@ class WorkerConfig:
             supabase_service_role_key=os.getenv("SUPABASE_SERVICE_ROLE_KEY", ""),
             
             # LlamaParse
-            llamaparse_api_url=os.getenv("LLAMAPARSE_API_URL", "https://api.cloud.llamaindex.ai"),
-            llamaparse_api_key=os.getenv("LLAMAPARSE_API_KEY", ""),
+            llamaparse_api_url=os.getenv("LLAMAPARSE_BASE_URL", "https://api.cloud.llamaindex.ai/api/v1"),
+            llamaparse_api_key=os.getenv("LLAMACLOUD_API_KEY", os.getenv("LLAMAPARSE_API_KEY", "")),
             
             # OpenAI
             openai_api_url=os.getenv("OPENAI_API_URL", "https://api.openai.com"),
