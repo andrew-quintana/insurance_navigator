@@ -103,7 +103,7 @@ class WorkerConfig:
             terminal_stage=os.getenv("TERMINAL_STAGE", "embedded"),
             
             # Local testing - default to false in production, true in development
-            use_mock_storage=os.getenv("USE_MOCK_STORAGE", "false" if os.getenv("ENVIRONMENT") == "production" else "true").lower() == "true"
+            use_mock_storage=os.getenv("USE_MOCK_STORAGE", "false").lower() == "true"
         )
     
     def to_dict(self) -> Dict[str, Any]:

@@ -91,7 +91,7 @@ class EnhancedBaseWorker:
         )
         
         try:
-            self.logger.info(
+        self.logger.info(
                 "Initializing Enhanced BaseWorker components",
                 correlation_id=correlation_id,
                 worker_id=self.worker_id
@@ -128,8 +128,7 @@ class EnhancedBaseWorker:
                         "tokens_per_minute": self.config.openai_tokens_per_minute
                     }
                 },
-                mode=ServiceMode.REAL,  # Force real mode in production
-                fallback_enabled=False  # Disable fallback to prevent silent mock usage
+                start_health_monitoring=True
             )
             
             # Initialize enhanced service client
@@ -446,10 +445,10 @@ class EnhancedBaseWorker:
             
             # Update document with parsed content info
             async with self.db.get_db_connection() as conn:
-                await conn.execute("""
-                    UPDATE upload_pipeline.documents
+                    await conn.execute("""
+                        UPDATE upload_pipeline.documents
                     SET parsed_path = $1, parsed_sha256 = $2, processing_status = 'parsed',
-                        updated_at = now()
+                            updated_at = now()
                     WHERE document_id = $3
                 """, parsed_path, parsed_result.get("sha256", ""), document_id)
                 
@@ -495,11 +494,11 @@ class EnhancedBaseWorker:
         )
         
         try:
-            self.logger.info(
+                self.logger.info(
                 "Processing document validation with real content",
                 correlation_id=correlation_id,
-                job_id=str(job_id),
-                document_id=str(document_id),
+                    job_id=str(job_id),
+                    document_id=str(document_id),
                 user_id=user_id
             )
             
@@ -690,9 +689,9 @@ class EnhancedBaseWorker:
             )
             
             # Store embeddings in database
-            async with self.db.get_db_connection() as conn:
+        async with self.db.get_db_connection() as conn:
                 for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-                    await conn.execute("""
+            await conn.execute("""
                         UPDATE upload_pipeline.document_chunks 
                         SET embedding = $1, updated_at = now()
                         WHERE chunk_id = $2
@@ -708,12 +707,12 @@ class EnhancedBaseWorker:
             self.logger.info(
                 "Embeddings processing completed successfully",
                 correlation_id=correlation_id,
-                job_id=str(job_id), 
-                document_id=str(document_id),
+                               job_id=str(job_id), 
+                               document_id=str(document_id),
                 embedding_count=len(embeddings)
             )
-            
-        except Exception as e:
+                
+            except Exception as e:
             error = self.error_handler.create_error(
                 error_code="EMBEDDINGS_PROCESSING_FAILED",
                 error_message="Failed to generate embeddings with OpenAI service",
@@ -723,7 +722,7 @@ class EnhancedBaseWorker:
                 original_exception=e
             )
             self.error_handler.log_error(error)
-            raise
+                raise
     
     def _generate_chunks(self, content: str, document_id: str) -> List[str]:
         """Generate chunks from content (simplified implementation)"""
@@ -740,21 +739,21 @@ class EnhancedBaseWorker:
     async def _update_job_state(self, job_id: str, state: str, correlation_id: str, error_message: Optional[str] = None):
         """Update job state in database"""
         try:
-            async with self.db.get_db_connection() as conn:
+        async with self.db.get_db_connection() as conn:
                 if error_message:
-                    await conn.execute("""
-                        UPDATE upload_pipeline.upload_jobs
+            await conn.execute("""
+                UPDATE upload_pipeline.upload_jobs
                         SET state = $1, last_error = $2, updated_at = now()
-                        WHERE job_id = $3
+                WHERE job_id = $3
                     """, state, json.dumps({"error": error_message, "timestamp": datetime.utcnow().isoformat()}), job_id)
                 else:
-                    await conn.execute("""
-                        UPDATE upload_pipeline.upload_jobs
+            await conn.execute("""
+                UPDATE upload_pipeline.upload_jobs
                         SET state = $1, updated_at = now()
-                        WHERE job_id = $2
+                WHERE job_id = $2
                     """, state, job_id)
         except Exception as e:
-            self.logger.error(
+        self.logger.error(
                 "Failed to update job state",
                 correlation_id=correlation_id,
                 job_id=job_id,
