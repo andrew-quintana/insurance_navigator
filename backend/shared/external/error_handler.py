@@ -165,7 +165,14 @@ class WorkerErrorHandler:
         
         # Log with appropriate level
         log_data = error.to_dict()
-        log_message = json.dumps(log_data, indent=2)
+        
+        # Custom JSON encoder to handle UUID objects
+        def json_serializer(obj):
+            if hasattr(obj, '__str__') and 'UUID' in str(type(obj)):
+                return str(obj)
+            raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+        
+        log_message = json.dumps(log_data, indent=2, default=json_serializer)
         
         if error.severity == ErrorSeverity.DEBUG:
             self.logger.debug(log_message)

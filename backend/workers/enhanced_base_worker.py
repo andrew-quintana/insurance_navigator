@@ -296,7 +296,8 @@ class EnhancedBaseWorker:
                 job = await conn.fetchrow("""
                     WITH next_job AS (
                         SELECT uj.job_id, uj.document_id, d.user_id, uj.status, uj.state,
-                               uj.progress, uj.retry_count, uj.last_error, uj.created_at
+                               uj.progress, uj.retry_count, uj.last_error, uj.created_at,
+                               d.storage_path, d.mime_type
                         FROM upload_pipeline.upload_jobs uj
                         JOIN upload_pipeline.documents d ON uj.document_id = d.document_id
                         WHERE uj.status IN (
@@ -426,12 +427,11 @@ class EnhancedBaseWorker:
             )
             
             # Get document details
-            progress = job.get("progress", {})
-            storage_path = progress.get("storage_path")
-            mime_type = progress.get("mime", "application/pdf")
+            storage_path = job.get("storage_path")
+            mime_type = job.get("mime_type", "application/pdf")
             
             if not storage_path:
-                raise ValueError("No storage_path found in job progress")
+                raise ValueError("No storage_path found in job data")
             
             # Call real LlamaParse service
             parsed_result = await self.enhanced_service_client.call_llamaparse_service(
