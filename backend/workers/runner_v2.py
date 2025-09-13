@@ -9,7 +9,7 @@ import sys
 import logging
 from typing import Optional
 
-from enhanced_base_worker_v2 import EnhancedBaseWorkerV2
+from enhanced_base_worker import EnhancedBaseWorker
 from shared.config import WorkerConfig
 
 # Configure logging
@@ -21,10 +21,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class WorkerRunnerV2:
-    """Runner for EnhancedBaseWorkerV2 with graceful shutdown handling"""
+    """Runner for EnhancedBaseWorker with graceful shutdown handling"""
     
     def __init__(self):
-        self.worker: Optional[EnhancedBaseWorkerV2] = None
+        self.worker: Optional[EnhancedBaseWorker] = None
         self.shutdown_event = asyncio.Event()
         
     async def start(self):
@@ -36,8 +36,9 @@ class WorkerRunnerV2:
             
             logger.info(f"Configuration loaded and validated, config_keys={list(config.to_dict().keys())}")
             
-            # Create and start worker
-            self.worker = EnhancedBaseWorkerV2(config)
+            # Create and initialize worker
+            self.worker = EnhancedBaseWorker(config)
+            await self.worker.initialize()
             
             # Set up signal handlers for graceful shutdown
             self._setup_signal_handlers()
