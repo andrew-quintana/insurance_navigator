@@ -102,8 +102,8 @@ class WorkerConfig:
             # Pipeline
             terminal_stage=os.getenv("TERMINAL_STAGE", "embedded"),
             
-            # Local testing
-            use_mock_storage=os.getenv("USE_MOCK_STORAGE", "true").lower() == "true"
+            # Local testing - default to false in production, true in development
+            use_mock_storage=os.getenv("USE_MOCK_STORAGE", "false" if os.getenv("ENVIRONMENT") == "production" else "true").lower() == "true"
         )
     
     def to_dict(self) -> Dict[str, Any]:

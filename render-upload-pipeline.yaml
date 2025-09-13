@@ -42,7 +42,7 @@ services:
     region: oregon
     branch: main
     buildCommand: pip install -r requirements.txt
-    startCommand: PYTHONPATH=/opt/render/project/src/backend python backend/workers/runner.py
+    startCommand: PYTHONPATH=/opt/render/project/src/backend python backend/workers/runner_v2.py
     numReplicas: 1
     autoscaling:
       enabled: true
