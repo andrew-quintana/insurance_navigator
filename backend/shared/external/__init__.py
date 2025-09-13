@@ -1,5 +1,5 @@
-from .llamaparse_client import LlamaParseClient
+from .llamaparse_real import LlamaParseReal
 from .openai_client import OpenAIClient
 
-__all__ = ['LlamaParseClient', 'OpenAIClient']
+__all__ = ['LlamaParseReal', 'OpenAIClient']
 
