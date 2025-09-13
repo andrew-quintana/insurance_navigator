@@ -270,8 +270,8 @@ class EnhancedBaseWorker:
                 )
                 self.error_handler.log_error(error)
                 await asyncio.sleep(10)  # Wait before retrying
-        
-        self.logger.info(
+            
+            self.logger.info(
             "Job processing loop stopped",
             correlation_id=correlation_id,
             worker_id=self.worker_id
@@ -431,11 +431,11 @@ class EnhancedBaseWorker:
             parsed_result = await self.enhanced_service_client.call_llamaparse_service(
                 document_path=storage_path,
                 user_id=user_id,
-                job_id=str(job_id),
+                        job_id=str(job_id),
                 document_id=str(document_id),
-                correlation_id=correlation_id
-            )
-            
+                        correlation_id=correlation_id
+                    )
+                    
             # Store parsed content
             parsed_path = f"files/user/{user_id}/parsed/{document_id}.md"
             await self.storage.write_blob(parsed_path, parsed_result["content"])
@@ -451,19 +451,19 @@ class EnhancedBaseWorker:
                 
                 # Update job status
                 await conn.execute("""
-                    UPDATE upload_pipeline.upload_jobs
+                    UPDATE upload_pipeline.upload_jobs 
                     SET status = 'parsed', state = 'queued', updated_at = now()
                     WHERE job_id = $1
                 """, job_id)
-            
-            self.logger.info(
+                
+                self.logger.info(
                 "Document parsing completed successfully",
                 correlation_id=correlation_id,
-                job_id=str(job_id),
+                    job_id=str(job_id),
                 document_id=str(document_id),
                 parsed_path=parsed_path
-            )
-            
+                )
+        
         except Exception as e:
             error = self.error_handler.create_error(
                 error_code="DOCUMENT_PARSING_FAILED",
@@ -485,7 +485,7 @@ class EnhancedBaseWorker:
         context = create_error_context(
             correlation_id=correlation_id,
             user_id=user_id,
-            job_id=str(job_id),
+                    job_id=str(job_id),
             document_id=str(document_id),
             operation="validate_parsed_content"
         )
@@ -535,15 +535,15 @@ class EnhancedBaseWorker:
                     SET status = 'parse_validated', state = 'queued', updated_at = now()
                     WHERE job_id = $1
                 """, job_id)
-            
-            self.logger.info(
+                
+                self.logger.info(
                 "Document validation completed successfully",
                 correlation_id=correlation_id,
-                job_id=str(job_id),
-                document_id=str(document_id),
+                    job_id=str(job_id),
+                    document_id=str(document_id),
                 content_length=len(parsed_content)
-            )
-            
+                )
+        
         except Exception as e:
             error = self.error_handler.create_error(
                 error_code="DOCUMENT_VALIDATION_FAILED",
@@ -574,10 +574,10 @@ class EnhancedBaseWorker:
             self.logger.info(
                 "Processing document chunking with real content",
                 correlation_id=correlation_id,
-                job_id=str(job_id),
+                    job_id=str(job_id),
                 document_id=str(document_id),
                 user_id=user_id
-            )
+                )
             
             # Get parsed content
             async with self.db.get_db_connection() as conn:
@@ -586,7 +586,7 @@ class EnhancedBaseWorker:
                     FROM upload_pipeline.documents 
                     WHERE document_id = $1
                 """, document_id)
-                
+            
                 if not doc_info or not doc_info["parsed_path"]:
                     raise ValueError(f"No parsed_path found for document {document_id}")
                 
@@ -617,15 +617,15 @@ class EnhancedBaseWorker:
                     SET status = 'chunks_stored', state = 'queued', updated_at = now()
                     WHERE job_id = $1
                 """, job_id)
-            
-            self.logger.info(
+                
+                self.logger.info(
                 "Document chunking completed successfully",
                 correlation_id=correlation_id,
-                job_id=str(job_id),
-                document_id=str(document_id),
+                    job_id=str(job_id),
+                    document_id=str(document_id),
                 chunk_count=len(chunks)
-            )
-            
+                )
+        
         except Exception as e:
             error = self.error_handler.create_error(
                 error_code="DOCUMENT_CHUNKING_FAILED",
@@ -647,7 +647,7 @@ class EnhancedBaseWorker:
         context = create_error_context(
             correlation_id=correlation_id,
             user_id=user_id,
-            job_id=str(job_id),
+                               job_id=str(job_id), 
             document_id=str(document_id),
             service_name="openai",
             operation="generate_embeddings"
@@ -700,11 +700,11 @@ class EnhancedBaseWorker:
                     SET status = 'embeddings_stored', state = 'completed', updated_at = now()
                     WHERE job_id = $1
                 """, job_id)
-            
+                
             self.logger.info(
                 "Embeddings processing completed successfully",
                 correlation_id=correlation_id,
-                job_id=str(job_id),
+                job_id=str(job_id), 
                 document_id=str(document_id),
                 embedding_count=len(embeddings)
             )
