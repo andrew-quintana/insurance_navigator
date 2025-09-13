@@ -27,7 +27,7 @@ class RetrievalConfig:
         max_chunks: Maximum number of chunks to return.
         token_budget: Maximum total tokens for all returned chunks.
     """
-    similarity_threshold: float = 0.3
+    similarity_threshold: float = 0.01
     max_chunks: int = 10
     token_budget: int = 4000
 
@@ -101,25 +101,25 @@ class RAGTool:
             # Query for top-k chunks with user-scoped access
             schema = os.getenv("DATABASE_SCHEMA", "upload_pipeline")
             
-            # Convert Python list to PostgreSQL vector format
+            # Convert Python list to PostgreSQL vector format (no spaces)
             vector_string = '[' + ','.join(str(x) for x in query_embedding) + ']'
             
-            # Use a different approach for asyncpg - cast the parameter directly
+            # Use string interpolation for vector parameter (asyncpg doesn't support vector parameter binding)
             sql = f"""
                 SELECT dc.chunk_id, dc.document_id, dc.chunk_ord as chunk_index, dc.text as content,
                        NULL as section_path, NULL as section_title,
                        NULL as page_start, NULL as page_end,
                        NULL as tokens,
-                       1 - (dc.embedding <=> $1::vector(1536)) as similarity
+                       1 - (dc.embedding <=> '{vector_string}'::vector) as similarity
                 FROM {schema}.document_chunks dc
                 JOIN {schema}.documents d ON dc.document_id = d.document_id
-                WHERE d.user_id = $2
+                WHERE d.user_id = $1
                   AND dc.embedding IS NOT NULL
-                  AND 1 - (dc.embedding <=> $1::vector(1536)) > $3
-                ORDER BY dc.embedding <=> $1::vector(1536)
-                LIMIT $4
+                  AND 1 - (dc.embedding <=> '{vector_string}'::vector) > $2
+                ORDER BY dc.embedding <=> '{vector_string}'::vector
+                LIMIT $3
             """
-            rows = await conn.fetch(sql, vector_string, self.user_id, self.config.similarity_threshold, self.config.max_chunks)
+            rows = await conn.fetch(sql, self.user_id, self.config.similarity_threshold, self.config.max_chunks)
             chunks = []
             total_tokens = 0
             for row in rows:
