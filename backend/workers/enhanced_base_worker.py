@@ -110,8 +110,11 @@ class EnhancedBaseWorker:
                 )
             else:
                 self.storage = StorageManager(
-                    supabase_url=self.config.supabase_url,
-                    supabase_key=self.config.supabase_service_role_key
+                    config={
+                        "storage_url": self.config.supabase_url,
+                        "anon_key": self.config.supabase_anon_key,
+                        "service_role_key": self.config.supabase_service_role_key
+                    }
                 )
             
             # Initialize service router
