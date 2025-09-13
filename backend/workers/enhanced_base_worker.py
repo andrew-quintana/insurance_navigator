@@ -171,6 +171,10 @@ class EnhancedBaseWorker:
                 worker_id=self.worker_id
             )
             
+            # Initialize components if not already done
+            if self.db is None:
+                await self.initialize()
+            
             self.running = True
             await self.process_jobs_continuously()
             
