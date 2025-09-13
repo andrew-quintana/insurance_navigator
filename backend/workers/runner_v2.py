@@ -7,7 +7,11 @@ import asyncio
 import signal
 import sys
 import logging
+import os
 from typing import Optional
+
+# Add the backend directory to Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from enhanced_base_worker import EnhancedBaseWorker
 from shared.config import WorkerConfig
