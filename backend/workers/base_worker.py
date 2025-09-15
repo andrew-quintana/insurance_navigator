@@ -478,14 +478,14 @@ class BaseWorker:
             normalized_content = self._normalize_markdown(parsed_content)
             content_sha = self._compute_sha256(normalized_content)
             
-            # Check for duplicate parsed content
+            # Check for duplicate parsed content (only within same user)
             async with self.db.get_db_connection() as conn:
                 existing = await conn.fetchrow("""
                     SELECT d.document_id, d.parsed_path 
                     FROM upload_pipeline.documents d
-                    WHERE d.parsed_sha256 = $1 AND d.document_id != $2
+                    WHERE d.parsed_sha256 = $1 AND d.document_id != $2 AND d.user_id = $3
                     LIMIT 1
-                """, content_sha, document_id)
+                """, content_sha, document_id, user_id)
                 
                 if existing:
                     # Use canonical path for duplicate

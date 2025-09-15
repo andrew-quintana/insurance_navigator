@@ -74,8 +74,8 @@ class WorkerConfig:
             supabase_service_role_key=os.getenv("SUPABASE_SERVICE_ROLE_KEY", ""),
             
             # LlamaParse
-            llamaparse_api_url=os.getenv("LLAMAPARSE_API_URL", "https://api.cloud.llamaindex.ai"),
-            llamaparse_api_key=os.getenv("LLAMAPARSE_API_KEY", ""),
+            llamaparse_api_url=os.getenv("LLAMAPARSE_BASE_URL", "https://api.cloud.llamaindex.ai/api/v1"),
+            llamaparse_api_key=os.getenv("LLAMACLOUD_API_KEY", os.getenv("LLAMAPARSE_API_KEY", "")),
             
             # OpenAI
             openai_api_url=os.getenv("OPENAI_API_URL", "https://api.openai.com"),
@@ -102,8 +102,8 @@ class WorkerConfig:
             # Pipeline
             terminal_stage=os.getenv("TERMINAL_STAGE", "embedded"),
             
-            # Local testing
-            use_mock_storage=os.getenv("USE_MOCK_STORAGE", "true").lower() == "true"
+            # Local testing - default to false in production, true in development
+            use_mock_storage=os.getenv("USE_MOCK_STORAGE", "false").lower() == "true"
         )
     
     def to_dict(self) -> Dict[str, Any]:
