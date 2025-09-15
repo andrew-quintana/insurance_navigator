@@ -318,3 +318,4 @@ async def check_user_has_document(
     except Exception as e:
         logger.error(f"Failed to check user {user_id} for document with content hash {content_hash}: {str(e)}")
         return None
+

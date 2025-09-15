@@ -1,0 +1,34 @@
+{
+  "timestamp": "2025-09-14T19:01:05.911249",
+  "duration_seconds": 0.003558,
+  "total_tests": 5,
+  "passed_tests": 4,
+  "failed_tests": 1,
+  "results": [
+    {
+      "test": "threshold_configuration",
+      "status": "PASS",
+      "details": "All threshold configurations working correctly"
+    },
+    {
+      "test": "configurable_thresholds",
+      "status": "PASS",
+      "details": "Configurable threshold management working correctly"
+    },
+    {
+      "test": "observability_logging",
+      "status": "PASS",
+      "details": "Observability logging features working correctly"
+    },
+    {
+      "test": "performance_monitoring",
+      "status": "PASS",
+      "details": "Performance monitoring working correctly"
+    },
+    {
+      "test": "rag_tool_integration",
+      "status": "FAIL",
+      "details": "Error: Expected 0.3, got 0.7"
+    }
+  ]
+}

@@ -16,6 +16,7 @@ from typing import List, Optional, Any
 from dataclasses import dataclass, field
 import asyncpg
 import logging
+from .observability import RAGPerformanceMonitor, threshold_manager
 
 # --- RetrievalConfig ---
 @dataclass
@@ -27,7 +28,7 @@ class RetrievalConfig:
         max_chunks: Maximum number of chunks to return.
         token_budget: Maximum total tokens for all returned chunks.
     """
-    similarity_threshold: float = 0.7
+    similarity_threshold: float = 0.3
     max_chunks: int = 10
     token_budget: int = 4000
 
@@ -76,15 +77,24 @@ class RAGTool:
     Main class for Retrieval-Augmented Generation (RAG) using vector similarity search.
     Performs user-scoped access control and token budget enforcement.
     """
-    def __init__(self, user_id: str, config: Optional[RetrievalConfig] = None):
+    def __init__(self, user_id: str, config: Optional[RetrievalConfig] = None, context: Optional[str] = None):
         """
         Args:
             user_id: User identifier for access control
             config: RetrievalConfig instance (optional)
+            context: Optional context for threshold management
         """
         self.user_id = user_id
+        self.context = context
         self.config = config or RetrievalConfig.default()
         self.logger = logging.getLogger("RAGTool")
+        self.performance_monitor = RAGPerformanceMonitor()
+        
+        # Override threshold with configurable threshold if available
+        configurable_threshold = threshold_manager.get_threshold(user_id, context)
+        if configurable_threshold != self.config.similarity_threshold:
+            self.config.similarity_threshold = configurable_threshold
+            self.logger.info(f"Using configurable threshold {configurable_threshold} for user {user_id}")
 
     async def retrieve_chunks(self, query_embedding: List[float]) -> List[ChunkWithContext]:
         """
@@ -95,6 +105,16 @@ class RAGTool:
             List of ChunkWithContext objects
         """
         self.config.validate()
+        
+        # Start performance monitoring
+        operation_metrics = self.performance_monitor.start_operation(
+            user_id=self.user_id,
+            query_text=None,  # We don't have query text in this method
+            similarity_threshold=self.config.similarity_threshold,
+            max_chunks=self.config.max_chunks,
+            token_budget=self.config.token_budget
+        )
+        
         conn = None
         try:
             conn = await self._get_db_conn()
@@ -104,7 +124,24 @@ class RAGTool:
             # Convert Python list to PostgreSQL vector format
             vector_string = '[' + ','.join(str(x) for x in query_embedding) + ']'
             
-            # Use a different approach for asyncpg - cast the parameter directly
+            # First, get all chunks above threshold to calculate similarity distribution
+            # This query gets all chunks without the threshold filter for histogram analysis
+            all_similarities_sql = f"""
+                SELECT 1 - (dc.embedding <=> $1::vector(1536)) as similarity
+                FROM {schema}.document_chunks dc
+                JOIN {schema}.documents d ON dc.document_id = d.document_id
+                WHERE d.user_id = $2
+                  AND dc.embedding IS NOT NULL
+                ORDER BY dc.embedding <=> $1::vector(1536)
+                LIMIT 100
+            """
+            all_similarity_rows = await conn.fetch(all_similarities_sql, vector_string, self.user_id)
+            all_similarities = [float(row["similarity"]) for row in all_similarity_rows]
+            
+            # Record similarity scores for histogram analysis
+            self.performance_monitor.record_similarity_scores(operation_metrics.operation_uuid, all_similarities)
+            
+            # Now get the actual results with threshold filtering
             sql = f"""
                 SELECT dc.chunk_id, dc.document_id, dc.chunk_ord as chunk_index, dc.text as content,
                        NULL as section_path, NULL as section_title,
@@ -140,9 +177,23 @@ class RAGTool:
                 )
                 chunks.append(chunk)
                 total_tokens += tokens
+            
+            # Record retrieval results
+            self.performance_monitor.record_retrieval_results(
+                operation_metrics.operation_uuid,
+                chunks_returned=len(chunks),
+                total_tokens_used=total_tokens,
+                total_chunks_available=len(all_similarity_rows)
+            )
+            
+            # Complete the operation successfully
+            self.performance_monitor.complete_operation(operation_metrics.operation_uuid, success=True)
+            
             return chunks
         except Exception as e:
             self.logger.error(f"RAGTool retrieval error: {e}")
+            # Complete the operation with error
+            self.performance_monitor.complete_operation(operation_metrics.operation_uuid, success=False, error_message=str(e))
             return []
         finally:
             if conn:
@@ -158,15 +209,32 @@ class RAGTool:
         Returns:
             List of ChunkWithContext objects
         """
+        # Start performance monitoring with query text
+        operation_metrics = self.performance_monitor.start_operation(
+            user_id=self.user_id,
+            query_text=query_text,
+            similarity_threshold=self.config.similarity_threshold,
+            max_chunks=self.config.max_chunks,
+            token_budget=self.config.token_budget
+        )
+        
         try:
             # Step 1: Generate embedding for the query text (MUST happen first)
             query_embedding = await self._generate_embedding(query_text)
+            operation_metrics.query_embedding_dim = len(query_embedding)
             
             # Step 2: Use the generated embedding to perform similarity search
-            return await self.retrieve_chunks(query_embedding)
+            chunks = await self.retrieve_chunks(query_embedding)
+            
+            # Complete the operation successfully
+            self.performance_monitor.complete_operation(operation_metrics.operation_uuid, success=True)
+            
+            return chunks
             
         except Exception as e:
             self.logger.error(f"RAGTool text retrieval error: {e}")
+            # Complete the operation with error
+            self.performance_monitor.complete_operation(operation_metrics.operation_uuid, success=False, error_message=str(e))
             return []
 
     async def _generate_embedding(self, text: str) -> List[float]:
