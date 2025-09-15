@@ -993,7 +993,6 @@ async def get_auth_user(request: Request):
             detail=str(e)
         )
 
-<<<<<<< HEAD
 @app.get("/health")
 async def health_check():
     """
@@ -1022,7 +1021,6 @@ async def health_check():
             "error": str(e),
             "version": "3.0.0"
         }
-=======
 
 @app.get("/debug/rag-similarity/{user_id}")
 async def debug_rag_similarity(
@@ -1111,7 +1109,6 @@ async def debug_rag_similarity(
             detail=f"Debug analysis failed: {str(e)}"
         )
 
->>>>>>> 17059bea829e425cbc75d16d069994640a564c4c
 
 if __name__ == "__main__":
     import uvicorn
