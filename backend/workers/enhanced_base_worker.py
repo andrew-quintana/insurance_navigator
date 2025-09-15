@@ -782,19 +782,19 @@ class EnhancedBaseWorker:
         return chunks
     
     async def _update_job_state(self, job_id: str, state: str, correlation_id: str, error_message: Optional[str] = None):
-        """Update job state in database"""
+        """Update job status in database"""
         try:
             async with self.db.get_db_connection() as conn:
                 if error_message:
                     await conn.execute("""
                         UPDATE upload_pipeline.upload_jobs
-                        SET state = $1, last_error = $2, updated_at = now()
+                        SET status = $1, last_error = $2, updated_at = now()
                         WHERE job_id = $3
                     """, state, json.dumps({"error": error_message, "timestamp": datetime.utcnow().isoformat()}), job_id)
                 else:
                     await conn.execute("""
                         UPDATE upload_pipeline.upload_jobs
-                        SET state = $1, updated_at = now()
+                        SET status = $1, updated_at = now()
                         WHERE job_id = $2
                     """, state, job_id)
         except Exception as e:
