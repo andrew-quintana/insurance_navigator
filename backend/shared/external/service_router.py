@@ -7,11 +7,14 @@ external services, enabling cost-controlled testing and development flexibility.
 
 import asyncio
 import logging
+import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, Optional, Type, List
 from datetime import datetime, timedelta
+
+from ..exceptions import UserFacingError, ServiceUnavailableError, ServiceExecutionError
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +181,10 @@ class ServiceRouter:
                 self.mode = ServiceMode.HYBRID
         else:
             self.mode = ServiceMode.HYBRID
+        
+        # Validate production environment configuration
+        self._validate_production_config()
+        
         self.services: Dict[str, Dict[str, ServiceInterface]] = {}
         self.health_cache: Dict[str, ServiceHealth] = {}
         self.health_check_interval = 30  # seconds
@@ -194,6 +201,23 @@ class ServiceRouter:
         
         # Note: Health monitoring will be started explicitly when needed
         # Don't start it during initialization to avoid blocking
+    
+    def _validate_production_config(self) -> None:
+        """Validate production environment configuration to prevent mock fallbacks."""
+        environment = os.getenv("ENVIRONMENT", "development")
+        
+        if environment == "production":
+            if self.mode == ServiceMode.MOCK:
+                raise ServiceConfigurationError(
+                    "Mock mode is not allowed in production environment",
+                    config_key="mode"
+                )
+            
+            if self.fallback_enabled:
+                logger.warning(
+                    "Fallback to mock services is enabled in production. "
+                    "This may mask real API failures and should be disabled."
+                )
     
     def _auto_register_services(self, config: Dict[str, Any]) -> None:
         """Automatically register services based on configuration"""
@@ -261,6 +285,7 @@ class ServiceRouter:
             
         Raises:
             ServiceUnavailableError: If no service is available
+            UserFacingError: If production service fails and no fallback is available
         """
         if service_name not in self.services:
             raise ServiceUnavailableError(f"Service '{service_name}' not registered")
@@ -275,8 +300,20 @@ class ServiceRouter:
             if await real_service.is_available():
                 return real_service
             elif self.fallback_enabled:
-                logger.warning(f"Real service '{service_name}' unavailable, falling back to mock")
-                return mock_service
+                # Check if we're in production - if so, don't fallback to mock
+                environment = os.getenv("ENVIRONMENT", "development")
+                if environment == "production":
+                    raise UserFacingError(
+                        f"Document processing service is temporarily unavailable. Please try again later.",
+                        error_code="SERVICE_UNAVAILABLE",
+                        context={
+                            "service_name": service_name,
+                            "environment": environment
+                        }
+                    )
+                else:
+                    logger.warning(f"Real service '{service_name}' unavailable, falling back to mock")
+                    return mock_service
             else:
                 raise ServiceUnavailableError(f"Real service '{service_name}' unavailable and fallback disabled")
         
@@ -285,15 +322,27 @@ class ServiceRouter:
             if await real_service.is_available():
                 return real_service
             else:
-                logger.info(f"Real service '{service_name}' unavailable, using mock service")
-                return mock_service
+                # Check if we're in production - if so, don't fallback to mock
+                environment = os.getenv("ENVIRONMENT", "development")
+                if environment == "production":
+                    raise UserFacingError(
+                        f"Document processing service is temporarily unavailable. Please try again later.",
+                        error_code="SERVICE_UNAVAILABLE",
+                        context={
+                            "service_name": service_name,
+                            "environment": environment
+                        }
+                    )
+                else:
+                    logger.info(f"Real service '{service_name}' unavailable, using mock service")
+                    return mock_service
         
         # Should never reach here
         raise ValueError(f"Invalid service mode: {self.mode}")
     
     async def execute_service(self, service_name: str, *args, **kwargs) -> Any:
         """
-        Execute a service operation with automatic service selection.
+        Execute a service operation with automatic service selection and retry logic.
         
         Args:
             service_name: Name of the service to execute
@@ -306,23 +355,75 @@ class ServiceRouter:
         Raises:
             ServiceUnavailableError: If no service is available
             ServiceExecutionError: If the service operation fails
+            UserFacingError: If production service fails with user-friendly error
         """
-        service = await self.get_service(service_name)
+        max_retries = 3
+        retry_delay = 1  # seconds
         
-        try:
-            start_time = datetime.utcnow()
-            result = await service.execute(*args, **kwargs)
-            execution_time = (datetime.utcnow() - start_time).total_seconds() * 1000
-            
-            # Update health metrics
-            self._update_health_metrics(service_name, True, execution_time)
-            
-            return result
-            
-        except Exception as e:
-            # Update health metrics
-            self._update_health_metrics(service_name, False, None, str(e))
-            raise ServiceExecutionError(f"Service '{service_name}' execution failed: {e}") from e
+        for attempt in range(max_retries + 1):
+            try:
+                service = await self.get_service(service_name)
+                
+                start_time = datetime.utcnow()
+                result = await service.execute(*args, **kwargs)
+                execution_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+                
+                # Update health metrics
+                self._update_health_metrics(service_name, True, execution_time)
+                
+                return result
+                
+            except UserFacingError:
+                # Re-raise user-facing errors immediately
+                raise
+            except ServiceUnavailableError as e:
+                # Check if we're in production and should raise UserFacingError
+                environment = os.getenv("ENVIRONMENT", "development")
+                if environment == "production":
+                    raise UserFacingError(
+                        f"Document processing service is temporarily unavailable. Please try again later.",
+                        error_code="SERVICE_UNAVAILABLE",
+                        context={
+                            "service_name": service_name,
+                            "environment": environment,
+                            "attempt": attempt + 1,
+                            "max_retries": max_retries
+                        }
+                    )
+                else:
+                    raise
+            except Exception as e:
+                # Update health metrics
+                self._update_health_metrics(service_name, False, None, str(e))
+                
+                # Check if this is the last attempt
+                if attempt == max_retries:
+                    # Check if we're in production and should raise UserFacingError
+                    environment = os.getenv("ENVIRONMENT", "development")
+                    if environment == "production":
+                        raise UserFacingError(
+                            f"Document processing failed after {max_retries + 1} attempts. Please try again later.",
+                            error_code="SERVICE_EXECUTION_FAILED",
+                            context={
+                                "service_name": service_name,
+                                "environment": environment,
+                                "attempts": max_retries + 1,
+                                "original_error": str(e)
+                            }
+                        )
+                    else:
+                        raise ServiceExecutionError(f"Service '{service_name}' execution failed: {e}") from e
+                
+                # Wait before retry with exponential backoff
+                wait_time = retry_delay * (2 ** attempt)
+                logger.warning(
+                    f"Service '{service_name}' execution failed (attempt {attempt + 1}/{max_retries + 1}), "
+                    f"retrying in {wait_time}s: {e}"
+                )
+                await asyncio.sleep(wait_time)
+        
+        # Should never reach here
+        raise ServiceExecutionError(f"Service '{service_name}' execution failed after {max_retries + 1} attempts")
     
     async def check_service_health(self, service_name: str) -> ServiceHealth:
         """Check the health of a specific service."""
