@@ -38,9 +38,11 @@ WORKDIR /app
 # Copy only necessary application files
 COPY main.py .
 COPY config/ ./config/
+COPY core/ ./core/
 COPY db/ ./db/
 COPY backend/ ./backend/
 COPY shared/ ./shared/
+COPY utils/ ./utils/
 
 # Create non-root user for security
 RUN useradd --create-home --shell /bin/bash app && \
