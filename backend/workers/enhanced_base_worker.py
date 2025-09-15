@@ -298,7 +298,7 @@ class EnhancedBaseWorker:
                     WITH next_job AS (
                         SELECT uj.job_id, uj.document_id, d.user_id, uj.status, uj.state,
                                uj.progress, uj.retry_count, uj.last_error, uj.created_at,
-                               d.storage_path, d.mime_type
+                               d.raw_path as storage_path, d.mime as mime_type
                         FROM upload_pipeline.upload_jobs uj
                         JOIN upload_pipeline.documents d ON uj.document_id = d.document_id
                         WHERE uj.status IN (
