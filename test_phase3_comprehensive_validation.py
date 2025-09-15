@@ -32,7 +32,7 @@ class Phase3Validator:
         self.results = {
             "test_timestamp": datetime.utcnow().isoformat(),
             "test_name": "Phase 3 Comprehensive Validation",
-            "total_tests": 0,
+                "total_tests": 0,
             "passed_tests": 0,
             "failed_tests": 0,
             "test_results": [],
@@ -68,8 +68,8 @@ class Phase3Validator:
             
             # Test 8: Error Handling
             await self._test_error_handling()
-            
-            # Generate final report
+        
+        # Generate final report
             self._generate_final_report()
             
         except Exception as e:
@@ -92,7 +92,7 @@ class Phase3Validator:
                     if response.status == 200:
                         health_data = await response.json()
                         self._record_test_result(test_name, True, {
-                            "status_code": response.status,
+                                "status_code": response.status,
                             "response_time_ms": response_time * 1000,
                             "health_data": health_data
                         })
@@ -133,7 +133,7 @@ class Phase3Validator:
                             "status_code": response.status,
                             "error": "Unexpected response code"
                         })
-                        
+                
         except Exception as e:
             self._record_test_result(test_name, False, {"error": str(e)})
     
@@ -195,7 +195,7 @@ class Phase3Validator:
                         })
                     elif response.status == 401:
                         self._record_test_result(test_name, True, {
-                            "status_code": response.status,
+                                "status_code": response.status,
                             "response_time_ms": response_time * 1000,
                             "note": "Upload endpoint requires authentication (expected)"
                         })
@@ -271,7 +271,7 @@ class Phase3Validator:
                             "response_time_ms": response_time * 1000,
                             "error": error_text
                         })
-                        
+                
         except Exception as e:
             self._record_test_result(test_name, False, {"error": str(e)})
     
@@ -301,7 +301,7 @@ class Phase3Validator:
                         })
                     elif response.status == 401:
                         self._record_test_result(test_name, True, {
-                            "status_code": response.status,
+                                "status_code": response.status,
                             "response_time_ms": response_time * 1000,
                             "note": "Chat endpoint requires authentication (expected)"
                         })
@@ -370,12 +370,12 @@ class Phase3Validator:
                             "response_time_ms": response_time * 1000,
                             "note": "Proper 405 error handling (method not allowed)"
                         })
-                    else:
+                else:
                         self._record_test_result(test_name, False, {
                             "status_code": response.status,
                             "error": "Unexpected response for invalid endpoint"
                         })
-                        
+                
         except Exception as e:
             self._record_test_result(test_name, False, {"error": str(e)})
     
