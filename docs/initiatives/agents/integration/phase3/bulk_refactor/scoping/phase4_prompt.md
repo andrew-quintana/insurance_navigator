@@ -4,9 +4,9 @@
 You are implementing Phase 4 of the Agent Integration Infrastructure Refactor initiative. This phase focuses on optimizing RAG similarity thresholds and implementing enhanced observability with histogram logging. **Note: RAG performance speed is non-critical for this initiative.**
 
 ## Reference Documents
-- **Primary Specification**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/spec_refactor.md` - Review "RAG Configuration" and "Observability" sections in Current State and Target State
-- **Technical Design**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/rfc.md` - Reference "4. RAG Performance Optimization" and "5. Enhanced Observability" sections for implementation details
-- **Implementation Tasks**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/todo.md` - Follow "Phase 4: RAG Performance & Observability" section for threshold and logging implementation
+- **Primary Specification**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/scoping/spec_refactor.md` - Review "RAG Configuration" and "Observability" sections in Current State and Target State
+- **Technical Design**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/scoping/rfc.md` - Reference "4. RAG Performance Optimization" and "5. Enhanced Observability" sections for implementation details
+- **Implementation Tasks**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/scoping/todo.md` - Follow "Phase 4: RAG Performance & Observability" section for threshold and logging implementation
 
 ## Key Implementation Areas
 Refer to the RFC document sections "4. RAG Performance Optimization" and "5. Enhanced Observability" for:

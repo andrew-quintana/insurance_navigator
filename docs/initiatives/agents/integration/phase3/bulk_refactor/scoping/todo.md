@@ -56,30 +56,30 @@
 
 ## Phase 3: Multi-User Data Integrity 👥
 
-### Database Schema Updates
-- [ ] **Update duplicate detection logic**
-  - [ ] Modify queries to include user_id in duplicate checks
-  - [ ] Update `check_duplicate_upload` function signature
-  - [ ] Ensure user isolation in all document operations
-  - [ ] Add user_id validation to upload endpoints
+### Document Row Duplication System
+- [ ] **Implement document row duplication logic**
+  - [ ] Create `duplicate_document_for_user` function to copy existing document data
+  - [ ] Update upload pipeline to detect existing documents by content_hash
+  - [ ] Implement document row creation with new user_id and existing processing data
+  - [ ] Ensure document_chunks relationships remain intact through document_id references
 
 - [ ] **Database optimization**
-  - [ ] Create composite index: `idx_documents_user_hash(user_id, content_hash)`
-  - [ ] Analyze query performance impact
-  - [ ] Update related queries to use new index
-  - [ ] Monitor index usage and performance
+  - [ ] Create index on content_hash for efficient duplicate detection: `idx_documents_content_hash`
+  - [ ] Ensure document_chunks table properly references documents table
+  - [ ] Optimize RAG queries to work with duplicated document rows
+  - [ ] Monitor query performance with new duplication pattern
 
-- [ ] **Data migration**
-  - [ ] Assess existing duplicate data with migration script
-  - [ ] Plan migration strategy for existing documents
-  - [ ] Create rollback procedures
-  - [ ] Validate data integrity post-migration
+- [ ] **Upload pipeline integration**
+  - [ ] Modify upload job processing to check for existing documents by content_hash
+  - [ ] Skip reprocessing when duplicating existing document
+  - [ ] Preserve all metadata and processing results in new document row
+  - [ ] Ensure proper user_id assignment in duplicated rows
 
-- [ ] **User isolation testing**
-  - [ ] Create tests for multi-user document upload scenarios
-  - [ ] Verify proper user_id scoping in all operations
-  - [ ] Test edge cases (same document, different users)
-  - [ ] Add integration tests for user isolation
+- [ ] **Multi-user scenario testing**
+  - [ ] Create tests for document duplication across different users
+  - [ ] Verify RAG functionality works correctly with duplicated documents
+  - [ ] Test edge cases (same document, multiple users, concurrent uploads)
+  - [ ] Validate that each user sees their own document entries
 
 ## Phase 4: RAG Performance & Observability 📊
 
