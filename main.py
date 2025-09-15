@@ -334,7 +334,7 @@ async def get_upload_pipeline_db():
     if not database_url:
         raise HTTPException(status_code=500, detail="Database configuration missing")
     
-    return await asyncpg.connect(database_url)
+    return await asyncpg.connect(database_url, statement_cache_size=0)
 
 async def generate_signed_url(storage_path: str, ttl_seconds: int = 3600) -> str:
     """Generate a signed URL for file upload."""
