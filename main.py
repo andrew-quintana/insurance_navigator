@@ -31,6 +31,7 @@ import traceback
 from core import initialize_system, close_system, get_database, get_agents
 
 # Database service imports
+from config.database import db_pool
 from db.services.user_service import get_user_service, UserService
 from db.services.auth_adapter import auth_adapter
 from db.services.conversation_service import get_conversation_service, ConversationService
@@ -190,7 +191,6 @@ async def health_check(request: Request):
     # Perform actual health check
     try:
         # Test database connection
-        from config.database import db_pool
         if db_pool:
             try:
                 # Test if pool is initialized
