@@ -1,0 +1,64 @@
+{
+  "timestamp": "2025-09-14T19:38:49.364661",
+  "total_time": 1.084779977798462,
+  "summary": {
+    "total_tests": 11,
+    "passed": 3,
+    "warned": 4,
+    "failed": 4,
+    "success_rate": 27.27272727272727
+  },
+  "results": {
+    "production_health": {
+      "status": "PASS",
+      "data": {
+        "status": "healthy",
+        "timestamp": "2025-09-15T02:38:21.693904",
+        "services": {
+          "database": "healthy",
+          "supabase_auth": "healthy",
+          "llamaparse": "healthy",
+          "openai": "healthy"
+        },
+        "version": "3.0.0"
+      },
+      "response_time": "N/A"
+    },
+    "local_database": {
+      "status": "FAIL",
+      "error": "System manager not initialized. Call initialize_system() first."
+    },
+    "local_agents": {
+      "status": "FAIL",
+      "error": "System manager not initialized. Call initialize_system() first."
+    },
+    "openai_config": {
+      "status": "WARN"
+    },
+    "llamaparse_config": {
+      "status": "WARN"
+    },
+    "supabase_config": {
+      "status": "WARN"
+    },
+    "rag_pipeline": {
+      "status": "FAIL",
+      "error": "System manager not initialized. Call initialize_system() first."
+    },
+    "production_performance": {
+      "status": "PASS",
+      "response_time": 0.10453581809997559
+    },
+    "import_management": {
+      "status": "PASS"
+    },
+    "api_reliability": {
+      "status": "WARN",
+      "configured_services": 0
+    },
+    "data_integrity": {
+      "status": "FAIL",
+      "error": "No module named 'db.models'"
+    }
+  }
+}
