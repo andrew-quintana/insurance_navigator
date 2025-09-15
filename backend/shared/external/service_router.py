@@ -223,14 +223,14 @@ class ServiceRouter:
         """Automatically register services based on configuration"""
         try:
             # Import here to avoid circular imports
-            from .llamaparse_client import LlamaParseClient
+            from .llamaparse_real import RealLlamaParseService
             from .openai_real import RealOpenAIService
             
             # Register LlamaParse service
             if "llamaparse_config" in config:
                 llamaparse_config = config["llamaparse_config"]
                 mock_llamaparse = MockLlamaParseService()
-                real_llamaparse = LlamaParseClient(llamaparse_config)
+                real_llamaparse = RealLlamaParseService(llamaparse_config)
                 self.register_service("llamaparse", mock_llamaparse, real_llamaparse)
             
             # Register OpenAI service

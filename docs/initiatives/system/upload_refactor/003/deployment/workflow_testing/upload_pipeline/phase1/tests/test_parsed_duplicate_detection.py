@@ -131,9 +131,9 @@ async def check_parsed_duplicates(document_id: str) -> Dict[str, Any]:
             duplicates = await conn.fetch("""
                 SELECT document_id, filename, created_at, processing_status
                 FROM upload_pipeline.documents
-                WHERE parsed_sha256 = $1 AND document_id != $2
+                WHERE parsed_sha256 = $1 AND document_id != $2 AND user_id = $3
                 ORDER BY created_at ASC
-            """, doc['parsed_sha256'], document_id)
+            """, doc['parsed_sha256'], document_id, user_id)
             
             print(f"   Found {len(duplicates)} documents with same parsed content")
             

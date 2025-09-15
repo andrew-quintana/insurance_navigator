@@ -1,0 +1,244 @@
+{
+  "test_timestamp": "2025-09-12T08:44:25.617053",
+  "phase": "3",
+  "test_name": "Phase 3: Comprehensive Validation Testing",
+  "configuration": {
+    "backend": "production_cloud",
+    "database": "production_supabase",
+    "environment": "phase3_comprehensive_validation"
+  },
+  "tests": {
+    "system_health": {
+      "status": "PASS",
+      "details": {
+        "status_code": 200,
+        "health_data": {
+          "status": "healthy",
+          "timestamp": "2025-09-12T15:44:23.936199",
+          "services": {
+            "database": "healthy",
+            "supabase_auth": "healthy",
+            "llamaparse": "healthy",
+            "openai": "healthy"
+          },
+          "version": "3.0.0"
+        },
+        "all_services_healthy": true
+      }
+    },
+    "database_connectivity": {
+      "status": "PASS",
+      "details": {
+        "connectivity": true,
+        "schema_columns": [
+          "document_id",
+          "user_id",
+          "filename",
+          "mime",
+          "bytes_len",
+          "file_sha256",
+          "parsed_sha256",
+          "raw_path",
+          "parsed_path",
+          "processing_status",
+          "created_at",
+          "updated_at"
+        ],
+        "missing_columns": [],
+        "schema_ok": true
+      }
+    },
+    "user_authentication": {
+      "status": "PASS",
+      "details": {
+        "signup_status": 201,
+        "login_status": 200,
+        "user_id": "11c49dfb-6004-44cf-a103-5df79f269d1b",
+        "token_valid": true,
+        "user_created": true
+      }
+    },
+    "document_upload_workflow": {
+      "status": "PASS",
+      "details": {
+        "status_code": 422,
+        "validation_working": true,
+        "expected_document_uuid": "a4cde8f8-e873-520c-a5c2-2e3b05713f9e",
+        "expected_chunk_uuid": "f962ba0f-0178-5e4e-a40d-02c38a03aa7a",
+        "content_hash": "phase3_test_1757691867_This is a comprehensive Phase 3 test document crea",
+        "response_data": {
+          "detail": [
+            {
+              "type": "missing",
+              "loc": [
+                "body",
+                "mime"
+              ],
+              "msg": "Field required",
+              "input": {
+                "filename": "phase3_test_document_1757691865.pdf",
+                "mime_type": "application/pdf",
+                "bytes_len": 1024,
+                "sha256": "phase3_test_1757691867_This is a comprehensive Phase 3 test document crea"
+              },
+              "url": "https://errors.pydantic.dev/2.6/v/missing"
+            }
+          ]
+        }
+      }
+    },
+    "uuid_generation_consistency": {
+      "status": "PASS",
+      "details": {
+        "document_uuid": "872bbe38-c2e1-5b4a-87ea-e6a9d75fc505",
+        "chunk_uuid": "33de8bd0-6849-560b-a481-188ed392a0cf",
+        "job_uuid1": "1d1bda82-a43f-474d-9267-44fc3d93beaa",
+        "job_uuid2": "d061f348-6b0f-43c1-8135-19bb80bb0e58",
+        "document_valid": true,
+        "chunk_valid": true,
+        "job_valid": true,
+        "document_consistent": true,
+        "chunk_consistent": true,
+        "job_unique": true,
+        "db_consistent": true,
+        "retrieved_uuid": "872bbe38-c2e1-5b4a-87ea-e6a9d75fc505"
+      }
+    },
+    "chat_interaction_workflow": {
+      "status": "PASS",
+      "details": {
+        "status_code": 200,
+        "conversation_id": "conv_1757691872",
+        "timestamp": "2025-09-12T15:44:32.248047",
+        "has_response": true,
+        "response_valid": true,
+        "response_data": {
+          "text": "I'm sorry, but I wasn't able to find any relevant information in the documents you requested. As an insurance assistant, my role is to help you understand your coverage and benefits, so I'll do my best to assist you further.\n\nCould you please provide me with some more details about what you're looking for? That will help me better understand how I can help. I'm here to support you through any insurance-related questions or concerns you may have.",
+          "response": "I'm sorry, but I wasn't able to find any relevant information in the documents you requested. As an insurance assistant, my role is to help you understand your coverage and benefits, so I'll do my best to assist you further.\n\nCould you please provide me with some more details about what you're looking for? That will help me better understand how I can help. I'm here to support you through any insurance-related questions or concerns you may have.",
+          "conversation_id": "conv_1757691872",
+          "timestamp": "2025-09-12T15:44:32.248047",
+          "metadata": {
+            "processing_time": 4.115453004837036,
+            "confidence": 0.9,
+            "agent_sources": [
+              "information_retrieval"
+            ],
+            "input_processing": {
+              "original_language": "auto",
+              "translation_applied": false
+            },
+            "agent_processing": {
+              "agents_used": [
+                "information_retrieval"
+              ],
+              "processing_time_ms": 4115
+            },
+            "output_formatting": {
+              "tone_applied": "empathetic",
+              "readability_level": "8th_grade",
+              "next_steps_included": false
+            }
+          },
+          "next_steps": [],
+          "sources": [
+            "information_retrieval"
+          ]
+        }
+      }
+    },
+    "database_consistency": {
+      "status": "PASS",
+      "details": {
+        "user_documents_count": 0,
+        "documents_valid": true,
+        "uuid_consistency": true,
+        "user_documents": []
+      }
+    },
+    "performance_validation": {
+      "status": "PASS",
+      "details": {
+        "uuid_generation": {
+          "time_seconds": 0.0016667842864990234,
+          "threshold_seconds": 0.5,
+          "uuids_generated": 50,
+          "meets_threshold": true
+        },
+        "cloud_response": {
+          "time_seconds": 0.15452980995178223,
+          "threshold_seconds": 3.0,
+          "status_code": 200,
+          "meets_threshold": true
+        }
+      }
+    },
+    "error_handling_validation": {
+      "status": "PASS",
+      "details": {
+        "uuid_validation": {
+          "results": [
+            {
+              "uuid": "invalid-uuid",
+              "is_valid": false,
+              "expected_valid": false
+            },
+            {
+              "uuid": "not-a-uuid",
+              "is_valid": false,
+              "expected_valid": false
+            },
+            {
+              "uuid": "",
+              "is_valid": false,
+              "expected_valid": false
+            },
+            {
+              "uuid": null,
+              "is_valid": false,
+              "expected_valid": false
+            }
+          ],
+          "all_correct": true
+        },
+        "cloud_error_handling": {
+          "invalid_endpoint_handled": true,
+          "invalid_auth_handled": true
+        }
+      }
+    },
+    "cleanup_and_final_validation": {
+      "status": "PASS",
+      "details": {
+        "cleanup_successful": true,
+        "cleanup_error": null,
+        "workflow_complete": true,
+        "workflow_status": {
+          "user_created": true,
+          "user_id": "11c49dfb-6004-44cf-a103-5df79f269d1b",
+          "access_token": "***REMOVED***.eyJzdWIiOiI1YzM3ODQ4My03YThiLTQ4NzgtYWY2Yi1hZGI3OTk5NDc1NTkiLCJlbWFpbCI6InBoYXNlM190ZXN0X3VzZXJfMTc1NzY5MTg2NUBleGFtcGxlLmNvbSIsImV4cCI6MTc1Nzc3ODI2NywiaWF0IjoxNzU3NjkxODY3LCJpc3MiOiJpbnN1cmFuY2UtbmF2aWdhdG9yLW1pbmltYWwtYXV0aCIsImF1ZCI6Imluc3VyYW5jZS1uYXZpZ2F0b3ItdXNlcnMifQ.gXPw6WCUrKJiNUnnSX5VStkmd_kzlBIc7NV5PJBA8OU",
+          "document_uploaded": true,
+          "document_id": "a4cde8f8-e873-520c-a5c2-2e3b05713f9e",
+          "document_processed": false,
+          "chat_interaction": true,
+          "conversation_id": "conv_1757691872"
+        }
+      }
+    }
+  },
+  "summary": {
+    "total_tests": 10,
+    "passed": 10,
+    "failed": 0,
+    "critical_failures": 0
+  },
+  "workflow": {
+    "user_created": true,
+    "user_id": "11c49dfb-6004-44cf-a103-5df79f269d1b",
+    "access_token": "***REMOVED***.eyJzdWIiOiI1YzM3ODQ4My03YThiLTQ4NzgtYWY2Yi1hZGI3OTk5NDc1NTkiLCJlbWFpbCI6InBoYXNlM190ZXN0X3VzZXJfMTc1NzY5MTg2NUBleGFtcGxlLmNvbSIsImV4cCI6MTc1Nzc3ODI2NywiaWF0IjoxNzU3NjkxODY3LCJpc3MiOiJpbnN1cmFuY2UtbmF2aWdhdG9yLW1pbmltYWwtYXV0aCIsImF1ZCI6Imluc3VyYW5jZS1uYXZpZ2F0b3ItdXNlcnMifQ.gXPw6WCUrKJiNUnnSX5VStkmd_kzlBIc7NV5PJBA8OU",
+    "document_uploaded": true,
+    "document_id": "a4cde8f8-e873-520c-a5c2-2e3b05713f9e",
+    "document_processed": false,
+    "chat_interaction": true,
+    "conversation_id": "conv_1757691872"
+  }
+}

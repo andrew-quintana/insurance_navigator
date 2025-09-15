@@ -197,13 +197,23 @@ Expert Query Reframe:
             # Use RAG tool's built-in text-to-chunks method (handles embedding generation internally)
             chunks = await self.rag_tool.retrieve_chunks_from_text(expert_query)
             
+            # Extract similarity scores for histogram analysis
+            similarities = [chunk.similarity for chunk in chunks if chunk.similarity is not None]
+            
+            # Generate and log similarity histogram for debugging
+            if similarities:
+                from utils.similarity_histogram import log_similarity_histogram
+                log_similarity_histogram(similarities, threshold=0.4, logger=self.logger)
+            else:
+                self.logger.warning("No similarity scores available for histogram analysis")
+            
             # Filter chunks by similarity threshold (adjusted for real OpenAI embeddings)
             filtered_chunks = [
-                chunk for chunk in chunks 
-                if chunk.similarity and chunk.similarity >= 0.4
+                chunk for chunk in chunks
+                if chunk.similarity and chunk.similarity >= 0.01
             ]
             
-            self.logger.info(f"Retrieved {len(chunks)} chunks, filtered to {len(filtered_chunks)} with similarity >= 0.4")
+            self.logger.info(f"Retrieved {len(chunks)} chunks, filtered to {len(filtered_chunks)} with similarity >= 0.01")
             
             return filtered_chunks
             
