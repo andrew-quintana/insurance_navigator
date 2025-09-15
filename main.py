@@ -338,8 +338,9 @@ async def get_upload_pipeline_db():
 
 async def generate_signed_url(storage_path: str, ttl_seconds: int = 3600) -> str:
     """Generate a signed URL for file upload."""
-    # For now, return a mock signed URL - in production this would use Supabase storage
-    return f"https://storage.supabase.co/files/{storage_path}?signed=true&ttl={ttl_seconds}"
+    # Get storage URL from environment variable
+    storage_url = os.getenv('SUPABASE_STORAGE_URL', 'https://storage.supabase.co')
+    return f"{storage_url}/files/{storage_path}?signed=true&ttl={ttl_seconds}"
 
 async def create_document_record(conn, document_id: str, user_id: str, filename: str, 
                                mime: str, bytes_len: int, file_sha256: str, raw_path: str):

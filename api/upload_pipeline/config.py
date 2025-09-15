@@ -5,7 +5,7 @@ Configuration management for the upload pipeline.
 import os
 from typing import Optional, List
 from pydantic_settings import BaseSettings
-from pydantic import field_validator
+from pydantic import field_validator, Field
 
 
 class UploadPipelineConfig(BaseSettings):
@@ -59,8 +59,8 @@ class UploadPipelineConfig(BaseSettings):
     signed_url_ttl_seconds: int = 300  # 5 minutes
     
     # Storage URL configuration for different environments
-    storage_url: str = "https://storage.supabase.co"  # Default production URL
-    storage_environment: str = "production"  # development, staging, production
+    storage_url: str = Field(default_factory=lambda: os.getenv('SUPABASE_STORAGE_URL', 'https://storage.supabase.co'))
+    storage_environment: str = Field(default_factory=lambda: os.getenv('ENVIRONMENT', 'production'))
     
     # Database configuration
     database_schema: str = "upload_pipeline"
