@@ -29,6 +29,8 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy shared modules first
 COPY backend/shared/ ./shared/
+COPY core/ ./core/
+COPY utils/ ./utils/
 
 # Copy application code
 COPY backend/workers/ ./
