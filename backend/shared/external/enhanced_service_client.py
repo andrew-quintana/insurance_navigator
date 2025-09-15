@@ -19,6 +19,7 @@ from .error_handler import (
     create_error_context
 )
 from .service_router import ServiceRouter, ServiceMode
+from ..logging.structured_logger import StructuredLogger
 
 
 class EnhancedServiceClient:
@@ -36,7 +37,7 @@ class EnhancedServiceClient:
     def __init__(self, service_router: ServiceRouter, logger_name: str = "enhanced_service_client"):
         self.service_router = service_router
         self.error_handler = WorkerErrorHandler(logger_name)
-        self.logger = logging.getLogger(logger_name)
+        self.logger = StructuredLogger(logger_name)
         self.retry_config = {
             "max_retries": 3,
             "base_delay": 1.0,
