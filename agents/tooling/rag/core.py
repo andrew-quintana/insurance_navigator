@@ -12,7 +12,7 @@ This MVP is designed for rapid, simple, and secure retrieval, serving as a contr
 """
 import os
 import asyncio
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 from dataclasses import dataclass, field
 import asyncpg
 import logging
@@ -70,6 +70,21 @@ class ChunkWithContext:
     page_end: Optional[int] = None
     similarity: Optional[float] = None
     tokens: Optional[int] = None  # If available
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert ChunkWithContext to dictionary for serialization."""
+        return {
+            "id": self.id,
+            "doc_id": self.doc_id,
+            "chunk_index": self.chunk_index,
+            "content": self.content,
+            "section_path": self.section_path,
+            "section_title": self.section_title,
+            "page_start": self.page_start,
+            "page_end": self.page_end,
+            "similarity": self.similarity,
+            "tokens": self.tokens
+        }
 
 # --- RAGTool ---
 class RAGTool:
@@ -124,7 +139,6 @@ class RAGTool:
             # Convert Python list to PostgreSQL vector format (no spaces)
             vector_string = '[' + ','.join(str(x) for x in query_embedding) + ']'
             
-<<<<<<< HEAD
             # First, get all chunks above threshold to calculate similarity distribution
             # This query gets all chunks without the threshold filter for histogram analysis
             all_similarities_sql = f"""
@@ -143,9 +157,6 @@ class RAGTool:
             self.performance_monitor.record_similarity_scores(operation_metrics.operation_uuid, all_similarities)
             
             # Now get the actual results with threshold filtering
-=======
-            # Use string interpolation for vector parameter (asyncpg doesn't support vector parameter binding)
->>>>>>> 17059bea829e425cbc75d16d069994640a564c4c
             sql = f"""
                 SELECT dc.chunk_id, dc.document_id, dc.chunk_ord as chunk_index, dc.text as content,
                        NULL as section_path, NULL as section_title,

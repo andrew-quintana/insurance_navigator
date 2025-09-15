@@ -370,7 +370,7 @@ class Phase3Validator:
                             "response_time_ms": response_time * 1000,
                             "note": "Proper 405 error handling (method not allowed)"
                         })
-                else:
+                    else:
                         self._record_test_result(test_name, False, {
                             "status_code": response.status,
                             "error": "Unexpected response for invalid endpoint"

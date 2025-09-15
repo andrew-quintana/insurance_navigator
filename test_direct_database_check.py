@@ -42,7 +42,7 @@ async def check_database_directly():
         logger.info("Checking chunks table...")
         chunks = await conn.fetch("""
             SELECT chunk_id, document_id, user_id, chunk_index, text_preview, created_at
-            FROM upload_pipeline.chunks 
+            FROM upload_pipeline.document_chunks 
             ORDER BY created_at DESC 
             LIMIT 10
         """)
