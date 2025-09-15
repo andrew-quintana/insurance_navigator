@@ -131,10 +131,10 @@ def log_similarity_histogram(similarities: List[float], operation_uuid: str):
 - Update error messaging
 
 ### Phase 3: Data Integrity (Week 2)
-- Update duplicate detection logic
-- Create database indexes
-- Migrate existing data if needed
-- Add user isolation tests
+- Implement document row duplication logic
+- Create content_hash database indexes
+- Test document duplication scenarios
+- Add multi-user upload tests
 
 ### Phase 4: RAG Optimization (Week 3)
 - Update similarity threshold configuration
@@ -142,11 +142,11 @@ def log_similarity_histogram(similarities: List[float], operation_uuid: str):
 - Add performance monitoring
 - Validate retrieval quality
 
-### Phase 5: Testing & Deployment (Week 4)
-- Comprehensive integration testing
-- Performance benchmarking
-- Production deployment
-- Monitor and iterate
+### Phase 5: Development Testing & Validation (Week 4)
+- Comprehensive integration testing in development environment
+- Validation with development database and local backend
+- End-to-end testing of all refactored components
+- Documentation and handoff preparation
 
 ## Alternatives Considered
 
