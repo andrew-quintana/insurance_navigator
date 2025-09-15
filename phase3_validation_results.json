@@ -1,0 +1,113 @@
+{
+  "test_timestamp": "2025-09-15T05:51:31.691839",
+  "test_name": "Phase 3 Comprehensive Validation",
+  "total_tests": 8,
+  "passed_tests": 8,
+  "failed_tests": 0,
+  "test_results": [
+    {
+      "test_name": "External API Health",
+      "passed": true,
+      "details": {
+        "status_code": 200,
+        "response_time_ms": 120.59402465820312,
+        "health_data": {
+          "status": "healthy",
+          "timestamp": "2025-09-15T05:51:20.090690",
+          "services": {
+            "database": "healthy",
+            "supabase_auth": "healthy",
+            "llamaparse": "healthy",
+            "openai": "healthy"
+          },
+          "version": "3.0.0"
+        }
+      },
+      "timestamp": "2025-09-15T05:51:31.812557"
+    },
+    {
+      "test_name": "Authentication System",
+      "passed": true,
+      "details": {
+        "status_code": 200,
+        "response_time_ms": 156.203031539917,
+        "note": "Authentication endpoint responding correctly"
+      },
+      "timestamp": "2025-09-15T05:51:31.969071"
+    },
+    {
+      "test_name": "Document Upload Pipeline",
+      "passed": true,
+      "details": {
+        "status_code": 200,
+        "response_time_ms": 397.20606803894043,
+        "upload_result": {
+          "job_id": "733b72eb-efb4-4eff-8218-cee775697172",
+          "document_id": "b9105262-73c5-58f0-9e36-bf369f1d11db",
+          "signed_url": "https://storage.supabase.co/files/files/user/aa424965-ff0d-4b30-acd2-6de37bbaabcb/raw/1757915492_90b578e0.pdf?signed=true&ttl=3600",
+          "upload_expires_at": "2025-09-15T06:51:32.475936"
+        }
+      },
+      "timestamp": "2025-09-15T05:51:32.508582"
+    },
+    {
+      "test_name": "Worker Processing",
+      "passed": true,
+      "details": {
+        "status_code": 200,
+        "response_time_ms": 252.20608711242676,
+        "status_data": {
+          "status": "operational",
+          "timestamp": "2025-09-15T05:51:32.748311",
+          "version": "1.0.0",
+          "database": "connected",
+          "environment": "development"
+        }
+      },
+      "timestamp": "2025-09-15T05:51:32.761288"
+    },
+    {
+      "test_name": "RAG Functionality",
+      "passed": true,
+      "details": {
+        "status_code": 401,
+        "response_time_ms": 114.15815353393555,
+        "note": "RAG endpoint requires authentication (expected)"
+      },
+      "timestamp": "2025-09-15T05:51:32.875803"
+    },
+    {
+      "test_name": "Agent Integration",
+      "passed": true,
+      "details": {
+        "status_code": 401,
+        "response_time_ms": 159.27600860595703,
+        "note": "Chat endpoint requires authentication (expected)"
+      },
+      "timestamp": "2025-09-15T05:51:33.035495"
+    },
+    {
+      "test_name": "Performance Metrics",
+      "passed": true,
+      "details": {
+        "concurrent_requests": 5,
+        "successful_requests": 5,
+        "total_time_ms": 188.64703178405762,
+        "avg_response_time_ms": 37.72940635681152
+      },
+      "timestamp": "2025-09-15T05:51:33.224859"
+    },
+    {
+      "test_name": "Error Handling",
+      "passed": true,
+      "details": {
+        "status_code": 405,
+        "response_time_ms": 197.74389266967773,
+        "note": "Proper 405 error handling (method not allowed)"
+      },
+      "timestamp": "2025-09-15T05:51:33.423307"
+    }
+  ],
+  "performance_metrics": {},
+  "errors": []
+}
