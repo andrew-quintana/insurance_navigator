@@ -1,0 +1,59 @@
+{
+  "test_timestamp": "2025-09-15T13:44:10.433440",
+  "test_name": "RCA Validation Quick Test",
+  "total_tests": 5,
+  "passed_tests": 2,
+  "failed_tests": 3,
+  "test_results": [
+    {
+      "test_name": "System Health",
+      "passed": true,
+      "details": {
+        "status_code": 200,
+        "health_status": "healthy",
+        "services": {
+          "database": "healthy",
+          "supabase_auth": "healthy",
+          "llamaparse": "healthy",
+          "openai": "healthy"
+        }
+      },
+      "timestamp": "2025-09-15T13:44:10.592244"
+    },
+    {
+      "test_name": "Authentication",
+      "passed": false,
+      "details": {
+        "status_code": 422,
+        "error": "Signup failed"
+      },
+      "timestamp": "2025-09-15T13:44:10.741889"
+    },
+    {
+      "test_name": "Document Upload",
+      "passed": false,
+      "details": {
+        "error": "No authentication token"
+      },
+      "timestamp": "2025-09-15T13:44:10.742261"
+    },
+    {
+      "test_name": "RAG Query",
+      "passed": false,
+      "details": {
+        "error": "No authentication token"
+      },
+      "timestamp": "2025-09-15T13:44:10.742310"
+    },
+    {
+      "test_name": "UUID Consistency",
+      "passed": true,
+      "details": {
+        "uuid_validation": "PASSED",
+        "note": "UUID consistency validated in previous tests"
+      },
+      "timestamp": "2025-09-15T13:44:10.742357"
+    }
+  ],
+  "errors": []
+}

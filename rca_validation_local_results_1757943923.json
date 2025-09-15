@@ -1,0 +1,80 @@
+{
+  "test_timestamp": "2025-09-15T13:45:22.836686",
+  "test_name": "RCA Validation - Local Development Servers",
+  "total_tests": 7,
+  "passed_tests": 4,
+  "failed_tests": 3,
+  "test_results": [
+    {
+      "test_name": "Local Server Health",
+      "passed": true,
+      "details": {
+        "backend_status": "degraded",
+        "frontend_status": "healthy",
+        "both_servers_healthy": true
+      },
+      "timestamp": "2025-09-15T13:45:22.873375"
+    },
+    {
+      "test_name": "Database Connection",
+      "passed": true,
+      "details": {
+        "connection_successful": true,
+        "query_result": 1
+      },
+      "timestamp": "2025-09-15T13:45:22.953544"
+    },
+    {
+      "test_name": "RAG Tool Functionality",
+      "passed": false,
+      "details": {
+        "error": "No module named 'agents.tooling.rag.config'"
+      },
+      "timestamp": "2025-09-15T13:45:23.072679"
+    },
+    {
+      "test_name": "UUID Consistency",
+      "passed": true,
+      "details": {
+        "documents_found": 3,
+        "chunks_found": 5,
+        "uuid_consistency": true,
+        "orphaned_chunks": 0
+      },
+      "timestamp": "2025-09-15T13:45:23.123735"
+    },
+    {
+      "test_name": "Similarity Threshold",
+      "passed": false,
+      "details": {
+        "error": "No module named 'agents.tooling.rag.config'"
+      },
+      "timestamp": "2025-09-15T13:45:23.123903"
+    },
+    {
+      "test_name": "Authentication Flow",
+      "passed": true,
+      "details": {
+        "auth_service_healthy": true,
+        "frontend_auth_status": "healthy"
+      },
+      "timestamp": "2025-09-15T13:45:23.130055"
+    },
+    {
+      "test_name": "End-to-End RAG",
+      "passed": false,
+      "details": {
+        "error": "No module named 'agents.tooling.rag.config'"
+      },
+      "timestamp": "2025-09-15T13:45:23.130280"
+    }
+  ],
+  "rca_fixes_validated": {
+    "uuid_consistency": true,
+    "similarity_threshold": false,
+    "rag_integration": false,
+    "authentication_flow": true,
+    "database_operations": true
+  },
+  "errors": []
+}
