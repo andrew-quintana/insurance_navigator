@@ -1,0 +1,61 @@
+{
+  "timestamp": "2025-09-14T19:39:17.310188",
+  "total_time": 1.2108919620513916,
+  "summary": {
+    "total_tests": 11,
+    "passed": 9,
+    "warned": 1,
+    "failed": 1,
+    "success_rate": 81.81818181818183
+  },
+  "results": {
+    "production_health": {
+      "status": "PASS",
+      "data": {
+        "status": "healthy",
+        "timestamp": "2025-09-15T02:38:56.693559",
+        "services": {
+          "database": "healthy",
+          "supabase_auth": "healthy",
+          "llamaparse": "healthy",
+          "openai": "healthy"
+        },
+        "version": "3.0.0"
+      },
+      "response_time": "N/A"
+    },
+    "local_database": {
+      "status": "PASS"
+    },
+    "local_agents": {
+      "status": "PASS"
+    },
+    "openai_config": {
+      "status": "PASS"
+    },
+    "llamaparse_config": {
+      "status": "PASS"
+    },
+    "supabase_config": {
+      "status": "WARN"
+    },
+    "rag_pipeline": {
+      "status": "PASS"
+    },
+    "production_performance": {
+      "status": "PASS",
+      "response_time": 0.15986895561218262
+    },
+    "import_management": {
+      "status": "PASS"
+    },
+    "api_reliability": {
+      "status": "PASS",
+      "configured_services": 2
+    },
+    "data_integrity": {
+      "status": "FAIL",
+      "error": "No module named 'db.models'"
+    }
+  }
+}
