@@ -306,7 +306,7 @@ class RAGTool:
         database_url = os.getenv("DATABASE_URL")
         if database_url:
             try:
-                return await asyncpg.connect(database_url)
+                return await asyncpg.connect(database_url, statement_cache_size=0)
             except Exception as e:
                 self.logger.warning(f"Failed to connect using DATABASE_URL: {e}, falling back to individual parameters")
         
@@ -323,4 +323,5 @@ class RAGTool:
             user=user,
             password=password,
             database=database,
+            statement_cache_size=0
         )
