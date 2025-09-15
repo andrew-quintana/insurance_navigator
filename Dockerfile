@@ -50,6 +50,7 @@ WORKDIR /app
 # Copy all necessary application files
 COPY main.py .
 COPY config/ ./config/
+COPY core/ ./core/
 COPY db/ ./db/
 COPY backend/ ./backend/
 COPY shared/ ./shared/
