@@ -367,6 +367,8 @@ class EnhancedBaseWorker:
             # Process based on status
             if status == "uploaded":
                 await self._process_parsing_real(job, correlation_id)
+            elif status == "parse_queued":
+                await self._process_parsing_real(job, correlation_id)
             elif status == "parsed":
                 await self._process_validation_real(job, correlation_id)
             elif status == "parse_validated":
@@ -377,7 +379,7 @@ class EnhancedBaseWorker:
                 raise ValueError(f"Unknown job status: {status}")
             
             # Mark job as completed
-            await self._update_job_state(job_id, "completed", correlation_id)
+            await self._update_job_state(job_id, "complete", correlation_id)
             
             processing_time = (datetime.utcnow() - start_time).total_seconds()
             self.logger.info(
@@ -416,7 +418,7 @@ class EnhancedBaseWorker:
             self.error_handler.log_error(error)
             
             # Mark job as failed
-            await self._update_job_state(job_id, "failed", correlation_id, str(e))
+            await self._update_job_state(job_id, "failed_parse", correlation_id, str(e))
             raise
     
     async def _process_parsing_real(self, job: Dict[str, Any], correlation_id: str):
@@ -460,7 +462,7 @@ class EnhancedBaseWorker:
                     )
                     
             # Store parsed content
-            parsed_path = f"files/user/{user_id}/parsed/{document_id}.md"
+            parsed_path = f"storage://documents/{user_id}/parsed/{document_id}.md"
             await self.storage.write_blob(parsed_path, parsed_result["content"])
             
             # Update document with parsed content info
@@ -475,7 +477,7 @@ class EnhancedBaseWorker:
                 # Update job status
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs 
-                    SET status = 'parsed', state = 'queued', updated_at = now()
+                    SET status = 'parsed', updated_at = now()
                     WHERE job_id = $1
                 """, job_id)
                 
@@ -503,9 +505,9 @@ class EnhancedBaseWorker:
             async with self.db.get_db_connection() as conn:
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
-                    SET status = 'failed', state = 'error', error_message = $1, updated_at = now()
+                    SET status = 'failed_parse', last_error = $1, updated_at = now()
                     WHERE job_id = $2
-                """, e.get_user_message(), job_id)
+                """, json.dumps({"error": e.get_user_message(), "timestamp": datetime.utcnow().isoformat()}), job_id)
                 
                 # Update document status
                 await conn.execute("""
@@ -579,7 +581,7 @@ class EnhancedBaseWorker:
             async with self.db.get_db_connection() as conn:
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
-                    SET status = 'parse_validated', state = 'queued', updated_at = now()
+                    SET status = 'parse_validated', updated_at = now()
                     WHERE job_id = $1
                 """, job_id)
                 
@@ -661,7 +663,7 @@ class EnhancedBaseWorker:
                 # Update job status
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
-                    SET status = 'chunks_stored', state = 'queued', updated_at = now()
+                    SET status = 'chunks_stored', updated_at = now()
                     WHERE job_id = $1
                 """, job_id)
                 
@@ -744,7 +746,7 @@ class EnhancedBaseWorker:
                 # Update job status
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
-                    SET status = 'embeddings_stored', state = 'completed', updated_at = now()
+                    SET status = 'embeddings_stored', updated_at = now()
                     WHERE job_id = $1
                 """, job_id)
                 
