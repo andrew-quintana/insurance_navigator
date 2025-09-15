@@ -22,6 +22,8 @@ class BaseAgent:
         mock: bool = False,
         examples: Optional[str] = None,
         logger: Optional[logging.Logger] = None,
+        db_manager: Optional[Any] = None,
+        config: Optional[Dict[str, Any]] = None,
     ):
         """
         Args:
@@ -32,6 +34,8 @@ class BaseAgent:
             mock: If True, always return mock output
             examples: Optional examples (string or path)
             logger: Optional logger (defaults to stdlib logger)
+            db_manager: Database manager instance for data operations
+            config: Configuration dictionary for agent settings
         """
         self.name = name
         self.prompt = self._load_if_path(prompt)
@@ -40,6 +44,8 @@ class BaseAgent:
         self.mock = mock
         self.examples = self._load_if_path(examples) if examples else None
         self.logger = logger or logging.getLogger(f"agent.{name}")
+        self.db_manager = db_manager
+        self.config = config or {}
 
     def _load_if_path(self, value: Optional[str]) -> Optional[str]:
         if value and os.path.isfile(value):
@@ -121,4 +127,35 @@ class BaseAgent:
 
     # Extension point: override for custom logging
     def log(self, message: str, level: int = logging.INFO):
-        self.logger.log(level, f"[{self.name}] {message}") 
+        self.logger.log(level, f"[{self.name}] {message}")
+    
+    # Dependency injection support methods
+    async def initialize(self) -> None:
+        """Initialize the agent with injected dependencies."""
+        self.logger.info(f"Initializing agent: {self.name}")
+        # Override in subclasses for custom initialization
+        pass
+    
+    async def health_check(self) -> Dict[str, Any]:
+        """Perform health check on the agent."""
+        try:
+            # Basic health check - override in subclasses for specific checks
+            return {
+                "status": "healthy",
+                "agent_name": self.name,
+                "mock_mode": self.mock,
+                "has_llm": self.llm is not None,
+                "has_db_manager": self.db_manager is not None
+            }
+        except Exception as e:
+            return {
+                "status": "unhealthy",
+                "agent_name": self.name,
+                "error": str(e)
+            }
+    
+    async def shutdown(self) -> None:
+        """Shutdown the agent and cleanup resources."""
+        self.logger.info(f"Shutting down agent: {self.name}")
+        # Override in subclasses for custom shutdown logic
+        pass 
