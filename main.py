@@ -27,9 +27,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import hashlib
 from utils.cors_config import get_cors_config, get_cors_headers
 import re
-import psycopg2
 import traceback
-from config.database import db_pool
+from core import initialize_system, close_system, get_database, get_agents
 
 # Database service imports
 from db.services.user_service import get_user_service, UserService
@@ -53,6 +52,28 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# System initialization and shutdown handlers
+@app.on_event("startup")
+async def startup_event():
+    """Initialize the core system on startup."""
+    try:
+        logger.info("Initializing Insurance Navigator system...")
+        await initialize_system()
+        logger.info("System initialization completed successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize system: {e}")
+        raise
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Shutdown the core system on shutdown."""
+    try:
+        logger.info("Shutting down Insurance Navigator system...")
+        await close_system()
+        logger.info("System shutdown completed")
+    except Exception as e:
+        logger.error(f"Error during system shutdown: {e}")
 
 # Custom error handler middleware
 class ErrorHandlerMiddleware(BaseHTTPMiddleware):
@@ -953,6 +974,35 @@ async def get_auth_user(request: Request):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
+
+@app.get("/health")
+async def health_check():
+    """
+    Health check endpoint using the new core system.
+    
+    Returns:
+        Dict containing system health status
+    """
+    try:
+        from core import get_system_manager
+        system = await get_system_manager()
+        health_status = await system.health_check()
+        
+        return {
+            "status": health_status["status"],
+            "timestamp": datetime.utcnow().isoformat(),
+            "services": health_status.get("services", {}),
+            "version": "3.0.0"
+        }
+        
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {
+            "status": "unhealthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "error": str(e),
+            "version": "3.0.0"
+        }
 
 if __name__ == "__main__":
     import uvicorn
