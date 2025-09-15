@@ -4,6 +4,7 @@ Upload endpoint for document ingestion pipeline.
 
 import json
 import logging
+import os
 from datetime import datetime, timedelta
 from typing import Optional
 from uuid import uuid4
@@ -424,17 +425,21 @@ async def _generate_signed_url(storage_path: str, ttl_seconds: int) -> str:
     """Generate a signed URL for file upload based on environment configuration."""
     config = get_config()
     
-    # Determine storage base URL based on environment
-    if config.storage_environment == "mock":
-        # Mock environment - use mock storage service
-        storage_base_url = "http://localhost:5001"
-    elif config.storage_environment == "development":
-        # Development environment - use actual Supabase storage
-        storage_base_url = "http://127.0.0.1:54321"
-    elif config.storage_environment == "staging":
-        storage_base_url = "https://staging-storage.supabase.co"
-    else:  # production
-        storage_base_url = "https://storage.supabase.co"
+    # Get storage URL from environment variable first, then fall back to environment-based logic
+    storage_base_url = os.getenv('SUPABASE_STORAGE_URL')
+    
+    if not storage_base_url:
+        # Fallback to environment-based logic if SUPABASE_STORAGE_URL not set
+        if config.storage_environment == "mock":
+            # Mock environment - use mock storage service
+            storage_base_url = "http://localhost:5001"
+        elif config.storage_environment == "development":
+            # Development environment - use actual Supabase storage
+            storage_base_url = "http://127.0.0.1:54321"
+        elif config.storage_environment == "staging":
+            storage_base_url = "https://staging-storage.supabase.co"
+        else:  # production
+            storage_base_url = "https://storage.supabase.co"
     
     # Handle new path format: files/user/{userId}/raw/{datetime}_{hash}.{ext}
     if storage_path.startswith("files/user/"):
