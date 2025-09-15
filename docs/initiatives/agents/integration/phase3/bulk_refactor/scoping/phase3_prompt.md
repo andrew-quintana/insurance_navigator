@@ -1,24 +1,26 @@
 # Phase 3: Multi-User Data Integrity - LLM Implementation Prompt
 
 ## Context
-You are implementing Phase 3 of the Agent Integration Infrastructure Refactor initiative. This phase focuses on implementing user-scoped duplicate detection to allow legitimate multi-user uploads of the same documents while maintaining data integrity.
+You are implementing Phase 3 of the Agent Integration Infrastructure Refactor initiative. This phase focuses on implementing document row duplication system to allow multiple users to upload the same document content while maintaining separate user-scoped document entries and preserving existing processing data.
 
 ## Reference Documents
-- **Primary Specification**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/spec_refactor.md` - Review "Data Integrity" sections in Current State and Target State
-- **Technical Design**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/rfc.md` - Reference "3. Multi-User Data Integrity" section for database schema updates and implementation approach
-- **Implementation Tasks**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/todo.md` - Follow "Phase 3: Multi-User Data Integrity" section for database schema and logic updates
+- **Primary Specification**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/scoping/spec_refactor.md` - Review "Data Integrity" sections in Current State and Target State
+- **Technical Design**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/scoping/rfc.md` - Reference "3. Multi-User Data Integrity" section for document row duplication implementation
+- **Implementation Tasks**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/scoping/todo.md` - Follow "Phase 3: Document Row Duplication System" section for implementation tasks
 
 ## Key Implementation Areas
 Refer to the RFC document section "3. Multi-User Data Integrity" for:
-- Database query updates to include user_id in duplicate detection
-- Composite index creation for performance optimization
-- User isolation implementation in all document operations
+- Document row duplication logic when same content is uploaded by different users
+- Content hash-based duplicate detection and document copying
+- Preservation of document_chunks relationships through proper document_id references
+- RAG functionality maintenance through normalized table relationships
 
 ## Success Criteria
 Implement all acceptance criteria listed in the spec_refactor.md document related to:
-- Duplicate upload checks correctly scoping by user_id
-- Multiple users able to upload the same document legitimately
-- Maintained data integrity across all user operations
+- Document row duplication creating separate user-scoped document entries
+- Multiple users able to upload same content with their own document rows
+- RAG functionality preserved through proper document-chunk relationships
+- Existing processing data preserved when duplicating documents
 
 ## Constraints
 - Follow database schema migration considerations outlined in spec_refactor.md risks section

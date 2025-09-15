@@ -14,7 +14,7 @@ Current agent integration infrastructure has several critical issues:
 
 1. **Import Failures**: Persistent psycopg2 and agents directory module import errors causing runtime instability
 2. **Silent API Failures**: Llamaparse calls defaulting to mock implementations in production, masking real issues
-3. **Data Integrity Issues**: Duplicate upload detection ignoring user_id, preventing legitimate multi-user scenarios
+3. **Data Integrity Issues**: Lack of proper document row duplication for multi-user scenarios where different users upload the same document
 4. **Suboptimal RAG Performance**: Default similarity thresholds may be filtering out relevant results (note: performance speed is non-critical)
 5. **Poor Observability**: Limited visibility into RAG performance characteristics
 
@@ -65,21 +65,29 @@ class LlamaParseClient:
 ```
 
 ### 3. Multi-User Data Integrity
-**Problem**: Duplicate detection not scoping by user_id.
+**Problem**: Current system prevents multiple users from uploading the same document, lacking proper document row duplication.
 
 **Solution**:
-- Update duplicate detection queries to include user_id
-- Create composite indexes for performance
-- Ensure user isolation in all document operations
+- Implement document row duplication for multi-user scenarios
+- When duplicate content is detected, create new document row for the new user
+- Copy all processing data from existing document while updating user_id
+- Preserve existing document chunks and processing results
+- Maintain RAG functionality through proper table relationships
 
 **Implementation**:
 ```sql
--- New index
-CREATE INDEX idx_documents_user_hash ON documents(user_id, content_hash);
+-- Detect existing document by content hash
+SELECT id, * FROM documents WHERE content_hash = %s LIMIT 1;
 
--- Updated query
-SELECT id FROM documents 
-WHERE user_id = %s AND content_hash = %s;
+-- Create new document row for new user with same processing data
+INSERT INTO documents (user_id, filename, content_hash, processed_content, metadata, created_at)
+SELECT %s, filename, content_hash, processed_content, metadata, NOW()
+FROM documents WHERE id = %s;
+
+-- RAG queries will work normally as they reference documents table first
+SELECT dc.* FROM document_chunks dc 
+JOIN documents d ON dc.document_id = d.id 
+WHERE d.user_id = %s;
 ```
 
 ### 4. RAG Performance Optimization

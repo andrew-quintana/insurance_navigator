@@ -4,9 +4,9 @@
 You are implementing Phase 5 of the Agent Integration Infrastructure Refactor initiative. This phase focuses on comprehensive testing, performance validation, and production deployment of all previous phase implementations.
 
 ## Reference Documents
-- **Primary Specification**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/spec_refactor.md` - Review all "Acceptance Criteria" and "Deliverables" sections for complete validation requirements
-- **Technical Design**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/rfc.md` - Reference "Implementation Plan" Phase 5 section and "Monitoring & Metrics" for deployment strategy
-- **Implementation Tasks**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/todo.md` - Follow "Phase 5: Testing & Deployment" section for comprehensive testing and deployment procedures
+- **Primary Specification**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/scoping/spec_refactor.md` - Review all "Acceptance Criteria" and "Deliverables" sections for complete validation requirements
+- **Technical Design**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/scoping/rfc.md` - Reference "Implementation Plan" Phase 5 section and "Monitoring & Metrics" for deployment strategy
+- **Implementation Tasks**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/scoping/todo.md` - Follow "Phase 5: Testing & Deployment" section for comprehensive testing and deployment procedures
 
 ## Key Implementation Areas
 Refer to the RFC document sections for:
@@ -18,7 +18,7 @@ Refer to the RFC document sections for:
 ## Success Criteria
 Validate all acceptance criteria from spec_refactor.md across all phases:
 - All existing tests pass after all refactoring
-- Zero import failures, proper API error handling, user-scoped duplicate detection
+- Zero import failures, proper API error handling, document row duplication for multi-user scenarios
 - RAG threshold at 0.3 with histogram logging and UUID traceability
 - All deliverables completed as specified
 

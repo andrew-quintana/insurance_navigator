@@ -4,9 +4,9 @@
 You are implementing Phase 2 of the Agent Integration Infrastructure Refactor initiative. This phase focuses on establishing reliable external API calls for LlamaParse in production, eliminating mock fallbacks and implementing proper error handling with UUID traceability.
 
 ## Reference Documents
-- **Primary Specification**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/spec_refactor.md` - Review "API Reliability" sections in Current State and Target State
-- **Technical Design**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/rfc.md` - Reference "2. Production API Reliability" section for implementation details and code examples
-- **Implementation Tasks**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/todo.md` - Follow "Phase 2: Production API Reliability" section for LlamaParse integration tasks
+- **Primary Specification**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/scoping/spec_refactor.md` - Review "API Reliability" sections in Current State and Target State
+- **Technical Design**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/scoping/rfc.md` - Reference "2. Production API Reliability" section for implementation details and code examples
+- **Implementation Tasks**: `@docs/initiatives/agents/integration/phase3/bulk_refactor/scoping/todo.md` - Follow "Phase 2: Production API Reliability" section for LlamaParse integration tasks
 
 ## Key Implementation Areas
 Refer to the RFC document section "2. Production API Reliability" for:
