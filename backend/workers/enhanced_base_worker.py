@@ -305,7 +305,6 @@ class EnhancedBaseWorker:
                             'uploaded', 'parse_queued', 'parsed', 'parse_validated', 
                             'chunking', 'chunks_stored', 'embedding_queued', 'embedding_in_progress', 'embeddings_stored'
                         )
-                        AND uj.state IN ('queued', 'working', 'retryable')
                         AND (
                             uj.last_error IS NULL 
                             OR (uj.last_error->>'retry_at')::timestamp <= now()
@@ -362,8 +361,8 @@ class EnhancedBaseWorker:
                 document_id=str(job.get("document_id"))
             )
             
-            # Update job state to working
-            await self._update_job_state(job_id, "working", correlation_id)
+            # Update job state to parse_queued
+            await self._update_job_state(job_id, "parse_queued", correlation_id)
             
             # Process based on status
             if status == "uploaded":

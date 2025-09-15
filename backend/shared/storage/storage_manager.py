@@ -6,8 +6,9 @@ import json
 import hashlib
 import hmac
 import secrets
+from ..logging.structured_logger import StructuredLogger
 
-logger = logging.getLogger(__name__)
+logger = StructuredLogger(__name__)
 
 class StorageManager:
     """Storage manager for blob storage operations with Supabase integration"""
