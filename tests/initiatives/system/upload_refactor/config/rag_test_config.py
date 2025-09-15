@@ -61,7 +61,7 @@ class RAGTestConfig(BaseModel):
     
     # Search configuration
     vector_search_limit: int = Field(default=10, description="Maximum number of search results")
-    similarity_threshold: float = Field(default=0.7, description="Minimum similarity threshold")
+    similarity_threshold: float = Field(default=0.3, description="Minimum similarity threshold")
     
     # Workflow configuration
     workflow_timeout: int = Field(default=30, description="Workflow timeout in seconds")

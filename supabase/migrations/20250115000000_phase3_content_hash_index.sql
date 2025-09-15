@@ -19,3 +19,4 @@ create index if not exists idx_documents_user_content_hash
     on upload_pipeline.documents (user_id, file_sha256);
 
 commit;
+
