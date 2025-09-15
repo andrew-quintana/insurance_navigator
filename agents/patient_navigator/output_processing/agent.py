@@ -149,7 +149,8 @@ class CommunicationAgent(BaseAgent):
             config: Configuration for the agent
             **kwargs: Additional arguments passed to BaseAgent
         """
-        self.config = config or OutputProcessingConfig.from_environment()
+        # Store the original config before BaseAgent initialization
+        original_config = config or OutputProcessingConfig.from_environment()
         
         # Auto-detect LLM client if not provided
         if llm_client is None:
@@ -165,8 +166,12 @@ class CommunicationAgent(BaseAgent):
             output_schema=CommunicationResponse,
             llm=llm_client,  # Claude Haiku client or None for mock mode
             mock=llm_client is None,
+            config=original_config.to_dict(),  # Pass config as dictionary to BaseAgent
             **kwargs
         )
+        
+        # Restore the original config object after BaseAgent initialization
+        self.config = original_config
         
         self.logger = logging.getLogger(f"agent.{self.name}")
         self.logger.info(f"Initialized Communication Agent with config: {self.config.to_dict()}")

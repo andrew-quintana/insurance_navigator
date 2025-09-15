@@ -14,6 +14,10 @@ import sys
 import uuid
 import aiohttp
 import asyncio
+from dotenv import load_dotenv
+
+# Load production environment variables
+load_dotenv('.env.production')
 from fastapi import FastAPI, HTTPException, Depends, Request, status, UploadFile, File, Form, Response, Body, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -289,7 +293,8 @@ async def get_document_status(
     """Get simplified document status."""
     try:
         # Get document service
-        doc_service = DocumentService()
+        from db.services.document_service import get_document_service
+        doc_service = await get_document_service()
         
         # Get document status
         status = await doc_service.get_document_status(document_id, str(current_user["id"]))
@@ -533,6 +538,14 @@ async def startup_event():
         
         storage_service_instance = await get_storage_service()
         logger.info("✅ Storage service initialized")
+        
+        # Initialize RAG tool and chat interface
+        try:
+            from agents.tooling.rag.core import RAGTool
+            from agents.patient_navigator.chat_interface import PatientNavigatorChatInterface
+            logger.info("✅ RAG tool and chat interface imports successful")
+        except ImportError as e:
+            logger.warning(f"⚠️ RAG tool or chat interface import failed: {e}")
         
         # Verify environment variables
         required_vars = [

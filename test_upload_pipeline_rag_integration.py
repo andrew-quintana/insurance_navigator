@@ -453,11 +453,12 @@ class UploadPipelineRAGTester:
                 # Insert test chunks
                 for chunk in test_chunks:
                     await conn.execute("""
-                        INSERT INTO upload_pipeline.chunks (
-                            chunk_id, document_id, user_id, content, chunk_index, created_at
-                        ) VALUES ($1, $2, $3, $4, $5, NOW())
-                    """, chunk["chunk_id"], document_uuid, self.test_user["user_id"], 
-                    chunk["content"], chunk["chunk_index"])
+                        INSERT INTO upload_pipeline.document_chunks (
+                            chunk_id, document_id, chunker_name, chunker_version, chunk_ord, text, chunk_sha, embed_model, embed_version, vector_dim, embedding, created_at
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+                    """, chunk["chunk_id"], document_uuid, "test-chunker", "1.0", 
+                    chunk["chunk_index"], chunk["content"], "test-sha", "text-embedding-3-small", "1", 1536, 
+                    '[' + ','.join(['0.0'] * 1536) + ']')
                 
                 self.results["workflow"]["document_processed"] = True
                 
@@ -689,10 +690,11 @@ class UploadPipelineRAGTester:
                     
                     # Check chunks
                     user_chunks = await conn.fetch("""
-                        SELECT chunk_id, document_id, user_id, content, chunk_index, created_at
-                        FROM upload_pipeline.chunks 
-                        WHERE user_id = $1
-                        ORDER BY created_at DESC
+                        SELECT dc.chunk_id, dc.document_id, dc.text as content, dc.chunk_ord as chunk_index, dc.created_at
+                        FROM upload_pipeline.document_chunks dc
+                        JOIN upload_pipeline.documents d ON dc.document_id = d.document_id
+                        WHERE d.user_id = $1
+                        ORDER BY dc.created_at DESC
                         LIMIT 20
                     """, self.test_user["user_id"])
                     
@@ -803,7 +805,18 @@ class UploadPipelineRAGTester:
         # Save results to file
         results_file = f"upload_pipeline_rag_test_{int(time.time())}.json"
         with open(results_file, 'w') as f:
-            json.dump(self.results, f, indent=2)
+            # Convert non-serializable objects to strings for JSON serialization
+            def convert_for_json(obj):
+                if isinstance(obj, dict):
+                    return {k: convert_for_json(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [convert_for_json(item) for item in obj]
+                elif hasattr(obj, '__str__') and ('UUID' in str(type(obj)) or 'datetime' in str(type(obj))):
+                    return str(obj)
+                else:
+                    return obj
+            
+            json.dump(convert_for_json(self.results), f, indent=2)
         
         print(f"\n📄 Detailed results saved to: {results_file}")
         print(f"\n🌐 Frontend URL for manual testing: http://localhost:3000")
