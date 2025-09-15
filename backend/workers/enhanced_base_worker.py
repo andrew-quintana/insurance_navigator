@@ -480,7 +480,6 @@ class EnhancedBaseWorker:
                     WHERE job_id = $1
                 """, job_id)
                 
-<<<<<<< HEAD
                 await conn.execute("""
                     UPDATE upload_pipeline.documents
                     SET parsed_path = $1, processing_status = 'parsed', updated_at = now()
@@ -492,16 +491,17 @@ class EnhancedBaseWorker:
                                document_id=str(document_id),
                                parsed_path=parsed_path)
                 
-            except UserFacingError as e:
-                # Log user-facing error with support UUID
-                self.logger.error("Document parsing failed with user-facing error", 
-                                job_id=str(job_id), 
-                                document_id=str(document_id),
-                                error=str(e),
-                                support_uuid=e.get_support_uuid(),
-                                error_code=e.error_code)
-                
-                # Update job status to failed with user message
+        except UserFacingError as e:
+            # Log user-facing error with support UUID
+            self.logger.error("Document parsing failed with user-facing error", 
+                            job_id=str(job_id), 
+                            document_id=str(document_id),
+                            error=str(e),
+                            support_uuid=e.get_support_uuid(),
+                            error_code=e.error_code)
+            
+            # Update job status to failed with user message
+            async with self.db.get_db_connection() as conn:
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
                     SET status = 'failed', state = 'error', error_message = $1, updated_at = now()
@@ -514,36 +514,15 @@ class EnhancedBaseWorker:
                     SET processing_status = 'failed', error_message = $1, updated_at = now()
                     WHERE document_id = $2
                 """, e.get_user_message(), document_id)
-                
-                # Re-raise the error for upstream handling
-                raise
-            except Exception as e:
-                self.logger.error("Parsing failed", 
-                                job_id=str(job_id), 
-                                document_id=str(document_id),
-                                error=str(e))
-                raise
-=======
-                self.logger.info(
-                "Document parsing completed successfully",
-                correlation_id=correlation_id,
-                    job_id=str(job_id),
-                document_id=str(document_id),
-                parsed_path=parsed_path
-                )
-        
-        except Exception as e:
-            error = self.error_handler.create_error(
-                error_code="DOCUMENT_PARSING_FAILED",
-                error_message="Failed to parse document with LlamaParse service",
-                severity=ErrorSeverity.ERROR,
-                category=ErrorCategory.PROCESSING_ERROR,
-                context=context,
-                original_exception=e
-            )
-            self.error_handler.log_error(error)
+            
+            # Re-raise the error for upstream handling
             raise
->>>>>>> 17059bea829e425cbc75d16d069994640a564c4c
+        except Exception as e:
+            self.logger.error("Parsing failed", 
+                            job_id=str(job_id), 
+                            document_id=str(document_id),
+                            error=str(e))
+            raise
     
     async def _process_validation_real(self, job: Dict[str, Any], correlation_id: str):
         """Process document validation with real content"""
@@ -819,7 +798,6 @@ class EnhancedBaseWorker:
                         WHERE job_id = $2
                     """, state, job_id)
         except Exception as e:
-<<<<<<< HEAD
             self.logger.error("Error getting final metrics", error=str(e))
             return {"error": str(e)}
     
@@ -933,8 +911,6 @@ class EnhancedBaseWorker:
         # Check if circuit should be opened
         if self.failure_count >= 5:  # Open circuit after 5 failures
             self.circuit_open = True
-=======
->>>>>>> 17059bea829e425cbc75d16d069994640a564c4c
             self.logger.error(
                 "Failed to update job state",
                 correlation_id=correlation_id,
