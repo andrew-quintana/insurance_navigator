@@ -22,6 +22,8 @@ services:
         sync: false
       - key: UPLOAD_PIPELINE_SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      - key: UPLOAD_PIPELINE_SUPABASE_STORAGE_URL
+        value: ***REMOVED***
       - key: OPENAI_API_KEY
         sync: false
       - key: LLAMAPARSE_API_KEY

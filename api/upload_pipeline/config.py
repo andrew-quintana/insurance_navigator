@@ -59,7 +59,7 @@ class UploadPipelineConfig(BaseSettings):
     signed_url_ttl_seconds: int = 300  # 5 minutes
     
     # Storage URL configuration for different environments
-    storage_url: str = Field(default_factory=lambda: os.getenv('SUPABASE_STORAGE_URL', 'https://storage.supabase.co'))
+    storage_url: str = Field(default_factory=lambda: os.getenv('SUPABASE_STORAGE_URL') or os.getenv('UPLOAD_PIPELINE_SUPABASE_STORAGE_URL', 'https://storage.supabase.co'))
     storage_environment: str = Field(default_factory=lambda: os.getenv('ENVIRONMENT', 'production'))
     
     # Database configuration
