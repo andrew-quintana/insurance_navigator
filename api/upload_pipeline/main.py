@@ -221,6 +221,23 @@ async def health_check():
     return health_status
 
 
+# Debug endpoint to check environment variables
+@app.get("/debug/env")
+async def debug_environment():
+    """Debug endpoint to check environment variables."""
+    import os
+    config = get_config()
+    
+    return {
+        "environment": os.getenv('ENVIRONMENT', 'not_set'),
+        "supabase_storage_url": os.getenv('SUPABASE_STORAGE_URL', 'not_set'),
+        "upload_pipeline_supabase_storage_url": os.getenv('UPLOAD_PIPELINE_SUPABASE_STORAGE_URL', 'not_set'),
+        "config_storage_url": config.storage_url,
+        "config_storage_environment": config.storage_environment,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+
 # Include API routers
 app.include_router(upload_router, prefix="/api/v2", tags=["upload"])
 app.include_router(jobs_router, prefix="/api/v2", tags=["jobs"])
