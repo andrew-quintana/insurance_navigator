@@ -22,12 +22,13 @@ Comprehensive refactor of agent integration infrastructure to address critical i
 - **API Behavior**: Production API failures will now surface as errors rather than silent fallbacks
 - **Database Schema**: May require migration if user_id indexing needs optimization
 - **Performance Impact**: Additional logging and histogram generation may affect response times (NOTE: RAG performance speeds are non-critical for this initiative)
+- **Development Scope**: Phase 5 testing and validation limited to development database and local backend environment
 - **Backward Compatibility**: Existing clients expecting mock fallback behavior may need updates
 
 ## Acceptance Criteria
 - All existing tests pass after import restructuring
 - No psycopg2 or agents module import failures in any environment
-- Llamaparse production failures generate proper error responses with UUIDs
+- Llamaparse API failures generate proper error responses with UUIDs (validated in development environment)
 - Document row duplication creates separate user-scoped document entries while preserving existing document chunks and processing data
 - RAG similarity threshold set to 0.3 across all configurations
 - INFO logs include cosine similarity histograms with clear UUID traceability
@@ -36,10 +37,10 @@ Comprehensive refactor of agent integration infrastructure to address critical i
 
 ## Deliverables
 - Refactored import management system
-- Production-ready API error handling layer
+- Development-validated API error handling layer
 - Implemented document row duplication system for multi-user scenarios
 - RAG configuration updates with 0.3 threshold
 - Enhanced logging system with similarity histograms
 - Migration guides for any breaking changes
-- Updated integration tests covering new error scenarios
+- Updated integration tests covering new error scenarios (executed in development environment with local backend)
 - Documentation for new observability features

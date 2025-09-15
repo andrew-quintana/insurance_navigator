@@ -115,58 +115,65 @@
   - [ ] Create UUID correlation system
   - [ ] Add UUID to user-facing responses for support
 
-## Phase 5: Testing & Deployment 🧪
+## Phase 5: Development Testing & Validation 🧪
 
-### Comprehensive Testing
-- [ ] **Integration test suite**
-  - [ ] Test import resolution in clean environment
-  - [ ] Validate API error handling with real failure scenarios
-  - [ ] Test multi-user upload scenarios
-  - [ ] Verify RAG performance with new threshold
+### Development Environment Setup
+- [ ] **Local backend preparation**
+  - [ ] Ensure development database is configured for testing
+  - [ ] Set up local backend environment with all refactored components
+  - [ ] Configure development-specific environment variables
+  - [ ] Validate local database connectivity and permissions
 
-- [ ] **Performance benchmarking**
-  - [ ] Baseline current RAG operation latencies
-  - [ ] Validate no regression > 50ms after changes
-  - [ ] Test similarity histogram logging overhead
-  - [ ] Monitor database query performance with new indexes
+### Comprehensive Integration Testing
+- [ ] **Import resolution testing**
+  - [ ] Test import resolution in clean development environment
+  - [ ] Validate all psycopg2 and agents module imports work correctly
+  - [ ] Run import validation tests in local backend
+  - [ ] Verify CI/CD import validation pipeline
 
-- [ ] **Error scenario testing**
-  - [ ] Test LlamaParse API failures
-  - [ ] Validate error UUID generation and logging
-  - [ ] Test retry mechanisms
-  - [ ] Verify user-facing error messages
+- [ ] **API error handling validation**
+  - [ ] Test LlamaParse API failures in development environment
+  - [ ] Validate error UUID generation and logging locally
+  - [ ] Test retry mechanisms with local backend
+  - [ ] Verify user-facing error messages in development
 
-### Deployment Strategy
-- [ ] **Staging deployment**
-  - [ ] Deploy all changes to staging environment
-  - [ ] Run full test suite in staging
-  - [ ] Validate observability features
-  - [ ] Performance test with realistic load
+- [ ] **Document duplication testing**
+  - [ ] Test multi-user document upload scenarios in development database
+  - [ ] Validate document row duplication logic with local backend
+  - [ ] Test RAG functionality with duplicated documents
+  - [ ] Verify content_hash indexing performance locally
 
-- [ ] **Production deployment**
-  - [ ] Create deployment runbook
-  - [ ] Plan rollback procedures
-  - [ ] Schedule maintenance window if needed
-  - [ ] Monitor post-deployment metrics
+- [ ] **RAG optimization validation**
+  - [ ] Test RAG similarity threshold at 0.3 in development environment
+  - [ ] Validate similarity histogram logging with local backend
+  - [ ] Test UUID traceability in development logs
+  - [ ] Verify observability features work correctly locally
 
-- [ ] **Post-deployment validation**
-  - [ ] Verify zero import failures
-  - [ ] Monitor API success rates
-  - [ ] Validate RAG performance improvements
-  - [ ] Check similarity histogram quality
+### Development Database Validation
+- [ ] **Database integrity testing**
+  - [ ] Run all database migrations in development environment
+  - [ ] Test document row duplication with development data
+  - [ ] Validate content_hash indexing performance
+  - [ ] Ensure user isolation works correctly with test data
 
-### Documentation & Migration
-- [ ] **Update documentation**
-  - [ ] Document new error handling patterns
-  - [ ] Create observability feature guide
-  - [ ] Update deployment procedures
-  - [ ] Document configuration changes
+- [ ] **End-to-end workflow testing**
+  - [ ] Test complete upload-to-RAG pipeline in development
+  - [ ] Validate error handling throughout the workflow
+  - [ ] Test multi-user scenarios with development database
+  - [ ] Verify all logging and observability features work locally
 
-- [ ] **Migration guides**
-  - [ ] Create guide for any breaking changes
-  - [ ] Document new error message formats
-  - [ ] Provide threshold tuning recommendations
-  - [ ] Create troubleshooting guide with UUID correlation
+### Development Documentation & Handoff
+- [ ] **Development validation documentation**
+  - [ ] Document all test results from development environment
+  - [ ] Create development environment setup guide
+  - [ ] Document local backend configuration requirements
+  - [ ] Record development database schema changes
+
+- [ ] **Implementation guides**
+  - [ ] Document new error handling patterns validated in development
+  - [ ] Create observability feature guide based on local testing
+  - [ ] Document document duplication workflow
+  - [ ] Create troubleshooting guide with UUID correlation for development
 
 ## Monitoring & Success Metrics 📈
 
