@@ -25,6 +25,7 @@ import traceback
 from shared.db import DatabaseManager
 from shared.storage import StorageManager
 from shared.external.service_router import ServiceRouter, ServiceMode, ServiceUnavailableError, ServiceExecutionError
+from shared.exceptions import UserFacingError
 from shared.logging import StructuredLogger
 from shared.config import WorkerConfig
 from shared.monitoring.cost_tracker import CostTracker
@@ -363,6 +364,23 @@ class EnhancedBaseWorker:
                 correlation_id=correlation_id
             )
             
+        except UserFacingError as e:
+            duration = (datetime.utcnow() - start_time).total_seconds()
+            self._record_processing_error(status, str(e))
+            
+            self.logger.error(
+                "Job processing failed with user-facing error",
+                job_id=str(job_id),
+                status=status,
+                error=str(e),
+                support_uuid=e.get_support_uuid(),
+                error_code=e.error_code,
+                duration_seconds=duration,
+                correlation_id=correlation_id
+            )
+            
+            # Handle error - retry or mark as failed
+            await self._handle_processing_error_enhanced(job, e, correlation_id)
         except Exception as e:
             duration = (datetime.utcnow() - start_time).total_seconds()
             self._record_processing_error(status, str(e))
@@ -1029,6 +1047,31 @@ Processing timestamp: {datetime.utcnow().isoformat()}
                                document_id=str(document_id),
                                parsed_path=parsed_path)
                 
+            except UserFacingError as e:
+                # Log user-facing error with support UUID
+                self.logger.error("Document parsing failed with user-facing error", 
+                                job_id=str(job_id), 
+                                document_id=str(document_id),
+                                error=str(e),
+                                support_uuid=e.get_support_uuid(),
+                                error_code=e.error_code)
+                
+                # Update job status to failed with user message
+                await conn.execute("""
+                    UPDATE upload_pipeline.upload_jobs
+                    SET status = 'failed', state = 'error', error_message = $1, updated_at = now()
+                    WHERE job_id = $2
+                """, e.get_user_message(), job_id)
+                
+                # Update document status
+                await conn.execute("""
+                    UPDATE upload_pipeline.documents
+                    SET processing_status = 'failed', error_message = $1, updated_at = now()
+                    WHERE document_id = $2
+                """, e.get_user_message(), document_id)
+                
+                # Re-raise the error for upstream handling
+                raise
             except Exception as e:
                 self.logger.error("Parsing failed", 
                                 job_id=str(job_id), 
@@ -1237,7 +1280,11 @@ Processing timestamp: {datetime.utcnow().isoformat()}
         error_message = str(error)
         
         # Classify error type
-        if isinstance(error, ServiceUnavailableError):
+        if isinstance(error, UserFacingError):
+            error_type = "user_facing_error"
+            is_retryable = False  # User-facing errors should not be retried
+            error_message = error.get_user_message()  # Use user-friendly message
+        elif isinstance(error, ServiceUnavailableError):
             error_type = "service_unavailable"
             is_retryable = True
         elif isinstance(error, ServiceExecutionError):
@@ -1253,13 +1300,23 @@ Processing timestamp: {datetime.utcnow().isoformat()}
             error_type = "unknown_error"
             is_retryable = False
         
+        # Prepare error logging context
+        log_context = {
+            "job_id": str(job_id),
+            "error_type": error_type,
+            "error_message": error_message,
+            "is_retryable": is_retryable,
+            "correlation_id": correlation_id
+        }
+        
+        # Add support UUID for UserFacingError
+        if isinstance(error, UserFacingError):
+            log_context["support_uuid"] = error.get_support_uuid()
+            log_context["error_code"] = error.error_code
+        
         self.logger.error(
             "Enhanced error handling",
-            job_id=str(job_id),
-            error_type=error_type,
-            error_message=error_message,
-            is_retryable=is_retryable,
-            correlation_id=correlation_id
+            **log_context
         )
         
         if is_retryable:

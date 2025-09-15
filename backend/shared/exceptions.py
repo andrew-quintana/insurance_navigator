@@ -6,6 +6,7 @@ including service integration, cost control, and configuration management.
 """
 
 import logging
+import uuid
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 
@@ -42,6 +43,58 @@ class InsuranceNavigatorError(Exception):
         }
 
 
+# User-facing exceptions
+
+class UserFacingError(InsuranceNavigatorError):
+    """
+    Exception class for user-facing errors with UUID traceability.
+    
+    This class provides structured error handling for errors that should be
+    presented to users, including automatic UUID generation for support
+    team traceability.
+    """
+    
+    def __init__(self, message: str, error_code: Optional[str] = None, 
+                 context: Optional[Dict[str, Any]] = None, 
+                 user_message: Optional[str] = None,
+                 support_uuid: Optional[str] = None):
+        """
+        Initialize UserFacingError.
+        
+        Args:
+            message: Internal error message for logging
+            error_code: Error code for categorization
+            context: Additional context information
+            user_message: User-friendly error message (defaults to message)
+            support_uuid: UUID for support team traceability (auto-generated if not provided)
+        """
+        # Generate support UUID if not provided
+        if support_uuid is None:
+            support_uuid = str(uuid.uuid4())
+        
+        # Set user message if not provided
+        if user_message is None:
+            user_message = message
+        
+        # Add support UUID to context
+        if context is None:
+            context = {}
+        context['support_uuid'] = support_uuid
+        context['user_message'] = user_message
+        
+        super().__init__(message, error_code, context)
+        self.user_message = user_message
+        self.support_uuid = support_uuid
+    
+    def get_user_message(self) -> str:
+        """Get user-friendly error message with support UUID."""
+        return f"{self.user_message} (Reference: {self.support_uuid})"
+    
+    def get_support_uuid(self) -> str:
+        """Get support UUID for traceability."""
+        return self.support_uuid
+
+
 # Service-related exceptions
 
 class ServiceError(InsuranceNavigatorError):
@@ -64,7 +117,7 @@ class ServiceUnavailableError(ServiceError):
                  retry_after: Optional[int] = None, context: Optional[Dict[str, Any]] = None):
         if retry_after:
             context = context or {}
-            context['retry_after_seconds'] = retry_after
+            context['retry_after'] = retry_after
         
         super().__init__(message, service_name, "SERVICE_UNAVAILABLE", context)
         self.retry_after = retry_after
@@ -87,40 +140,21 @@ class ServiceExecutionError(ServiceError):
 class ServiceConfigurationError(ServiceError):
     """Raised when service configuration is invalid."""
     
-    def __init__(self, message: str, service_name: Optional[str] = None, 
-                 config_key: Optional[str] = None, context: Optional[Dict[str, Any]] = None):
+    def __init__(self, message: str, config_key: Optional[str] = None, 
+                 context: Optional[Dict[str, Any]] = None):
         if config_key:
             context = context or {}
             context['config_key'] = config_key
         
-        super().__init__(message, service_name, "SERVICE_CONFIGURATION_ERROR", context)
+        super().__init__(message, None, "SERVICE_CONFIGURATION_ERROR", context)
         self.config_key = config_key
-
-
-class ServiceRateLimitError(ServiceError):
-    """Raised when service rate limits are exceeded."""
-    
-    def __init__(self, message: str, service_name: Optional[str] = None, 
-                 retry_after: Optional[int] = None, rate_limit_info: Optional[Dict[str, Any]] = None, 
-                 context: Optional[Dict[str, Any]] = None):
-        if retry_after:
-            context = context or {}
-            context['retry_after_seconds'] = retry_after
-        
-        if rate_limit_info:
-            context = context or {}
-            context['rate_limit_info'] = rate_limit_info
-        
-        super().__init__(message, service_name, "SERVICE_RATE_LIMIT_EXCEEDED", context)
-        self.retry_after = retry_after
-        self.rate_limit_info = rate_limit_info
 
 
 class ServiceTimeoutError(ServiceError):
     """Raised when a service operation times out."""
     
     def __init__(self, message: str, service_name: Optional[str] = None, 
-                 timeout_seconds: Optional[int] = None, context: Optional[Dict[str, Any]] = None):
+                 timeout_seconds: Optional[float] = None, context: Optional[Dict[str, Any]] = None):
         if timeout_seconds:
             context = context or {}
             context['timeout_seconds'] = timeout_seconds
@@ -129,350 +163,260 @@ class ServiceTimeoutError(ServiceError):
         self.timeout_seconds = timeout_seconds
 
 
-# Cost control exceptions
-
-class CostControlError(InsuranceNavigatorError):
-    """Base exception for cost control errors."""
-    
-    def __init__(self, message: str, error_code: Optional[str] = None, 
-                 context: Optional[Dict[str, Any]] = None):
-        super().__init__(message, error_code, context)
-
-
-class CostLimitExceededError(CostControlError):
-    """Raised when cost limits are exceeded."""
+class ServiceRateLimitError(ServiceError):
+    """Raised when a service rate limit is exceeded."""
     
     def __init__(self, message: str, service_name: Optional[str] = None, 
-                 daily_cost: Optional[float] = None, daily_limit: Optional[float] = None,
-                 context: Optional[Dict[str, Any]] = None):
-        if service_name:
-            context = context or {}
-            context['service_name'] = service_name
-        
-        if daily_cost is not None:
-            context = context or {}
-            context['daily_cost_usd'] = daily_cost
-        
-        if daily_limit is not None:
-            context = context or {}
-            context['daily_limit_usd'] = daily_limit
-        
-        super().__init__(message, "COST_LIMIT_EXCEEDED", context)
-        self.service_name = service_name
-        self.daily_cost = daily_cost
-        self.daily_limit = daily_limit
-
-
-class RateLimitExceededError(CostControlError):
-    """Raised when rate limits are exceeded."""
-    
-    def __init__(self, message: str, service_name: Optional[str] = None, 
-                 hourly_requests: Optional[int] = None, hourly_limit: Optional[int] = None,
                  retry_after: Optional[int] = None, context: Optional[Dict[str, Any]] = None):
-        if service_name:
-            context = context or {}
-            context['service_name'] = service_name
-        
-        if hourly_requests is not None:
-            context = context or {}
-            context['hourly_requests'] = hourly_requests
-        
-        if hourly_limit is not None:
-            context = context or {}
-            context['hourly_limit'] = hourly_limit
-        
         if retry_after:
             context = context or {}
-            context['retry_after_seconds'] = retry_after
+            context['retry_after'] = retry_after
         
-        super().__init__(message, "RATE_LIMIT_EXCEEDED", context)
-        self.service_name = service_name
-        self.hourly_requests = hourly_requests
-        self.hourly_limit = hourly_limit
+        super().__init__(message, service_name, "SERVICE_RATE_LIMIT", context)
         self.retry_after = retry_after
 
 
-class BudgetExceededError(CostControlError):
-    """Raised when total budget is exceeded."""
+# Cost-related exceptions
+
+class CostLimitExceededError(InsuranceNavigatorError):
+    """Raised when cost limits are exceeded."""
     
-    def __init__(self, message: str, total_cost: Optional[float] = None, 
-                 total_limit: Optional[float] = None, context: Optional[Dict[str, Any]] = None):
-        if total_cost is not None:
+    def __init__(self, message: str, current_cost: Optional[float] = None, 
+                 cost_limit: Optional[float] = None, context: Optional[Dict[str, Any]] = None):
+        if current_cost is not None and cost_limit is not None:
             context = context or {}
-            context['total_cost_usd'] = total_cost
+            context['current_cost'] = current_cost
+            context['cost_limit'] = cost_limit
+            context['excess_cost'] = current_cost - cost_limit
         
-        if total_limit is not None:
-            context = context or {}
-            context['total_limit_usd'] = total_limit
-        
-        super().__init__(message, "BUDGET_EXCEEDED", context)
-        self.total_cost = total_cost
-        self.total_limit = total_limit
+        super().__init__(message, "COST_LIMIT_EXCEEDED", context)
+        self.current_cost = current_cost
+        self.cost_limit = cost_limit
 
 
-# Configuration exceptions
-
-class ConfigurationError(InsuranceNavigatorError):
-    """Raised when configuration validation fails."""
+class DailyCostLimitExceededError(CostLimitExceededError):
+    """Raised when daily cost limit is exceeded."""
     
-    def __init__(self, message: str, config_key: Optional[str] = None, 
-                 validation_errors: Optional[List[str]] = None, context: Optional[Dict[str, Any]] = None):
-        if config_key:
-            context = context or {}
-            context['config_key'] = config_key
-        
-        if validation_errors:
-            context = context or {}
-            context['validation_errors'] = validation_errors
-        
-        super().__init__(message, "CONFIGURATION_ERROR", context)
-        self.config_key = config_key
-        self.validation_errors = validation_errors
+    def __init__(self, message: str, current_cost: Optional[float] = None, 
+                 daily_limit: Optional[float] = None, context: Optional[Dict[str, Any]] = None):
+        super().__init__(message, current_cost, daily_limit, context)
 
 
-class EnvironmentVariableError(ConfigurationError):
-    """Raised when required environment variables are missing."""
+class HourlyRateLimitExceededError(CostLimitExceededError):
+    """Raised when hourly rate limit is exceeded."""
     
-    def __init__(self, message: str, missing_variables: Optional[List[str]] = None, 
-                 context: Optional[Dict[str, Any]] = None):
-        if missing_variables:
-            context = context or {}
-            context['missing_variables'] = missing_variables
-        
-        super().__init__(message, "ENVIRONMENT_VARIABLE_ERROR", context)
-        self.missing_variables = missing_variables
+    def __init__(self, message: str, current_rate: Optional[float] = None, 
+                 hourly_limit: Optional[float] = None, context: Optional[Dict[str, Any]] = None):
+        super().__init__(message, current_rate, hourly_limit, context)
 
 
-class CredentialError(ConfigurationError):
-    """Raised when credentials are invalid or missing."""
-    
-    def __init__(self, message: str, credential_type: Optional[str] = None, 
-                 context: Optional[Dict[str, Any]] = None):
-        if credential_type:
-            context = context or {}
-            context['credential_type'] = credential_type
-        
-        super().__init__(message, "CREDENTIAL_ERROR", context)
-        self.credential_type = credential_type
-
-
-# Database and storage exceptions
+# Database-related exceptions
 
 class DatabaseError(InsuranceNavigatorError):
     """Base exception for database-related errors."""
     
-    def __init__(self, message: str, error_code: Optional[str] = None, 
-                 context: Optional[Dict[str, Any]] = None):
-        super().__init__(message, error_code, context)
+    def __init__(self, message: str, operation: Optional[str] = None, 
+                 table: Optional[str] = None, context: Optional[Dict[str, Any]] = None):
+        if operation or table:
+            context = context or {}
+            if operation:
+                context['operation'] = operation
+            if table:
+                context['table'] = table
+        
+        super().__init__(message, "DATABASE_ERROR", context)
+        self.operation = operation
+        self.table = table
 
 
-class ConnectionError(DatabaseError):
+class DatabaseConnectionError(DatabaseError):
     """Raised when database connection fails."""
     
-    def __init__(self, message: str, connection_string: Optional[str] = None, 
-                 context: Optional[Dict[str, Any]] = None):
-        if connection_string:
-            # Don't log the full connection string for security
+    def __init__(self, message: str, context: Optional[Dict[str, Any]] = None):
+        super().__init__(message, "connection", None, context)
+
+
+class DatabaseQueryError(DatabaseError):
+    """Raised when a database query fails."""
+    
+    def __init__(self, message: str, query: Optional[str] = None, 
+                 table: Optional[str] = None, context: Optional[Dict[str, Any]] = None):
+        if query:
             context = context or {}
-            context['connection_host'] = connection_string.split('@')[-1].split('/')[0] if '@' in connection_string else 'unknown'
+            context['query'] = query
         
-        super().__init__(message, "DATABASE_CONNECTION_ERROR", context)
-        self.connection_string = connection_string
+        super().__init__(message, "query", table, context)
+        self.query = query
 
 
-class TransactionError(DatabaseError):
-    """Raised when database transaction fails."""
+class DatabaseTransactionError(DatabaseError):
+    """Raised when a database transaction fails."""
     
     def __init__(self, message: str, operation: Optional[str] = None, 
                  context: Optional[Dict[str, Any]] = None):
-        if operation:
-            context = context or {}
-            context['operation'] = operation
-        
-        super().__init__(message, "DATABASE_TRANSACTION_ERROR", context)
-        self.operation = operation
+        super().__init__(message, operation, None, context)
 
+
+# Storage-related exceptions
 
 class StorageError(InsuranceNavigatorError):
     """Base exception for storage-related errors."""
     
-    def __init__(self, message: str, error_code: Optional[str] = None, 
+    def __init__(self, message: str, operation: Optional[str] = None, 
+                 path: Optional[str] = None, context: Optional[Dict[str, Any]] = None):
+        if operation or path:
+            context = context or {}
+            if operation:
+                context['operation'] = operation
+            if path:
+                context['path'] = path
+        
+        super().__init__(message, "STORAGE_ERROR", context)
+        self.operation = operation
+        self.path = path
+
+
+class StorageConnectionError(StorageError):
+    """Raised when storage connection fails."""
+    
+    def __init__(self, message: str, context: Optional[Dict[str, Any]] = None):
+        super().__init__(message, "connection", None, context)
+
+
+class StorageUploadError(StorageError):
+    """Raised when file upload fails."""
+    
+    def __init__(self, message: str, file_path: Optional[str] = None, 
                  context: Optional[Dict[str, Any]] = None):
-        super().__init__(message, error_code, context)
+        super().__init__(message, "upload", file_path, context)
 
 
-class FileNotFoundError(StorageError):
+class StorageDownloadError(StorageError):
+    """Raised when file download fails."""
+    
+    def __init__(self, message: str, file_path: Optional[str] = None, 
+                 context: Optional[Dict[str, Any]] = None):
+        super().__init__(message, "download", file_path, context)
+
+
+class StorageNotFoundError(StorageError):
     """Raised when a file is not found in storage."""
     
     def __init__(self, message: str, file_path: Optional[str] = None, 
                  context: Optional[Dict[str, Any]] = None):
-        if file_path:
-            context = context or {}
-            context['file_path'] = file_path
-        
-        super().__init__(message, "FILE_NOT_FOUND", context)
-        self.file_path = file_path
+        super().__init__(message, "not_found", file_path, context)
 
 
-class StorageQuotaExceededError(StorageError):
-    """Raised when storage quota is exceeded."""
-    
-    def __init__(self, message: str, current_usage: Optional[int] = None, 
-                 quota_limit: Optional[int] = None, context: Optional[Dict[str, Any]] = None):
-        if current_usage is not None:
-            context = context or {}
-            context['current_usage_bytes'] = current_usage
-        
-        if quota_limit is not None:
-            context = context or {}
-            context['quota_limit_bytes'] = quota_limit
-        
-        super().__init__(message, "STORAGE_QUOTA_EXCEEDED", context)
-        self.current_usage = current_usage
-        self.quota_limit = quota_limit
-
-
-# Processing pipeline exceptions
-
-class ProcessingError(InsuranceNavigatorError):
-    """Base exception for document processing errors."""
-    
-    def __init__(self, message: str, error_code: Optional[str] = None, 
-                 context: Optional[Dict[str, Any]] = None):
-        super().__init__(message, error_code, context)
-
-
-class DocumentValidationError(ProcessingError):
-    """Raised when document validation fails."""
-    
-    def __init__(self, message: str, document_id: Optional[str] = None, 
-                 validation_errors: Optional[List[str]] = None, context: Optional[Dict[str, Any]] = None):
-        if document_id:
-            context = context or {}
-            context['document_id'] = document_id
-        
-        if validation_errors:
-            context = context or {}
-            context['validation_errors'] = validation_errors
-        
-        super().__init__(message, "DOCUMENT_VALIDATION_ERROR", context)
-        self.document_id = document_id
-        self.validation_errors = validation_errors
-
+# Validation-related exceptions
 
 class ValidationError(InsuranceNavigatorError):
-    """Raised when general validation fails."""
+    """Base exception for validation errors."""
     
-    def __init__(self, message: str, field_name: Optional[str] = None, 
-                 validation_errors: Optional[List[str]] = None, context: Optional[Dict[str, Any]] = None):
-        if field_name:
+    def __init__(self, message: str, field: Optional[str] = None, 
+                 value: Optional[Any] = None, context: Optional[Dict[str, Any]] = None):
+        if field or value is not None:
             context = context or {}
-            context['field_name'] = field_name
-        
-        if validation_errors:
-            context = context or {}
-            context['validation_errors'] = validation_errors
+            if field:
+                context['field'] = field
+            if value is not None:
+                context['value'] = str(value)
         
         super().__init__(message, "VALIDATION_ERROR", context)
-        self.field_name = field_name
-        self.validation_errors = validation_errors
+        self.field = field
+        self.value = value
 
 
-class ProcessingTimeoutError(ProcessingError):
-    """Raised when document processing times out."""
+class RequiredFieldError(ValidationError):
+    """Raised when a required field is missing."""
     
-    def __init__(self, message: str, document_id: Optional[str] = None, 
-                 processing_stage: Optional[str] = None, timeout_seconds: Optional[int] = None,
-                 context: Optional[Dict[str, Any]] = None):
-        if document_id:
-            context = context or {}
-            context['document_id'] = document_id
-        
-        if processing_stage:
-            context = context or {}
-            context['processing_stage'] = processing_stage
-        
-        if timeout_seconds:
-            context = context or {}
-            context['timeout_seconds'] = timeout_seconds
-        
-        super().__init__(message, "PROCESSING_TIMEOUT", context)
-        self.document_id = document_id
-        self.processing_stage = processing_stage
-        self.timeout_seconds = timeout_seconds
+    def __init__(self, field: str, context: Optional[Dict[str, Any]] = None):
+        super().__init__(f"Required field '{field}' is missing", field, None, context)
 
 
-class StateTransitionError(ProcessingError):
-    """Raised when state machine transition fails."""
+class InvalidValueError(ValidationError):
+    """Raised when a field has an invalid value."""
     
-    def __init__(self, message: str, document_id: Optional[str] = None, 
-                 current_state: Optional[str] = None, target_state: Optional[str] = None,
+    def __init__(self, field: str, value: Any, expected: Optional[str] = None, 
                  context: Optional[Dict[str, Any]] = None):
-        if document_id:
-            context = context or {}
-            context['document_id'] = document_id
+        message = f"Invalid value for field '{field}': {value}"
+        if expected:
+            message += f" (expected: {expected})"
         
-        if current_state:
-            context = context or {}
-            context['current_state'] = current_state
-        
-        if target_state:
-            context = context or {}
-            context['target_state'] = target_state
-        
-        super().__init__(message, "STATE_TRANSITION_ERROR", context)
-        self.document_id = document_id
-        self.current_state = current_state
-        self.target_state = target_state
+        super().__init__(message, field, value, context)
+        self.expected = expected
 
 
-# Authentication and authorization exceptions
-
-class AuthenticationError(InsuranceNavigatorError):
-    """Raised when authentication fails."""
+class InvalidFormatError(ValidationError):
+    """Raised when a field has an invalid format."""
     
-    def __init__(self, message: str, error_code: Optional[str] = None, 
+    def __init__(self, field: str, value: Any, expected_format: str, 
                  context: Optional[Dict[str, Any]] = None):
-        super().__init__(message, error_code, context)
+        message = f"Invalid format for field '{field}': {value} (expected: {expected_format})"
+        super().__init__(message, field, value, context)
+        self.expected_format = expected_format
 
 
-class AuthorizationError(InsuranceNavigatorError):
-    """Raised when authorization fails."""
-    
-    def __init__(self, message: str, required_permissions: Optional[List[str]] = None, 
-                 context: Optional[Dict[str, Any]] = None):
-        if required_permissions:
-            context = context or {}
-            context['required_permissions'] = required_permissions
-        
-        super().__init__(message, "AUTHORIZATION_ERROR", context)
-        self.required_permissions = required_permissions
-
-
-# Network and communication exceptions
+# Network-related exceptions
 
 class NetworkError(InsuranceNavigatorError):
     """Base exception for network-related errors."""
     
-    def __init__(self, message: str, error_code: Optional[str] = None, 
+    def __init__(self, message: str, url: Optional[str] = None, 
+                 status_code: Optional[int] = None, context: Optional[Dict[str, Any]] = None):
+        if url or status_code:
+            context = context or {}
+            if url:
+                context['url'] = url
+            if status_code:
+                context['status_code'] = status_code
+        
+        super().__init__(message, "NETWORK_ERROR", context)
+        self.url = url
+        self.status_code = status_code
+
+
+class ConnectionError(NetworkError):
+    """Raised when a network connection fails."""
+    
+    def __init__(self, message: str, url: Optional[str] = None, 
                  context: Optional[Dict[str, Any]] = None):
-        super().__init__(message, error_code, context)
+        super().__init__(message, url, None, context)
+
+
+class TimeoutError(NetworkError):
+    """Raised when a network operation times out."""
+    
+    def __init__(self, message: str, url: Optional[str] = None, 
+                 timeout_seconds: Optional[float] = None, context: Optional[Dict[str, Any]] = None):
+        if timeout_seconds:
+            context = context or {}
+            context['timeout_seconds'] = timeout_seconds
+        
+        super().__init__(message, url, None, context)
+        self.timeout_seconds = timeout_seconds
+
+
+class HTTPError(NetworkError):
+    """Raised when an HTTP request fails."""
+    
+    def __init__(self, message: str, url: Optional[str] = None, 
+                 status_code: Optional[int] = None, context: Optional[Dict[str, Any]] = None):
+        super().__init__(message, url, status_code, context)
 
 
 class WebhookError(NetworkError):
-    """Raised when webhook delivery fails."""
+    """Raised when a webhook delivery fails."""
     
     def __init__(self, message: str, webhook_url: Optional[str] = None, 
                  delivery_attempts: Optional[int] = None, context: Optional[Dict[str, Any]] = None):
-        if webhook_url:
+        if webhook_url or delivery_attempts:
             context = context or {}
-            context['webhook_url'] = webhook_url
+            if webhook_url:
+                context['webhook_url'] = webhook_url
+            if delivery_attempts:
+                context['delivery_attempts'] = delivery_attempts
         
-        if delivery_attempts is not None:
-            context = context or {}
-            context['delivery_attempts'] = delivery_attempts
-        
-        super().__init__(message, "WEBHOOK_DELIVERY_ERROR", context)
+        super().__init__(message, webhook_url, None, context)
         self.webhook_url = webhook_url
         self.delivery_attempts = delivery_attempts
 
@@ -495,38 +439,37 @@ def is_retryable_error(error: Exception) -> bool:
 
 def get_retry_delay(error: Exception) -> int:
     """Get retry delay in seconds for an error."""
-    if isinstance(error, ServiceRateLimitError) and error.retry_after:
-        return error.retry_after
-    
-    if isinstance(error, ServiceTimeoutError):
-        return 30  # 30 seconds for timeout errors
-    
-    if isinstance(error, ConnectionError):
-        return 60  # 1 minute for connection errors
-    
-    if isinstance(error, ServiceUnavailableError):
-        return 300  # 5 minutes for service unavailable
-    
-    # Default retry delay
-    return 10
-
-
-def format_error_context(error: Exception) -> Dict[str, Any]:
-    """Format error context for logging and debugging."""
-    if isinstance(error, InsuranceNavigatorError):
-        return error.to_dict()
+    if isinstance(error, ServiceRateLimitError):
+        return error.retry_after or 60
+    elif isinstance(error, ServiceUnavailableError):
+        return error.retry_after or 30
+    elif isinstance(error, (ConnectionError, NetworkError)):
+        return 10
     else:
-        return {
-            'error_type': type(error).__name__,
-            'message': str(error),
-            'timestamp': datetime.utcnow().isoformat()
-        }
+        return 5
 
 
-def log_exception_with_context(error: Exception, context: Optional[Dict[str, Any]] = None) -> None:
-    """Log an exception with additional context."""
-    error_context = format_error_context(error)
-    if context:
-        error_context['additional_context'] = context
+def create_user_facing_error(message: str, original_error: Optional[Exception] = None, 
+                           error_code: Optional[str] = None, context: Optional[Dict[str, Any]] = None) -> UserFacingError:
+    """
+    Create a UserFacingError with automatic UUID generation.
     
-    logger.error(f"Exception occurred: {error_context['error_type']}", extra=error_context)
+    Args:
+        message: Error message
+        original_error: Original exception that caused this error
+        error_code: Error code for categorization
+        context: Additional context information
+        
+    Returns:
+        UserFacingError instance with support UUID
+    """
+    if original_error:
+        context = context or {}
+        context['original_error'] = str(original_error)
+        context['original_error_type'] = type(original_error).__name__
+    
+    return UserFacingError(
+        message=message,
+        error_code=error_code,
+        context=context
+    )

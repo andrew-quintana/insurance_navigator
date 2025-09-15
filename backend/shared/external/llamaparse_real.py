@@ -18,6 +18,7 @@ import httpx
 from pydantic import BaseModel, Field
 
 from .service_router import ServiceInterface, ServiceHealth, ServiceUnavailableError, ServiceExecutionError
+from ..exceptions import UserFacingError
 
 logger = logging.getLogger(__name__)
 
@@ -187,8 +188,8 @@ class RealLlamaParseService(ServiceInterface):
             ServiceExecutionError: If parsing fails
             ServiceUnavailableError: If service is unavailable
         """
-        if not await self.is_available():
-            raise ServiceUnavailableError("LlamaParse service is unavailable")
+        # Note: We don't check availability here to allow the actual API call
+        # to determine the specific error type (auth, rate limit, etc.)
         
         await self._check_rate_limit()
         
@@ -246,24 +247,89 @@ class RealLlamaParseService(ServiceInterface):
                 )
             
             elif response.status_code == 401:
-                raise ServiceExecutionError("Invalid LlamaParse API key")
+                raise UserFacingError(
+                    "Document processing service authentication failed. Please contact support.",
+                    error_code="LLAMAPARSE_AUTH_ERROR",
+                    context={
+                        "status_code": response.status_code,
+                        "service": "llamaparse",
+                        "operation": "parse_document"
+                    }
+                )
             elif response.status_code == 403:
-                raise ServiceExecutionError("Insufficient LlamaParse API permissions")
+                raise UserFacingError(
+                    "Document processing service access denied. Please contact support.",
+                    error_code="LLAMAPARSE_PERMISSION_ERROR",
+                    context={
+                        "status_code": response.status_code,
+                        "service": "llamaparse",
+                        "operation": "parse_document"
+                    }
+                )
             elif response.status_code == 429:
-                raise ServiceExecutionError("LlamaParse API rate limit exceeded")
+                raise UserFacingError(
+                    "Document processing service is currently busy. Please try again in a few minutes.",
+                    error_code="LLAMAPARSE_RATE_LIMIT_ERROR",
+                    context={
+                        "status_code": response.status_code,
+                        "service": "llamaparse",
+                        "operation": "parse_document"
+                    }
+                )
             elif response.status_code >= 500:
-                raise ServiceExecutionError(f"LlamaParse API server error: {response.status_code}")
+                raise UserFacingError(
+                    "Document processing service is temporarily unavailable. Please try again later.",
+                    error_code="LLAMAPARSE_SERVER_ERROR",
+                    context={
+                        "status_code": response.status_code,
+                        "service": "llamaparse",
+                        "operation": "parse_document"
+                    }
+                )
             else:
                 error_detail = response.text or f"HTTP {response.status_code}"
-                raise ServiceExecutionError(f"LlamaParse API request failed: {error_detail}")
+                raise UserFacingError(
+                    "Document processing failed due to an unexpected error. Please try again later.",
+                    error_code="LLAMAPARSE_UNKNOWN_ERROR",
+                    context={
+                        "status_code": response.status_code,
+                        "error_detail": error_detail,
+                        "service": "llamaparse",
+                        "operation": "parse_document"
+                    }
+                )
                 
         except httpx.TimeoutException:
-            raise ServiceExecutionError("LlamaParse API request timed out")
+            raise UserFacingError(
+                "Document processing request timed out. Please try again later.",
+                error_code="LLAMAPARSE_TIMEOUT_ERROR",
+                context={
+                    "service": "llamaparse",
+                    "operation": "parse_document",
+                    "timeout_seconds": self.timeout_seconds
+                }
+            )
         except httpx.RequestError as e:
-            raise ServiceExecutionError(f"LlamaParse API request failed: {e}")
+            raise UserFacingError(
+                "Document processing service is temporarily unavailable. Please try again later.",
+                error_code="LLAMAPARSE_NETWORK_ERROR",
+                context={
+                    "service": "llamaparse",
+                    "operation": "parse_document",
+                    "original_error": str(e)
+                }
+            )
         except Exception as e:
             logger.error(f"Unexpected error in LlamaParse parse request: {e}")
-            raise ServiceExecutionError(f"Unexpected error: {e}")
+            raise UserFacingError(
+                "Document processing failed due to an unexpected error. Please try again later.",
+                error_code="LLAMAPARSE_UNEXPECTED_ERROR",
+                context={
+                    "service": "llamaparse",
+                    "operation": "parse_document",
+                    "original_error": str(e)
+                }
+            )
     
     async def get_parse_status(self, parse_job_id: str) -> Dict[str, Any]:
         """

@@ -189,12 +189,17 @@ class WorkerConfig:
     def get_service_router_config(self) -> Dict[str, Any]:
         """Get service router configuration"""
         # Use REAL mode in production, HYBRID in development
-        mode = "REAL" if os.getenv("ENVIRONMENT", "development") == "production" else "HYBRID"
+        environment = os.getenv("ENVIRONMENT", "development")
+        mode = "REAL" if environment == "production" else "HYBRID"
+        
+        # Disable fallback in production to prevent silent mock usage
+        fallback_enabled = environment != "production"
+        
         return {
             "mode": mode,
             "llamaparse_config": self.get_llamaparse_config(),
             "openai_config": self.get_openai_config(),
-            "fallback_enabled": True,
+            "fallback_enabled": fallback_enabled,
             "fallback_timeout": 10
         }
 
