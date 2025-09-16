@@ -100,6 +100,20 @@ async def create_document_with_content_deduplication(conn, document_id, user_id,
 
 ## 🧪 **Testing Content Deduplication**
 
+### **How Content Deduplication Works**
+
+The system handles three scenarios:
+
+1. **Same User + Same Content**: Updates existing document metadata, **NO deduplication**
+2. **Different User + Same Content**: Creates new document for new user, **copies processed data** from existing user's document
+3. **Different User + Different Content**: Creates new document, **normal processing**
+
+**Key Points:**
+- Each user gets their own `document_id` and `user_id` in their document record
+- Content deduplication only happens between **different users**
+- Processed data (chunks, embeddings, status) is **copied**, not shared
+- Users can only access their own documents
+
 ### **Test Scenario 1: Same User, Same Content**
 ```bash
 # Upload same content with same user (should update existing)
@@ -126,7 +140,7 @@ curl -X POST http://localhost:8000/api/v2/upload \
     "ocr": false
   }'
 ```
-**Expected**: Same `document_id`, updates existing document
+**Expected**: Same `document_id`, updates existing document metadata, **NO content deduplication** (same user)
 
 ### **Test Scenario 2: Different Users, Same Content**
 ```bash
@@ -153,7 +167,13 @@ curl -X POST http://localhost:8000/api/v2/upload \
     "ocr": false
   }'
 ```
-**Expected**: Different `document_id`, copies processed data from User 1's document
+**Expected**: 
+- Different `document_id` for User 2
+- User 2 gets their own `user_id` in the document record
+- User 2's document gets **copied** processed data (chunks, embeddings, status) from User 1's document
+- **Content deduplication triggered** - no re-processing needed
+
+
 
 ### **Test Scenario 3: Different Users, Different Content**
 ```bash
