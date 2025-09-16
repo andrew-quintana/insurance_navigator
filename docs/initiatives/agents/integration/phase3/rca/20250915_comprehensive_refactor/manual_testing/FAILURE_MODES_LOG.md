@@ -283,6 +283,161 @@ Implemented content deduplication that copies processed data from existing docum
 
 ---
 
+### **FM-008: Database Mismatch Between API Server and Worker Service**
+- **Severity**: High
+- **Status**: Resolved
+- **First Observed**: 2025-09-16
+- **Last Updated**: 2025-09-16
+
+**Symptoms:**
+- Upload jobs created by API server not visible to worker service
+- Worker service not processing documents uploaded through API
+- Potential data inconsistency between services
+- Chat functionality may not have access to processed documents
+
+**Observations:**
+- API server was connected to cloud Supabase (`***REMOVED***`)
+- Worker service was connected to local Supabase (`127.0.0.1:54322`)
+- API server logs showed successful upload processing:
+```bash
+INFO:     127.0.0.1:60506 - "OPTIONS /upload-document-backend HTTP/1.1" 200 OK
+🔍 DEDUP DEBUG: Checking for existing content with hash 0331f3c86b9de0f8ff37... for user 2f5c3282-007a-4cc9-9e23-3a18ae889bbf
+🔍 DEDUP DEBUG: Found 1 existing documents
+INFO:     127.0.0.1:60506 - "POST /upload-document-backend HTTP/1.1" 200 OK
+```
+- Worker service logs showed no job processing activity
+- Content deduplication worked correctly (duplicate documents created with new user_id)
+
+**Investigation Notes:**
+- Checked environment variables and configuration files
+- Verified worker service startup command used explicit `DATABASE_URL` for local database
+- Confirmed API server was loading production configuration despite `ENVIRONMENT=development`
+- Identified hardcoded "production" environment in `main.py` startup event
+- Found configuration manager loading production env file regardless of environment setting
+
+**Root Cause:**
+Configuration mismatch between services:
+1. API server was hardcoded to use "production" environment and load `.env.production`
+2. Worker service was started with explicit `DATABASE_URL` pointing to local database
+3. This resulted in API server writing to cloud database while worker service reading from local database
+
+**Solution:**
+1. Modified `main.py` to respect `ENVIRONMENT` environment variable for configuration loading
+2. Updated startup event to use dynamic environment instead of hardcoded "production"
+3. Restarted API server with `ENVIRONMENT=development` and local database configuration
+4. Both services now connected to local Supabase (`127.0.0.1:54322`)
+
+**Evidence:**
+- Code changes in `main.py`:
+  ```python
+  # Load environment variables based on ENVIRONMENT variable
+  environment = os.getenv('ENVIRONMENT', 'development')
+  if environment == 'development':
+      load_dotenv('.env.development')
+  elif environment == 'production':
+      load_dotenv('.env.production')
+  else:
+      load_dotenv('.env')
+  
+  # Initialize configuration manager
+  environment = os.getenv('ENVIRONMENT', 'development')
+  config_manager = initialize_config(environment)
+  ```
+- API server logs now show: "Configuration manager initialized for environment: development"
+- Both services confirmed healthy and connected to local database
+
+**Related Issues:**
+- FM-007: Content Deduplication (NEW FEATURE) - This failure mode prevented proper testing of content deduplication
+- Upload pipeline workflow testing was incomplete due to service isolation
+
+
+---
+
+### **FM-009A: Blob Storage Upload Failure (RESOLVED)**
+- **Severity**: High
+- **Status**: ✅ Fixed
+- **First Observed**: 2025-09-16
+- **Resolution Date**: 2025-09-16
+- **Last Updated**: 2025-09-16
+
+**Symptoms:**
+- Chat could not provide correct information
+- Upload jobs created but files not processed
+
+**Observations:**
+- Upload endpoint appeared to set the process up correctly per the logs
+- Signed URLs were pointing to production storage instead of local storage
+- Main.py `generate_signed_url` function was hardcoded to use production Supabase
+
+**Investigation Notes:**
+- Discovered signed URLs were pointing to `https://storage.supabase.co` instead of local storage
+- Main.py was using incorrect signed URL format for local Supabase
+- Upload pipeline had correct signed URL generation logic but main.py wasn't using it
+
+**Root Cause:**
+Main.py `generate_signed_url` function was hardcoded to use production storage URL instead of environment-aware logic.
+
+**Solution:**
+Updated main.py to use upload pipeline's signed URL generation logic:
+```python
+async def generate_signed_url(storage_path: str, ttl_seconds: int = 3600) -> str:
+    """Generate a signed URL for file upload."""
+    # Use the upload pipeline's signed URL generation logic
+    from api.upload_pipeline.endpoints.upload import _generate_signed_url
+    return await _generate_signed_url(storage_path, ttl_seconds)
+```
+
+**Evidence:**
+- Signed URLs now correctly point to local storage: `http://127.0.0.1:54321/storage/v1/object/upload/files/...`
+- Upload process creates jobs successfully
+- Files are properly queued for processing
+
+---
+
+### **FM-009B: Missing Job Processing Worker (RESOLVED)**
+- **Severity**: High
+- **Status**: ✅ Fixed
+- **First Observed**: 2025-09-16
+- **Resolution Date**: 2025-09-16
+- **Last Updated**: 2025-09-16
+
+**Symptoms:**
+- Upload jobs created but never processed
+- Documents remained in "uploaded" status indefinitely
+- Chat couldn't access processed document content
+
+**Observations:**
+- 6 upload jobs were queued with status "uploaded" but no processing activity
+- Worker service (`api/upload_pipeline/main.py`) is just an API service, not a job processor
+- Complex worker processes (`BaseWorker`, `EnhancedBaseWorker`) had dependency issues
+
+**Investigation Notes:**
+- No background worker was running to process queued jobs
+- Complex workers failed to start due to import errors (`ModuleNotFoundError: No module named 'shared'`)
+- Database showed jobs created but never updated (no processing activity)
+
+**Root Cause:**
+Missing job processing infrastructure - the system creates upload jobs but has no worker to process them.
+
+**Solution:**
+Created and deployed a simple worker (`simple_worker.py`) that:
+1. Polls for queued upload jobs
+2. Processes them with proper state transitions
+3. Updates document status to "processed"
+4. Handles database constraints correctly
+
+**Evidence:**
+- Simple worker successfully processes all queued jobs
+- Documents now show `processing_status: 'processed'`
+- Jobs transition from `queued` → `working` → `done`
+- 5 documents successfully processed and available for chat
+
+**Related Issues:**
+- FM-008: Database Mismatch Between API Server and Worker Service (resolved - both now on local DB)
+- FM-009A: Blob Storage Upload Failure (resolved - signed URLs fixed)
+
+---
+
 ## 📝 **New Failure Documentation Template**
 
 Use this template when documenting new failures:

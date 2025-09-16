@@ -16,8 +16,14 @@ import aiohttp
 import asyncio
 from dotenv import load_dotenv
 
-# Load production environment variables
-load_dotenv('.env.production')
+# Load environment variables based on ENVIRONMENT variable
+environment = os.getenv('ENVIRONMENT', 'development')
+if environment == 'development':
+    load_dotenv('.env.development')
+elif environment == 'production':
+    load_dotenv('.env.production')
+else:
+    load_dotenv('.env')
 
 # Import centralized configuration manager
 from config.configuration_manager import get_config_manager, initialize_config
@@ -87,7 +93,8 @@ async def startup_event():
         logger.info("Initializing Insurance Navigator system...")
         
         # Initialize configuration manager
-        config_manager = initialize_config("production")
+        environment = os.getenv('ENVIRONMENT', 'development')
+        config_manager = initialize_config(environment)
         app.state.config_manager = config_manager
         logger.info(f"Configuration manager initialized for {config_manager.get_environment().value}")
         
@@ -591,9 +598,9 @@ async def get_upload_pipeline_db():
 
 async def generate_signed_url(storage_path: str, ttl_seconds: int = 3600) -> str:
     """Generate a signed URL for file upload."""
-    # Get storage URL from environment variable
-    storage_url = os.getenv('SUPABASE_STORAGE_URL', 'https://storage.supabase.co')
-    return f"{storage_url}/files/{storage_path}?signed=true&ttl={ttl_seconds}"
+    # Use the upload pipeline's signed URL generation logic
+    from api.upload_pipeline.endpoints.upload import _generate_signed_url
+    return await _generate_signed_url(storage_path, ttl_seconds)
 
 async def create_document_record(conn, document_id: str, user_id: str, filename: str, 
                                mime: str, bytes_len: int, file_sha256: str, raw_path: str):
