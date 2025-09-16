@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, File, UploadFile
 from fastapi.responses import JSONResponse
 
 from ..models import UploadRequest, UploadResponse, JobPayloadJobValidated
@@ -189,8 +189,9 @@ async def upload_document(
             db=db
         )
         
-        # Generate signed URL for upload
-        signed_url = await _generate_signed_url(raw_path, config.signed_url_ttl_seconds)
+        # For development, we'll handle file upload directly in the endpoint
+        # Generate a placeholder signed URL for frontend compatibility
+        signed_url = f"http://localhost:8000/api/upload-pipeline/upload-file/{job_id}"
         upload_expires_at = datetime.utcnow() + timedelta(seconds=config.signed_url_ttl_seconds)
         
         # Log upload accepted event
@@ -422,62 +423,128 @@ async def _create_upload_job(
 
 
 async def _generate_signed_url(storage_path: str, ttl_seconds: int) -> str:
-    """Generate a signed URL for file upload based on environment configuration."""
+    """Generate a signed URL for file upload. For development, return a direct upload URL."""
     config = get_config()
     
-    # Get storage URL from environment variable first, then fall back to environment-based logic
-    storage_base_url = os.getenv('SUPABASE_STORAGE_URL')
+    # For development, use direct upload URL with service role key
+    if config.storage_environment == "development":
+        # Return a URL that the frontend can use with proper authentication
+        return f"http://127.0.0.1:54321/storage/v1/object/files/{storage_path[6:] if storage_path.startswith('files/') else storage_path}"
     
-    if not storage_base_url:
-        # Fallback to environment-based logic if SUPABASE_STORAGE_URL not set
-        if config.storage_environment == "mock":
-            # Mock environment - use mock storage service
-            storage_base_url = "http://localhost:5001"
-        elif config.storage_environment == "development":
-            # Development environment - use actual Supabase storage
-            storage_base_url = "http://127.0.0.1:54321"
-        elif config.storage_environment == "staging":
-            storage_base_url = "https://staging-storage.supabase.co"
-        else:  # production
-            storage_base_url = "https://storage.supabase.co"
-    
-    # Handle new path format: files/user/{userId}/raw/{datetime}_{hash}.{ext}
-    if storage_path.startswith("files/user/"):
-        # For Supabase storage, we need to extract the key part
-        # The format is: files/user/{userId}/raw/{datetime}_{hash}.{ext}
-        # We'll use the full path as the key
-        key = storage_path
+    # For production, use proper Supabase signed URL generation
+    try:
+        from config.database import get_supabase_service_client
+        supabase = await get_supabase_service_client()
         
-        # Generate environment-appropriate signed URL
-        if config.storage_environment == "mock":
-            # Mock environment - direct access URL to mock service
-            return f"{storage_base_url}/storage/v1/object/upload/{key}"
-        elif config.storage_environment == "development":
-            # Development environment - Supabase signed URL to local Supabase
-            return f"{storage_base_url}/storage/v1/object/upload/{key}"
-        else:
-            # Staging/Production - Supabase signed URL
-            return f"{storage_base_url}/files/{key}?signed=true&ttl={ttl_seconds}"
-    
-    # Handle legacy storage:// format
-    elif storage_path.startswith("storage://"):
-        path_parts = storage_path[10:].split("/", 1)  # Remove "storage://" and split
-        if len(path_parts) == 2:
-            bucket, key = path_parts
-            # Generate environment-appropriate signed URL
-            if config.storage_environment == "mock":
-                # Mock environment - direct access URL to mock service
-                return f"{storage_base_url}/storage/v1/object/upload/{bucket}/{key}"
-            elif config.storage_environment == "development":
-                # Development environment - Supabase signed URL to local Supabase
-                return f"{storage_base_url}/storage/v1/object/upload/{bucket}/{key}"
-            else:
-                # Staging/Production - Supabase signed URL
-                return f"{storage_base_url}/{bucket}/{key}?signed=true&ttl={ttl_seconds}"
-    
-    # Fallback for invalid storage paths
-    raise ValueError(f"Invalid storage path format: {storage_path}")
+        # Handle new path format: files/user/{userId}/raw/{datetime}_{hash}.{ext}
+        if storage_path.startswith("files/user/"):
+            key = storage_path[6:]  # Remove "files/" prefix
+            bucket = "files"
+            
+            # Generate signed URL using Supabase client
+            response = supabase.storage.from_(bucket).create_signed_upload_url(key)
+            
+            if response.get('error'):
+                raise ValueError(f"Failed to generate signed URL: {response['error']}")
+            
+            return response['signedURL']
+        
+        # Handle legacy storage:// format
+        elif storage_path.startswith("storage://"):
+            path_parts = storage_path[10:].split("/", 1)
+            if len(path_parts) == 2:
+                bucket, key = path_parts
+                response = supabase.storage.from_(bucket).create_signed_upload_url(key)
+                
+                if response.get('error'):
+                    raise ValueError(f"Failed to generate signed URL: {response['error']}")
+                
+                return response['signedURL']
+        
+        raise ValueError(f"Invalid storage path format: {storage_path}")
+        
+    except Exception as e:
+        logger.error(f"Failed to generate signed URL for {storage_path}: {str(e)}")
+        raise
 
+
+@router.post("/upload-file/{job_id}")
+async def upload_file_to_storage(
+    job_id: str,
+    file: UploadFile = File(...)
+):
+    """Handle direct file upload to storage for development."""
+    from config.database import get_supabase_service_client
+    
+    try:
+        # Get the job to find the storage path
+        db = get_database()
+        async with db.get_connection() as conn:
+            job = await conn.fetchrow(
+                "SELECT document_id, status FROM upload_pipeline.upload_jobs WHERE job_id = $1",
+                job_id
+            )
+            
+            if not job:
+                raise HTTPException(status_code=404, detail="Job not found")
+            
+            # Get document info
+            doc = await conn.fetchrow(
+                "SELECT raw_path FROM upload_pipeline.documents WHERE document_id = $1",
+                job["document_id"]
+            )
+            
+            if not doc:
+                raise HTTPException(status_code=404, detail="Document not found")
+            
+            raw_path = doc["raw_path"]
+        
+        # Upload file to Supabase storage using service role
+        supabase = await get_supabase_service_client()
+        
+        # Extract bucket and key from raw_path
+        if raw_path.startswith("files/user/"):
+            key = raw_path[6:]  # Remove "files/" prefix
+            bucket = "files"
+        else:
+            raise ValueError(f"Invalid raw_path format: {raw_path}")
+        
+        # Read file content
+        file_content = await file.read()
+        
+        # Upload to Supabase storage
+        response = supabase.storage.from_(bucket).upload(
+            key,
+            file_content,
+            file_options={"content-type": file.content_type or "application/octet-stream"}
+        )
+        
+        if response.get('error'):
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Failed to upload file to storage: {response['error']}"
+            )
+        
+        # Update job status to indicate file is uploaded
+        async with db.get_connection() as conn:
+            await conn.execute(
+                "UPDATE upload_pipeline.upload_jobs SET status = 'uploaded', state = 'queued' WHERE job_id = $1",
+                job_id
+            )
+        
+        logger.info(f"File uploaded successfully to {raw_path} for job {job_id}")
+        
+        return {"message": "File uploaded successfully", "path": raw_path}
+        
+    except Exception as e:
+        logger.error(f"File upload failed for job {job_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+
+@router.get("/test-endpoint")
+async def test_endpoint():
+    """Test endpoint to verify router is working."""
+    return {"message": "Router is working", "status": "ok"}
 
 @router.get("/upload/limits")
 async def get_upload_limits():

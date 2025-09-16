@@ -396,6 +396,117 @@ class RealLlamaParseService(ServiceInterface):
         """Execute service operation (implements ServiceInterface)."""
         return await self.parse_document(*args, **kwargs)
     
+    async def submit_parse_job(
+        self, 
+        job_id: str, 
+        source_url: str, 
+        webhook_url: str,
+        webhook_secret: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Submit a parse job with webhook callback"""
+        try:
+            await self._check_rate_limit()
+            
+            # Prepare webhook payload with HMAC signature if secret provided
+            webhook_payload = {
+                "url": webhook_url,
+                "headers": {}
+            }
+            
+            if webhook_secret:
+                timestamp = str(int(datetime.utcnow().timestamp()))
+                payload = f"{job_id}:{timestamp}"
+                signature = hmac.new(
+                    webhook_secret.encode(),
+                    payload.encode(),
+                    hashlib.sha256
+                ).hexdigest()
+                
+                webhook_payload["headers"] = {
+                    "X-LlamaParse-Signature": signature,
+                    "X-LlamaParse-Timestamp": timestamp
+                }
+            
+            # Submit parse job
+            response = await self.client.post(
+                f"{self.base_url}/v1/parse",
+                json={
+                    "source_url": source_url,
+                    "webhook": webhook_payload,
+                    "metadata": {
+                        "job_id": job_id,
+                        "submitted_at": datetime.utcnow().isoformat()
+                    }
+                }
+            )
+            
+            response.raise_for_status()
+            result = response.json()
+            
+            logger.info(
+                "Parse job submitted successfully",
+                extra={
+                    "job_id": job_id,
+                    "parse_job_id": result.get("parse_job_id"),
+                    "status": result.get("status")
+                }
+            )
+            
+            return result
+            
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 401:
+                raise UserFacingError(
+                    "Document processing service authentication failed. Please contact support.",
+                    error_code="LLAMAPARSE_AUTH_ERROR",
+                    context={
+                        "status_code": e.response.status_code,
+                        "service": "llamaparse",
+                        "operation": "submit_parse_job"
+                    }
+                )
+            elif e.response.status_code == 403:
+                raise UserFacingError(
+                    "Document processing service access denied. Please contact support.",
+                    error_code="LLAMAPARSE_PERMISSION_ERROR",
+                    context={
+                        "status_code": e.response.status_code,
+                        "service": "llamaparse",
+                        "operation": "submit_parse_job"
+                    }
+                )
+            elif e.response.status_code == 429:
+                raise UserFacingError(
+                    "Document processing service is currently busy. Please try again in a few minutes.",
+                    error_code="LLAMAPARSE_RATE_LIMIT_ERROR",
+                    context={
+                        "status_code": e.response.status_code,
+                        "service": "llamaparse",
+                        "operation": "submit_parse_job"
+                    }
+                )
+            else:
+                raise UserFacingError(
+                    f"Document processing service error: {e.response.status_code}",
+                    error_code="LLAMAPARSE_SERVICE_ERROR",
+                    context={
+                        "status_code": e.response.status_code,
+                        "service": "llamaparse",
+                        "operation": "submit_parse_job"
+                    }
+                )
+        except Exception as e:
+            logger.error(f"Failed to submit parse job: {e}")
+            raise UserFacingError(
+                "Document processing service is temporarily unavailable. Please try again later.",
+                error_code="LLAMAPARSE_SERVICE_UNAVAILABLE",
+                context={
+                    "service": "llamaparse",
+                    "operation": "submit_parse_job",
+                    "error": str(e)
+                }
+            )
+
     async def close(self):
         """Close the service and cleanup resources."""
         if self.client:
