@@ -18,6 +18,10 @@ from dotenv import load_dotenv
 
 # Load production environment variables
 load_dotenv('.env.production')
+
+# Import centralized configuration manager
+from config.configuration_manager import get_config_manager, initialize_config
+from core.service_manager import get_service_manager, initialize_service_manager
 from fastapi import FastAPI, HTTPException, Depends, Request, status, UploadFile, File, Form, Response, Body, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -48,6 +52,7 @@ from db.services.storage_service import get_storage_service, StorageService
 from db.services.document_service import DocumentService
 
 # Set up logging with more detailed format
+# Note: Log level will be overridden by environment-specific configuration
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s - %(pathname)s:%(lineno)d'
@@ -69,6 +74,30 @@ async def startup_event():
     """Initialize the core system on startup."""
     try:
         logger.info("Initializing Insurance Navigator system...")
+        
+        # Initialize configuration manager
+        config_manager = initialize_config("production")
+        app.state.config_manager = config_manager
+        logger.info(f"Configuration manager initialized for {config_manager.get_environment().value}")
+        
+        # Configure logging based on environment
+        log_level = getattr(logging, config_manager.service.log_level.upper(), logging.INFO)
+        logging.getLogger().setLevel(log_level)
+        logger.info(f"Logging level set to {config_manager.service.log_level}")
+        
+        # Initialize service manager
+        service_manager = initialize_service_manager()
+        app.state.service_manager = service_manager
+        
+        # Register core services
+        await _register_core_services(service_manager, config_manager)
+        
+        # Initialize all services
+        success = await service_manager.initialize_all_services()
+        if not success:
+            raise RuntimeError("Failed to initialize core services")
+        
+        # Initialize core system
         await initialize_system()
         logger.info("System initialization completed successfully")
     except Exception as e:
@@ -80,6 +109,13 @@ async def shutdown_event():
     """Shutdown the core system on shutdown."""
     try:
         logger.info("Shutting down Insurance Navigator system...")
+        
+        # Shutdown services
+        service_manager = getattr(app.state, 'service_manager', None)
+        if service_manager:
+            await service_manager.shutdown_all_services()
+        
+        # Shutdown core system
         await close_system()
         logger.info("System shutdown completed")
     except Exception as e:
@@ -184,7 +220,7 @@ async def debug_auth():
 
 @app.get("/health")
 async def health_check(request: Request):
-    """Health check endpoint with caching to reduce database load."""
+    """Health check endpoint with service manager integration."""
     global _health_cache
     current_time = time.time()
     cache_duration = 30  # seconds
@@ -199,37 +235,48 @@ async def health_check(request: Request):
     
     # Perform actual health check
     try:
-        # Test database connection
-        if db_pool:
-            try:
-                # Test if pool is initialized
-                client = await db_pool.get_client()
-                if client:
-                    db_status = "healthy"
-                else:
-                    db_status = "not_initialized"
-                    logger.warning("⚠️ Database pool not initialized")
-            except Exception as e:
-                db_status = f"error: {str(e)[:50]}"
-                logger.warning(f"⚠️ Database connection error: {e}")
+        # Get service manager
+        service_manager = getattr(app.state, 'service_manager', None)
+        
+        if service_manager:
+            # Use service manager for health checks
+            services_health = await service_manager.health_check_all()
+            
+            # Determine overall status
+            all_healthy = all(
+                service_info.get("healthy", False) 
+                for service_info in services_health.values()
+            )
+            
+            result = {
+                "status": "healthy" if all_healthy else "degraded",
+                "timestamp": datetime.utcnow().isoformat(),
+                "services": services_health,
+                "version": "3.0.0"
+            }
         else:
+            # Fallback to basic health check
             db_status = "unavailable"
-            logger.warning("⚠️ Database client unavailable")
+            if db_pool:
+                try:
+                    client = await db_pool.get_client()
+                    db_status = "healthy" if client else "not_initialized"
+                except Exception as e:
+                    db_status = f"error: {str(e)[:50]}"
+            
+            services_status = {
+                "database": db_status,
+                "supabase_auth": "healthy" if os.getenv("SUPABASE_URL") else "not_configured",
+                "llamaparse": "healthy" if os.getenv("LLAMAPARSE_API_KEY") else "not_configured",
+                "openai": "healthy" if os.getenv("OPENAI_API_KEY") else "not_configured"
+            }
 
-        # Check service dependencies
-        services_status = {
-            "database": db_status,
-            "supabase_auth": "healthy" if os.getenv("SUPABASE_URL") else "not_configured",
-            "llamaparse": "healthy" if os.getenv("LLAMAPARSE_API_KEY") else "not_configured",
-            "openai": "healthy" if os.getenv("OPENAI_API_KEY") else "not_configured"
-        }
-
-        result = {
-            "status": "healthy" if all(s == "healthy" for s in services_status.values()) else "degraded",
-            "timestamp": datetime.utcnow().isoformat(),
-            "services": services_status,
-            "version": "3.0.0"
-        }
+            result = {
+                "status": "healthy" if all(s == "healthy" for s in services_status.values()) else "degraded",
+                "timestamp": datetime.utcnow().isoformat(),
+                "services": services_status,
+                "version": "3.0.0"
+            }
         
         # Cache the result
         _health_cache["result"] = result
@@ -250,6 +297,93 @@ storage_service_instance = None
 
 # Initialize services
 storage_service: Optional[StorageService] = None
+
+async def _register_core_services(service_manager, config_manager):
+    """Register core services with the service manager."""
+    try:
+        # Register database service
+        async def init_database():
+            await db_pool.initialize()
+            return db_pool
+        
+        async def health_check_database(instance):
+            try:
+                client = await instance.get_client()
+                return client is not None
+            except Exception:
+                return False
+        
+        service_manager.register_service(
+            name="database",
+            service_type=type(db_pool),
+            init_func=init_database,
+            health_check=health_check_database
+        )
+        
+        # Register RAG service
+        async def init_rag():
+            from agents.tooling.rag.core import RAGTool, RetrievalConfig
+            rag_config = RetrievalConfig(
+                similarity_threshold=config_manager.get_rag_similarity_threshold(),
+                max_chunks=config_manager.get_config("rag.max_chunks", 10),
+                token_budget=config_manager.get_config("rag.token_budget", 4000)
+            )
+            return {"tool": RAGTool, "config": rag_config}
+        
+        async def health_check_rag(instance):
+            try:
+                # Test RAG tool instantiation
+                test_tool = instance["tool"]("test_user", instance["config"])
+                return test_tool is not None
+            except Exception:
+                return False
+        
+        service_manager.register_service(
+            name="rag",
+            service_type=dict,
+            dependencies=["database"],
+            init_func=init_rag,
+            health_check=health_check_rag
+        )
+        
+        # Register user service
+        async def init_user_service():
+            return await get_user_service()
+        
+        service_manager.register_service(
+            name="user_service",
+            service_type=type(None),
+            dependencies=["database"],
+            init_func=init_user_service
+        )
+        
+        # Register conversation service
+        async def init_conversation_service():
+            return await get_conversation_service()
+        
+        service_manager.register_service(
+            name="conversation_service",
+            service_type=type(None),
+            dependencies=["database"],
+            init_func=init_conversation_service
+        )
+        
+        # Register storage service
+        async def init_storage_service():
+            return await get_storage_service()
+        
+        service_manager.register_service(
+            name="storage_service",
+            service_type=type(None),
+            dependencies=["database"],
+            init_func=init_storage_service
+        )
+        
+        logger.info("Core services registered successfully")
+        
+    except Exception as e:
+        logger.error(f"Failed to register core services: {e}")
+        raise
 
 # Authentication utilities
 async def get_current_user(request: Request) -> Dict[str, Any]:
@@ -541,11 +675,32 @@ async def startup_event():
         
         # Initialize RAG tool and chat interface
         try:
-            from agents.tooling.rag.core import RAGTool
+            from agents.tooling.rag.core import RAGTool, RetrievalConfig
             from agents.patient_navigator.chat_interface import PatientNavigatorChatInterface
             logger.info("✅ RAG tool and chat interface imports successful")
+            
+            # Get configuration manager
+            config_manager = getattr(app.state, 'config_manager', None)
+            if not config_manager:
+                logger.warning("Configuration manager not available, using defaults")
+                config_manager = get_config_manager()
+            
+            # Initialize RAG tool with configuration from manager
+            rag_config = RetrievalConfig(
+                similarity_threshold=config_manager.get_rag_similarity_threshold(),
+                max_chunks=config_manager.get_config("rag.max_chunks", 10),
+                token_budget=config_manager.get_config("rag.token_budget", 4000)
+            )
+            
+            # Store RAG tool globally for use in chat endpoints
+            app.state.rag_tool = RAGTool
+            app.state.rag_config = rag_config
+            logger.info(f"✅ RAG tool initialized with similarity threshold: {rag_config.similarity_threshold}")
+            
         except ImportError as e:
             logger.warning(f"⚠️ RAG tool or chat interface import failed: {e}")
+            app.state.rag_tool = None
+            app.state.rag_config = None
         
         # Verify environment variables
         required_vars = [
@@ -646,6 +801,23 @@ async def chat_with_agent(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Message is required"
+            )
+        
+        # Get RAG service from service manager
+        service_manager = getattr(app.state, 'service_manager', None)
+        if not service_manager:
+            logger.error("Service manager not available")
+            raise HTTPException(
+                status_code=500,
+                detail="Service manager not available"
+            )
+        
+        rag_service = service_manager.get_service("rag")
+        if not rag_service:
+            logger.error("RAG service not available")
+            raise HTTPException(
+                status_code=500,
+                detail="RAG service not available"
             )
         
         # Import the chat interface using safe imports

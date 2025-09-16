@@ -1,0 +1,38 @@
+repos:
+  - repo: local
+    hooks:
+      - id: environment-configuration-enforcement
+        name: Environment Configuration Enforcement
+        entry: ./scripts/environment/enforce-environment-rules-new-code.sh
+        language: system
+        stages: [pre-commit]
+        always_run: true
+        pass_filenames: false
+        description: "Enforce three-environment configuration system rules for new/modified code"
+        
+      - id: python-environment-tests
+        name: Python Environment Tests
+        entry: python -m pytest tests/development/ tests/testing/ tests/production/ tests/integration/ -v --tb=short
+        language: system
+        stages: [pre-commit]
+        files: ^.*\.py$
+        pass_filenames: false
+        description: "Run environment-specific tests"
+        
+      - id: configuration-manager-usage
+        name: Configuration Manager Usage Check
+        entry: bash -c 'if [ $(grep -r "os\.getenv" --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=__pycache__ --exclude="*.example" --exclude="config/configuration_manager.py" --exclude="test_*.py" . | wc -l) -gt 0 ]; then echo "❌ Direct os.getenv usage found outside configuration_manager.py"; exit 1; else echo "✅ No direct os.getenv usage found"; fi'
+        language: system
+        stages: [pre-commit]
+        files: ^.*\.py$
+        pass_filenames: false
+        description: "Check for direct environment variable access"
+        
+      - id: environment-specific-tests
+        name: Environment-Specific Tests Check
+        entry: bash -c 'DEV_TESTS=$(find . -name "test_development_*.py" -o -name "test_dev_*.py" | wc -l); TESTING_TESTS=$(find . -name "test_testing_*.py" -o -name "test_bridge_*.py" | wc -l); PROD_TESTS=$(find . -name "test_production_*.py" -o -name "test_prod_*.py" | wc -l); if [ $DEV_TESTS -eq 0 ] || [ $TESTING_TESTS -eq 0 ] || [ $PROD_TESTS -eq 0 ]; then echo "⚠️  Missing environment-specific test files"; else echo "✅ Environment-specific test files found"; fi'
+        language: system
+        stages: [pre-commit]
+        files: ^.*\.py$
+        pass_filenames: false
+        description: "Check for environment-specific test files"
