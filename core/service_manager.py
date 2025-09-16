@@ -3,6 +3,7 @@ Service Manager for Insurance Navigator System
 
 This module provides a centralized service management system that handles
 service registration, dependency injection, lifecycle management, and health checks.
+Enhanced with production resilience features including circuit breakers and monitoring.
 """
 
 import asyncio
@@ -11,6 +12,14 @@ from typing import Any, Dict, Optional, Type, Callable, List
 from dataclasses import dataclass, field
 from enum import Enum
 from contextlib import asynccontextmanager
+
+# Import resilience components
+from .resilience import (
+    CircuitBreaker,
+    CircuitBreakerConfig,
+    get_circuit_breaker_registry,
+    get_system_monitor
+)
 
 logger = logging.getLogger("ServiceManager")
 
@@ -37,6 +46,8 @@ class ServiceInfo:
     shutdown_func: Optional[Callable] = None
     error_message: Optional[str] = None
     last_health_check: Optional[float] = None
+    circuit_breaker: Optional[CircuitBreaker] = None
+    enable_circuit_breaker: bool = True
 
 class ServiceManager:
     """
@@ -53,6 +64,8 @@ class ServiceManager:
         self._is_initialized = False
         self._is_shutting_down = False
         self._logger = logging.getLogger("ServiceManager")
+        self._circuit_breaker_registry = get_circuit_breaker_registry()
+        self._system_monitor = get_system_monitor()
     
     def register_service(
         self,
@@ -61,7 +74,8 @@ class ServiceManager:
         dependencies: Optional[List[str]] = None,
         health_check: Optional[Callable] = None,
         init_func: Optional[Callable] = None,
-        shutdown_func: Optional[Callable] = None
+        shutdown_func: Optional[Callable] = None,
+        enable_circuit_breaker: bool = True
     ) -> None:
         """
         Register a service with the service manager.
@@ -73,9 +87,13 @@ class ServiceManager:
             health_check: Optional health check function
             init_func: Optional custom initialization function
             shutdown_func: Optional custom shutdown function
+            enable_circuit_breaker: Whether to enable circuit breaker for this service
         """
         if name in self._services:
             raise ValueError(f"Service '{name}' is already registered")
+        
+        # Circuit breaker will be created during initialization
+        # Store the flag to enable it during service initialization
         
         self._services[name] = ServiceInfo(
             name=name,
@@ -83,7 +101,9 @@ class ServiceManager:
             dependencies=dependencies or [],
             health_check=health_check,
             init_func=init_func,
-            shutdown_func=shutdown_func
+            shutdown_func=shutdown_func,
+            circuit_breaker=None,  # Will be created during initialization
+            enable_circuit_breaker=enable_circuit_breaker
         )
         
         self._logger.info(f"Registered service: {name}")
@@ -261,15 +281,45 @@ class ServiceManager:
                 if dep_info.status != ServiceStatus.HEALTHY:
                     raise ValueError(f"Dependency '{dep_name}' is not healthy for service '{service_name}'")
             
-            # Initialize service
-            if service_info.init_func:
-                service_info.instance = await service_info.init_func()
-            else:
-                # Default initialization - try to instantiate the service type
-                if hasattr(service_info.service_type, '__call__'):
-                    service_info.instance = service_info.service_type()
+            # Create circuit breaker if enabled
+            if service_info.enable_circuit_breaker:
+                try:
+                    if service_name == "database":
+                        from .resilience import create_database_circuit_breaker
+                        circuit_breaker = create_database_circuit_breaker(f"service_{service_name}")
+                    elif service_name == "rag":
+                        from .resilience import create_rag_circuit_breaker
+                        circuit_breaker = create_rag_circuit_breaker(f"service_{service_name}")
+                    else:
+                        from .resilience import create_api_circuit_breaker
+                        circuit_breaker = create_api_circuit_breaker(f"service_{service_name}")
+                    
+                    service_info.circuit_breaker = circuit_breaker
+                    self._logger.info(f"Created circuit breaker for service: {service_name}")
+                    
+                except Exception as e:
+                    self._logger.warning(f"Failed to create circuit breaker for service '{service_name}': {e}")
+            
+            # Initialize service with circuit breaker protection if available
+            if service_info.circuit_breaker:
+                if service_info.init_func:
+                    service_info.instance = await service_info.circuit_breaker.call(service_info.init_func)
                 else:
-                    raise ValueError(f"Cannot initialize service type: {service_info.service_type}")
+                    # Default initialization - try to instantiate the service type
+                    if hasattr(service_info.service_type, '__call__'):
+                        service_info.instance = service_info.service_type()
+                    else:
+                        raise ValueError(f"Cannot initialize service type: {service_info.service_type}")
+            else:
+                # Initialize without circuit breaker
+                if service_info.init_func:
+                    service_info.instance = await service_info.init_func()
+                else:
+                    # Default initialization - try to instantiate the service type
+                    if hasattr(service_info.service_type, '__call__'):
+                        service_info.instance = service_info.service_type()
+                    else:
+                        raise ValueError(f"Cannot initialize service type: {service_info.service_type}")
             
             # Run health check if available
             if service_info.health_check:
@@ -280,12 +330,36 @@ class ServiceManager:
             
             service_info.status = ServiceStatus.HEALTHY
             service_info.error_message = None
+            
+            # Record service initialization metric
+            await self._system_monitor.metrics.increment_counter(
+                f"service.{service_name}.initialized",
+                tags={"service": service_name}
+            )
+            
             self._logger.info(f"Service '{service_name}' initialized successfully")
             return True
             
         except Exception as e:
             service_info.status = ServiceStatus.FAILED
             service_info.error_message = str(e)
+            
+            # Record service initialization failure
+            await self._system_monitor.metrics.increment_counter(
+                f"service.{service_name}.initialization_failed",
+                tags={"service": service_name, "error": str(e)[:100]}
+            )
+            
+            # Create alert for service initialization failure
+            await self._system_monitor.alerts.create_alert(
+                f"service_init_failed_{service_name}",
+                self._system_monitor.alerts.AlertLevel.ERROR,
+                f"Service Initialization Failed: {service_name}",
+                f"Service '{service_name}' failed to initialize: {str(e)}",
+                "service_manager",
+                {"service": service_name}
+            )
+            
             self._logger.error(f"Failed to initialize service '{service_name}': {e}")
             return False
     

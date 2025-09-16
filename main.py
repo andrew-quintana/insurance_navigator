@@ -51,6 +51,17 @@ from db.services.conversation_service import get_conversation_service, Conversat
 from db.services.storage_service import get_storage_service, StorageService
 from db.services.document_service import DocumentService
 
+# Resilience imports
+from core.resilience import (
+    get_system_monitor,
+    get_degradation_registry,
+    get_circuit_breaker_registry,
+    create_rag_degradation_manager,
+    create_upload_degradation_manager,
+    create_database_degradation_manager,
+    time_metric
+)
+
 # Set up logging with more detailed format
 # Note: Log level will be overridden by environment-specific configuration
 logging.basicConfig(
@@ -92,6 +103,9 @@ async def startup_event():
         # Register core services
         await _register_core_services(service_manager, config_manager)
         
+        # Initialize resilience systems
+        await _initialize_resilience_systems()
+        
         # Initialize all services
         success = await service_manager.initialize_all_services()
         if not success:
@@ -99,6 +113,11 @@ async def startup_event():
         
         # Initialize core system
         await initialize_system()
+        
+        # Start monitoring
+        system_monitor = get_system_monitor()
+        await system_monitor.start()
+        
         logger.info("System initialization completed successfully")
     except Exception as e:
         logger.error(f"Failed to initialize system: {e}")
@@ -109,6 +128,10 @@ async def shutdown_event():
     """Shutdown the core system on shutdown."""
     try:
         logger.info("Shutting down Insurance Navigator system...")
+        
+        # Stop monitoring
+        system_monitor = get_system_monitor()
+        await system_monitor.stop()
         
         # Shutdown services
         service_manager = getattr(app.state, 'service_manager', None)
@@ -216,6 +239,58 @@ async def debug_auth():
         return {
             "auth_adapter_loaded": False,
             "error": str(e)
+        }
+
+@app.get("/debug-resilience")
+async def debug_resilience():
+    """Debug endpoint to check resilience system status."""
+    try:
+        # Get resilience registries
+        degradation_registry = get_degradation_registry()
+        circuit_breaker_registry = get_circuit_breaker_registry()
+        system_monitor = get_system_monitor()
+        
+        # Get degradation status
+        service_levels = degradation_registry.get_all_levels()
+        degraded_services = degradation_registry.get_degraded_services()
+        unavailable_services = degradation_registry.get_unavailable_services()
+        
+        # Get circuit breaker status
+        cb_stats = await circuit_breaker_registry.get_all_stats()
+        cb_names = circuit_breaker_registry.list_names()
+        
+        # Get system status
+        system_status = await system_monitor.get_system_status()
+        
+        return {
+            "degradation_managers": {
+                "registered": list(service_levels.keys()),
+                "service_levels": {k: v.value for k, v in service_levels.items()},
+                "degraded_services": degraded_services,
+                "unavailable_services": unavailable_services
+            },
+            "circuit_breakers": {
+                "registered": cb_names,
+                "stats": {
+                    name: {
+                        "state": stats.state.value,
+                        "total_calls": stats.total_calls,
+                        "total_failures": stats.total_failures,
+                        "success_rate": stats.success_rate()
+                    }
+                    for name, stats in cb_stats.items()
+                }
+            },
+            "system_monitor": {
+                "overall_health": system_status.get("overall_health", 0.0),
+                "status": system_status.get("status", "unknown"),
+                "active_alerts": system_status.get("active_alerts", 0)
+            }
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "error_type": type(e).__name__
         }
 
 @app.get("/health")
@@ -385,6 +460,45 @@ async def _register_core_services(service_manager, config_manager):
         logger.error(f"Failed to register core services: {e}")
         raise
 
+async def _initialize_resilience_systems():
+    """Initialize resilience systems including degradation managers."""
+    try:
+        # Get registries
+        degradation_registry = get_degradation_registry()
+        circuit_breaker_registry = get_circuit_breaker_registry()
+        
+        # Register degradation managers for key services
+        rag_degradation = create_rag_degradation_manager()
+        upload_degradation = create_upload_degradation_manager()
+        database_degradation = create_database_degradation_manager()
+        
+        degradation_registry.register("rag", rag_degradation)
+        degradation_registry.register("upload", upload_degradation)
+        degradation_registry.register("database", database_degradation)
+        
+        # Create and register circuit breakers
+        from core.resilience import (
+            create_database_circuit_breaker,
+            create_rag_circuit_breaker,
+            CircuitBreakerConfig
+        )
+        
+        # Create circuit breakers for expected services
+        database_breaker = create_database_circuit_breaker("service_database")
+        rag_breaker = create_rag_circuit_breaker("service_rag")
+        
+        # Register circuit breakers in the registry
+        await circuit_breaker_registry.get_or_create("service_database", database_breaker.config)
+        await circuit_breaker_registry.get_or_create("service_rag", rag_breaker.config)
+        
+        logger.info("Resilience systems initialized successfully")
+        logger.info(f"Registered degradation managers: {list(degradation_registry.get_all_levels().keys())}")
+        logger.info(f"Registered circuit breakers: {circuit_breaker_registry.list_names()}")
+        
+    except Exception as e:
+        logger.error(f"Failed to initialize resilience systems: {e}")
+        raise
+
 # Authentication utilities
 async def get_current_user(request: Request) -> Dict[str, Any]:
     """Extract and validate user from JWT token."""
@@ -512,6 +626,7 @@ async def create_upload_job(conn, job_id: str, document_id: str, user_id: str,
 
 # New Upload Pipeline Endpoint
 @app.post("/api/v2/upload", response_model=UploadResponse)
+@time_metric("upload.request_duration", {"endpoint": "upload_v2"})
 async def upload_document_v2(
     request: UploadRequest,
     current_user: Dict[str, Any] = Depends(get_current_user)
@@ -524,6 +639,8 @@ async def upload_document_v2(
     2. Creates a new document record
     3. Initializes a job in the queue
     4. Returns a signed URL for file upload
+    
+    Enhanced with graceful degradation and circuit breaker protection.
     """
     logger.info(f"📄 Upload pipeline request received - File: {request.filename}, Size: {request.bytes_len}, User: {current_user['email']}")
     
@@ -785,6 +902,7 @@ async def login(request: Request, response: Response):
 
 # Add /me endpoint for session validation
 @app.post("/chat")
+@time_metric("chat.request_duration", {"endpoint": "chat"})
 async def chat_with_agent(
     request: Request,
     current_user: Dict[str, Any] = Depends(get_current_user)
@@ -864,8 +982,32 @@ async def chat_with_agent(
             }
         )
         
-        # Process message through the complete agentic workflow
-        response = await chat_interface.process_message(chat_message)
+        # Process message through the complete agentic workflow with graceful degradation
+        degradation_registry = get_degradation_registry()
+        rag_degradation = degradation_registry.get("rag")
+        
+        if rag_degradation:
+            # Use graceful degradation for RAG processing
+            async def process_with_rag():
+                return await chat_interface.process_message(chat_message)
+            
+            degradation_result = await rag_degradation.execute_with_fallback(process_with_rag)
+            
+            if degradation_result.success:
+                response = degradation_result.result
+                # Add degradation metadata
+                if degradation_result.service_level.value != "full":
+                    logger.info(f"Chat processed with degraded service level: {degradation_result.service_level.value}")
+            else:
+                # All fallbacks failed, return error response
+                logger.error(f"Chat processing failed completely: {degradation_result.error}")
+                raise HTTPException(
+                    status_code=500,
+                    detail="Chat service is temporarily unavailable. Please try again later."
+                )
+        else:
+            # Fallback to direct processing if degradation manager not available
+            response = await chat_interface.process_message(chat_message)
         
         # Return enhanced response with metadata
         return {
