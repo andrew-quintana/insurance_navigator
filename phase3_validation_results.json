@@ -1,5 +1,5 @@
 {
-  "test_timestamp": "2025-09-15T13:42:21.855458",
+  "test_timestamp": "2025-09-16T01:49:47.877118",
   "test_name": "Phase 3 Comprehensive Validation",
   "total_tests": 8,
   "passed_tests": 8,
@@ -10,10 +10,10 @@
       "passed": true,
       "details": {
         "status_code": 200,
-        "response_time_ms": 145.6129550933838,
+        "response_time_ms": 118.96014213562012,
         "health_data": {
           "status": "healthy",
-          "timestamp": "2025-09-15T13:42:03.680668",
+          "timestamp": "2025-09-16T01:49:33.680807",
           "services": {
             "database": "healthy",
             "supabase_auth": "healthy",
@@ -23,68 +23,68 @@
           "version": "3.0.0"
         }
       },
-      "timestamp": "2025-09-15T13:42:22.001402"
+      "timestamp": "2025-09-16T01:49:47.996298"
     },
     {
       "test_name": "Authentication System",
       "passed": true,
       "details": {
         "status_code": 200,
-        "response_time_ms": 130.45215606689453,
+        "response_time_ms": 176.5880584716797,
         "note": "Authentication endpoint responding correctly"
       },
-      "timestamp": "2025-09-15T13:42:22.132278"
+      "timestamp": "2025-09-16T01:49:48.173224"
     },
     {
       "test_name": "Document Upload Pipeline",
       "passed": true,
       "details": {
         "status_code": 200,
-        "response_time_ms": 582.0820331573486,
+        "response_time_ms": 500.26798248291016,
         "upload_result": {
-          "job_id": "7c7fa382-7fda-4351-ba5f-765759f262b5",
-          "document_id": "76480c3d-4096-5b4f-a518-60264575b2f6",
-          "signed_url": "https://storage.supabase.co/files/files/user/dd03c21e-02d8-48c5-a953-8a0a1464e513/raw/1757943742_e21f97c1.pdf?signed=true&ttl=3600",
-          "upload_expires_at": "2025-09-15T14:42:22.735471"
+          "job_id": "b6588601-b24b-4c39-9405-76964f4360a9",
+          "document_id": "b8ee1881-248c-5535-8447-5f6fe1c1df5f",
+          "signed_url": "https://storage.supabase.co/files/files/user/267e121e-7366-4edb-a967-5e33591b7bc4/raw/1757987388_b67ffded.pdf?signed=true&ttl=3600",
+          "upload_expires_at": "2025-09-16T02:49:48.743671"
         }
       },
-      "timestamp": "2025-09-15T13:42:22.792262"
+      "timestamp": "2025-09-16T01:49:48.762877"
     },
     {
       "test_name": "Worker Processing",
       "passed": true,
       "details": {
         "status_code": 200,
-        "response_time_ms": 276.73864364624023,
+        "response_time_ms": 297.50895500183105,
         "status_data": {
           "status": "operational",
-          "timestamp": "2025-09-15T13:42:23.096353",
+          "timestamp": "2025-09-16T01:49:49.050170",
           "version": "1.0.0",
           "database": "connected",
           "environment": "development"
         }
       },
-      "timestamp": "2025-09-15T13:42:23.069802"
+      "timestamp": "2025-09-16T01:49:49.060939"
     },
     {
       "test_name": "RAG Functionality",
       "passed": true,
       "details": {
         "status_code": 401,
-        "response_time_ms": 140.58613777160645,
+        "response_time_ms": 125.2589225769043,
         "note": "RAG endpoint requires authentication (expected)"
       },
-      "timestamp": "2025-09-15T13:42:23.211469"
+      "timestamp": "2025-09-16T01:49:49.186664"
     },
     {
       "test_name": "Agent Integration",
       "passed": true,
       "details": {
         "status_code": 401,
-        "response_time_ms": 155.90810775756836,
+        "response_time_ms": 153.20587158203125,
         "note": "Chat endpoint requires authentication (expected)"
       },
-      "timestamp": "2025-09-15T13:42:23.367806"
+      "timestamp": "2025-09-16T01:49:49.340235"
     },
     {
       "test_name": "Performance Metrics",
@@ -92,20 +92,20 @@
       "details": {
         "concurrent_requests": 5,
         "successful_requests": 5,
-        "total_time_ms": 164.97421264648438,
-        "avg_response_time_ms": 32.994842529296875
+        "total_time_ms": 159.3630313873291,
+        "avg_response_time_ms": 31.87260627746582
       },
-      "timestamp": "2025-09-15T13:42:23.533177"
+      "timestamp": "2025-09-16T01:49:49.499982"
     },
     {
       "test_name": "Error Handling",
       "passed": true,
       "details": {
         "status_code": 405,
-        "response_time_ms": 475.2640724182129,
+        "response_time_ms": 110.66985130310059,
         "note": "Proper 405 error handling (method not allowed)"
       },
-      "timestamp": "2025-09-15T13:42:24.009117"
+      "timestamp": "2025-09-16T01:49:49.611212"
     }
   ],
   "performance_metrics": {},

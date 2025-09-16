@@ -1,0 +1,51 @@
+{
+  "timestamp": "2025-09-15T18:49:44.184390",
+  "phase": "Phase 2 - Pipeline and Data Flow Refactor",
+  "tests": {
+    "configuration_initialization": {
+      "status": "PASSED",
+      "rag_similarity_threshold": 0.3,
+      "expected_threshold": 0.3,
+      "threshold_correct": true
+    },
+    "uuid_standardization": {
+      "status": "PASSED",
+      "document_uuid_deterministic": true,
+      "chunk_uuid_deterministic": true,
+      "job_uuid_random": true,
+      "document_uuid_valid": true,
+      "chunk_uuid_valid": true,
+      "document_uuid": "82c0600d-626e-563f-9df4-e15f9f798951",
+      "chunk_uuid": "9504978a-011d-5bf5-b923-242fd9f74cf8",
+      "job_uuid": "74cef6e6-7dd9-47d7-b90a-1a1b4357b466"
+    },
+    "upload_pipeline_refactor": {
+      "status": "PASSED",
+      "document_id_deterministic": true,
+      "document_id_valid": true,
+      "storage_path_valid": true,
+      "document_id": "f0195a33-9672-5401-badd-e49097a8e65b",
+      "storage_path": "files/user/test_user_456/raw/607d2f56_5614fe4d.pdf"
+    },
+    "rag_system_integration": {
+      "status": "PASSED",
+      "rag_tool_initialized": true,
+      "similarity_threshold": 0.3,
+      "expected_threshold": 0.3,
+      "threshold_correct": true,
+      "max_chunks": 10,
+      "token_budget": 4000,
+      "configurable_threshold": 0.3,
+      "has_retrieve_chunks": true,
+      "has_retrieve_chunks_from_text": true,
+      "has_get_similarity_threshold": false
+    }
+  },
+  "summary": {
+    "total_tests": 4,
+    "passed_tests": 4,
+    "failed_tests": 0,
+    "success_rate": 100.0,
+    "phase2_complete": true
+  }
+}
