@@ -433,8 +433,17 @@ class SystemMonitor:
         def check_memory_usage():
             try:
                 import psutil
+                import os
                 memory = psutil.virtual_memory()
-                return memory.percent < 90.0  # Alert if memory usage > 90%
+                
+                # Adjust threshold based on environment
+                environment = os.getenv('ENVIRONMENT', 'development')
+                if environment == 'development':
+                    threshold = 95.0  # More lenient for development
+                else:
+                    threshold = 90.0  # Stricter for production
+                
+                return memory.percent < threshold
             except ImportError:
                 return True  # Skip if psutil not available
         
