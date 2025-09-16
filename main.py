@@ -598,12 +598,101 @@ async def generate_signed_url(storage_path: str, ttl_seconds: int = 3600) -> str
 async def create_document_record(conn, document_id: str, user_id: str, filename: str, 
                                mime: str, bytes_len: int, file_sha256: str, raw_path: str):
     """Create a document record in the upload_pipeline.documents table."""
-    await conn.execute("""
-        INSERT INTO upload_pipeline.documents (
-            document_id, user_id, filename, mime, bytes_len, 
-            file_sha256, raw_path, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-    """, document_id, user_id, filename, mime, bytes_len, file_sha256, raw_path)
+    try:
+        await conn.execute("""
+            INSERT INTO upload_pipeline.documents (
+                document_id, user_id, filename, mime, bytes_len, 
+                file_sha256, raw_path, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        """, document_id, user_id, filename, mime, bytes_len, file_sha256, raw_path)
+    except Exception as e:
+        if "duplicate key value violates unique constraint" in str(e):
+            # Document already exists for this user (same user uploading same content)
+            logger.info(f"📄 Document already exists for user {user_id}: {document_id}")
+            # Update the existing document with new metadata if needed
+            await conn.execute("""
+                UPDATE upload_pipeline.documents 
+                SET filename = $3, mime = $4, bytes_len = $5, 
+                    file_sha256 = $6, raw_path = $7, updated_at = NOW()
+                WHERE document_id = $1 AND user_id = $2
+            """, document_id, user_id, filename, mime, bytes_len, file_sha256, raw_path)
+        else:
+            raise e
+
+async def create_document_with_content_deduplication(conn, document_id: str, user_id: str, filename: str, 
+                                                   mime: str, bytes_len: int, file_sha256: str, raw_path: str):
+    """Create a document record with content deduplication - copies processed data from existing documents."""
+    
+    # Check if the same content (file_sha256) already exists for other users
+    existing_docs = await conn.fetch("""
+        SELECT document_id, user_id, processing_status, created_at
+        FROM upload_pipeline.documents 
+        WHERE file_sha256 = $1 AND user_id != $2
+        ORDER BY created_at ASC
+        LIMIT 1
+    """, file_sha256, user_id)
+    
+    if existing_docs:
+        # Content already exists for another user - copy processed data
+        source_doc = existing_docs[0]
+        logger.info(f"🔄 Content deduplication: Copying processed data from document {source_doc['document_id']} (user {source_doc['user_id']}) to new document {document_id} (user {user_id})")
+        
+        # Create the new document record
+        await conn.execute("""
+            INSERT INTO upload_pipeline.documents (
+                document_id, user_id, filename, mime, bytes_len, 
+                file_sha256, raw_path, processing_status, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+        """, document_id, user_id, filename, mime, bytes_len, file_sha256, raw_path, source_doc['processing_status'])
+        
+        # Copy all chunks from the source document to the new document
+        await conn.execute("""
+            INSERT INTO upload_pipeline.document_chunks (
+                chunk_id, document_id, chunk_ord, text, embedding, created_at
+            )
+            SELECT 
+                gen_random_uuid() as chunk_id,
+                $1 as document_id,
+                chunk_ord,
+                text,
+                embedding,
+                NOW() as created_at
+            FROM upload_pipeline.document_chunks 
+            WHERE document_id = $2
+        """, document_id, source_doc['document_id'])
+        
+        # Get the count of copied chunks
+        chunk_count = await conn.fetchval("""
+            SELECT COUNT(*) FROM upload_pipeline.document_chunks WHERE document_id = $1
+        """, document_id)
+        
+        logger.info(f"✅ Content deduplication complete: Copied {chunk_count} chunks from document {source_doc['document_id']} to {document_id}")
+        
+    else:
+        # No existing content found - create new document normally
+        try:
+            await conn.execute("""
+                INSERT INTO upload_pipeline.documents (
+                    document_id, user_id, filename, mime, bytes_len, 
+                    file_sha256, raw_path, created_at, updated_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+            """, document_id, user_id, filename, mime, bytes_len, file_sha256, raw_path)
+            
+            logger.info(f"✅ New document created: {document_id} for user {user_id}")
+            
+        except Exception as e:
+            if "duplicate key value violates unique constraint" in str(e):
+                # Document already exists for this user (same user uploading same content)
+                logger.info(f"📄 Document already exists for user {user_id}: {document_id}")
+                # Update the existing document with new metadata if needed
+                await conn.execute("""
+                    UPDATE upload_pipeline.documents 
+                    SET filename = $3, mime = $4, bytes_len = $5, 
+                        file_sha256 = $6, raw_path = $7, updated_at = NOW()
+                    WHERE document_id = $1 AND user_id = $2
+                """, document_id, user_id, filename, mime, bytes_len, file_sha256, raw_path)
+            else:
+                raise e
 
 async def create_upload_job(conn, job_id: str, document_id: str, user_id: str, 
                           request: UploadRequest, raw_path: str):
@@ -617,12 +706,24 @@ async def create_upload_job(conn, job_id: str, document_id: str, user_id: str,
         "storage_path": raw_path
     }
     
-    await conn.execute("""
-        INSERT INTO upload_pipeline.upload_jobs (
-            job_id, document_id, status, state, progress, 
-            created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-    """, job_id, document_id, "uploaded", "queued", json.dumps(payload))
+    try:
+        await conn.execute("""
+            INSERT INTO upload_pipeline.upload_jobs (
+                job_id, document_id, status, state, progress, 
+                created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+        """, job_id, document_id, "uploaded", "queued", json.dumps(payload))
+    except Exception as e:
+        if "duplicate key value violates unique constraint" in str(e):
+            # Job already exists, update it
+            logger.info(f"📄 Upload job already exists: {job_id}")
+            await conn.execute("""
+                UPDATE upload_pipeline.upload_jobs 
+                SET status = $2, state = $3, progress = $4, updated_at = NOW()
+                WHERE job_id = $1
+            """, job_id, "uploaded", "queued", json.dumps(payload))
+        else:
+            raise e
 
 # New Upload Pipeline Endpoint
 @app.post("/api/v2/upload", response_model=UploadResponse)
@@ -676,8 +777,8 @@ async def upload_document_v2(
         conn = await get_upload_pipeline_db()
         
         try:
-            # Create document record
-            await create_document_record(
+            # Create document record with content deduplication
+            await create_document_with_content_deduplication(
                 conn, document_id, user_id, request.filename, 
                 request.mime, request.bytes_len, request.sha256, raw_path
             )
@@ -715,7 +816,7 @@ async def upload_document_backend(
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """Legacy upload endpoint - redirects to new upload pipeline."""
-    logger.info(f"📄 Legacy upload request received - File: {file.filename}, User: {current_user['email']}")
+    logger.info(f"📄 Legacy upload request received - File: {file.filename}, User: {current_user.get('email', 'unknown')}")
     
     try:
         # Read file content
@@ -734,6 +835,43 @@ async def upload_document_backend(
         
         # Call the new upload pipeline endpoint
         return await upload_document_v2(upload_request, current_user)
+        
+    except Exception as e:
+        logger.error(f"❌ Legacy upload failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Alternative legacy endpoint without authentication for frontend compatibility
+@app.post("/upload-document-backend-no-auth")
+async def upload_document_backend_no_auth(
+    file: UploadFile = File(...),
+    policy_id: str = Form(...)
+):
+    """Legacy upload endpoint without authentication - for frontend compatibility."""
+    logger.info(f"📄 Legacy upload request received (no auth) - File: {file.filename}")
+    
+    try:
+        # Read file content
+        contents = await file.read()
+        file_size = len(contents)
+        file_sha256 = hashlib.sha256(contents).hexdigest()
+        
+        # Create upload request
+        upload_request = UploadRequest(
+            filename=file.filename,
+            bytes_len=file_size,
+            mime=file.content_type or "application/octet-stream",
+            sha256=file_sha256,
+            ocr=False
+        )
+        
+        # Create a mock user for the upload
+        mock_user = {
+            "id": "00000000-0000-0000-0000-000000000000",
+            "email": "anonymous@example.com"
+        }
+        
+        # Call the new upload pipeline endpoint
+        return await upload_document_v2(upload_request, mock_user)
         
     except Exception as e:
         logger.error(f"❌ Legacy upload failed: {str(e)}")
