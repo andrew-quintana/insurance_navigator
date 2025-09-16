@@ -9,6 +9,7 @@ import hashlib
 from typing import Dict, Any
 from fastapi import APIRouter, Request, HTTPException, Depends
 from core import get_database
+from backend.shared.storage import StorageManager
 
 logger = logging.getLogger(__name__)
 
@@ -82,21 +83,41 @@ async def llamaparse_webhook(job_id: str, request: Request):
                 return {"status": "error", "message": "No parsed content received"}
             
             # Generate storage path for parsed content
-            parsed_path = f"files/user/{job['user_id']}/parsed/{document_id}.md"
+            # Format: storage://files/user/{user_id}/parsed/{document_id}.md
+            parsed_path = f"storage://files/user/{job['user_id']}/parsed/{document_id}.md"
             
             # Store parsed content in blob storage
             logger.info(f"Parsed content received, storing in blob storage for document {document_id}")
             
-            # Store the parsed content in blob storage
-            storage_config = {
-                "storage_url": "http://localhost:54321",
-                "anon_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0",
-                "service_role_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nk0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
-            }
-            storage = StorageManager(storage_config)
+            # Store the parsed content in blob storage using direct HTTP request
+            import httpx
             
-            # Store the parsed content
-            success = await storage.write_blob(parsed_path, parsed_content, "text/markdown")
+            # Extract bucket and key from parsed_path
+            # Format: storage://files/user/{user_id}/parsed/{document_id}.md
+            path_parts = parsed_path[10:].split("/", 1)  # Remove "storage://" prefix
+            if len(path_parts) == 2:
+                bucket, key = path_parts
+            else:
+                raise ValueError(f"Invalid parsed_path format: {parsed_path}")
+            
+            logger.info(f"Uploading parsed content to bucket: {bucket}, key: {key}")
+            
+            # Use direct HTTP request with service role key (same as upload endpoint)
+            service_role_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.put(
+                    f"http://127.0.0.1:54321/storage/v1/object/{bucket}/{key}",
+                    content=parsed_content.encode('utf-8'),
+                    headers={
+                        "Content-Type": "text/markdown",
+                        "Authorization": f"Bearer {service_role_key}"
+                    }
+                )
+                
+                logger.info(f"Storage upload response: {response.status_code} - {response.text}")
+                
+                success = response.status_code in [200, 201]
             
             if not success:
                 logger.error(f"Failed to store parsed content for document {document_id}")
@@ -137,7 +158,7 @@ async def llamaparse_webhook(job_id: str, request: Request):
             # Handle parsing failure
             error_message = payload.get("error", "Unknown parsing error")
             
-            async with db.get_db_connection() as conn:
+            async with db.get_connection() as conn:
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
                     SET status = 'failed_parse', state = 'done', 
