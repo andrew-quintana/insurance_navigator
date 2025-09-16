@@ -166,18 +166,135 @@ lsof -i :8001
 - [ ] Fresh authentication token obtained
 - [ ] Log monitoring active
 - [ ] Database connectivity confirmed
+- [ ] Review `FAILURE_MODES_LOG.md` for known issues
 
 ### **During Testing:**
 - [ ] Monitor logs for errors
 - [ ] Verify database persistence
 - [ ] Check response times
 - [ ] Test error scenarios
+- [ ] **Document failures immediately** using the failure tracking system
 
 ### **After Testing:**
-- [ ] Document any new failure modes
+- [ ] Document any new failure modes in `FAILURE_MODES_LOG.md`
 - [ ] Update root cause analysis
 - [ ] Record test results
 - [ ] Note any system improvements needed
+- [ ] Update failure statuses if resolved
+
+---
+
+## 🚨 **Failure Documentation Process**
+
+### **When You Encounter a Failure:**
+
+1. **Immediate Response:**
+   - Take screenshots of error messages
+   - Copy relevant log entries
+   - Note the exact time and context
+   - Record reproduction steps
+
+2. **Document in FAILURE_MODES_LOG.md:**
+   - Use the template in the "New Failure Documentation Template" section
+   - Assign the next available FM-XXX number
+   - Fill out all sections with as much detail as possible
+   - Set initial status to "Active" or "Under Investigation"
+
+3. **Investigation:**
+   - Follow the investigation process outlined in the failure tracking guidelines
+   - Update the failure record as you learn more
+   - Test hypotheses and document results
+   - Link related failures if applicable
+
+4. **Resolution:**
+   - Document the root cause once identified
+   - Record the solution and evidence
+   - Update status to "Resolved"
+   - Test the fix thoroughly
+
+### **Failure Documentation Template:**
+```markdown
+### **FM-XXX: [Descriptive Failure Name]**
+- **Severity**: [Low/Medium/High/Critical]
+- **Status**: [Active/Under Investigation/Resolved]
+- **First Observed**: [YYYY-MM-DD]
+- **Last Updated**: [YYYY-MM-DD]
+
+**Symptoms:**
+- [Specific error messages or behaviors]
+- [When the failure occurs]
+- [What functionality is affected]
+
+**Observations:**
+- [What you noticed during testing]
+- [Patterns or timing of the failure]
+- [Any error messages or logs]
+
+**Investigation Notes:**
+- [Steps taken to investigate]
+- [Hypotheses about the cause]
+- [Tests performed or attempted]
+- [Files or components involved]
+
+**Root Cause:**
+[The actual cause once identified, or "Under investigation" if unknown]
+
+**Solution:**
+[How the issue was fixed, or "Pending" if not yet resolved]
+
+**Evidence:**
+- [Code changes made]
+- [Log entries or error messages]
+- [Test results or screenshots]
+
+**Related Issues:**
+- [Links to related failures or issues]
+```
+
+### **Common Failure Types to Watch For:**
+- **Authentication Issues**: Token expiration, invalid credentials
+- **Database Problems**: Connection failures, schema issues, data corruption
+- **API Errors**: 4xx/5xx responses, timeout issues
+- **Service Crashes**: Unexpected shutdowns, memory issues
+- **Performance Issues**: Slow responses, high resource usage
+- **Data Inconsistencies**: Missing data, incorrect processing
+- **Integration Failures**: Service communication issues
+
+### **Best Practices for Failure Documentation:**
+
+1. **Be Specific and Detailed:**
+   - Include exact error messages, not just "it didn't work"
+   - Note the exact time and sequence of events
+   - Include relevant configuration or environment details
+
+2. **Include Evidence:**
+   - Screenshots of error messages
+   - Relevant log entries (with timestamps)
+   - Stack traces or error details
+   - Network requests/responses if applicable
+
+3. **Document the Investigation Process:**
+   - What you tried to fix it
+   - What worked and what didn't
+   - Any patterns you noticed
+   - Files or components that might be involved
+
+4. **Update Regularly:**
+   - Don't just document and forget
+   - Update the status as you learn more
+   - Add new findings to investigation notes
+   - Link related failures when you discover connections
+
+5. **Use Clear, Descriptive Names:**
+   - "API Server Startup Hanging" instead of "Server Problem"
+   - "Document Status Schema Issues" instead of "Database Error"
+   - Make it easy to find and understand the issue
+
+### **Working with the Agent:**
+- When reporting failures to the agent, reference the FM-XXX number
+- Ask the agent to help investigate specific aspects of a failure
+- Request the agent to update the failure record with findings
+- Use the agent to help analyze logs and identify root causes
 
 ## 🚨 **Emergency Procedures**
 
