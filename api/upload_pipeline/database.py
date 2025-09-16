@@ -32,6 +32,9 @@ class DatabaseManager:
             logger.info(f"Attempting database connection to: {db_url[:50]}...")
             
             # Create connection pool with SSL configuration for Supabase
+            # For local development, disable SSL; for production, require SSL
+            ssl_mode = "disable" if "127.0.0.1" in db_url or "localhost" in db_url else "require"
+            
             self.pool = await create_pool(
                 db_url,
                 min_size=5,
@@ -40,7 +43,7 @@ class DatabaseManager:
                 statement_cache_size=0,
                 max_cached_statement_lifetime=0,
                 setup=self._setup_connection,
-                ssl="require"  # Require SSL for Supabase connections
+                ssl=ssl_mode
             )
             
             logger.info("Database connection pool initialized successfully")

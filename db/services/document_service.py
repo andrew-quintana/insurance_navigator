@@ -21,7 +21,7 @@ class DocumentService:
     def __init__(self, supabase_client: SupabaseClient):
         """Initialize the document service."""
         self.supabase = supabase_client
-        self.table = "documents"
+        self.table = "upload_pipeline.documents"
         self.audit_table = "audit_logs"
         self.encryption_key = os.getenv("DOCUMENT_ENCRYPTION_KEY")
         if not self.encryption_key:
@@ -116,6 +116,47 @@ class DocumentService:
             
         except Exception as e:
             logger.error(f"Error creating document: {str(e)}")
+            return None
+
+    async def get_document_status(self, document_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get document status and metadata."""
+        try:
+            logger.info(f"Getting document status for {document_id}")
+            
+            # Use direct database query instead of Supabase client to avoid schema issues
+            import asyncpg
+            import os
+            from dotenv import load_dotenv
+            
+            load_dotenv('.env.production')
+            database_url = os.getenv('DATABASE_URL')
+            
+            conn = await asyncpg.connect(database_url, statement_cache_size=0)
+            
+            # Query document with user validation
+            doc = await conn.fetchrow(
+                'SELECT document_id, filename, processing_status, created_at, updated_at, bytes_len, mime, user_id FROM upload_pipeline.documents WHERE document_id = $1 AND user_id = $2',
+                document_id, user_id
+            )
+            
+            await conn.close()
+            
+            if doc:
+                return {
+                    "document_id": doc["document_id"],
+                    "filename": doc["filename"],
+                    "status": doc["processing_status"],
+                    "created_at": doc["created_at"],
+                    "updated_at": doc["updated_at"],
+                    "bytes_len": doc["bytes_len"],
+                    "mime": doc["mime"]
+                }
+            else:
+                logger.warning(f"Document {document_id} not found for user {user_id}")
+                return None
+            
+        except Exception as e:
+            logger.error(f"Error getting document status: {str(e)}")
             return None
 
     async def update_document_status(self, document_id: str, status: str, message: Optional[str] = None) -> bool:
@@ -280,7 +321,7 @@ class DocumentService:
 async def get_document_service() -> DocumentService:
     """Get configured document service instance."""
     try:
-        client = get_base_client()
+        client = await get_base_client()
         return DocumentService(client)
     except Exception as e:
         logger.error(f"Error creating document service: {str(e)}")

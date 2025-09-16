@@ -351,9 +351,10 @@ class ServiceManager:
             )
             
             # Create alert for service initialization failure
+            from core.resilience import AlertLevel
             await self._system_monitor.alerts.create_alert(
                 f"service_init_failed_{service_name}",
-                self._system_monitor.alerts.AlertLevel.ERROR,
+                AlertLevel.ERROR,
                 f"Service Initialization Failed: {service_name}",
                 f"Service '{service_name}' failed to initialize: {str(e)}",
                 "service_manager",

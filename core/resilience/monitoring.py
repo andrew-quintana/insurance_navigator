@@ -511,6 +511,8 @@ class MetricTimer:
 # Decorator for timing functions
 def time_metric(metric_name: str, tags: Optional[Dict[str, str]] = None):
     """Decorator to time function execution and record as metric."""
+    import functools
+    
     def decorator(func):
         async def async_wrapper(*args, **kwargs):
             monitor = get_system_monitor()
@@ -534,8 +536,10 @@ def time_metric(metric_name: str, tags: Optional[Dict[str, str]] = None):
                 raise
         
         if asyncio.iscoroutinefunction(func):
-            return async_wrapper
+            # Use functools.wraps to preserve function signature for FastAPI
+            return functools.wraps(func)(async_wrapper)
         else:
-            return sync_wrapper
+            # Use functools.wraps to preserve function signature for FastAPI
+            return functools.wraps(func)(sync_wrapper)
     
     return decorator
