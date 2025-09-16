@@ -85,6 +85,14 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
+# Include webhook router
+from api.upload_pipeline.webhooks import router as webhook_router
+app.include_router(webhook_router, prefix="/api/upload-pipeline")
+
+# Include upload router
+from api.upload_pipeline.endpoints.upload import router as upload_router
+app.include_router(upload_router, prefix="/api/upload-pipeline")
+
 # System initialization and shutdown handlers
 @app.on_event("startup")
 async def startup_event():
@@ -733,87 +741,86 @@ async def create_upload_job(conn, job_id: str, document_id: str, user_id: str,
             raise e
 
 # New Upload Pipeline Endpoint
-@app.post("/api/v2/upload", response_model=UploadResponse)
-@time_metric("upload.request_duration", {"endpoint": "upload_v2"})
-async def upload_document_v2(
-    request: UploadRequest,
-    current_user: Dict[str, Any] = Depends(get_current_user)
+# Upload Pipeline Endpoint moved to router at /api/upload-pipeline/upload
+
+# Simple test endpoint
+@app.get("/api/upload-pipeline/test-simple")
+async def test_simple():
+    """Simple test endpoint to verify API server is working."""
+    return {"message": "API server is working", "status": "ok"}
+
+# Temporary direct implementation of upload-file endpoint
+@app.post("/api/upload-pipeline/upload-file/{job_id}")
+async def upload_file_to_storage_direct(
+    job_id: str,
+    file: UploadFile = File(...)
 ):
-    """
-    Upload a new document for processing using the upload pipeline.
-    
-    This endpoint:
-    1. Validates the upload request
-    2. Creates a new document record
-    3. Initializes a job in the queue
-    4. Returns a signed URL for file upload
-    
-    Enhanced with graceful degradation and circuit breaker protection.
-    """
-    logger.info(f"📄 Upload pipeline request received - File: {request.filename}, Size: {request.bytes_len}, User: {current_user['email']}")
+    """Handle direct file upload to storage for development."""
+    from config.database import get_supabase_service_client
     
     try:
-        # Validate file size
-        if request.bytes_len > 50 * 1024 * 1024:  # 50MB limit
-            logger.error(f"❌ File too large: {request.bytes_len} bytes")
-            raise HTTPException(status_code=413, detail="File too large. Maximum size is 50MB")
-            
-        logger.info(f"✅ File size validated: {request.bytes_len} bytes")
+        # Get the job to find the storage path
+        db = get_upload_pipeline_db()
+        job = await db.fetchrow(
+            "SELECT document_id, status FROM upload_pipeline.upload_jobs WHERE job_id = $1",
+            job_id
+        )
         
-        # Generate document and job IDs using deterministic approach
-        from utils.uuid_generation import UUIDGenerator
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
         
-        # Use actual authenticated user ID (not a random UUID)
-        user_id = current_user['id']
+        # Get document info
+        doc = await db.fetchrow(
+            "SELECT raw_path FROM upload_pipeline.documents WHERE document_id = $1",
+            job["document_id"]
+        )
         
-        # Generate deterministic document ID based on user and content hash
-        document_id = UUIDGenerator.document_uuid(user_id, request.sha256)
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found")
         
-        # Job IDs can remain random for ephemeral tracking
-        job_id = UUIDGenerator.job_uuid()
+        raw_path = doc["raw_path"]
         
-        # Generate storage path
-        timestamp = int(time.time())
-        file_hash = hashlib.md5(document_id.encode()).hexdigest()[:8]
-        file_ext = request.filename.split('.')[-1] if '.' in request.filename else 'pdf'
-        raw_path = f"files/user/{user_id}/raw/{timestamp}_{file_hash}.{file_ext}"
+        # Upload file to Supabase storage using service role
+        supabase = await get_supabase_service_client()
         
-        logger.info(f"📄 Generated storage path: {raw_path}")
+        # Extract bucket and key from raw_path
+        if raw_path.startswith("files/user/"):
+            key = raw_path[6:]  # Remove "files/" prefix
+            bucket = "files"
+        else:
+            raise ValueError(f"Invalid raw_path format: {raw_path}")
         
-        # Connect to database
-        conn = await get_upload_pipeline_db()
+        # Read file content
+        file_content = await file.read()
         
-        try:
-            # Create document record with content deduplication
-            await create_document_with_content_deduplication(
-                conn, document_id, user_id, request.filename, 
-                request.mime, request.bytes_len, request.sha256, raw_path
+        # Upload to Supabase storage
+        response = supabase.storage.from_(bucket).upload(
+            key,
+            file_content,
+            file_options={"content-type": file.content_type or "application/octet-stream"}
+        )
+        
+        if response.get('error'):
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Failed to upload file to storage: {response['error']}"
             )
-            logger.info(f"✅ Document record created: {document_id}")
-            
-            # Create upload job
-            await create_upload_job(conn, job_id, document_id, user_id, request, raw_path)
-            logger.info(f"✅ Upload job created: {job_id}")
-            
-            # Generate signed URL
-            signed_url = await generate_signed_url(raw_path, 3600)  # 1 hour TTL
-            upload_expires_at = datetime.utcnow() + timedelta(seconds=3600)
-            
-            logger.info(f"✅ Signed URL generated: {signed_url[:50]}...")
-            
-            return UploadResponse(
-                job_id=job_id,
-                document_id=document_id,
-                signed_url=signed_url,
-                upload_expires_at=upload_expires_at
-            )
-            
-        finally:
-            await conn.close()
+        
+        # Update job status to indicate file is uploaded
+        await db.execute(
+            "UPDATE upload_pipeline.upload_jobs SET status = 'uploaded', state = 'queued' WHERE job_id = $1",
+            job_id
+        )
+        
+        logger.info(f"File uploaded successfully to {raw_path} for job {job_id}")
+        
+        return {"message": "File uploaded successfully", "path": raw_path}
         
     except Exception as e:
-        logger.error(f"❌ Upload pipeline failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"File upload failed for job {job_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+    finally:
+        await db.close()
 
 # Legacy endpoint for backward compatibility
 @app.post("/upload-document-backend")

@@ -109,6 +109,58 @@ class MockLlamaParseService(MockService):
             }
         }
     
+    async def submit_parse_job(
+        self, 
+        job_id: str, 
+        source_url: str, 
+        webhook_url: str,
+        webhook_secret: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Mock parse job submission with webhook callback."""
+        if self._fail_on_execute:
+            raise ServiceExecutionError("Mock LlamaParse job submission failed")
+        
+        # Simulate async processing by scheduling a webhook callback
+        import asyncio
+        asyncio.create_task(self._simulate_webhook_callback(job_id, source_url, webhook_url))
+        
+        return {
+            "status": "submitted",
+            "parse_job_id": f"mock_parse_{job_id}",
+            "webhook_url": webhook_url,
+            "submitted_at": datetime.utcnow().isoformat()
+        }
+    
+    async def _simulate_webhook_callback(self, job_id: str, source_url: str, webhook_url: str):
+        """Simulate webhook callback after mock processing."""
+        import asyncio
+        import httpx
+        
+        # Wait a bit to simulate processing time
+        await asyncio.sleep(2)
+        
+        # Prepare mock webhook payload
+        webhook_payload = {
+            "status": "completed",
+            "result": {
+                "markdown": f"Mock parsed content from {source_url}",
+                "metadata": {
+                    "job_id": job_id,
+                    "source_url": source_url,
+                    "parsed_at": datetime.utcnow().isoformat()
+                }
+            }
+        }
+        
+        try:
+            # Send webhook callback
+            async with httpx.AsyncClient() as client:
+                response = await client.post(webhook_url, json=webhook_payload)
+                response.raise_for_status()
+                logger.info(f"Mock webhook callback sent for job {job_id}")
+        except Exception as e:
+            logger.error(f"Failed to send mock webhook callback for job {job_id}: {e}")
+    
     async def health_check(self) -> Dict[str, Any]:
         """Mock health check."""
         return {

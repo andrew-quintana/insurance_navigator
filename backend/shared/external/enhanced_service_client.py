@@ -127,6 +127,95 @@ class EnhancedServiceClient:
                 original_exception=e,
                 is_retryable=True
             )
+            self.error_handler.log_error(error)
+            raise
+    
+    async def submit_llamaparse_job(
+        self,
+        job_id: str,
+        document_id: str,
+        source_url: str,
+        webhook_url: str,
+        webhook_secret: Optional[str] = None,
+        correlation_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Submit a LlamaParse job with webhook callback.
+        
+        Args:
+            job_id: Job ID for tracking
+            document_id: Document ID for tracking
+            source_url: URL of the document to parse
+            webhook_url: Webhook URL for callback
+            webhook_secret: Secret for webhook verification
+            correlation_id: Correlation ID for request tracking
+            
+        Returns:
+            Parse job submission result with job ID
+            
+        Raises:
+            ServiceUnavailableError: If service is unavailable
+            AuthenticationError: If authentication fails
+            RateLimitError: If rate limit is exceeded
+        """
+        if correlation_id is None:
+            correlation_id = create_correlation_id()
+        
+        context = create_error_context(
+            correlation_id=correlation_id,
+            user_id="",  # Not available at job submission time
+            job_id=job_id,
+            document_id=document_id,
+            service_name="llamaparse",
+            operation="submit_parse_job"
+        )
+        
+        try:
+            # Get the service (this will raise an error if unavailable and fallback disabled)
+            service = await self.service_router.get_service("llamaparse")
+            
+            # Check if we're in mock mode (this should not happen in production)
+            if hasattr(service, 'name') and 'mock' in service.name.lower():
+                error = self.error_handler.create_error(
+                    error_code="MOCK_SERVICE_DETECTED",
+                    error_message="Mock service detected in production environment",
+                    severity=ErrorSeverity.FATAL,
+                    category=ErrorCategory.CONFIGURATION_ERROR,
+                    context=context,
+                    metadata={"service_name": "llamaparse", "detected_mode": "mock"}
+                )
+                self.error_handler.log_error(error)
+                raise RuntimeError("Mock service detected in production - this should not happen")
+            
+            # Call the service with retry logic
+            result = await self._call_with_retry(
+                service.submit_parse_job,
+                job_id,
+                source_url,
+                webhook_url,
+                webhook_secret,
+                context=context,
+                service_name="llamaparse"
+            )
+            
+            self.logger.info(
+                "LlamaParse job submitted successfully",
+                correlation_id=correlation_id,
+                job_id=job_id,
+                document_id=document_id,
+                parse_job_id=result.get("parse_job_id")
+            )
+            
+            return result
+            
+        except Exception as e:
+            # Log the error and re-raise instead of falling back to mock
+            error = self.error_handler.handle_processing_error(
+                operation="llamaparse_submit_job",
+                context=context,
+                original_exception=e,
+                is_retryable=True
+            )
             raise
     
     async def call_openai_service(

@@ -546,6 +546,219 @@ def check_memory_usage():
 
 ---
 
+### **FM-011: Document Processing Simulation - No Actual Chunks Created (INITIAL RESOLUTION)**
+- **Severity**: Critical
+- **Status**: ✅ Resolved
+- **First Observed**: 2025-09-16
+- **Resolution Date**: 2025-09-16
+- **Last Updated**: 2025-09-16
+
+**Symptoms:**
+- Upload jobs show status "complete" and state "done"
+- Documents show processing_status "processed"
+- **No document chunks exist in the database (0 total chunks)**
+- Document processing appears successful but no actual content processing occurred
+- Chat functionality cannot access document content (no chunks to search)
+
+**Observations:**
+- 3 upload jobs completed in last 10 minutes
+- All jobs show state "done" and status "complete"
+- 1 document shows processing_status "processed"
+- **Critical**: 0 chunks exist in upload_pipeline.document_chunks table
+- Simple worker is running and "processing" jobs
+- Jobs are being marked complete without actual document processing
+
+**Investigation Notes:**
+- Simple worker (`simple_worker.py`) is only **simulating** document processing
+- Worker code shows:
+  ```python
+  # Simulate processing (in real implementation, this would:
+  # 1. Download file from storage
+  # 2. Parse document
+  # 3. Generate chunks
+  # 4. Create embeddings
+  # 5. Store in database)
+  
+  logger.info(f"Simulating document processing for {document_id}")
+  await asyncio.sleep(2)  # Simulate processing time
+  ```
+- Worker is sleeping for 2 seconds then marking jobs as complete
+- No actual document parsing, chunking, or embedding is happening
+- This explains why jobs appear complete but no chunks exist
+
+**Root Cause:**
+Simple worker was created as a **simulation** to bypass complex worker dependencies, but it's not performing actual document processing. The worker:
+1. Only simulates processing with a 2-second sleep
+2. Updates document status to "processed" without processing
+3. Marks jobs as "complete" without creating chunks
+4. No real document parsing, chunking, or embedding occurs
+
+**Solution:**
+1. **Immediate**: Replaced simple worker with enhanced worker
+2. **Long-term**: Fixed enhanced worker import dependencies and job processing logic
+3. **Alternative**: Created real_worker.py as backup for actual document processing
+
+**Evidence:**
+- 0 chunks in upload_pipeline.document_chunks table
+- Simple worker code shows simulation comments
+- Jobs marked complete without actual processing
+- Document status "processed" but no content available
+- Enhanced worker now running and processing jobs
+
+**Related Issues:**
+- FM-009B: Missing Job Processing Worker (resolved - worker exists but only simulates)
+- FM-012: Enhanced Worker Job Processing Loop Failure (new issue discovered)
+- Document processing pipeline incomplete
+
+---
+
+### **FM-012: Enhanced Worker Job Processing Loop Failure (ACTIVE)**
+- **Severity**: High
+- **Status**: 🔍 Under Investigation
+- **First Observed**: 2025-09-16
+- **Last Updated**: 2025-09-16
+
+**Symptoms:**
+- Enhanced worker starts successfully and initializes properly
+- Job processing loop stops continuously every 5 seconds
+- Queued jobs are not being processed despite worker being running
+- No document chunks are created even when jobs are queued
+- Worker logs show "Job processing loop stopped" repeatedly
+
+**Observations:**
+- Enhanced worker process is running (PID visible in process list)
+- Worker initialization completes successfully:
+  ```
+  ✅ Enhanced worker initialized successfully
+  Database pool initialized with 5-20 connections
+  Storage manager initialized for http://localhost:54321
+  ```
+- Job processing loop starts but stops immediately:
+  ```
+  Starting job processing loop
+  Job processing loop stopped
+  ```
+- Queued job remains in "queued, uploaded" status indefinitely
+- No processing activity despite job being available
+
+**Investigation Notes:**
+- Enhanced worker import issues were resolved successfully
+- Worker can be instantiated and initialized without errors
+- Job processing loop appears to be stopping due to internal logic issue
+- Job polling mechanism may not be working correctly
+- Worker may be exiting the processing loop prematurely
+
+**Root Cause:**
+The enhanced worker's job processing loop is working, but jobs are failing during the parsing stage with "Parsed content is empty" error. The parsing stage is not creating valid parsed content, causing the validation stage to fail.
+
+**Solution:**
+1. **Immediate**: Fixed logging issue - "Job processing loop stopped" messages were misleading
+2. **Investigation**: Enhanced worker is processing jobs but failing at parsing stage
+3. **Next**: Debug parsing stage to understand why parsed content is empty
+
+**Evidence:**
+- Enhanced worker logs show "Parsed content is empty" error during validation
+- Jobs are being processed but failing at parsing stage
+- Job status changes to "failed_parse" after processing
+- 0 chunks created due to parsing failures
+
+**Related Issues:**
+- FM-011: Document Processing Simulation (resolved - replaced with enhanced worker)
+- FM-013: Parsed Content Storage Failure (new issue discovered)
+
+---
+
+### **FM-013: Parsed Content Storage Failure (ACTIVE)**
+- **Severity**: High
+- **Status**: 🔍 Under Investigation
+- **First Observed**: 2025-09-16
+- **Last Updated**: 2025-09-16
+
+**Symptoms:**
+- Enhanced worker parsing stage reports success: "Document parsed successfully"
+- LlamaParse service call successful with result_size: 309
+- Parsed content path stored in database: `storage://documents/.../parsed/...md`
+- Validation stage fails with "Parsed content is empty" error
+- No document chunks created due to validation failure
+
+**Observations:**
+- Parsing stage logs show successful processing:
+  ```
+  Processing document parsing with real LlamaParse service
+  LlamaParse service call successful, result_size: 309
+  Document parsed successfully
+  ```
+- Database shows parsed_path is set correctly
+- Storage system returns 400 Bad Request when trying to read parsed content
+- Parsed content is not actually stored despite successful parsing logs
+
+**Investigation Notes:**
+- Enhanced worker parsing stage claims to store content but it's not accessible
+- Storage manager gets 400 Bad Request when reading parsed content
+- This suggests the write operation in parsing stage is failing silently
+- The parsing stage may be using mock storage or incorrect storage configuration
+
+**Root Cause:**
+Under investigation - the parsing stage is not actually storing parsed content in the storage system, despite reporting success.
+
+**Solution:**
+Pending - need to debug why the parsing stage's storage write operation is failing.
+
+**Evidence:**
+- Enhanced worker logs show successful parsing but content not accessible
+- Storage manager test shows 400 Bad Request when reading parsed content
+- Database has parsed_path but content doesn't exist in storage
+- Validation stage fails because it can't read the non-existent content
+
+**Related Issues:**
+- FM-012: Enhanced Worker Job Processing Loop Failure (related - parsing stage issue)
+- FM-014: Enhanced Worker Startup Failure After Code Updates (new issue discovered)
+
+---
+
+### **FM-014: Enhanced Worker Startup Failure After Code Updates (ACTIVE)**
+- **Severity**: High
+- **Status**: 🔍 Under Investigation
+- **First Observed**: 2025-09-16
+- **Last Updated**: 2025-09-16
+
+**Symptoms:**
+- Enhanced worker fails to start after implementing webhook-based parsing updates
+- Process exits immediately without error messages
+- No enhanced worker process visible in process list
+- Previous enhanced worker was running successfully before code updates
+
+**Observations:**
+- Enhanced worker was running successfully with PID 44390
+- After implementing webhook-based parsing changes, worker fails to start
+- No error messages visible in logs or console output
+- Code compiles successfully without syntax errors
+- Import tests pass without issues
+
+**Investigation Notes:**
+- Enhanced worker imports successfully when tested directly
+- Startup script appears to run but process doesn't persist
+- May be related to the new webhook-based parsing implementation
+- Could be an issue with the enhanced service client or LlamaParse service integration
+
+**Root Cause:**
+Enhanced worker startup failure was caused by a blocking `await self.worker.start()` call in the enhanced runner. The `start()` method calls `await self.process_jobs_continuously()` which is an infinite loop, causing the runner to hang.
+
+**Solution:**
+Fixed the enhanced runner to start the worker in the background using `asyncio.create_task()` instead of awaiting it directly. Also fixed import issues in the enhanced runner.
+
+**Evidence:**
+- Modified `backend/workers/enhanced_runner.py` to use `self.worker_task = asyncio.create_task(self.worker.start())`
+- Fixed import paths in enhanced runner
+- Enhanced worker now starts successfully and runs in background
+- Process visible in process list (PID 47178)
+
+**Related Issues:**
+- FM-013: Parsed Content Storage Failure (related - both involve enhanced worker issues)
+- Webhook-based parsing implementation ready for testing
+
+---
+
 ## 📝 **New Failure Documentation Template**
 
 Use this template when documenting new failures:
@@ -697,6 +910,221 @@ Use this template when documenting new failures:
 - [ ] Test performance under load
 - [ ] Test configuration changes
 - [ ] Document any new failure modes
+
+---
+
+## FM-015: Blob Storage Upload Failure - Signed URL Returns 404
+
+**Status:** ACTIVE  
+**Date:** 2025-09-16  
+**Severity:** HIGH  
+
+### Symptoms
+- Signed URL upload returns "404 Bucket not found" error
+- Files not uploaded to blob storage despite bucket existing
+- Enhanced worker processes jobs with mock content instead of real documents
+
+### Observations
+- API generates signed URLs correctly
+- `files` bucket exists in Supabase storage
+- Upload request reaches Supabase but fails with 404
+- Enhanced worker falls back to mock content for chunking
+
+### Investigation Notes
+- Verified `files` bucket exists: `SELECT * FROM storage.buckets WHERE name = 'files'`
+- Checked signed URL format: `http://127.0.0.1:54321/storage/v1/object/upload/files/user/...`
+- Tested with both anon and service role keys
+- Confirmed bucket is not public (public: false)
+
+### Root Cause
+- Signed URL authentication issue with Supabase storage
+- Possible mismatch between signed URL format and Supabase expectations
+- Local Supabase storage configuration issue
+
+### Solution
+- Debug signed URL generation and authentication
+- Test different authentication approaches
+- Verify Supabase storage configuration
+
+### Evidence
+```bash
+curl -X PUT "http://127.0.0.1:54321/storage/v1/object/upload/files/user/..."
+# Returns: {"statusCode":"404","error":"Bucket not found","message":"Bucket not found"}
+```
+
+### Related Issues
+- FM-013: Parsed Content Storage Failure (related to storage issues)
+
+---
+
+## FM-016: Upload-File Endpoint 405 Method Not Allowed
+
+**Status:** ACTIVE  
+**Date:** 2025-09-16  
+**Severity:** HIGH  
+
+### Symptoms
+- Upload-file endpoint returns "405 Method Not Allowed" error
+- Endpoint is registered in FastAPI app but not accessible
+- Request reaches API server but returns 405 immediately
+- No error messages in API server logs
+
+### Observations
+- Endpoint `/api/upload-pipeline/upload-file/{job_id}` is registered in FastAPI app
+- Router is properly included in main.py
+- Request reaches API server (visible in logs)
+- Returns 405 Method Not Allowed with no additional error details
+- OPTIONS request hangs (suggests routing issue)
+
+### Investigation Notes
+- Removed conflicting `/api/v2/upload` endpoint from main.py
+- Fixed database access pattern in upload-file endpoint
+- Restarted API server multiple times
+- Verified router import and route registration
+- Endpoint shows up in FastAPI app routes but not accessible
+
+### Root Cause
+Under investigation - endpoint is registered but not accessible, suggesting a routing or middleware issue.
+
+### Solution
+Pending - need to debug why registered endpoint returns 405 Method Not Allowed.
+
+### Evidence
+```bash
+# Endpoint registered in FastAPI app
+/api/upload-pipeline/upload-file/{job_id} - {'POST'}
+
+# But returns 405 when called
+curl -X POST "http://localhost:8000/api/upload-pipeline/upload-file/test-job-id" \
+  -F "file=@test_document.txt"
+# Returns: {"detail":"Method Not Allowed"}
+```
+
+### Related Issues
+- FM-015: Blob Storage Upload Failure (related to storage issues)
+- Upload endpoint conflict resolution (completed)
+
+---
+
+## FM-017: Root Cause Analysis - Upload Endpoint Issues
+
+**Status:** ACTIVE  
+**Date:** 2025-09-16  
+**Severity:** CRITICAL  
+
+### Problem Summary
+Multiple upload-related endpoints are failing with "405 Method Not Allowed" errors despite being properly registered in the FastAPI application. This is blocking the complete end-to-end upload flow testing.
+
+### Changes Made to Resolve Issues
+
+#### 1. **Removed Conflicting Endpoint (FM-016)**
+- **Change**: Removed `/api/v2/upload` endpoint from `main.py` (lines 744-825)
+- **Reason**: This endpoint was conflicting with the new upload router
+- **Result**: Endpoint removed but 405 errors persist
+
+#### 2. **Fixed Database Access Pattern**
+- **Change**: Updated `api/upload_pipeline/endpoints/upload.py` to use proper database connection pattern
+- **Before**: `db = get_database(); job = await db.fetchrow(...)`
+- **After**: `db = get_database(); async with db.get_connection() as conn: job = await conn.fetchrow(...)`
+- **Result**: Database access fixed but 405 errors persist
+
+#### 3. **Added Test Endpoint**
+- **Change**: Added simple test endpoint `/test-endpoint` to verify router functionality
+- **Result**: Test endpoint also returns 405 Method Not Allowed
+
+#### 4. **Multiple API Server Restarts**
+- **Change**: Restarted API server multiple times to pick up code changes
+- **Result**: No improvement in endpoint accessibility
+
+### Root Cause Analysis
+
+#### **Primary Issue: Router Not Actually Loaded**
+Despite the router being included in `main.py` and showing up in FastAPI app routes, the endpoints are not actually accessible. This suggests:
+
+1. **Import Error**: The router import might be failing silently
+2. **Middleware Conflict**: Some middleware might be intercepting requests
+3. **Route Registration Issue**: The router might not be properly registered
+4. **Code Not Reloaded**: The API server might not be running the updated code
+
+#### **Secondary Issues**
+1. **Multiple Process Confusion**: Multiple API server processes might be running
+2. **Cache Issues**: FastAPI might be caching old route definitions
+3. **Import Path Issues**: The router import path might be incorrect
+
+### Investigation Findings
+
+#### **Evidence of Router Registration**
+```python
+# main.py shows router inclusion
+from api.upload_pipeline.endpoints.upload import router as upload_router
+app.include_router(upload_router, prefix="/api/upload-pipeline")
+
+# FastAPI app routes show endpoint registered
+/api/upload-pipeline/upload-file/{job_id} - {'POST'}
+/api/upload-pipeline/test-endpoint - {'GET'}
+```
+
+#### **Evidence of 405 Errors**
+```bash
+# All endpoints return 405 Method Not Allowed
+curl -X POST "http://localhost:8000/api/upload-pipeline/upload-file/test-job-id"
+# Returns: {"detail":"Method Not Allowed"}
+
+curl -X GET "http://localhost:8000/api/upload-pipeline/test-endpoint"
+# Returns: {"detail":"Method Not Allowed"}
+```
+
+### Next Steps for Resolution
+
+#### **Immediate Actions**
+1. **Verify Single API Process**: Ensure only one API server process is running
+2. **Check Import Errors**: Verify router imports are working without errors
+3. **Test Router Isolation**: Test the router in isolation to verify it works
+4. **Check Middleware**: Investigate if any middleware is blocking requests
+
+#### **Systematic Approach**
+1. **Clean Restart**: Kill all processes and start fresh
+2. **Import Testing**: Test router imports individually
+3. **Route Debugging**: Add logging to see if routes are being hit
+4. **Alternative Implementation**: Consider implementing endpoint directly in main.py
+
+### Related Issues
+- FM-015: Blob Storage Upload Failure (related to storage issues)
+- FM-016: Upload-File Endpoint 405 Method Not Allowed (same issue)
+
+---
+
+## FM-018: Upload Endpoint Consolidation Investigation
+
+**Status:** ACTIVE  
+**Date:** 2025-09-16  
+**Severity:** MEDIUM  
+
+### Problem Summary
+Multiple upload endpoints exist in the system, creating confusion and maintenance overhead. Need to investigate which endpoints are actually needed and consolidate into a single, mature upload endpoint.
+
+### Current Upload Endpoints
+1. **`/upload-document-backend`** - Legacy endpoint with authentication
+2. **`/upload-document-backend-no-auth`** - Legacy endpoint without authentication  
+3. **`/api/upload-pipeline/upload`** - New upload pipeline endpoint (router-based)
+4. **`/api/upload-pipeline/upload-file/{job_id}`** - Direct file upload endpoint (router-based)
+5. **`/api/v2/upload`** - Removed conflicting endpoint
+
+### Investigation Required
+- Which endpoints are actually being used by the frontend?
+- What are the differences between each endpoint?
+- Which endpoint should be the canonical upload endpoint?
+- How to consolidate without breaking existing functionality?
+
+### Next Steps
+- Audit frontend code to see which endpoints are called
+- Test each endpoint to understand their functionality
+- Design consolidated upload endpoint
+- Implement migration plan
+
+### Related Issues
+- FM-016: Upload-File Endpoint 405 Method Not Allowed (blocking testing)
+- FM-017: Root Cause Analysis - Upload Endpoint Issues (same investigation)
 
 ---
 

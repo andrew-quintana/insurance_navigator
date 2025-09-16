@@ -1,0 +1,22 @@
+Test Insurance Policy Document
+
+Policy Number: TEST-12345
+Coverage Type: Comprehensive
+Premium: $500/month
+Effective Date: January 1, 2024
+Expiration Date: December 31, 2024
+
+Coverage Details:
+- Liability: $100,000
+- Collision: $50,000
+- Comprehensive: $25,000
+
+Terms and Conditions:
+This policy covers the insured vehicle for the specified
+coverage amounts and terms as outlined in the policy.
+All claims must be reported within 30 days of incident.
+
+Additional Information:
+The policyholder is responsible for maintaining accurate
+information and reporting any changes in circumstances
+that may affect coverage eligibility.

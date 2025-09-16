@@ -7,7 +7,11 @@ import asyncio
 import signal
 import sys
 import logging
+import os
 from typing import Optional
+
+# Add the backend directory to Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from enhanced_base_worker import EnhancedBaseWorker
 from shared.config import WorkerConfig
@@ -36,14 +40,15 @@ class EnhancedWorkerRunner:
             
             logger.info(f"Enhanced worker configuration loaded and validated, config_keys={list(config.to_dict().keys())}")
             
-            # Create and start enhanced worker
+            # Create and initialize enhanced worker
             self.worker = EnhancedBaseWorker(config)
+            await self.worker.initialize()
             
             # Set up signal handlers for graceful shutdown
             self._setup_signal_handlers()
             
-            # Start the enhanced worker (don't await - it runs in background)
-            await self.worker.start()
+            # Start the enhanced worker in background (don't await - it runs forever)
+            self.worker_task = asyncio.create_task(self.worker.start())
             
             # Wait a moment to ensure the worker is fully started
             await asyncio.sleep(1)
@@ -58,6 +63,13 @@ class EnhancedWorkerRunner:
         
         if self.worker:
             await self.worker.stop()
+        
+        if hasattr(self, 'worker_task') and self.worker_task:
+            self.worker_task.cancel()
+            try:
+                await self.worker_task
+            except asyncio.CancelledError:
+                logger.info("Worker task cancelled successfully")
         
         self.shutdown_event.set()
         logger.info("Enhanced worker runner stopped")
