@@ -19,15 +19,15 @@ During Phase 3 validation testing, multiple critical system integration failures
 
 ## Investigation Steps
 
-### Theory 1: Service Integration Architecture Failures
-- **Context**: RAG tool not available in main API service despite being functional in isolation
+### Theory 1: RAG Tool Initialization Failures
+- **Context**: RAG tool not properly initialized in main API service despite being functional in isolation
 - **Possible Issues**:
-  - RAG tool not properly initialized in service startup sequence
+  - RAG tool import failing in main.py startup sequence
   - Missing dependency injection for RAG tool
-  - Service discovery and registration not working correctly
-  - Missing error handling for service initialization failures
-- **Task**: Investigate service startup sequence and RAG tool initialization
-- **Goal**: Ensure RAG tool is properly available to chat endpoints
+  - Service initialization order issues
+  - Missing error handling for RAG tool initialization failures
+- **Task**: Investigate RAG tool import and initialization in main.py
+- **Goal**: Ensure RAG tool is properly initialized and available to chat endpoints
 
 ### Theory 2: Configuration Management System Failures
 - **Context**: Similarity threshold not loading correctly (0.7 vs expected 0.3)
@@ -72,7 +72,7 @@ During Phase 3 validation testing, multiple critical system integration failures
 ## Root Cause Identified
 - **Primary Cause**: Multiple interconnected system integration failures preventing end-to-end functionality
 - **Contributing Factors**:
-  - Missing service initialization and dependency injection
+  - RAG tool not properly initialized in main.py startup sequence
   - Configuration management system not working correctly
   - Database schema inconsistencies and misalignments
   - UUID generation strategy conflicts breaking pipeline continuity
@@ -91,7 +91,7 @@ During Phase 3 validation testing, multiple critical system integration failures
 
 ## Solution Requirements
 - **Immediate Fixes**:
-  - Implement proper service initialization and dependency injection
+  - Fix RAG tool initialization in main.py startup sequence
   - Fix configuration management system and environment loading
   - Standardize database schema references and queries
   - Implement unified UUID generation strategy
@@ -104,7 +104,7 @@ During Phase 3 validation testing, multiple critical system integration failures
   - Standardize configuration across all services
 
 - **Code Changes**:
-  - Refactor service architecture with proper integration
+  - Fix RAG tool initialization and integration in main.py
   - Implement dependency injection and service lifecycle management
   - Standardize database schema and query patterns
   - Unify UUID generation strategy across all components
@@ -123,7 +123,7 @@ During Phase 3 validation testing, multiple critical system integration failures
 - **Process Changes**: Add integration testing to CI/CD pipeline, implement configuration validation
 
 ## Follow-up Actions
-- [ ] Implement service architecture refactor with proper integration
+- [ ] Fix RAG tool initialization in main.py startup sequence
 - [ ] Fix configuration management system and environment loading
 - [ ] Standardize database schema and resolve inconsistencies
 - [ ] Implement unified UUID generation strategy

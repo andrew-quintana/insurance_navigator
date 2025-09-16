@@ -20,12 +20,15 @@ Based on comprehensive validation testing and RCA analysis, this effort addresse
 ## Problem Statement
 
 ### **Primary Issues Identified**
-1. **RAG Tool Integration Failures** - Core functionality not properly initialized
+1. **RAG Tool Initialization Failures** - RAG tool not properly initialized in main API service
 2. **Configuration Management Issues** - Environment-specific settings not loading correctly  
 3. **Database Schema Inconsistencies** - Table name mismatches and query failures
 4. **Service Dependency Injection** - Missing or incorrect service initialization
 5. **UUID Generation Inconsistencies** - Pipeline-breaking UUID strategy conflicts
 6. **Similarity Threshold Configuration** - RAG queries failing due to incorrect thresholds
+
+### **Architecture Clarification**
+The system uses an **embedded RAG approach** where the RAG tool is a library component within the main API service, not a separate microservice. The issues are related to initialization, configuration, and integration problems within this embedded architecture.
 
 ### **Impact Assessment**
 - **User Experience**: Complete failure of core document-to-chat workflow
@@ -71,11 +74,11 @@ Based on comprehensive validation testing and RCA analysis, this effort addresse
 ### **Phase 1: Critical System Integration (Week 1)**
 **Priority**: 🚨 P0 CRITICAL - Must complete before any other work
 
-#### **1.1: Service Architecture Refactor**
-- **RAG Tool Integration**: Proper initialization and dependency injection
+#### **1.1: RAG Tool Integration Fix**
+- **RAG Tool Initialization**: Fix RAG tool import and initialization in main.py startup sequence
 - **Configuration Management**: Centralized, environment-aware configuration system
-- **Service Discovery**: Proper service registration and discovery patterns
-- **Dependency Injection**: Clean dependency management across all services
+- **Service Dependencies**: Fix service dependency injection and initialization order
+- **Error Handling**: Add comprehensive error handling and logging for RAG operations
 
 #### **1.2: Database Schema Standardization**
 - **Schema Alignment**: Fix all table name references and schema inconsistencies
@@ -85,7 +88,7 @@ Based on comprehensive validation testing and RCA analysis, this effort addresse
 
 #### **1.3: Configuration System Overhaul**
 - **Environment Management**: Proper environment-specific configuration loading
-- **Feature Flags**: Centralized feature flag and threshold management
+- **Similarity Threshold**: Fix similarity threshold loading (0.3 for production)
 - **Service Configuration**: Environment-aware service configuration
 - **Validation**: Configuration validation and error handling
 
@@ -110,41 +113,26 @@ Based on comprehensive validation testing and RCA analysis, this effort addresse
 - **Chunk Management**: Proper chunk storage, retrieval, and management
 - **Performance**: RAG query performance optimization
 
-### **Phase 3: Production Readiness and Hardening (Week 3)**
-**Priority**: 🟢 MEDIUM - Production deployment preparation
+### **Phase 3: Production Readiness and Validation (Week 3)**
+**Priority**: 🟡 HIGH - Production deployment preparation
 
 #### **3.1: Error Handling and Resilience**
 - **Graceful Degradation**: Proper fallback mechanisms for service failures
 - **Error Recovery**: Automatic error recovery and retry mechanisms
 - **Circuit Breakers**: Service protection and isolation
-- **Monitoring**: Comprehensive error monitoring and alerting
+- **Error Monitoring**: Basic error monitoring and alerting
 
 #### **3.2: Performance and Scalability**
 - **Performance Optimization**: System-wide performance improvements
-- **Scalability Testing**: Load testing and scalability validation
+- **Load Testing**: Basic load testing and scalability validation
 - **Resource Management**: Proper resource allocation and management
 - **Caching**: Strategic caching implementation
 
-#### **3.3: Security and Compliance**
-- **Security Hardening**: Security best practices implementation
-- **Data Protection**: Proper data handling and protection
-- **Access Control**: Robust authentication and authorization
-- **Audit Logging**: Comprehensive audit and compliance logging
-
-### **Phase 4: Monitoring and Operations (Week 4)**
-**Priority**: 🟢 LOW - Long-term operational excellence
-
-#### **4.1: Observability and Monitoring**
-- **Metrics Collection**: Comprehensive system metrics and KPIs
-- **Logging**: Structured logging and log aggregation
-- **Tracing**: Distributed tracing and performance monitoring
-- **Alerting**: Proactive alerting and incident response
-
-#### **4.2: Documentation and Knowledge Transfer**
-- **Technical Documentation**: Complete system documentation
-- **Operational Runbooks**: Operational procedures and troubleshooting
-- **Training Materials**: Team training and knowledge transfer
-- **Architecture Documentation**: System architecture and design decisions
+#### **3.3: End-to-End Validation**
+- **Complete Workflow Testing**: Validate upload → processing → chat workflow
+- **Integration Testing**: Test all system integrations and dependencies
+- **Performance Validation**: Ensure performance meets MVP requirements
+- **Production Readiness**: Final validation for production deployment
 
 ---
 

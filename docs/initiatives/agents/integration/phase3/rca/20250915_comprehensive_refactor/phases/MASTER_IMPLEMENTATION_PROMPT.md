@@ -23,7 +23,6 @@ Execute each phase in sequence using the following phase-specific prompts:
 - **Phase 1**: @docs/initiatives/agents/integration/phase3/rca/20250915_comprehensive_refactor/phases/PHASE_1_CRITICAL_SERVICE_INTEGRATION_PROMPT.md
 - **Phase 2**: @docs/initiatives/agents/integration/phase3/rca/20250915_comprehensive_refactor/phases/PHASE_2_PIPELINE_DATA_FLOW_REFACTOR_PROMPT.md
 - **Phase 3**: @docs/initiatives/agents/integration/phase3/rca/20250915_comprehensive_refactor/phases/PHASE_3_PRODUCTION_READINESS_HARDENING_PROMPT.md
-- **Phase 4**: @docs/initiatives/agents/integration/phase3/rca/20250915_comprehensive_refactor/phases/PHASE_4_MONITORING_OPERATIONS_PROMPT.md
 
 ### Implementation Approach
 1. **Sequential Execution**: Complete each phase in order, ensuring all success criteria are met before proceeding
@@ -38,7 +37,7 @@ Execute each phase in sequence using the following phase-specific prompts:
 - **Comprehensive testing required** - As specified in testing_spec_comprehensive_validation.md
 
 ### Timeline and Dependencies
-- **Total Duration**: 4 weeks (1 week per phase)
+- **Total Duration**: 3 weeks (1 week per phase)
 - **Phase Dependencies**: Each phase requires successful completion of previous phases
 - **Phase 3 Dependency**: Must complete before Phase 3 cloud deployment
 - **Resource Requirements**: As specified in the EXECUTIVE_SUMMARY.md document
