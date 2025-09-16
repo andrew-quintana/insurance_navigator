@@ -130,16 +130,21 @@ db_pool = DatabasePool()
 async def get_supabase_client() -> Client:
     """Get a Supabase client with retry logic"""
     supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_ANON_KEY")
+    supabase_key = os.getenv("SUPABASE_ANON_KEY") or os.getenv("ANON_KEY")
     
     if not supabase_url or not supabase_key:
-        raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY environment variables must be set")
+        raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY (or ANON_KEY) environment variables must be set")
     
     try:
-        # Create client without custom options - let the library handle defaults
+        # Create client with upload_pipeline schema
+        from supabase._sync.client import ClientOptions
+        options = ClientOptions()
+        options.schema = "upload_pipeline"
+        
         client = create_client(
             supabase_url,
-            supabase_key
+            supabase_key,
+            options=options
         )
         return client
     except Exception as e:
@@ -160,9 +165,14 @@ async def get_supabase_service_client() -> Client:
     
     try:
         # Create client with service role key for admin operations
+        from supabase._sync.client import ClientOptions
+        options = ClientOptions()
+        options.schema = "upload_pipeline"
+        
         client = create_client(
             supabase_url,
-            supabase_service_key
+            supabase_service_key,
+            options=options
         )
         return client
     except Exception as e:
