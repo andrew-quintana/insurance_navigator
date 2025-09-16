@@ -20,9 +20,9 @@ Before beginning implementation, you must thoroughly review and understand the f
 ### Implementation Scope
 Implement all Phase 1 tasks as defined in the TODO001.md document, specifically:
 
-- **1.1 Service Architecture Refactor** - RAG tool integration, configuration management, service discovery, error handling
+- **1.1 RAG Tool Integration Fix** - Fix RAG tool initialization in main.py, configuration management, service dependencies, error handling
 - **1.2 Database Schema Standardization** - Schema alignment, query standardization, migration management, data integrity
-- **1.3 Configuration System Overhaul** - Environment management, feature flags, validation, hot-reloading
+- **1.3 Configuration System Overhaul** - Environment management, similarity threshold fix (0.3), validation, hot-reloading
 
 ### Success Criteria
 Your implementation must meet all Phase 1 success criteria as defined in the PRD001.md document. The system must achieve 100% end-to-end workflow functionality after Phase 1 completion.

@@ -8,8 +8,8 @@ If you encounter critical issues during implementation that require immediate at
 
 #### **RAG Tool Not Available**
 - **Reference**: @docs/initiatives/agents/integration/phase3/rca/20250915_comprehensive_refactor/rollups/rag_system_rollup.md
-- **Check**: Service initialization in main.py startup sequence
-- **Verify**: RAG tool import and dependency injection
+- **Check**: RAG tool import and initialization in main.py startup sequence
+- **Verify**: RAG tool properly initialized and available to chat endpoints
 
 #### **Configuration Not Loading**
 - **Reference**: @docs/initiatives/agents/integration/phase3/rca/20250915_comprehensive_refactor/rollups/configuration_management_rollup.md
@@ -28,7 +28,7 @@ If you encounter critical issues during implementation that require immediate at
 
 #### **Service Integration Failures**
 - **Reference**: @docs/initiatives/agents/integration/phase3/rca/20250915_comprehensive_refactor/rollups/main_api_service_rollup.md
-- **Check**: Service initialization and dependency injection
+- **Check**: RAG tool initialization and service dependency injection
 - **Verify**: All services properly connected and communicating
 
 ### Emergency Escalation
@@ -38,11 +38,11 @@ If issues cannot be resolved using the referenced documents:
 3. **Rollback**: Follow rollback procedures as specified in the phase-specific prompts
 
 ### Quick Validation Checklist
-- [ ] All services initialized correctly
-- [ ] Configuration loaded from environment variables
-- [ ] Database schema references correct table names
+- [ ] RAG tool properly initialized in main.py startup sequence
+- [ ] Configuration loaded from environment variables (similarity threshold 0.3)
+- [ ] Database schema references correct table names (document_chunks)
 - [ ] UUID generation consistent across pipeline stages
-- [ ] RAG tool available and functional
+- [ ] RAG tool available and functional in chat endpoints
 - [ ] End-to-end workflow working (upload → chat)
 
 ### Success Criteria Verification

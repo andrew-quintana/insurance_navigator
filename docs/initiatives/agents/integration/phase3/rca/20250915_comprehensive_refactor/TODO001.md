@@ -10,9 +10,9 @@
 ## Phase 1 — Critical Service Integration (Week 1)
 **Priority**: 🚨 P0 CRITICAL - Must complete before any other work
 
-### 1.1 Service Architecture Refactor
-- [ ] **RAG Tool Integration**
-  - [ ] Add RAG tool import and initialization to main.py startup sequence
+### 1.1 RAG Tool Integration Fix
+- [ ] **RAG Tool Initialization**
+  - [ ] Fix RAG tool import and initialization in main.py startup sequence
   - [ ] Implement proper dependency injection for RAG tool
   - [ ] Add error handling for RAG tool initialization failures
   - [ ] Test RAG tool availability in chat endpoints
@@ -20,6 +20,7 @@
 - [ ] **Configuration Management System**
   - [ ] Create centralized ConfigurationManager class
   - [ ] Implement environment-specific configuration loading
+  - [ ] Fix similarity threshold loading (0.3 for production)
   - [ ] Add configuration validation and error handling
   - [ ] Implement hot-reloading capability for configuration changes
 
@@ -235,57 +236,33 @@
   - [ ] Create audit log analysis and reporting
   - [ ] Add audit log retention and compliance
 
-## Phase 4 — Monitoring and Operations (Week 4)
-**Priority**: 🟢 LOW - Long-term operational excellence
+## Phase 3 — End-to-End Validation (Week 3)
+**Priority**: 🟡 HIGH - Production deployment preparation
 
-### 4.1 Observability and Monitoring
-- [ ] **Metrics Collection**
-  - [ ] Implement comprehensive system metrics and KPIs
-  - [ ] Add business metrics and user experience monitoring
-  - [ ] Create metrics dashboard and reporting
-  - [ ] Add metrics alerting and notification
+### 3.3 End-to-End Validation
+- [ ] **Complete Workflow Testing**
+  - [ ] Validate upload → processing → chat workflow
+  - [ ] Test all system integrations and dependencies
+  - [ ] Ensure performance meets MVP requirements
+  - [ ] Final validation for production deployment
 
-- [ ] **Logging and Aggregation**
-  - [ ] Add structured logging and log aggregation
-  - [ ] Implement log analysis and search capabilities
-  - [ ] Create log monitoring and alerting
-  - [ ] Add log retention and compliance
+- [ ] **Production Readiness**
+  - [ ] Security hardening and validation
+  - [ ] Data protection and compliance
+  - [ ] Error handling and resilience testing
+  - [ ] Performance and scalability validation
 
-- [ ] **Tracing and Performance**
-  - [ ] Implement distributed tracing and performance monitoring
-  - [ ] Add trace analysis and debugging capabilities
-  - [ ] Create performance monitoring and optimization
-  - [ ] Add trace-based alerting and notification
+- [ ] **Integration Testing**
+  - [ ] Test all system integrations and dependencies
+  - [ ] Validate end-to-end workflow functionality
+  - [ ] Ensure system reliability and stability
+  - [ ] Add comprehensive integration test coverage
 
-- [ ] **Alerting and Response**
-  - [ ] Configure proactive alerting and incident response
-  - [ ] Add alert escalation and response procedures
-  - [ ] Create alert testing and validation
-  - [ ] Add alert management and optimization
-
-### 4.2 Documentation and Knowledge Transfer
-- [ ] **Technical Documentation**
-  - [ ] Create complete system documentation and architecture
-  - [ ] Add API documentation and integration guides
-  - [ ] Create troubleshooting and debugging guides
-  - [ ] Add system maintenance and operations documentation
-
-- [ ] **Operational Runbooks**
-  - [ ] Develop operational procedures and troubleshooting guides
-  - [ ] Add incident response and recovery procedures
-  - [ ] Create system maintenance and update procedures
-  - [ ] Add monitoring and alerting procedures
-
-- [ ] **Training Materials**
-  - [ ] Create team training and knowledge transfer materials
-  - [ ] Add system administration and operations training
-  - [ ] Create troubleshooting and debugging training
-  - [ ] Add security and compliance training
-
-- [ ] **Architecture Documentation**
-  - [ ] Document system architecture and design decisions
-  - [ ] Add integration patterns and best practices
-  - [ ] Create system evolution and roadmap documentation
+- [ ] **Performance Validation**
+  - [ ] Ensure performance meets MVP requirements
+  - [ ] Validate system scalability and reliability
+  - [ ] Add performance monitoring and alerting
+  - [ ] Create performance testing and validation procedures
   - [ ] Add technology stack and dependency documentation
 
 ## Blockers
