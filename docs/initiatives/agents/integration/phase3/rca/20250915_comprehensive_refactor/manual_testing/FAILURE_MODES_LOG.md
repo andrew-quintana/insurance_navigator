@@ -1128,6 +1128,278 @@ Multiple upload endpoints exist in the system, creating confusion and maintenanc
 
 ---
 
+---
+
+## FM-019: Blob Storage Upload Failure - Files Not Actually Uploaded
+
+**Status:** ACTIVE  
+**Date:** 2025-09-16  
+**Severity:** CRITICAL  
+
+### Symptoms
+- Upload jobs create document records with `raw_path` values like `files/user/.../raw/...pdf`
+- Documents show `processing_status: None` instead of `uploaded`
+- Files are not actually accessible in Supabase blob storage (404 Not Found)
+- Signed URLs are generated but file uploads fail silently
+- Enhanced worker cannot process documents because files don't exist in storage
+
+### Observations
+- Recent test shows document `65b26125-1599-549d-aabe-f348ceaec2f4` has:
+  - `raw_path`: `files/user/362b6683-43a4-433d-9e15-45a410297db2/raw/192bd6c4_f73c0464.pdf`
+  - `processing_status`: `None`
+  - File not found in storage: `{"statusCode":"404","error":"not_found","message":"Object not found"}`
+- Upload endpoint returns 200 OK with signed URL but actual file upload fails
+- This blocks the entire pipeline as parsing stage cannot access the file
+
+### Investigation Notes
+- Signed URL generation appears to work correctly
+- File upload to signed URL may be failing due to:
+  - Incorrect signed URL format for local Supabase
+    - if it's different between production and local, it needs to be configurable
+    - the code we work with needs to be scalable to production
+  - Authentication issues with signed URL
+    - use actual /auth endpoints and a new user creation/existing user sign in as necessary to mimic executing the workflow as similarly to production as possible
+  - Storage bucket configuration problems
+  - CORS issues preventing file upload
+
+### Database Investigation Results (Pre-Reset)
+**Total Records Analyzed:**
+- 9 Upload Jobs (3 parse_queued, 4 failed_parse, 2 complete)
+- 9 Documents (3 None status, 3 processed, 3 parsed)
+- 8 Document Chunks (across 3 documents)
+
+**Critical Findings:**
+- All recent files return HTTP 400 when accessed via storage API
+- Documents have `raw_path` values but files don't exist in storage
+- 3 recent documents have `processing_status: None` due to missing files
+- System worked initially but broke around 23:06, suggesting configuration change
+
+**Evidence from Database:**
+```sql
+-- Recent stuck jobs
+Job: 441abedd-414d-4bd2-b344-af7fff52ff9e - parse_queued - queued
+Job: 001fe897-652f-4316-b938-5479cf37166f - parse_queued - queued
+
+-- Documents with missing files
+Document: 4fa73c54-3ced-5da5-a20f-b3fabdc4a3a9 - Status: None
+Document: 65b26125-1599-549d-aabe-f348ceaec2f4 - Status: None
+Document: 3132d851-f119-50e0-a8e5-f9075efab85e - Status: None
+```
+
+### Root Cause
+Under investigation - the file upload to blob storage is failing despite successful signed URL generation. This could be due to:
+1. **Signed URL Format Issue**: Local Supabase may require different signed URL format
+2. **Authentication Problem**: Signed URL authentication not working with local storage
+3. **Storage Configuration**: Local Supabase storage not properly configured for file uploads
+4. **CORS Issues**: File upload blocked by CORS policy
+
+### Solution
+Pending - need to debug the file upload process and fix the signed URL generation for local Supabase storage.
+
+### Evidence
+```bash
+# Document record shows raw_path but file doesn't exist
+raw_path: files/user/362b6683-43a4-433d-9e15-45a410297db2/raw/192bd6c4_f73c0464.pdf
+processing_status: None
+
+# File not found in storage
+curl -X GET "http://127.0.0.1:54321/storage/v1/object/files/user/..."
+# Returns: {"statusCode":"404","error":"not_found","message":"Object not found"}
+```
+
+### Related Issues
+- FM-015: Blob Storage Upload Failure - Signed URL Returns 404 (related)
+- FM-020: Parsing Pipeline Failure - Webhook Processing Issues (blocked by this issue)
+
+---
+
+## FM-020: Parsing Pipeline Failure - Parsed Content Storage Issues
+
+**Status:** RESOLVED  
+**Date:** 2025-09-16  
+**Severity:** CRITICAL  
+
+### Symptoms
+- Upload jobs complete with `failed_parse` status instead of `parsed`
+- Webhook callbacks working (HTTP 200 OK) but parsed content not stored
+- Raw files uploaded successfully to `files/user/{uuid}/raw/` directory
+- **Missing parsed subdirectory**: No `files/user/{uuid}/parsed/` directory created
+- **Missing parsed markdown files**: No `.md` files stored in parsed directory
+- Enhanced worker processes jobs but parsing stage fails to store results
+
+### Observations
+- **Blob Storage Structure Analysis**:
+  - ✅ Raw files successfully stored: `files/user/{uuid}/raw/{filename}.pdf`
+  - ❌ Parsed directory missing: `files/user/{uuid}/parsed/` does not exist
+  - ❌ Parsed markdown files missing: No `.md` files in storage
+- **Recent Job Analysis** (Job `7f67ddfb-2e9d-4af4-81bc-1799965b6992`):
+  - Status: `failed_parse` (not `parsed`)
+  - State: `done` (job completed but failed)
+  - Last Error: `"Failed to store parsed content"`
+  - Document Status: `None` (not `processed`)
+- **Webhook Processing**:
+  - ✅ Webhook endpoint receiving HTTP 200 OK responses
+  - ✅ Mock webhook callbacks working correctly
+  - ❌ Parsed content storage operation failing
+- **Enhanced Worker Logs**:
+  - "Mock webhook callback sent for job" (working)
+  - "HTTP Request: POST .../webhook/llamaparse/... HTTP/1.1 200 OK" (working)
+  - But parsed content storage fails silently
+
+### Investigation Notes
+- Enhanced worker is using mock LlamaParse service instead of real API
+- Webhook endpoint `/api/upload-pipeline/webhook/llamaparse/{job_id}` returns 500 error
+- Parsing stage never updates job status from `parse_queued` to `parsed`
+- This blocks the entire pipeline as chunking and embedding stages never execute
+
+### Database Investigation Results (Pre-Reset)
+**Status Distribution Analysis:**
+- Job Status: 4 failed_parse (44%), 3 parse_queued (33%), 2 complete (22%)
+- Document Status: 3 None (33%), 3 processed (33%), 3 parsed (33%)
+
+**Timeline Analysis:**
+- 23:08:12 - New job created (parse_queued) - **CURRENTLY STUCK**
+- 23:06:39 - New job created (parse_queued) - **CURRENTLY STUCK**
+- 23:06:18 - Job completed successfully (complete) - **WORKING**
+- 22:23:01 - Job completed successfully (complete) - **WORKING**
+
+**Key Observation:** System worked initially but broke around 23:06, suggesting configuration or service change.
+
+**Webhook Error Details:**
+```bash
+# API Server Log Error
+2025-09-16 16:21:13,477 - api.upload_pipeline.webhooks - ERROR - 
+Webhook processing failed for job a82b9022-047c-44ec-aa41-60ff0fbd6131: 
+name 'StorageManager' is not defined
+
+# Enhanced Worker Log Pattern
+"LlamaParse job submitted successfully"
+"parse_job_id": "mock_parse_a82b9022-047c-44ec-aa41-60ff0fbd6131"
+"Failed to send mock webhook callback: Server error '500 Internal Server Error'"
+```
+
+### Root Cause
+The parsing pipeline had a **parsed content storage failure**:
+1. **Webhook Processing**: ✅ WORKING - Webhook endpoint receives HTTP 200 OK responses
+2. **Authentication Issue**: Webhook was trying to use Supabase client without proper JWT context
+3. **Path Format Issue**: Incorrect storage path format - was using `storage://files/{user_id}/{document_id}.md` instead of `storage://files/user/{user_id}/parsed/{document_id}.md`
+4. **Storage Method**: Using Supabase client instead of direct HTTP requests with service role key
+
+### Solution
+1. **Authentication Fix**: Replaced Supabase client with direct HTTP requests using service role key
+2. **Path Format Fix**: Updated path format to `storage://files/user/{user_id}/parsed/{document_id}.md`
+3. **HTTP Method**: Used PUT method instead of POST for file uploads
+4. **Service Role Key**: Used proper authentication with `Authorization: Bearer {service_role_key}` header
+
+### Evidence
+**Before Fix:**
+```bash
+# Jobs stuck in parse_queued status
+001fe897-652f-4316-b938-5479cf37166f - parse_queued - queued - 2025-09-16 23:06:39.981681+00:00 - 2025-09-16 23:06:40.020363+00:00
+
+# Enhanced worker logs show mock usage
+"LlamaParse job submitted successfully"
+"parse_job_id": "mock_parse_001fe897-652f-4316-b938-5479cf37166f"
+
+# Webhook errors
+"Failed to send mock webhook callback for job 001fe897-652f-4316-b938-5479cf37166f: Server error '500 Internal Server Error'"
+```
+
+**After Fix:**
+```bash
+# Webhook processing successful
+Storage upload response: 200 - {"Key":"files/user/b71bf595-bb97-4653-a70b-fb47d103aa0d/parsed/4364edc2-9fb5-5ba5-8e92-c9d408d0588f.md","Id":"97749302-f79c-4179-bc64-836225531e38"}
+
+# Document status updated
+Document Status: parsed
+Parsed Path: storage://files/user/b71bf595-bb97-4653-a70b-fb47d103aa0d/parsed/4364edc2-9fb5-5ba5-8e92-c9d408d0588f.md
+
+# Webhook response
+{"status":"success","message":"Webhook processed"}
+```
+
+### Related Issues
+- FM-019: Blob Storage Upload Failure - Files Not Actually Uploaded (blocking dependency)
+- FM-013: Parsed Content Storage Failure (related parsing issues)
+- FM-012: Enhanced Worker Job Processing Loop Failure (related worker issues)
+
+---
+
+## 📊 **COMPREHENSIVE INVESTIGATION SUMMARY (Pre-Reset)**
+
+**Investigation Date:** 2025-09-16  
+**Investigation Scope:** Complete database state analysis before reset  
+**Investigator:** Development Team  
+
+### **Database State Overview**
+- **Total Upload Jobs:** 9 (3 parse_queued, 4 failed_parse, 2 complete)
+- **Total Documents:** 9 (3 None status, 3 processed, 3 parsed)  
+- **Total Chunks:** 8 (across 3 successfully processed documents)
+- **Investigation Period:** Last 2 hours of activity
+
+### **Critical Issues Identified**
+
+#### **1. Blob Storage Upload Failure (FM-019)**
+- **Severity:** CRITICAL
+- **Impact:** Blocks entire pipeline
+- **Evidence:** All recent files return HTTP 400 when accessed
+- **Pattern:** Documents have `raw_path` but files don't exist in storage
+- **Root Cause:** Signed URL format/authentication issue with local Supabase
+
+#### **2. Parsing Pipeline Failure (FM-020)**
+- **Severity:** CRITICAL  
+- **Impact:** Jobs stuck at `parse_queued` status
+- **Evidence:** Webhook endpoint returns 500 error (`StorageManager` not defined)
+- **Pattern:** Enhanced worker uses mock services instead of real APIs
+- **Root Cause:** Import error in webhooks.py + mock service configuration
+
+### **Timeline Analysis**
+**System Behavior Pattern:**
+- **22:23:01** - ✅ Job completed successfully (complete)
+- **23:06:18** - ✅ Job completed successfully (complete)  
+- **23:06:39** - ❌ Job stuck (parse_queued) - **BREAKING POINT**
+- **23:08:12** - ❌ Job stuck (parse_queued)
+
+**Key Finding:** System worked initially but broke around 23:06, suggesting a configuration or service change occurred.
+
+### **Expected vs Actual Behavior**
+
+#### **Expected Pipeline Flow:**
+1. Upload job created → File uploaded to storage → Status: `uploaded`
+2. Enhanced worker processes → Real LlamaParse called → Status: `parsed`
+3. Chunking stage → Embeddings generated → Status: `complete`
+4. Document status: `processed` with chunks and embeddings
+
+#### **Actual Pipeline Flow:**
+1. Upload job created → File upload fails → Status: `parse_queued` (stuck)
+2. Enhanced worker processes → Mock LlamaParse → Webhook fails → Status: `parse_queued` (stuck)
+3. No chunking or embedding stages execute
+4. Document status: `None` (no processing)
+
+### **Critical Fixes Required After Reset**
+
+#### **Immediate (High Priority):**
+1. **Fix StorageManager Import** in `api/upload_pipeline/webhooks.py` line 96
+2. **Fix Signed URL Generation** for local Supabase storage (environment-aware)
+3. **Configure Enhanced Worker** to use real LlamaParse API instead of mocks
+4. **Test File Upload Flow** end-to-end with real files
+
+#### **Secondary (Medium Priority):**
+5. **Verify Webhook Processing** with proper database updates
+6. **Test Authentication Flow** using real `/auth` endpoints
+7. **Validate Production Scalability** of signed URL generation
+
+### **Investigation Methodology**
+- **Database Analysis:** Comprehensive query of all tables and relationships
+- **Log Analysis:** Review of API server and enhanced worker logs
+- **API Testing:** Direct testing of webhook endpoints and storage access
+- **Timeline Reconstruction:** Analysis of job creation and processing patterns
+
+### **Pre-Reset State Documentation**
+This investigation provides a complete baseline for understanding the system's failure modes before database reset. The findings will guide the implementation of fixes and ensure the upload pipeline works correctly with external APIs.
+
+---
+
 **Last Updated**: $(date)
 **Next Review**: After next testing session
 **Maintainer**: Development Team

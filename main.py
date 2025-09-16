@@ -106,6 +106,15 @@ async def startup_event():
         app.state.config_manager = config_manager
         logger.info(f"Configuration manager initialized for {config_manager.get_environment().value}")
         
+        # Initialize upload pipeline database
+        try:
+            from api.upload_pipeline.database import get_database
+            await get_database().initialize()
+            logger.info("Upload pipeline database initialized successfully")
+        except Exception as e:
+            logger.warning(f"Upload pipeline database initialization failed: {e}")
+            logger.warning("Upload pipeline features may not work properly")
+        
         # Configure logging based on environment
         log_level = getattr(logging, config_manager.service.log_level.upper(), logging.INFO)
         logging.getLogger().setLevel(log_level)
@@ -743,84 +752,7 @@ async def create_upload_job(conn, job_id: str, document_id: str, user_id: str,
 # New Upload Pipeline Endpoint
 # Upload Pipeline Endpoint moved to router at /api/upload-pipeline/upload
 
-# Simple test endpoint
-@app.get("/api/upload-pipeline/test-simple")
-async def test_simple():
-    """Simple test endpoint to verify API server is working."""
-    return {"message": "API server is working", "status": "ok"}
-
-# Temporary direct implementation of upload-file endpoint
-@app.post("/api/upload-pipeline/upload-file/{job_id}")
-async def upload_file_to_storage_direct(
-    job_id: str,
-    file: UploadFile = File(...)
-):
-    """Handle direct file upload to storage for development."""
-    from config.database import get_supabase_service_client
-    
-    try:
-        # Get the job to find the storage path
-        db = get_upload_pipeline_db()
-        job = await db.fetchrow(
-            "SELECT document_id, status FROM upload_pipeline.upload_jobs WHERE job_id = $1",
-            job_id
-        )
-        
-        if not job:
-            raise HTTPException(status_code=404, detail="Job not found")
-        
-        # Get document info
-        doc = await db.fetchrow(
-            "SELECT raw_path FROM upload_pipeline.documents WHERE document_id = $1",
-            job["document_id"]
-        )
-        
-        if not doc:
-            raise HTTPException(status_code=404, detail="Document not found")
-        
-        raw_path = doc["raw_path"]
-        
-        # Upload file to Supabase storage using service role
-        supabase = await get_supabase_service_client()
-        
-        # Extract bucket and key from raw_path
-        if raw_path.startswith("files/user/"):
-            key = raw_path[6:]  # Remove "files/" prefix
-            bucket = "files"
-        else:
-            raise ValueError(f"Invalid raw_path format: {raw_path}")
-        
-        # Read file content
-        file_content = await file.read()
-        
-        # Upload to Supabase storage
-        response = supabase.storage.from_(bucket).upload(
-            key,
-            file_content,
-            file_options={"content-type": file.content_type or "application/octet-stream"}
-        )
-        
-        if response.get('error'):
-            raise HTTPException(
-                status_code=500, 
-                detail=f"Failed to upload file to storage: {response['error']}"
-            )
-        
-        # Update job status to indicate file is uploaded
-        await db.execute(
-            "UPDATE upload_pipeline.upload_jobs SET status = 'uploaded', state = 'queued' WHERE job_id = $1",
-            job_id
-        )
-        
-        logger.info(f"File uploaded successfully to {raw_path} for job {job_id}")
-        
-        return {"message": "File uploaded successfully", "path": raw_path}
-        
-    except Exception as e:
-        logger.error(f"File upload failed for job {job_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
-    finally:
-        await db.close()
+# Upload pipeline endpoints are now handled by the router at /api/upload-pipeline/*
 
 # Legacy endpoint for backward compatibility
 @app.post("/upload-document-backend")
