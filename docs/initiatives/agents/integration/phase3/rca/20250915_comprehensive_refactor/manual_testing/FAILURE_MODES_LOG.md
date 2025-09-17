@@ -2139,6 +2139,74 @@ Final section with more content."""
 
 ---
 
+## FM-032: Embedding Generation Failure - All Zero Vectors
+
+**Status:** ACTIVE  
+**Date:** 2025-09-17  
+**Severity:** CRITICAL  
+
+### Symptoms
+- Upload pipeline processes documents successfully (chunks created, parsed markdown content)
+- RAG tool returns AI-generated failure responses instead of document-based answers
+- All embedding vectors contain only zeros: `[0.0, 0.0, 0.0, ...]` (1536 dimensions)
+- Queries like "what is my deductible" return generic apologies instead of document content
+- Document chunks exist with proper content but embeddings are invalid
+
+### Observations
+- **Pipeline Success**: Documents parsed, chunks created, embeddings generated
+- **Content Quality**: Parsed markdown contains actual insurance document content
+- **Embedding Failure**: All embedding vectors are zero-filled arrays
+- **RAG Impact**: Zero embeddings cause similarity search to fail completely
+- **User Experience**: Chat functionality unusable despite successful document processing
+
+### Investigation Notes
+- **Embedding Generation**: OpenAI text-embedding-3-small model being called
+- **Vector Format**: Embeddings converted to PostgreSQL vector format correctly
+- **Database Storage**: Vectors stored in `document_chunks.embedding` column
+- **API Calls**: OpenAI embedding API calls appear successful (no error logs)
+- **Content Input**: Chunk content is valid and contains actual document text
+
+### Root Cause
+**UNKNOWN - Requires Investigation**: OpenAI embedding API calls appear successful but return zero vectors. Possible causes:
+1. **API Key Issues**: Invalid or expired OpenAI API key
+2. **Model Configuration**: Incorrect model parameters or request format
+3. **Content Preprocessing**: Chunk content being modified before embedding generation
+4. **Response Parsing**: Embedding response not being parsed correctly
+5. **Rate Limiting**: OpenAI API rate limiting causing fallback to zero vectors
+
+### Solution
+**Pending Investigation**: Need to debug OpenAI embedding API integration to determine why zero vectors are being generated despite successful API calls.
+
+### Evidence
+**Database State:**
+```sql
+-- Chunks exist with valid content
+SELECT chunk_id, content, array_length(embedding, 1) as embedding_dims 
+FROM upload_pipeline.document_chunks 
+WHERE document_id = '5f60d27a-de04-4311-89f1-80ef78d57b38';
+
+-- Results show zero embeddings
+chunk_id: 062f2f1f-03e6-4397-b358-289437ec5e11
+content: "1. Introduction\nThis document outlines the terms, conditions, and coverage details..."
+embedding_dims: 1536
+embedding: [0.0, 0.0, 0.0, 0.0, 0.0, ...] (all zeros)
+```
+
+**RAG Tool Behavior:**
+```bash
+# Similarity search fails due to zero embeddings
+RAG Operation SUCCESS - Duration:68.3ms Chunks:0/0 Tokens:0
+Similarity scores: all very low due to zero vectors
+No chunks returned (correctly - zero vectors have no semantic meaning)
+```
+
+### Related Issues
+- FM-030: LlamaParse Summarization (resolved - now extracting verbatim content)
+- FM-031: Enhanced Worker Hardcoded Fallback Chunks (resolved - using real content)
+- This issue prevents RAG functionality despite successful document processing
+
+---
+
 **Last Updated**: 2025-09-17
-**Next Review**: After storage read issue investigation
+**Next Review**: After embedding generation investigation
 **Maintainer**: Development Team
