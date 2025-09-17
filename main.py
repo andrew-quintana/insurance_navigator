@@ -823,7 +823,7 @@ async def upload_document_backend(
         )
         
         # Create document record
-        upload_db = await get_upload_db()
+        upload_db = get_upload_db()
         async with upload_db.get_connection() as conn:
             await conn.execute("""
                 INSERT INTO upload_pipeline.documents 

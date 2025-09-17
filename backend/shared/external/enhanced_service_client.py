@@ -291,8 +291,16 @@ class EnhancedServiceClient:
                     context=context,
                     service_name="openai"
                 )
-                # Extract embeddings from response
-                result = [item.embedding for item in response.data]
+                # Extract embeddings from response - handle OpenAI response format
+                if hasattr(response, 'data') and response.data:
+                    # OpenAI response format: response.data is list of dicts
+                    result = [item['embedding'] if isinstance(item, dict) else item.embedding for item in response.data]
+                elif isinstance(response, dict) and 'data' in response:
+                    # Dict response format
+                    result = [item['embedding'] for item in response['data']]
+                else:
+                    # Direct embedding list
+                    result = response if isinstance(response, list) else [response]
             else:
                 raise RuntimeError("OpenAI service does not support embedding generation")
             
