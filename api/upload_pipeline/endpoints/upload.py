@@ -93,12 +93,26 @@ async def upload_document(
                 }
             )
             
-            # Return existing document response
-            return UploadResponse(
-                job_id=user_existing_document["job_id"],
+            # For duplicate documents, return a placeholder URL since file already exists
+            signed_url = f"http://127.0.0.1:54321/storage/v1/object/{user_existing_document['raw_path']}"
+            upload_expires_at = datetime.utcnow() + timedelta(seconds=config.signed_url_ttl_seconds)
+            
+            # Create a new job for the duplicate upload request
+            duplicate_job_id = uuid4()
+            await _create_upload_job_for_duplicate(
+                job_id=str(duplicate_job_id),
                 document_id=user_existing_document["document_id"],
-                signed_url=user_existing_document["signed_url"],
-                upload_expires_at=user_existing_document["upload_expires_at"]
+                user_id=str(current_user.user_id),
+                raw_path=user_existing_document["raw_path"],
+                db=db
+            )
+            
+            # Return existing document response with new job_id
+            return UploadResponse(
+                job_id=duplicate_job_id,
+                document_id=user_existing_document["document_id"],
+                signed_url=signed_url,
+                upload_expires_at=upload_expires_at
             )
         
         # Check if any other user has uploaded this document content
@@ -149,8 +163,18 @@ async def upload_document(
                     f"user: {current_user.user_id}, source: {cross_user_existing_document['document_id']}"
                 )
                 
+                # Create a job for the duplicated document
+                duplicate_job_id = uuid4()
+                await _create_upload_job_for_duplicate(
+                    job_id=str(duplicate_job_id),
+                    document_id=duplicated_document["document_id"],
+                    user_id=str(current_user.user_id),
+                    raw_path=duplicated_document["raw_path"],
+                    db=db
+                )
+                
                 return UploadResponse(
-                    job_id=None,  # No new job needed since document is already processed
+                    job_id=duplicate_job_id,
                     document_id=duplicated_document["document_id"],
                     signed_url=signed_url,
                     upload_expires_at=upload_expires_at
@@ -430,10 +454,18 @@ async def _generate_signed_url(storage_path: str, ttl_seconds: int) -> str:
     """Generate a signed URL for file upload. For development, return a direct upload URL."""
     config = get_config()
     
-    # For development, use direct upload URL with service role key
+    # For development, use direct upload URL (bypass signed URL authentication issues)
     if config.storage_environment == "development":
-        # Return a URL that the frontend can use with proper authentication
-        return f"http://127.0.0.1:54321/storage/v1/object/files/{storage_path[6:] if storage_path.startswith('files/') else storage_path}"
+        # Handle files/user/{userId}/raw/{filename} format
+        if storage_path.startswith("files/user/"):
+            key = storage_path[6:]  # Remove "files/" prefix
+            bucket = "files"
+            
+            # Return direct upload URL that frontend can PUT to with service role key
+            return f"http://127.0.0.1:54321/storage/v1/object/{bucket}/{key}"
+        else:
+            # Fallback for other path formats
+            return f"http://127.0.0.1:54321/storage/v1/object/{storage_path}"
     
     # For production, use proper Supabase signed URL generation
     try:

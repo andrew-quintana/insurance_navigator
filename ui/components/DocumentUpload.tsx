@@ -38,6 +38,14 @@ export default function DocumentUpload({
   
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Calculate file hash for deduplication
+  const calculateFileHash = async (file: File): Promise<string> => {
+    const buffer = await file.arrayBuffer()
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
+    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+  }
+
   // File validation
   const validateFile = (file: File): string | null => {
     const maxSize = 10 * 1024 * 1024 // 10MB
@@ -101,7 +109,7 @@ export default function DocumentUpload({
     }
   }, [handleFileSelect])
 
-  // Upload file to backend
+  // Upload file to backend using proper signed URL pattern
   const handleUpload = async () => {
     if (!selectedFile) return
 
@@ -112,27 +120,66 @@ export default function DocumentUpload({
     setUploadError(null)
 
     try {
-      // Immediate progress to show frontend activity
-      setUploadMessage("📤 Uploading document...")
-      setUploadProgress(20)
-
       const token = localStorage.getItem("token")
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
       
-      // Try new backend endpoint first, fallback to existing endpoint
-      let uploadUrl = `${apiBaseUrl}/upload-document-backend`
-      let uploadResponse = await fetch(uploadUrl, {
+      // Step 1: Get signed URL from backend (send file metadata only)
+      setUploadMessage("📋 Preparing upload...")
+      setUploadProgress(10)
+      
+      const fileHash = await calculateFileHash(selectedFile)
+      const metadataResponse = await fetch(`${apiBaseUrl}/api/upload-pipeline/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
-        body: (() => {
-          const formData = new FormData()
-          formData.append('file', selectedFile)
-          formData.append('policy_id', selectedFile.name.replace(/\.[^/.]+$/, ""))
-          return formData
-        })(),
+        body: JSON.stringify({
+          filename: selectedFile.name,
+          bytes_len: selectedFile.size,
+          mime: selectedFile.type || 'application/octet-stream',
+          sha256: fileHash,
+          ocr: false
+        })
       })
+      
+      if (!metadataResponse.ok) {
+        throw new Error(`Failed to prepare upload: ${metadataResponse.status}`)
+      }
+      
+      const uploadData = await metadataResponse.json()
+      const { signed_url, document_id, job_id } = uploadData
+      
+      // Step 2: Upload file to signed URL
+      setUploadMessage("📤 Uploading file...")
+      setUploadProgress(50)
+      
+      const fileUploadResponse = await fetch(signed_url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': selectedFile.type || 'application/octet-stream'
+          // Note: Signed URLs should not need additional authorization
+        },
+        body: selectedFile
+      })
+      
+      if (!fileUploadResponse.ok) {
+        throw new Error(`File upload failed: ${fileUploadResponse.status} - ${await fileUploadResponse.text()}`)
+      }
+      
+      // Step 3: Confirm upload completion
+      setUploadMessage("✅ Upload complete!")
+      setUploadProgress(100)
+      
+      const uploadResponse = {
+        ok: true,
+        json: () => Promise.resolve({
+          document_id,
+          job_id,
+          signed_url,
+          filename: selectedFile.name
+        })
+      }
 
       // No fallback needed - /upload-document-backend is the correct endpoint
 

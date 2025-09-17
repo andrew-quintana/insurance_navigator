@@ -37,7 +37,7 @@ async def working_llamaparse_integration():
     LLAMAPARSE_API_KEY = os.getenv("LLAMAPARSE_API_KEY", "llx-CRtlURo7FT74ZMyd...")
     LLAMAPARSE_BASE_URL = "https://api.cloud.llamaindex.ai"
     SUPABASE_URL = "http://127.0.0.1:54321"
-    SUPABASE_SERVICE_ROLE_KEY = "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
+    SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     
     # Generate unique IDs

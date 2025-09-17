@@ -1,5 +1,6 @@
 import httpx
 import logging
+import os
 from typing import Dict, Any, Optional, Union
 from datetime import datetime, timedelta
 import json
@@ -21,9 +22,11 @@ class StorageManager:
         
         # Validate service role key
         if not self.service_role_key or self.service_role_key.strip() == "":
-            # Use hardcoded key for local development if not provided
-            self.service_role_key = "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
-            logger.warning("Service role key not provided, using hardcoded local development key")
+            # Load from environment variables
+            self.service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))
+            if not self.service_role_key:
+                raise ValueError("SUPABASE_SERVICE_ROLE_KEY environment variable must be set")
+            logger.info("Service role key loaded from environment variables")
         
         # HTTP client configuration
         self.client = httpx.AsyncClient(
