@@ -50,7 +50,7 @@ async def working_llamaparse_integration():
     parsed_path = f'files/user/{user_id}/parsed/{doc_id}.md'
     
     # Step 1: Read PDF file
-    with open('examples/simulated_insurance_document.pdf', 'rb') as f:
+    with open('examples/scan_classic_hmo.pdf', 'rb') as f:
         file_content = f.read()
     
     file_hash = hashlib.sha256(file_content).hexdigest()

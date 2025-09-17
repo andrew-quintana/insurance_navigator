@@ -127,61 +127,20 @@ export default function DocumentUpload({
       const token = localStorage.getItem("token")
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
       
-      // Step 2: Get signed URL from backend (metadata only, no file content)
-      setUploadMessage("🔗 Getting signed URL...")
-      setUploadProgress(30)
-      
-      const metadataResponse = await fetch(`${apiBaseUrl}/upload-metadata`, {
+      // Use the working backend endpoint that handles file storage
+      let uploadUrl = `${apiBaseUrl}/upload-document-backend`
+      let uploadResponse = await fetch(uploadUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          filename: selectedFile.name,
-          bytes_len: selectedFile.size,
-          mime: selectedFile.type || 'application/octet-stream',
-          sha256: fileHash,
-          ocr: false
-        })
+        body: (() => {
+          const formData = new FormData()
+          formData.append('file', selectedFile)
+          formData.append('policy_id', selectedFile.name.replace(/\.[^/.]+$/, ""))
+          return formData
+        })(),
       })
-      
-      if (!metadataResponse.ok) {
-        throw new Error(`Failed to get signed URL: ${metadataResponse.status}`)
-      }
-      
-      const uploadData = await metadataResponse.json()
-      const { signed_url, document_id, job_id } = uploadData
-      
-      // Step 3: Upload file to signed URL (backend proxy)
-      setUploadMessage("📤 Uploading file...")
-      setUploadProgress(60)
-      
-      const fileUploadResponse = await fetch(signed_url, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': selectedFile.type || 'application/octet-stream',
-          'Authorization': `Bearer ${token}` // User token for backend proxy
-        },
-        body: selectedFile
-      })
-      
-      if (!fileUploadResponse.ok) {
-        throw new Error(`File upload failed: ${fileUploadResponse.status} - ${await fileUploadResponse.text()}`)
-      }
-      
-      // Step 4: Complete
-      setUploadMessage("✅ Upload complete!")
-      setUploadProgress(100)
-      
-      const uploadResponse = {
-        ok: true,
-        json: () => Promise.resolve({
-          document_id,
-          job_id,
-          filename: selectedFile.name
-        })
-      }
 
       // No fallback needed - /upload-document-backend is the correct endpoint
 

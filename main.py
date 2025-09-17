@@ -810,6 +810,7 @@ async def upload_document_backend(
             logger.info(f"📁 Storing file content in blob storage...")
             
             # Get the raw_path from the database
+            import asyncpg
             conn = await asyncpg.connect(os.getenv('DATABASE_URL'))
             try:
                 doc_info = await conn.fetchrow("""
@@ -855,8 +856,8 @@ async def upload_document_backend(
         return upload_response
         
     except Exception as e:
-        logger.error(f"❌ Legacy upload failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"❌ Legacy upload failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Legacy upload failed: {str(e)}")
 
 # Alternative legacy endpoint without authentication for frontend compatibility
 @app.post("/upload-document-backend-no-auth")
@@ -1477,6 +1478,17 @@ async def get_auth_user(request: Request):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
+
+@app.get("/debug-env")
+async def debug_environment():
+    """Debug endpoint to check environment variable loading."""
+    import os
+    return {
+        "supabase_url": os.getenv("SUPABASE_URL", "NOT_SET"),
+        "service_role_key_present": bool(os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))),
+        "service_role_key_length": len(os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))),
+        "environment": os.getenv("ENVIRONMENT", "NOT_SET")
+    }
 
 @app.get("/health")
 async def health_check():

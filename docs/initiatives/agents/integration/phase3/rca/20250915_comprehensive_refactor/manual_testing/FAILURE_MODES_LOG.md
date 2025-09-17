@@ -1954,6 +1954,61 @@ Status: failed_parse
 
 ---
 
+## FM-029: Upload Metadata Signed URL Authentication Failure
+
+**Status:** ACTIVE  
+**Date:** 2025-09-17  
+**Severity:** HIGH  
+
+### Symptoms
+- Frontend upload via /upload-metadata endpoint fails with signature verification errors
+- Backend upload via /upload-document-backend fails with same signature verification errors  
+- Both signed URL method and backend proxy method fail with identical error
+- Error: "signature verification failed" from Supabase storage (403 Unauthorized)
+- Database records created successfully but files not stored in blob storage
+
+### Observations
+- Manual curl commands to Supabase storage work perfectly with same service role key
+- Environment variables loaded correctly (service_role_key present, correct length)
+- Both frontend→storage and backend→storage fail with identical authentication error
+- Path structure correct: files/user/{user_id}/raw/{filename}
+- File metadata calculated correctly (size, SHA256 hash)
+
+### Investigation Notes
+- Service role key authentication works for bucket access and manual uploads
+- Programmatic HTTP requests (httpx, fetch) rejected by local Supabase storage
+- Issue affects both /upload-metadata (signed URL) and /upload-document-backend (workaround)
+- Local Supabase vs production behavior should be identical for signed URLs
+- May be related to local Supabase storage configuration or RLS policies
+
+### Root Cause
+Under investigation - local Supabase storage authentication configuration issue affecting all programmatic file uploads while manual curl commands succeed.
+
+### Solution
+Pending investigation of:
+1. Local Supabase storage RLS policies
+2. Signed URL generation vs manual authentication differences  
+3. HTTP client request format vs curl command differences
+4. Local development storage configuration issues
+
+### Evidence
+```bash
+# Manual curl works
+curl -X POST -H "Authorization: Bearer {service_role_key}" --data-binary "@file" 
+"http://127.0.0.1:54321/storage/v1/object/files/path" 
+# Returns: {"Key":"files/path","Id":"..."}
+
+# Backend HTTP request fails  
+httpx.post(url, content=file_content, headers={"Authorization": f"Bearer {key}"})
+# Returns: {"statusCode":"403","error":"Unauthorized","message":"signature verification failed"}
+```
+
+### Related Issues
+- Enhanced worker LlamaParse integration (resolved - working with manual file uploads)
+- Frontend upload flow architecture (implemented but blocked by this issue)
+
+---
+
 **Last Updated**: 2025-09-17
-**Next Review**: After enhanced worker LlamaParse integration investigation
+**Next Review**: After signed URL authentication investigation
 **Maintainer**: Development Team
