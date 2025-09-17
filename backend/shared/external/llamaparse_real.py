@@ -239,7 +239,7 @@ class RealLlamaParseService(ServiceInterface):
             
             # Simple form data (no extra fields)
             data = {
-                'parsing_instruction': 'Parse this insurance document and extract all text content',
+                'parsingInstructions': 'Extract the complete text content from this PDF document exactly as it appears. Do not summarize, analyze, or modify the content. Return the raw text with all details, numbers, and specific information preserved.',
                 'result_type': 'markdown'
             }
             

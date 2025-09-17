@@ -7,6 +7,7 @@ integrate with the RAG system, and provide consistent responses using self-consi
 
 import logging
 import asyncio
+import os
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
 
@@ -33,11 +34,21 @@ class InformationRetrievalAgent(BaseAgent):
             use_mock: If True, use mock responses for testing
             **kwargs: Additional arguments passed to BaseAgent
         """
+        # Auto-detect LLM client if not provided
+        llm_client = kwargs.get('llm')
+        if llm_client is None and not use_mock:
+            llm_client = self._get_claude_haiku_llm()
+            if llm_client:
+                logging.info("Auto-detected Claude Haiku LLM client for InformationRetrievalAgent")
+            else:
+                logging.info("No Claude Haiku client available for InformationRetrievalAgent, using mock mode")
+        
         super().__init__(
             name="information_retrieval",
             prompt="",  # Will be loaded from file
             output_schema=InformationRetrievalOutput,
-            mock=use_mock,
+            llm=llm_client,
+            mock=use_mock or llm_client is None,
             **kwargs
         )
         
@@ -45,6 +56,50 @@ class InformationRetrievalAgent(BaseAgent):
         self.terminology_translator = InsuranceTerminologyTranslator()
         self.consistency_checker = SelfConsistencyChecker()
         self.rag_tool = None  # Will be initialized with user context
+    
+    def _get_claude_haiku_llm(self):
+        """
+        Return a callable that invokes Claude Haiku, or None for mock mode.
+        
+        We prefer to avoid hard dependency; if Anthropic client isn't available,
+        we return None and the agent will run in mock mode.
+        """
+        try:
+            from anthropic import Anthropic
+            
+            api_key = os.getenv("ANTHROPIC_API_KEY")
+            if not api_key:
+                return None
+            
+            client = Anthropic(api_key=api_key)
+            model = os.getenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307")
+            
+            def call_llm(prompt: str) -> str:
+                """Call Claude Haiku with the given prompt."""
+                try:
+                    resp = client.messages.create(
+                        model=model,
+                        max_tokens=4000,
+                        temperature=0.2,
+                        messages=[{"role": "user", "content": prompt}],
+                    )
+                    
+                    content = resp.content[0].text if getattr(resp, "content", None) else ""
+                    
+                    if not content:
+                        raise ValueError("Empty response from Claude Haiku")
+                    
+                    return content.strip()
+                    
+                except Exception as e:
+                    logging.error(f"Claude Haiku API call failed: {e}")
+                    raise
+            
+            return call_llm
+            
+        except Exception as e:
+            logging.warning(f"Failed to initialize Anthropic client: {e}")
+            return None
         
     async def retrieve_information(self, input_data: InformationRetrievalInput) -> InformationRetrievalOutput:
         """

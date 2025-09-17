@@ -61,14 +61,25 @@ async def llamaparse_webhook(job_id: str, request: Request):
             f"Received LlamaParse webhook for job {job_id}, document {document_id}, status {payload.get('status')}"
         )
         logger.info(f"Webhook payload keys: {list(payload.keys())}")
-        logger.info(f"Parsed content from payload: '{payload.get('parsed_content', 'NOT_FOUND')}'")
-        logger.info(f"Result from payload: {payload.get('result', 'NOT_FOUND')}")
+        logger.info(f"Full webhook payload: {payload}")
+        logger.info(f"Markdown content: '{payload.get('md', 'NOT_FOUND')}'")
+        logger.info(f"Text content: '{payload.get('txt', 'NOT_FOUND')}'")
+        logger.info(f"JSON content: '{payload.get('json', 'NOT_FOUND')}'")
+        logger.info(f"Parsed content: '{payload.get('parsed_content', 'NOT_FOUND')}'")
+        logger.info(f"Result: {payload.get('result', 'NOT_FOUND')}")
         
         # Handle different webhook statuses
-        if payload.get("status") == "completed":
+        # Process both 'completed' status and None status (some webhooks don't include status)
+        if payload.get("status") == "completed" or payload.get("status") is None:
             # Get parsed content from webhook payload
-            # Try both formats: direct parsed_content or nested result.markdown
-            parsed_content = payload.get("parsed_content", "") or payload.get("result", {}).get("markdown", "")
+            # LlamaParse sends content in 'txt', 'md', and 'json' fields
+            parsed_content = (
+                payload.get("md", "") or  # Markdown format (preferred)
+                payload.get("txt", "") or  # Raw text format
+                payload.get("json", "") or  # JSON format (might contain content)
+                payload.get("parsed_content", "") or  # Fallback to old format
+                payload.get("result", {}).get("markdown", "")  # Another fallback
+            )
             
             if not parsed_content:
                 logger.error(f"No parsed content received for document {document_id}")

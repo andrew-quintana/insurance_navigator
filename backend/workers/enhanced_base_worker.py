@@ -503,18 +503,33 @@ class EnhancedBaseWorker:
             if not storage_path:
                 raise ValueError("No storage_path found in job data")
             
+            # Get document filename from database
+            async with self.db.get_db_connection() as conn:
+                doc_result = await conn.fetchrow("""
+                    SELECT filename FROM upload_pipeline.documents 
+                    WHERE document_id = $1
+                """, document_id)
+                document_filename = doc_result["filename"] if doc_result else "document.pdf"
+            
             # Log storage path for debugging
             logger.info(f"Processing document with storage path: {storage_path}")
             
             # Generate webhook URL for LlamaParse callback
-            webhook_url = f"http://localhost:8000/api/upload-pipeline/webhook/llamaparse/{job_id}"
+            # Use NGROK_URL for local development, production webhook URL for production
+            import os
+            base_url = os.getenv("NGROK_URL") or os.getenv("WEBHOOK_BASE_URL", "http://localhost:8000")
+            # Use the new ngrok URL for API server
+            base_url = "https://f47df0ded4df.ngrok-free.app"
+            webhook_url = f"{base_url}/api/upload-pipeline/webhook/llamaparse/{job_id}"
             webhook_secret = str(uuid.uuid4())  # Generate webhook secret
             
             # DIRECT LlamaParse call (bypassing service layers to avoid rate limiting)
             parse_result = await self._direct_llamaparse_call(
                 file_path=storage_path,
                 job_id=str(job_id),
-                correlation_id=correlation_id
+                correlation_id=correlation_id,
+                document_filename=document_filename,
+                webhook_url=webhook_url
             )
             
             # Store webhook secret in job for verification
@@ -770,53 +785,31 @@ class EnhancedBaseWorker:
             else:
                 raise ValueError(f"Invalid file_path format: {file_path}")
             
-            # Read file from Supabase storage
+            # Read parsed content from storage (not raw file)
             try:
-                response = self.storage_manager.read_blob(file_path)
-                if response.get('error'):
-                    raise ValueError(f"Failed to read file from storage: {response['error']}")
+                # Get parsed content path from database
+                async with self.db.get_db_connection() as conn:
+                    parsed_info = await conn.fetchrow("""
+                        SELECT parsed_path FROM upload_pipeline.documents 
+                        WHERE document_id = $1
+                    """, document_id)
+                    
+                    if not parsed_info or not parsed_info["parsed_path"]:
+                        raise ValueError(f"No parsed content found for document {document_id}")
+                    
+                    parsed_path = parsed_info["parsed_path"]
                 
-                parsed_content = response.get('content', '')
-                if not parsed_content:
-                    # Fallback to mock content if file is empty
-                    self.logger.warning("File content is empty, using mock content for testing")
-                    parsed_content = """# Test Document
-
-This is a test document with some content.
-
-## Section 1
-
-Some more content here.
-
-## Section 2
-
-Even more content.
-
-## Section 3
-
-Final section with more content."""
-                else:
-                    self.logger.info(f"Successfully read {len(parsed_content)} characters from storage")
+                # Read parsed content from storage
+                parsed_content = await self.storage.read_blob(parsed_path)
+                
+                if not parsed_content or len(parsed_content.strip()) == 0:
+                    raise ValueError("Parsed content is empty or not found")
+                
+                self.logger.info(f"Successfully read {len(parsed_content)} characters of parsed content from storage")
                     
             except Exception as e:
-                self.logger.error(f"Failed to read file from storage: {str(e)}")
-                # Fallback to mock content for testing
-                self.logger.info("Using mock content as fallback")
-                parsed_content = """# Test Document
-
-This is a test document with some content.
-
-## Section 1
-
-Some more content here.
-
-## Section 2
-
-Even more content.
-
-## Section 3
-
-Final section with more content."""
+                self.logger.error(f"Failed to read parsed content from storage: {str(e)}")
+                raise ValueError(f"Cannot proceed with chunking - parsed content not available: {str(e)}")
             
             if not parsed_content or len(parsed_content.strip()) == 0:
                 raise ValueError("Parsed content is empty")
@@ -898,7 +891,7 @@ Final section with more content."""
             raise
     
     async def _process_embeddings_real(self, job: Dict[str, Any], correlation_id: str):
-        """Process embeddings using real OpenAI service"""
+        """Process embeddings using real OpenAI service with batch processing"""
         job_id = job["job_id"]
         document_id = job["document_id"]
         user_id = job["user_id"]
@@ -906,7 +899,7 @@ Final section with more content."""
         context = create_error_context(
             correlation_id=correlation_id,
             user_id=user_id,
-                               job_id=str(job_id), 
+            job_id=str(job_id), 
             document_id=str(document_id),
             service_name="openai",
             operation="generate_embeddings"
@@ -934,28 +927,74 @@ Final section with more content."""
                     raise ValueError(f"No chunks found for document {document_id}")
                 
                 chunk_texts = [chunk["text"] for chunk in chunks]
+                total_chunks = len(chunk_texts)
             
-            # Call real OpenAI service for embeddings
-            embeddings = await self.enhanced_service_client.call_openai_service(
-                texts=chunk_texts,
-                user_id=user_id,
+            # Process embeddings in batches to avoid OpenAI batch size limits
+            batch_size = 256  # OpenAI's maximum batch size
+            all_embeddings = []
+            
+            self.logger.info(
+                f"Processing {total_chunks} chunks in batches of {batch_size}",
+                correlation_id=correlation_id,
                 job_id=str(job_id),
                 document_id=str(document_id),
-                correlation_id=correlation_id
+                total_chunks=total_chunks,
+                batch_size=batch_size
             )
             
-            # Store embeddings in database
-            async with self.db.get_db_connection() as conn:
-                for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-                    # Convert embedding list to string format for PostgreSQL vector type
-                    embedding_str = "[" + ",".join([str(x) for x in embedding]) + "]"
-                    await conn.execute("""
-                        UPDATE upload_pipeline.document_chunks 
-                        SET embedding = $1, updated_at = now()
-                        WHERE chunk_id = $2
-                    """, embedding_str, chunk["chunk_id"])
+            for i in range(0, total_chunks, batch_size):
+                batch_end = min(i + batch_size, total_chunks)
+                batch_texts = chunk_texts[i:batch_end]
+                batch_chunks = chunks[i:batch_end]
                 
-                # Update job status
+                self.logger.info(
+                    f"Processing batch {i//batch_size + 1}/{(total_chunks + batch_size - 1)//batch_size} "
+                    f"(chunks {i+1}-{batch_end})",
+                    correlation_id=correlation_id,
+                    job_id=str(job_id),
+                    document_id=str(document_id),
+                    batch_start=i+1,
+                    batch_end=batch_end,
+                    batch_size=len(batch_texts)
+                )
+                
+                # Call OpenAI service for this batch
+                batch_embeddings = await self.enhanced_service_client.call_openai_service(
+                    texts=batch_texts,
+                    user_id=user_id,
+                    job_id=str(job_id),
+                    document_id=str(document_id),
+                    correlation_id=correlation_id
+                )
+                
+                # Store embeddings for this batch
+                async with self.db.get_db_connection() as conn:
+                    for chunk, embedding in zip(batch_chunks, batch_embeddings):
+                        # Convert embedding list to string format for PostgreSQL vector type
+                        embedding_str = "[" + ",".join([str(x) for x in embedding]) + "]"
+                        await conn.execute("""
+                            UPDATE upload_pipeline.document_chunks 
+                            SET embedding = $1, updated_at = now()
+                            WHERE chunk_id = $2
+                        """, embedding_str, chunk["chunk_id"])
+                
+                all_embeddings.extend(batch_embeddings)
+                
+                self.logger.info(
+                    f"Batch {i//batch_size + 1} processed successfully",
+                    correlation_id=correlation_id,
+                    job_id=str(job_id),
+                    document_id=str(document_id),
+                    batch_embeddings=len(batch_embeddings),
+                    total_processed=len(all_embeddings)
+                )
+                
+                # Add small delay between batches to respect rate limits
+                if i + batch_size < total_chunks:
+                    await asyncio.sleep(0.1)  # 100ms delay between batches
+            
+            # Update job status
+            async with self.db.get_db_connection() as conn:
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
                     SET status = 'embeddings_stored', updated_at = now()
@@ -967,7 +1006,8 @@ Final section with more content."""
                 correlation_id=correlation_id,
                 job_id=str(job_id), 
                 document_id=str(document_id),
-                embedding_count=len(embeddings)
+                embedding_count=len(all_embeddings),
+                total_chunks=total_chunks
             )
             
         except Exception as e:
@@ -1118,7 +1158,7 @@ Final section with more content."""
             # Mark job as failed
             await self._update_job_state(job["job_id"], "failed_parse", correlation_id, f"Non-retryable error: {error_type}: {error_message}")
     
-    async def _direct_llamaparse_call(self, file_path: str, job_id: str, correlation_id: str) -> Dict[str, Any]:
+    async def _direct_llamaparse_call(self, file_path: str, job_id: str, correlation_id: str, document_filename: str, webhook_url: str) -> Dict[str, Any]:
         """
         Direct LlamaParse API call bypassing all service layers.
         Matches the reference script implementation exactly.
@@ -1173,23 +1213,29 @@ Final section with more content."""
             
             # Make direct API call exactly like reference script (fresh client, no custom config)
             async with httpx.AsyncClient(timeout=300) as client:
+                # Prepare multipart form data for file upload
                 files = {
-                    'file': ('test.pdf', file_content, 'application/pdf')
+                    'file': (document_filename, file_content, 'application/pdf')
                 }
-                data = {
-                    'parsing_instruction': 'Parse this insurance document and extract all text content',
-                    'result_type': 'text'
+                
+                # Prepare form data (primitive types only for multipart)
+                form_data = {
+                    'parsingInstructions': 'Extract the complete text content from this PDF document exactly as it appears. Do not summarize, analyze, or modify the content. Return the raw text with all details, numbers, and specific information preserved.',
+                    'result_type': 'markdown',
+                    'webhook_url': webhook_url  # Use simple webhook_url parameter
                 }
+                
                 headers = {
                     'Authorization': f'Bearer {LLAMAPARSE_API_KEY}'
                 }
                 
                 self.logger.info(f"Making direct LlamaParse API call for job {job_id}")
+                self.logger.info(f"LlamaParse API form_data: {form_data}")
                 
                 response = await client.post(
                     f'{LLAMAPARSE_BASE_URL}/api/parsing/upload',
                     files=files,
-                    data=data,
+                    data=form_data,
                     headers=headers
                 )
                 
