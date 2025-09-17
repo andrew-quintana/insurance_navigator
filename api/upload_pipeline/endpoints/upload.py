@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Depends, status, File, UploadFile
+from fastapi import APIRouter, HTTPException, Depends, status, File, UploadFile, Request
 from fastapi.responses import JSONResponse
 
 from ..models import UploadRequest, UploadResponse, JobPayloadJobValidated
@@ -93,8 +93,8 @@ async def upload_document(
                 }
             )
             
-            # For duplicate documents, return a placeholder URL since file already exists
-            signed_url = f"http://127.0.0.1:54321/storage/v1/object/{user_existing_document['raw_path']}"
+            # Generate proper signed URL for duplicate document
+            signed_url = await _generate_signed_url(user_existing_document["raw_path"], config.signed_url_ttl_seconds)
             upload_expires_at = datetime.utcnow() + timedelta(seconds=config.signed_url_ttl_seconds)
             
             # Create a new job for the duplicate upload request
@@ -454,18 +454,19 @@ async def _generate_signed_url(storage_path: str, ttl_seconds: int) -> str:
     """Generate a signed URL for file upload. For development, return a direct upload URL."""
     config = get_config()
     
-    # For development, use direct upload URL (bypass signed URL authentication issues)
+    # For development, use backend proxy since local Supabase requires Authorization header
     if config.storage_environment == "development":
         # Handle files/user/{userId}/raw/{filename} format
         if storage_path.startswith("files/user/"):
             key = storage_path[6:]  # Remove "files/" prefix
             bucket = "files"
             
-            # Return direct upload URL that frontend can PUT to with service role key
-            return f"http://127.0.0.1:54321/storage/v1/object/{bucket}/{key}"
+            # Return backend proxy URL that frontend can upload to with user token
+            # Backend will handle the service role key authentication to Supabase
+            return f"http://localhost:8000/api/upload-pipeline/upload-file-proxy/{bucket}/{key}"
         else:
             # Fallback for other path formats
-            return f"http://127.0.0.1:54321/storage/v1/object/{storage_path}"
+            return f"http://localhost:8000/api/upload-pipeline/upload-file-proxy/{storage_path}"
     
     # For production, use proper Supabase signed URL generation
     try:
@@ -581,6 +582,90 @@ async def upload_file_to_storage(
 async def test_endpoint():
     """Test endpoint to verify router is working."""
     return {"message": "Router is working", "status": "ok"}
+
+@router.put("/upload-file-proxy/{bucket}/{key:path}")
+async def upload_file_proxy(
+    bucket: str,
+    key: str,
+    request: Request,
+    current_user: User = Depends(require_user)
+):
+    """
+    Proxy endpoint for file uploads to Supabase storage.
+    This allows frontend to upload files using user token instead of exposing service role key.
+    """
+    try:
+        logger.info(f"File upload proxy request - bucket: {bucket}, key: {key}, user: {current_user.user_id}")
+        
+        # Read file content from request body
+        file_content = await request.body()
+        content_type = request.headers.get("content-type", "application/octet-stream")
+        
+        # Upload to Supabase storage using service role key
+        import httpx
+        import os
+        
+        # Load environment variables explicitly
+        storage_url = os.getenv("SUPABASE_URL", "http://127.0.0.1:54321")
+        service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))
+        
+        # Debug environment variable loading
+        logger.info(f"Storage URL: {storage_url}")
+        logger.info(f"Service role key present: {bool(service_role_key and len(service_role_key) > 10)}")
+        
+        if not service_role_key:
+            raise HTTPException(status_code=500, detail="Storage service role key not configured")
+        
+        async with httpx.AsyncClient() as client:
+            # Debug the exact request being made
+            request_url = f"{storage_url}/storage/v1/object/{bucket}/{key}"
+            request_headers = {
+                "Content-Type": content_type,
+                "Authorization": f"Bearer {service_role_key}",
+                "x-upsert": "true"
+            }
+            
+            logger.info(f"Making storage request: POST {request_url}")
+            logger.info(f"Headers: {list(request_headers.keys())}")
+            logger.info(f"Content size: {len(file_content)} bytes")
+            
+            # Use POST method with x-upsert (works reliably with local Supabase)
+            response = await client.post(
+                request_url,
+                content=file_content,
+                headers=request_headers
+            )
+            
+            logger.info(f"Storage response: {response.status_code}")
+            if response.status_code not in [200, 201]:
+                logger.error(f"Storage response body: {response.text}")
+            
+            if response.status_code in [200, 201]:
+                logger.info(f"File uploaded successfully via proxy - bucket: {bucket}, key: {key}")
+                
+                # Update document status to uploaded
+                db = get_database()
+                async with db.get_connection() as conn:
+                    await conn.execute("""
+                        UPDATE upload_pipeline.documents
+                        SET processing_status = 'uploaded', updated_at = now()
+                        WHERE raw_path = $1
+                    """, f"{bucket}/{key}")
+                
+                return {"status": "success", "message": "File uploaded successfully"}
+            else:
+                logger.error(f"Storage upload failed - {response.status_code}: {response.text}")
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Storage upload failed: {response.text}"
+                )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"File upload proxy error - bucket: {bucket}, key: {key}, error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
+
 
 @router.post("/upload-test")
 async def upload_test(request: UploadRequest):

@@ -109,7 +109,7 @@ export default function DocumentUpload({
     }
   }, [handleFileSelect])
 
-  // Upload file to backend using proper signed URL pattern
+  // Upload file to backend (simple working approach)
   const handleUpload = async () => {
     if (!selectedFile) return
 
@@ -120,15 +120,18 @@ export default function DocumentUpload({
     setUploadError(null)
 
     try {
+      // Immediate progress to show frontend activity
+      setUploadMessage("📤 Uploading document...")
+      setUploadProgress(20)
+
       const token = localStorage.getItem("token")
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
       
-      // Step 1: Get signed URL from backend (send file metadata only)
-      setUploadMessage("📋 Preparing upload...")
-      setUploadProgress(10)
+      // Step 2: Get signed URL from backend (metadata only, no file content)
+      setUploadMessage("🔗 Getting signed URL...")
+      setUploadProgress(30)
       
-      const fileHash = await calculateFileHash(selectedFile)
-      const metadataResponse = await fetch(`${apiBaseUrl}/api/upload-pipeline/upload`, {
+      const metadataResponse = await fetch(`${apiBaseUrl}/upload-metadata`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -144,21 +147,21 @@ export default function DocumentUpload({
       })
       
       if (!metadataResponse.ok) {
-        throw new Error(`Failed to prepare upload: ${metadataResponse.status}`)
+        throw new Error(`Failed to get signed URL: ${metadataResponse.status}`)
       }
       
       const uploadData = await metadataResponse.json()
       const { signed_url, document_id, job_id } = uploadData
       
-      // Step 2: Upload file to signed URL
+      // Step 3: Upload file to signed URL (backend proxy)
       setUploadMessage("📤 Uploading file...")
-      setUploadProgress(50)
+      setUploadProgress(60)
       
       const fileUploadResponse = await fetch(signed_url, {
         method: 'PUT',
         headers: {
-          'Content-Type': selectedFile.type || 'application/octet-stream'
-          // Note: Signed URLs should not need additional authorization
+          'Content-Type': selectedFile.type || 'application/octet-stream',
+          'Authorization': `Bearer ${token}` // User token for backend proxy
         },
         body: selectedFile
       })
@@ -167,7 +170,7 @@ export default function DocumentUpload({
         throw new Error(`File upload failed: ${fileUploadResponse.status} - ${await fileUploadResponse.text()}`)
       }
       
-      // Step 3: Confirm upload completion
+      // Step 4: Complete
       setUploadMessage("✅ Upload complete!")
       setUploadProgress(100)
       
@@ -176,7 +179,6 @@ export default function DocumentUpload({
         json: () => Promise.resolve({
           document_id,
           job_id,
-          signed_url,
           filename: selectedFile.name
         })
       }

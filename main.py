@@ -754,18 +754,40 @@ async def create_upload_job(conn, job_id: str, document_id: str, user_id: str,
 
 # Upload pipeline endpoints are now handled by the router at /api/upload-pipeline/*
 
-# Legacy endpoint for backward compatibility
+# Metadata-only endpoint for proper signed URL flow
+@app.post("/upload-metadata")
+async def upload_metadata(
+    request: UploadRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Metadata-only endpoint - frontend calculates metadata and requests signed URL."""
+    logger.info(f"📋 Upload metadata request - File: {request.filename}, User: {current_user.get('email', 'unknown')}")
+    
+    try:
+        # Call the upload pipeline endpoint to create records and get signed URL
+        from api.upload_pipeline.endpoints.upload import upload_document
+        upload_response = await upload_document(request)
+        
+        logger.info(f"✅ Signed URL generated - document_id: {upload_response.document_id}")
+        return upload_response
+        
+    except Exception as e:
+        logger.error(f"❌ Metadata upload failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Metadata upload failed: {str(e)}")
+
+
+# Legacy endpoint for backward compatibility with existing frontend
 @app.post("/upload-document-backend")
 async def upload_document_backend(
     file: UploadFile = File(...),
     policy_id: str = Form(...),
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    """Legacy upload endpoint - redirects to new upload pipeline."""
+    """Legacy upload endpoint - handles full file upload for backward compatibility."""
     logger.info(f"📄 Legacy upload request received - File: {file.filename}, User: {current_user.get('email', 'unknown')}")
     
     try:
-        # Read file content
+        # Read file content and calculate metadata
         contents = await file.read()
         file_size = len(contents)
         file_sha256 = hashlib.sha256(contents).hexdigest()
@@ -779,14 +801,57 @@ async def upload_document_backend(
             ocr=False
         )
         
-        # Call the new upload pipeline endpoint to create records and get signed URL
+        # Call the upload pipeline endpoint to create records
         from api.upload_pipeline.endpoints.upload import upload_document
         upload_response = await upload_document(upload_request)
         
-        # TODO: Frontend should upload file to signed URL
-        # The backend should NOT store the file - that's the frontend's responsibility
-        logger.info(f"✅ Upload metadata processed, signed URL generated for frontend upload")
+        # Store the file content directly (backend handles storage)
+        if upload_response.document_id:
+            logger.info(f"📁 Storing file content in blob storage...")
+            
+            # Get the raw_path from the database
+            conn = await asyncpg.connect(os.getenv('DATABASE_URL'))
+            try:
+                doc_info = await conn.fetchrow("""
+                    SELECT raw_path FROM upload_pipeline.documents 
+                    WHERE document_id = $1
+                """, upload_response.document_id)
+                
+                if doc_info and doc_info['raw_path']:
+                    raw_path = doc_info['raw_path']
+                    
+                    # Store file using direct HTTP request (proven to work)
+                    import httpx
+                    storage_url = os.getenv("SUPABASE_URL", "http://127.0.0.1:54321")
+                    service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))
+                    
+                    async with httpx.AsyncClient() as client:
+                        response = await client.post(
+                            f"{storage_url}/storage/v1/object/{raw_path}",
+                            content=contents,
+                            headers={
+                                "Content-Type": file.content_type or "application/octet-stream",
+                                "Authorization": f"Bearer {service_role_key}",
+                                "x-upsert": "true"
+                            }
+                        )
+                        
+                        if response.status_code in [200, 201]:
+                            logger.info(f"✅ File successfully stored: {raw_path}")
+                            
+                            # Update document status to uploaded
+                            await conn.execute("""
+                                UPDATE upload_pipeline.documents
+                                SET processing_status = 'uploaded', updated_at = now()
+                                WHERE document_id = $1
+                            """, upload_response.document_id)
+                        else:
+                            logger.error(f"❌ Failed to store file: {response.status_code} - {response.text}")
+                
+            finally:
+                await conn.close()
         
+        logger.info(f"✅ Upload completed - document_id: {upload_response.document_id}")
         return upload_response
         
     except Exception as e:
