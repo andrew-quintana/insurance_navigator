@@ -31,7 +31,7 @@ router = APIRouter()
 @router.post("/upload", response_model=UploadResponse)
 async def upload_document(
     request: UploadRequest,
-    # current_user: User = Depends(require_user)  # Temporarily disabled for testing
+    current_user: User = Depends(require_user)  # Re-enabled authentication
 ):
     """
     Upload a new document for processing.
@@ -57,10 +57,8 @@ async def upload_document(
         config = get_config()
         db = get_database()
         
-        # Mock user for testing (temporarily disabled authentication)
-        # Use consistent mock user ID to allow content deduplication to work
-        MOCK_USER_ID = "00000000-0000-0000-0000-000000000001"
-        current_user = type('MockUser', (), {'user_id': MOCK_USER_ID})()
+        # Use authenticated user (no more hardcoded UUID)
+        logger.info(f"Upload request from authenticated user: {current_user.user_id}")
         
         # Check concurrent job limits
         await _check_concurrent_job_limits(current_user.user_id, db)
