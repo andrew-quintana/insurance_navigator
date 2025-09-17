@@ -1136,6 +1136,8 @@ Final section with more content."""
                 # Try to read from storage
                 storage_url = os.getenv("SUPABASE_URL", "http://127.0.0.1:54321")
                 service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))
+                if not service_role_key:
+                    raise Exception("SUPABASE_SERVICE_ROLE_KEY environment variable not set")
                 
                 if file_path.startswith('files/'):
                     bucket = 'files'

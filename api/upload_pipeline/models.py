@@ -37,7 +37,7 @@ class UploadRequest(BaseModel):
 class UploadResponse(BaseModel):
     """Response model for document upload."""
     
-    job_id: uuid.UUID = Field(..., description="Unique job identifier")
+    job_id: Optional[uuid.UUID] = Field(None, description="Unique job identifier (None for duplicates)")
     document_id: uuid.UUID = Field(..., description="Unique document identifier")
     signed_url: str = Field(..., description="Signed URL for file upload")
     upload_expires_at: datetime = Field(..., description="Upload URL expiration time")

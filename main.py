@@ -779,9 +779,15 @@ async def upload_document_backend(
             ocr=False
         )
         
-        # Call the new upload pipeline endpoint
+        # Call the new upload pipeline endpoint to create records and get signed URL
         from api.upload_pipeline.endpoints.upload import upload_document
-        return await upload_document(upload_request)
+        upload_response = await upload_document(upload_request)
+        
+        # TODO: Frontend should upload file to signed URL
+        # The backend should NOT store the file - that's the frontend's responsibility
+        logger.info(f"✅ Upload metadata processed, signed URL generated for frontend upload")
+        
+        return upload_response
         
     except Exception as e:
         logger.error(f"❌ Legacy upload failed: {str(e)}")
