@@ -54,7 +54,8 @@ def get_cors_config() -> Dict[str, Any]:
             "Cache-Control",
             "Range",
             "Content-Length",
-            "Content-Range"
+            "Content-Range",
+            "ngrok-skip-browser-warning"
         ],
         "expose_headers": ["Content-Length", "Content-Range"],
         "max_age": 7200  # 2 hours

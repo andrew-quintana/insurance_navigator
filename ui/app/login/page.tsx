@@ -65,6 +65,7 @@ export default function LoginPage() {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'Origin': window.location.origin,
+          'ngrok-skip-browser-warning': 'true',
         },
         credentials: 'include',
         mode: 'cors',
