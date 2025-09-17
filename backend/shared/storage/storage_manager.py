@@ -146,7 +146,7 @@ class StorageManager:
     
     def _parse_storage_path(self, path: str) -> tuple[str, str]:
         """Parse storage path to extract bucket and key"""
-        # Expected format: storage://{bucket}/{user_id}/{document_id}.{ext}
+        # Expected format: storage://{bucket}/user/{user_id}/parsed/{document_id}.{ext}
         if not path.startswith("storage://"):
             raise ValueError(f"Invalid storage path format: {path}")
         
@@ -168,7 +168,10 @@ class StorageManager:
             # In production, this would call Supabase storage API to get signed URLs
             if "localhost" in self.base_url or "127.0.0.1" in self.base_url:
                 # Local development - direct access
-                return f"{self.base_url}/storage/v1/object/{method}/{bucket}/{key}"
+                if method == "GET":
+                    return f"{self.base_url}/storage/v1/object/{bucket}/{key}"
+                else:
+                    return f"{self.base_url}/storage/v1/object/{method}/{bucket}/{key}"
             else:
                 # Production - get signed URL from Supabase
                 response = await self.client.post(

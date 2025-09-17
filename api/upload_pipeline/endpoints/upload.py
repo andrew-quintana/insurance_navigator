@@ -450,7 +450,7 @@ async def _generate_signed_url(storage_path: str, ttl_seconds: int) -> str:
             if response.get('error'):
                 raise ValueError(f"Failed to generate signed URL: {response['error']}")
             
-            return response['signedURL']
+            return response['signed_url']
         
         # Handle legacy storage:// format
         elif storage_path.startswith("storage://"):
@@ -462,7 +462,7 @@ async def _generate_signed_url(storage_path: str, ttl_seconds: int) -> str:
                 if response.get('error'):
                     raise ValueError(f"Failed to generate signed URL: {response['error']}")
                 
-                return response['signedURL']
+                return response['signed_url']
         
         raise ValueError(f"Invalid storage path format: {storage_path}")
         

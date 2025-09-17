@@ -162,16 +162,16 @@ class RAGTool:
                        NULL as section_path, NULL as section_title,
                        NULL as page_start, NULL as page_end,
                        NULL as tokens,
-                       1 - (dc.embedding <=> '{vector_string}'::vector) as similarity
+                       1 - (dc.embedding <=> $1::vector) as similarity
                 FROM {schema}.document_chunks dc
                 JOIN {schema}.documents d ON dc.document_id = d.document_id
-                WHERE d.user_id = $1
+                WHERE d.user_id = $2
                   AND dc.embedding IS NOT NULL
-                  AND 1 - (dc.embedding <=> '{vector_string}'::vector) > $2
-                ORDER BY dc.embedding <=> '{vector_string}'::vector
-                LIMIT $3
+                  AND 1 - (dc.embedding <=> $1::vector) > $3
+                ORDER BY dc.embedding <=> $1::vector
+                LIMIT $4
             """
-            rows = await conn.fetch(sql, self.user_id, self.config.similarity_threshold, self.config.max_chunks)
+            rows = await conn.fetch(sql, vector_string, self.user_id, self.config.similarity_threshold, self.config.max_chunks)
             chunks = []
             total_tokens = 0
             for row in rows:
