@@ -282,7 +282,13 @@ class ServiceRouter:
             if "llamaparse_config" in config:
                 llamaparse_config = config["llamaparse_config"]
                 mock_llamaparse = MockLlamaParseService()
-                real_llamaparse = RealLlamaParseService(llamaparse_config)
+                real_llamaparse = RealLlamaParseService(
+                    api_key=llamaparse_config["api_key"],
+                    base_url=llamaparse_config["api_url"],
+                    rate_limit_per_minute=llamaparse_config.get("requests_per_minute", 60),
+                    timeout_seconds=llamaparse_config.get("timeout_seconds", 30),
+                    max_retries=llamaparse_config.get("max_retries", 3)
+                )
                 self.register_service("llamaparse", mock_llamaparse, real_llamaparse)
             
             # Register OpenAI service

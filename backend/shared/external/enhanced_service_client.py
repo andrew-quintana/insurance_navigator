@@ -39,7 +39,7 @@ class EnhancedServiceClient:
         self.error_handler = WorkerErrorHandler(logger_name)
         self.logger = StructuredLogger(logger_name)
         self.retry_config = {
-            "max_retries": 3,
+            "max_retries": 0,  # Disable retries for LlamaParse to avoid rate limiting
             "base_delay": 1.0,
             "max_delay": 60.0,
             "exponential_base": 2.0
