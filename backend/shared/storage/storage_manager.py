@@ -22,8 +22,12 @@ class StorageManager:
         
         # Validate service role key
         if not self.service_role_key or self.service_role_key.strip() == "":
-            # Load from environment variables
-            self.service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))
+            # Load from environment variables - prioritize development key for local development
+            environment = os.getenv("ENVIRONMENT", "development")
+            if environment == "development":
+                self.service_role_key = os.getenv("SERVICE_ROLE_KEY", "")
+            else:
+                self.service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))
             if not self.service_role_key:
                 raise ValueError("SUPABASE_SERVICE_ROLE_KEY environment variable must be set")
             logger.info("Service role key loaded from environment variables")
