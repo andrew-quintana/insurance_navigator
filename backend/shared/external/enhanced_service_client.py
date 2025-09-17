@@ -274,13 +274,27 @@ class EnhancedServiceClient:
                 self.error_handler.log_error(error)
                 raise RuntimeError("Mock service detected in production - this should not happen")
             
-            # Call the service with retry logic
-            result = await self._call_with_retry(
-                service.generate_embeddings,
-                texts,
-                context=context,
-                service_name="openai"
-            )
+            # Call the service with retry logic - use correct method name
+            if hasattr(service, 'generate_embeddings'):
+                result = await self._call_with_retry(
+                    service.generate_embeddings,
+                    texts,
+                    context=context,
+                    service_name="openai"
+                )
+            elif hasattr(service, 'create_embeddings'):
+                # RealOpenAIService uses create_embeddings
+                response = await self._call_with_retry(
+                    service.create_embeddings,
+                    texts,
+                    correlation_id=context.correlation_id,
+                    context=context,
+                    service_name="openai"
+                )
+                # Extract embeddings from response
+                result = [item.embedding for item in response.data]
+            else:
+                raise RuntimeError("OpenAI service does not support embedding generation")
             
             self.logger.info(
                 "OpenAI service call successful",

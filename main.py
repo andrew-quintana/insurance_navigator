@@ -809,9 +809,46 @@ async def upload_document_backend(
             ocr=False
         )
         
-        # Call the upload pipeline endpoint to create records
-        from api.upload_pipeline.endpoints.upload import upload_document
-        upload_response = await upload_document(upload_request)
+        # Create upload records directly (don't call FastAPI endpoint function)
+        from api.upload_pipeline.database import get_database as get_upload_db
+        from api.upload_pipeline.utils.upload_pipeline_utils import generate_document_id, generate_storage_path
+        from uuid import uuid4
+        
+        # Generate document ID and storage path
+        document_id = generate_document_id(str(current_user.get("id", "unknown")), file_sha256)
+        raw_path = generate_storage_path(
+            str(current_user.get("id", "unknown")),
+            str(document_id),
+            file.filename
+        )
+        
+        # Create document record
+        upload_db = await get_upload_db()
+        async with upload_db.get_connection() as conn:
+            await conn.execute("""
+                INSERT INTO upload_pipeline.documents 
+                (document_id, user_id, filename, mime, bytes_len, file_sha256, 
+                 raw_path, processing_status, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), now())
+            """, document_id, current_user.get("id"), file.filename, 
+                 file.content_type or "application/octet-stream", file_size, file_sha256, 
+                 raw_path, 'uploaded')
+            
+            # Create job record
+            job_id = uuid4()
+            await conn.execute("""
+                INSERT INTO upload_pipeline.upload_jobs 
+                (job_id, document_id, status, state, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, now(), now())
+            """, job_id, document_id, 'uploaded', 'queued')
+        
+        # Create upload response
+        upload_response = type('UploadResponse', (), {
+            'document_id': document_id,
+            'job_id': job_id,
+            'signed_url': f"http://localhost:8000/upload-complete",
+            'upload_expires_at': None
+        })()
         
         # Store the file content directly (backend handles storage)
         if upload_response.document_id:
