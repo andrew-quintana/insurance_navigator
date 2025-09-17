@@ -387,6 +387,9 @@ class EnhancedBaseWorker:
             elif status == "parsed":
                 await self._process_validation_real(job, correlation_id)
                 # Job status will be updated to "parse_validated" by _process_validation_real
+            elif status == "failed_parse":
+                # Retry failed parsing jobs
+                await self._retry_failed_parse(job, correlation_id)
             elif status == "parse_validated":
                 await self._process_chunking_real(job, correlation_id)
                 # Job status will be updated to "chunks_stored" by _process_chunking_real
@@ -568,6 +571,78 @@ class EnhancedBaseWorker:
                             error=str(e))
             raise
     
+    async def _retry_failed_parse(self, job: Dict[str, Any], correlation_id: str):
+        """Retry failed parsing jobs with retry limits"""
+        job_id = job["job_id"]
+        document_id = job["document_id"]
+        user_id = job["user_id"]
+        
+        context = create_error_context(
+            correlation_id=correlation_id,
+            user_id=user_id,
+            job_id=str(job_id),
+            document_id=str(document_id),
+            operation="retry_failed_parse"
+        )
+        
+        try:
+            # Check retry count
+            async with self.db.get_db_connection() as conn:
+                retry_info = await conn.fetchrow("""
+                    SELECT retry_count, last_error
+                    FROM upload_pipeline.upload_jobs 
+                    WHERE job_id = $1
+                """, job_id)
+                
+                if not retry_info:
+                    self.logger.error(f"Job not found for retry: {job_id}")
+                    return
+                
+                retry_count = retry_info.get("retry_count", 0)
+                max_retries = self.config.max_retries
+                
+                if retry_count >= max_retries:
+                    self.logger.warning(
+                        f"Job {job_id} has exceeded max retries ({max_retries}), marking as permanently failed",
+                        correlation_id=correlation_id,
+                        job_id=str(job_id),
+                        retry_count=retry_count
+                    )
+                    await self._update_job_state(job_id, "permanently_failed", correlation_id, 
+                                               f"Exceeded max retries ({max_retries})")
+                    return
+                
+                # Increment retry count
+                await conn.execute("""
+                    UPDATE upload_pipeline.upload_jobs
+                    SET retry_count = retry_count + 1, 
+                        status = 'parse_queued',
+                        last_error = NULL,
+                        updated_at = now()
+                    WHERE job_id = $1
+                """, job_id)
+                
+                self.logger.info(
+                    f"Retrying failed parse job {job_id} (attempt {retry_count + 1}/{max_retries})",
+                    correlation_id=correlation_id,
+                    job_id=str(job_id),
+                    retry_count=retry_count + 1
+                )
+                
+                # Process the job again
+                await self._process_parsing_real(job, correlation_id)
+                
+        except Exception as e:
+            self.logger.error(
+                f"Failed to retry job {job_id}: {str(e)}",
+                correlation_id=correlation_id,
+                job_id=str(job_id),
+                error=str(e)
+            )
+            # Mark as permanently failed if retry mechanism itself fails
+            await self._update_job_state(job_id, "permanently_failed", correlation_id, 
+                                       f"Retry mechanism failed: {str(e)}")
+
     async def _process_validation_real(self, job: Dict[str, Any], correlation_id: str):
         """Process document validation with real content"""
         job_id = job["job_id"]
@@ -754,19 +829,49 @@ Final section with more content."""
             # Store chunks in database
             import hashlib
             async with self.db.get_db_connection() as conn:
-                for i, chunk in enumerate(chunks):
-                    chunk_id = str(uuid.uuid4())
-                    chunk_sha = hashlib.sha256(chunk["text"].encode('utf-8')).hexdigest()
-                    await conn.execute("""
-                        INSERT INTO upload_pipeline.document_chunks 
-                        (chunk_id, document_id, chunker_name, chunker_version, chunk_ord, text, chunk_sha, 
-                         embed_model, embed_version, vector_dim, embedding, created_at, updated_at)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), now())
-                    """, chunk_id, document_id, chunk["chunker_name"], chunk["chunker_version"], 
-                        i, chunk["text"], chunk_sha, "text-embedding-3-small", "1", 1536, 
-                        "[" + ",".join(["0.0"] * 1536) + "]")  # Placeholder embedding vector as string
+                # Check if chunks already exist for this document
+                existing_chunks = await conn.fetchval("""
+                    SELECT COUNT(*) FROM upload_pipeline.document_chunks 
+                    WHERE document_id = $1 AND chunker_name = $2
+                """, document_id, chunks[0]["chunker_name"] if chunks else "markdown-simple")
                 
-                # Update job status
+                if existing_chunks > 0:
+                    self.logger.info(
+                        f"Chunks already exist for document {document_id}, skipping chunking and continuing pipeline",
+                        correlation_id=correlation_id,
+                        job_id=str(job_id),
+                        document_id=str(document_id),
+                        existing_chunks=existing_chunks
+                    )
+                    # Chunks already exist, continue to next stage without error
+                else:
+                    # Insert chunks only if they don't exist
+                    for i, chunk in enumerate(chunks):
+                        chunk_id = str(uuid.uuid4())
+                        chunk_sha = hashlib.sha256(chunk["text"].encode('utf-8')).hexdigest()
+                        try:
+                            await conn.execute("""
+                                INSERT INTO upload_pipeline.document_chunks 
+                                (chunk_id, document_id, chunker_name, chunker_version, chunk_ord, text, chunk_sha, 
+                                 embed_model, embed_version, vector_dim, embedding, created_at, updated_at)
+                                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), now())
+                            """, chunk_id, document_id, chunk["chunker_name"], chunk["chunker_version"], 
+                                i, chunk["text"], chunk_sha, "text-embedding-3-small", "1", 1536, 
+                                "[" + ",".join(["0.0"] * 1536) + "]")  # Placeholder embedding vector as string
+                        except Exception as e:
+                            if "duplicate key value violates unique constraint" in str(e):
+                                self.logger.info(
+                                    f"Chunk {i} already exists for document {document_id}, skipping",
+                                    correlation_id=correlation_id,
+                                    job_id=str(job_id),
+                                    document_id=str(document_id),
+                                    chunk_ord=i
+                                )
+                                continue  # Skip this chunk and continue with the next one
+                            else:
+                                raise  # Re-raise if it's a different error
+                
+                # Update job status to chunks_stored (whether chunks were inserted or already existed)
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
                     SET status = 'chunks_stored', updated_at = now()
@@ -774,11 +879,12 @@ Final section with more content."""
                 """, job_id)
                 
                 self.logger.info(
-                "Document chunking completed successfully",
-                correlation_id=correlation_id,
+                    f"Chunking stage completed for document {document_id}",
+                    correlation_id=correlation_id,
                     job_id=str(job_id),
                     document_id=str(document_id),
-                chunk_count=len(chunks)
+                    existing_chunks=existing_chunks,
+                    chunk_count=len(chunks)
                 )
         
         except Exception as e:
@@ -843,11 +949,13 @@ Final section with more content."""
             # Store embeddings in database
             async with self.db.get_db_connection() as conn:
                 for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
+                    # Convert embedding list to string format for PostgreSQL vector type
+                    embedding_str = "[" + ",".join([str(x) for x in embedding]) + "]"
                     await conn.execute("""
                         UPDATE upload_pipeline.document_chunks 
                         SET embedding = $1, updated_at = now()
                         WHERE chunk_id = $2
-                    """, embedding, chunk["chunk_id"])
+                    """, embedding_str, chunk["chunk_id"])
                 
                 # Update job status
                 await conn.execute("""

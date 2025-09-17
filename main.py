@@ -780,7 +780,8 @@ async def upload_document_backend(
         )
         
         # Call the new upload pipeline endpoint
-        return await upload_document_v2(upload_request, current_user)
+        from api.upload_pipeline.endpoints.upload import upload_document
+        return await upload_document(upload_request)
         
     except Exception as e:
         logger.error(f"❌ Legacy upload failed: {str(e)}")
@@ -817,7 +818,8 @@ async def upload_document_backend_no_auth(
         }
         
         # Call the new upload pipeline endpoint
-        return await upload_document_v2(upload_request, mock_user)
+        from api.upload_pipeline.endpoints.upload import upload_document
+        return await upload_document(upload_request)
         
     except Exception as e:
         logger.error(f"❌ Legacy upload failed: {str(e)}")

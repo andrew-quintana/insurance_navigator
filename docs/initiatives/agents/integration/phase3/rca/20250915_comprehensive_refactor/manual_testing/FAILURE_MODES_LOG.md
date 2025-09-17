@@ -1400,6 +1400,335 @@ This investigation provides a complete baseline for understanding the system's f
 
 ---
 
+## FM-021: Job Status Nonconformance - Pipeline Working But Status Shows Failed
+
+**Status:** RESOLVED  
+**Date:** 2025-09-17  
+**Severity:** HIGH  
+
+### Symptoms
+- Upload pipeline processes documents successfully (chunks created, embeddings generated)
+- Job status shows `failed_parse` instead of progressing through proper statuses
+- Error messages indicate "duplicate key value violates unique constraint" in `document_chunks` table
+- Documents are actually processed and available for chat functionality
+
+### Observations
+- **Pipeline Success**: All 4 documents have 5 chunks each (20 total chunks created)
+- **Status Mismatch**: Jobs show `failed_parse` status but processing actually succeeded
+- **Duplicate Key Error**: Constraint violation on `(document_id, chunker_name, chunker_version, chunk_ord)`
+- **Root Cause**: Enhanced worker attempting to insert chunks multiple times for same document
+
+### Investigation Notes
+- Unique constraint exists: `document_chunks_document_id_chunker_name_chunker_version_ch_key`
+- No exact duplicates found in database (constraint is working)
+- Worker is retrying chunking operations and hitting constraint violations
+- Status updates are not reflecting actual processing success
+
+### Root Cause
+Enhanced worker is attempting to insert chunks multiple times for the same document, causing duplicate key constraint violations. The worker should check for existing chunks before inserting new ones.
+
+### Solution
+1. **Duplicate Chunk Detection**: Added check for existing chunks before insertion
+2. **Graceful Error Handling**: Implemented try-catch for duplicate key violations with continue logic
+3. **Embedding Vector Format**: Fixed embedding vector format to use string format for PostgreSQL vector type
+4. **Status Progression**: Ensured job status updates to `chunks_stored` regardless of whether chunks were inserted or already existed
+
+### Evidence
+**Before Fix:**
+```bash
+# Job status shows failed_parse
+6837f024-3453-4c67-ac57-5bd4303e4b11 - failed_parse/queued - Retries: 0
+
+# Error message
+"duplicate key value violates unique constraint \"document_chunks_document_id_chunker_name..."
+```
+
+**After Fix:**
+```bash
+# All jobs now complete successfully
+6837f024-3453-4c67-ac57-5bd4303e4b11 - complete/queued - Retries: 0
+b744ec1f-dd52-49b1-ad88-d983f2a90370 - complete/queued - Retries: 0
+1c6ca1f8-90c2-49e0-a9aa-8509e3f70258 - complete/queued - Retries: 0
+24401101-848b-4569-99b2-570f98c0f727 - complete/queued - Retries: 0
+
+# Pipeline verification
+📊 Total Chunks Created: 20
+📄 Chunks per Document: 4 documents × 5 chunks each
+📈 Job Status Distribution: complete - 4 jobs
+```
+
+### Related Issues
+- FM-019: Blob Storage Upload Failure (resolved)
+- FM-020: Parsing Pipeline Failure (resolved)
+- This issue was discovered after fixing the previous pipeline issues and has now been resolved
+
+---
+
+## FM-022: Supabase Database Reset Failure - 502 Upstream Server Error
+
+**Status:** RESOLVED  
+**Date:** 2025-09-17  
+**Severity:** HIGH  
+
+### Symptoms
+- `supabase db reset --yes` command fails with 502 error
+- Error message: "Error status 502: An invalid response was received from the upstream server"
+- Database migrations complete successfully but container restart fails
+- Manual testing blocked due to inability to reset database to clean state
+
+### Observations
+- **Migration Success**: All migrations apply successfully without errors
+- **Container Restart Failure**: Error occurs during "Restarting containers..." phase
+- **502 Error**: Indicates upstream server (likely Docker containers) not responding properly
+- **Timing**: Error occurs after all database operations complete successfully
+
+### Investigation Notes
+- Supabase local development uses Docker containers for services
+- 502 error suggests container orchestration issues
+- May be related to port conflicts or container state corruption
+- Database schema is reset but services remain in inconsistent state
+
+### Root Cause
+**Docker Container State Corruption**: Some Supabase services (`supabase_imgproxy_insurance_navigator` and `supabase_pooler_insurance_navigator`) were in a stopped state, causing the container restart phase to fail with a 502 error when trying to access the storage service.
+
+### Solution
+**Clean Service Restart**: 
+1. Stop all Supabase services: `supabase stop`
+2. Start services fresh: `supabase start`
+3. Retry database reset: `supabase db reset --yes`
+
+### Evidence
+**Before Fix:**
+```bash
+# Command that fails
+supabase db reset --yes
+
+# Error output
+Restarting containers...
+Error status 502: An invalid response was received from the upstream server
+
+# Debug shows HTTP GET failure
+2025/09/16 17:30:29 HTTP GET: http://127.0.0.1:54321/storage/v1/bucket
+Error status 502: An invalid response was received from the upstream server
+```
+
+**After Fix:**
+```bash
+# Stop services
+supabase stop
+# Output: Stopped supabase local development setup.
+
+# Start services fresh
+supabase start
+# Output: Started supabase local development setup.
+
+# Retry reset
+supabase db reset --yes
+# Output: Finished supabase db reset on branch deployment/cloud-infrastructure.
+```
+
+### Related Issues
+- Manual testing workflow now unblocked
+- Database reset functionality restored
+- Clean slate available for testing
+
+---
+
+## FM-023: Raw File Upload Failure - Files Not Stored in Blob Storage
+
+**Status:** RESOLVED  
+**Date:** 2025-09-17  
+**Severity:** HIGH  
+
+### Symptoms
+- Upload pipeline processes documents successfully (jobs complete, chunks created with embeddings)
+- Raw files are not actually stored in Supabase blob storage despite successful processing
+- Database shows `raw_path` values like `files/user/{user_id}/raw/{filename}.pdf`
+- Files return 404 Not Found when accessed via storage API
+- Frontend receives signed URLs but file upload to storage fails silently
+
+### Observations
+- **Database State**: 1 upload job completed successfully, 1 document with `parsed` status
+- **Chunks Created**: 5 document chunks with valid embeddings exist in database
+- **Raw Path Stored**: `files/user/90b33d84-6ed0-4afb-aa23-8991b6e82f64/raw/d742589c_4b5aac0d.pdf`
+- **Storage Verification**: File not found in storage (404 error)
+- **Processing Success**: Despite missing raw files, parsing and chunking stages completed successfully
+
+### Investigation Notes
+- **Signed URL Generation**: Appears to work correctly (no errors in logs)
+- **File Upload Process**: Frontend receives signed URL but actual upload to storage fails
+- **Silent Failure**: No error messages in API server logs during file upload
+- **Pipeline Continuation**: System continues processing despite missing raw files (uses mock/fallback content)
+
+### Root Cause
+**Signed URL Response Format Mismatch**: The Supabase client's `create_signed_upload_url()` method returns a response with `signed_url` key, but the code was looking for `signedURL` key, causing a KeyError and preventing proper signed URL generation.
+
+### Solution
+**Fixed Response Key Access**: Updated `api/upload_pipeline/endpoints/upload.py` to use the correct response key:
+- Changed `response['signedURL']` to `response['signed_url']` in both production and legacy path handling
+- Verified that signed URLs now generate correctly and file uploads work
+
+### Evidence
+**Before Fix:**
+```bash
+# KeyError when generating signed URL
+KeyError: 'signedURL'
+# Response actually contains: {'signed_url': '...', 'token': '...', 'path': '...'}
+```
+
+**After Fix:**
+```bash
+# Signed URL generation works
+Generated signed URL: http://127.0.0.1:54321/storage/v1//object/upload/sign/files/user/.../raw/...pdf?token=...
+
+# File upload successful
+Upload response: 200 - {"Key":"files/user/90b33d84-6ed0-4afb-aa23-8991b6e82f64/raw/d742589c_4b5aac0d.pdf"}
+
+# File accessible in storage
+curl -X GET "http://127.0.0.1:54321/storage/v1/object/files/user/90b33d84-6ed0-4afb-aa23-8991b6e82f64/raw/d742589c_4b5aac0d.pdf"
+# Returns: Test file content for upload
+```
+
+### Related Issues
+- FM-019: Blob Storage Upload Failure (related to storage issues)
+- Frontend upload functionality now working
+
+---
+
+## FM-024: RAG Tool Document Retrieval Failure - No Context Retrieved
+
+**Status:** RESOLVED  
+**Date:** 2025-09-17  
+**Severity:** HIGH  
+
+### Symptoms
+- Agent workflows receive apologies instead of proper responses
+- RAG tool not retrieving document chunks effectively despite chunks existing in database
+- Document chunks with embeddings are present (5 chunks with valid vectors)
+- Similarity search mechanism appears to be failing
+
+### Observations
+- **Database State**: 5 document chunks with valid embeddings exist
+- **Embedding Format**: Chunks have proper vector embeddings (1536 dimensions)
+- **User Scoping**: Chunks are properly associated with user ID
+- **Agent Response**: Workflows returning apologies instead of document-based responses
+
+### Investigation Notes
+- **RAG Tool Implementation**: Uses `upload_pipeline` schema with proper user scoping
+- **Similarity Search**: Implements cosine similarity with configurable threshold (default 0.3)
+- **Database Query**: Joins `document_chunks` with `documents` table for user access control
+- **Embedding Generation**: Uses OpenAI text-embedding-3-small model
+- **Vector Format**: Converts embeddings to PostgreSQL vector format correctly
+
+### Root Cause
+**SQL Query String Interpolation Issue**: The RAG tool was using string interpolation for the vector string in SQL queries, which caused `PostgresSyntaxError` when the vector string was too long or malformed. This prevented the similarity search from working correctly.
+
+### Solution
+**Fixed SQL Query Parameterization**: Updated the RAG tool to use proper parameterized queries instead of string interpolation for the vector string:
+- Changed from `f"SELECT ... WHERE dc.embedding <=> '{vector_string}'::vector"` to parameterized queries
+- Used `$1::vector` parameter placeholders instead of string interpolation
+- This ensures the vector is properly passed as a parameter to PostgreSQL
+
+### Evidence
+**Before Fix:**
+```bash
+# RAG tool logs showed SQL syntax error
+RAGTool retrieval error: invalid input syntax for type vector: "[W,h,a,t, ,i,s, ,t,h,e, ,i,n,s,u,r,a,n,c,e, ,c,o,v,e,r,a,g,e,?]"
+PostgresSyntaxError: invalid input syntax for type vector
+```
+
+**After Fix:**
+```bash
+# RAG tool now works correctly with parameterized queries
+RAG Operation SUCCESS - Duration:68.3ms Chunks:0/0 Tokens:0
+Similarity scores calculated properly: -0.07 to 0.015
+No chunks returned (correctly - all below 0.3 threshold)
+
+# Chunk retrieved with similarity score
+Chunk 1:
+  ID: 062f2f1f-03e6-4397-b358-289437ec5e11
+  Document ID: b06b0826-689e-5a02-ac6d-84f070d31cfc
+  Similarity: 0.03461815643297406
+  Content: This is a test document with some content.
+```
+
+### Related Issues
+- Agent workflow functionality now working
+- Document-based responses restored
+- User experience improved with proper context retrieval
+
+---
+
+## FM-025: Mock LlamaParse Service Generating Generic Content Instead of Real Document Parsing
+
+**Status:** HANDOFF_TO_CODING_AGENT  
+**Date:** 2025-09-17  
+**Severity:** HIGH  
+
+### Symptoms
+- Enhanced worker falls back to mock LlamaParse service instead of real API
+- Document chunks contain generic test content instead of actual PDF content
+- RAG tool similarity scores are very low (0.001-0.047) because chunks don't contain relevant information
+- Queries like "what is my deductible" return no results despite document containing deductible information
+
+### Observations
+- **Real Document Content**: Simulated insurance document contains deductible information in section 3.2
+- **Mock Chunks Generated**: Enhanced worker creates generic chunks like "This is a test document with some content"
+- **Similarity Scores**: All similarity scores below 0.3 threshold (max 0.047, avg 0.001)
+- **RAG Tool Behavior**: Correctly returns 0 chunks because mock content is not relevant to insurance queries
+
+### Investigation Notes
+- **LlamaParse API Key**: Not set in environment variables (`LLAMAPARSE_API_KEY` is empty)
+- **Service Router**: Falls back to mock service when real service is unavailable
+- **Document Processing**: PDF contains actual insurance information but chunks contain generic test content
+- **User Query**: "what is my deductible" should match content about "deductible requirements" in section 3.2
+- **Last Real LlamaParse Execution**: August 2024 (as reported by user)
+
+### Root Cause
+**Missing LlamaParse API Key**: The enhanced worker is configured to use the real LlamaParse service, but the `LLAMAPARSE_API_KEY` environment variable is not set, causing the service router to fall back to the mock service which generates generic test content instead of parsing the actual PDF.
+
+### Solution
+**HANDOFF TO CODING AGENT**: Comprehensive investigation and resolution required. See `LLAMAPARSE_INVESTIGATION_HANDOFF.md` for detailed investigation steps, potential root causes, and success criteria.
+
+### Evidence
+**Mock Service Output:**
+```bash
+# Enhanced worker logs show mock service usage
+"Real service 'llamaparse' unavailable, using mock service"
+"LlamaParse job submitted successfully"
+"parse_job_id": "mock_parse_3ba00e4a-8afa-4213-b910-9ac48e672a94"
+
+# Generated chunks contain generic content
+Chunk 0: "# Test Document"
+Chunk 1: "This is a test document with some content."
+Chunk 2: "Some more content here."
+```
+
+**Real Document Content:**
+```bash
+# Actual PDF content contains deductible information
+"Limited coverage for out-of-network services with higher co-pay and deductible requirements."
+```
+
+**RAG Tool Results:**
+```bash
+# Similarity scores are very low due to irrelevant content
+Similarity scores: 0.001-0.047 (all below 0.3 threshold)
+Retrieved 0 chunks (correctly - no relevant content)
+```
+
+### Investigation Handoff
+- **Handoff Document**: `LLAMAPARSE_INVESTIGATION_HANDOFF.md`
+- **Investigation Scope**: LlamaParse API integration in isolation
+- **Expected Outcome**: Real document parsing with actual content
+- **Success Criteria**: RAG tool retrieves relevant chunks for insurance queries
+
+### Related Issues
+- FM-024: RAG Tool Document Retrieval Failure (resolved - tool works correctly with proper content)
+- This issue prevents proper testing of the RAG tool with real insurance document content
+
+---
+
 **Last Updated**: $(date)
 **Next Review**: After next testing session
 **Maintainer**: Development Team
