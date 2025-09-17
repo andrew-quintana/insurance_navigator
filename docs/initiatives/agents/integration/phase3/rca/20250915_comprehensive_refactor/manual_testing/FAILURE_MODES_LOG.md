@@ -1536,9 +1536,9 @@ supabase db reset --yes
 
 ## FM-023: Raw File Upload Failure - Files Not Stored in Blob Storage
 
-**Status:** RESOLVED  
+**Status:** ACTIVE  
 **Date:** 2025-09-17  
-**Severity:** HIGH  
+**Severity:** CRITICAL  
 
 ### Symptoms
 - Upload pipeline processes documents successfully (jobs complete, chunks created with embeddings)
@@ -1546,52 +1546,45 @@ supabase db reset --yes
 - Database shows `raw_path` values like `files/user/{user_id}/raw/{filename}.pdf`
 - Files return 404 Not Found when accessed via storage API
 - Frontend receives signed URLs but file upload to storage fails silently
+- **CRITICAL**: This causes downstream parsing to fail, leading to mock content generation
 
 ### Observations
-- **Database State**: 1 upload job completed successfully, 1 document with `parsed` status
-- **Chunks Created**: 5 document chunks with valid embeddings exist in database
-- **Raw Path Stored**: `files/user/90b33d84-6ed0-4afb-aa23-8991b6e82f64/raw/d742589c_4b5aac0d.pdf`
+- **Database State**: Recent document `7ff4ca89-0b1e-5bc3-880d-69a788401d89` shows `parsed` status
+- **Raw Path**: `files/user/61f1d766-14c7-4bbd-8dbe-0b32e7ca3ef0/raw/b78980ba_aa77e516.pdf`
 - **Storage Verification**: File not found in storage (404 error)
-- **Processing Success**: Despite missing raw files, parsing and chunking stages completed successfully
+- **Mock Content**: LlamaParse generates "Mock parsed content from files/user/61f1d766-14c7-4bbd-8dbe-0b32e7ca3ef0/raw/b78980ba_aa77e516.pdf"
+- **Root Cause**: No actual file exists for LlamaParse to parse, so it falls back to mock content
 
 ### Investigation Notes
-- **Signed URL Generation**: Appears to work correctly (no errors in logs)
-- **File Upload Process**: Frontend receives signed URL but actual upload to storage fails
-- **Silent Failure**: No error messages in API server logs during file upload
-- **Pipeline Continuation**: System continues processing despite missing raw files (uses mock/fallback content)
+- **Previous Fix Attempted**: Fixed `signedURL` vs `signed_url` key mismatch
+- **Current Issue**: File upload to signed URL still failing silently
+- **JWT Authentication**: May be related to JWT token issues in frontend upload
+- **Pipeline Impact**: This is the root cause of mock content generation in LlamaParse
 
 ### Root Cause
-**Signed URL Response Format Mismatch**: The Supabase client's `create_signed_upload_url()` method returns a response with `signed_url` key, but the code was looking for `signedURL` key, causing a KeyError and preventing proper signed URL generation.
+**File Upload to Signed URL Failing**: Despite signed URL generation working, the actual file upload from frontend to Supabase storage is failing silently, likely due to JWT authentication issues or CORS problems.
 
 ### Solution
-**Fixed Response Key Access**: Updated `api/upload_pipeline/endpoints/upload.py` to use the correct response key:
-- Changed `response['signedURL']` to `response['signed_url']` in both production and legacy path handling
-- Verified that signed URLs now generate correctly and file uploads work
+**Pending**: Need to investigate and fix the file upload process from frontend to Supabase storage.
 
 ### Evidence
-**Before Fix:**
+**Current State:**
 ```bash
-# KeyError when generating signed URL
-KeyError: 'signedURL'
-# Response actually contains: {'signed_url': '...', 'token': '...', 'path': '...'}
-```
+# Document shows parsed status but file doesn't exist
+Document: 7ff4ca89-0b1e-5bc3-880d-69a788401d89 - Status: parsed
+Raw Path: files/user/61f1d766-14c7-4bbd-8dbe-0b32e7ca3ef0/raw/b78980ba_aa77e516.pdf
 
-**After Fix:**
-```bash
-# Signed URL generation works
-Generated signed URL: http://127.0.0.1:54321/storage/v1//object/upload/sign/files/user/.../raw/...pdf?token=...
+# File not found in storage
+curl -X GET "http://127.0.0.1:54321/storage/v1/object/files/user/61f1d766-14c7-4bbd-8dbe-0b32e7ca3ef0/raw/b78980ba_aa77e516.pdf"
+# Returns: {"statusCode":"404","error":"not_found","message":"Object not found"}
 
-# File upload successful
-Upload response: 200 - {"Key":"files/user/90b33d84-6ed0-4afb-aa23-8991b6e82f64/raw/d742589c_4b5aac0d.pdf"}
-
-# File accessible in storage
-curl -X GET "http://127.0.0.1:54321/storage/v1/object/files/user/90b33d84-6ed0-4afb-aa23-8991b6e82f64/raw/d742589c_4b5aac0d.pdf"
-# Returns: Test file content for upload
+# Mock content generated due to missing file
+"Mock parsed content from files/user/61f1d766-14c7-4bbd-8dbe-0b32e7ca3ef0/raw/b78980ba_aa77e516.pdf"
 ```
 
 ### Related Issues
-- FM-019: Blob Storage Upload Failure (related to storage issues)
-- Frontend upload functionality now working
+- FM-025: Mock LlamaParse Service (caused by this issue)
+- Frontend upload functionality needs investigation
 
 ---
 
@@ -1659,73 +1652,64 @@ Chunk 1:
 
 ---
 
-## FM-025: Mock LlamaParse Service Generating Generic Content Instead of Real Document Parsing
+## FM-025: LlamaParse Mock Content Generation Due to Missing Raw Files
 
-**Status:** HANDOFF_TO_CODING_AGENT  
+**Status:** ACTIVE  
 **Date:** 2025-09-17  
 **Severity:** HIGH  
 
 ### Symptoms
-- Enhanced worker falls back to mock LlamaParse service instead of real API
+- LlamaParse generates mock content instead of parsing actual PDF documents
+- Mock content message: "Mock parsed content from files/user/61f1d766-14c7-4bbd-8dbe-0b32e7ca3ef0/raw/b78980ba_aa77e516.pdf"
 - Document chunks contain generic test content instead of actual PDF content
 - RAG tool similarity scores are very low (0.001-0.047) because chunks don't contain relevant information
 - Queries like "what is my deductible" return no results despite document containing deductible information
 
 ### Observations
-- **Real Document Content**: Simulated insurance document contains deductible information in section 3.2
-- **Mock Chunks Generated**: Enhanced worker creates generic chunks like "This is a test document with some content"
-- **Similarity Scores**: All similarity scores below 0.3 threshold (max 0.047, avg 0.001)
-- **RAG Tool Behavior**: Correctly returns 0 chunks because mock content is not relevant to insurance queries
+- **Mock Content Message**: Shows the exact path where the file should be but isn't
+- **File Path**: `files/user/61f1d766-14c7-4bbd-8dbe-0b32e7ca3ef0/raw/b78980ba_aa77e516.pdf`
+- **File Status**: 404 Not Found when accessed via storage API
+- **LlamaParse API Key**: Present and valid (`llx-CRtlUR...`)
+- **Real Document Available**: `examples/simulated_insurance_document.pdf` exists and is readable
 
 ### Investigation Notes
-- **LlamaParse API Key**: Not set in environment variables (`LLAMAPARSE_API_KEY` is empty)
-- **Service Router**: Falls back to mock service when real service is unavailable
-- **Document Processing**: PDF contains actual insurance information but chunks contain generic test content
-- **User Query**: "what is my deductible" should match content about "deductible requirements" in section 3.2
-- **Last Real LlamaParse Execution**: August 2024 (as reported by user)
+- **Root Cause**: LlamaParse is working correctly but has no file to parse
+- **Upstream Issue**: FM-023 (Raw File Upload Failure) prevents files from being stored
+- **Mock Fallback**: When no file exists, LlamaParse generates mock content
+- **API Key Status**: LlamaParse API key is present and valid
+- **File Verification**: Local PDF file exists and is readable (1782 bytes)
 
 ### Root Cause
-**Missing LlamaParse API Key**: The enhanced worker is configured to use the real LlamaParse service, but the `LLAMAPARSE_API_KEY` environment variable is not set, causing the service router to fall back to the mock service which generates generic test content instead of parsing the actual PDF.
+**Missing Raw Files**: LlamaParse is functioning correctly but cannot parse documents because the raw files are not being uploaded to storage due to FM-023 (Raw File Upload Failure). When no file exists at the expected path, LlamaParse falls back to generating mock content.
 
 ### Solution
-**HANDOFF TO CODING AGENT**: Comprehensive investigation and resolution required. See `LLAMAPARSE_INVESTIGATION_HANDOFF.md` for detailed investigation steps, potential root causes, and success criteria.
+**Fix FM-023 First**: Resolve the raw file upload failure to ensure files are properly stored in Supabase storage, then LlamaParse will be able to parse actual document content.
 
 ### Evidence
-**Mock Service Output:**
+**Mock Content Generation:**
 ```bash
-# Enhanced worker logs show mock service usage
-"Real service 'llamaparse' unavailable, using mock service"
-"LlamaParse job submitted successfully"
-"parse_job_id": "mock_parse_3ba00e4a-8afa-4213-b910-9ac48e672a94"
+# Mock content shows the missing file path
+"Mock parsed content from files/user/61f1d766-14c7-4bbd-8dbe-0b32e7ca3ef0/raw/b78980ba_aa77e516.pdf"
 
-# Generated chunks contain generic content
-Chunk 0: "# Test Document"
-Chunk 1: "This is a test document with some content."
-Chunk 2: "Some more content here."
+# File doesn't exist in storage
+curl -X GET "http://127.0.0.1:54321/storage/v1/object/files/user/61f1d766-14c7-4bbd-8dbe-0b32e7ca3ef0/raw/b78980ba_aa77e516.pdf"
+# Returns: {"statusCode":"404","error":"not_found","message":"Object not found"}
 ```
 
-**Real Document Content:**
+**LlamaParse API Status:**
 ```bash
-# Actual PDF content contains deductible information
-"Limited coverage for out-of-network services with higher co-pay and deductible requirements."
-```
+# API key is present and valid
+✅ LlamaParse API key found: llx-CRtlUR...
 
-**RAG Tool Results:**
-```bash
-# Similarity scores are very low due to irrelevant content
-Similarity scores: 0.001-0.047 (all below 0.3 threshold)
-Retrieved 0 chunks (correctly - no relevant content)
+# Local PDF file exists and is readable
+✅ PDF file exists: examples/simulated_insurance_document.pdf
+📄 File size: 1782 bytes
+📖 File readable, first 100 bytes: b'%PDF-1.3\n3 0 obj\n<</Type /Page\n/Parent 1 0 R\n/Reso'...
 ```
-
-### Investigation Handoff
-- **Handoff Document**: `LLAMAPARSE_INVESTIGATION_HANDOFF.md`
-- **Investigation Scope**: LlamaParse API integration in isolation
-- **Expected Outcome**: Real document parsing with actual content
-- **Success Criteria**: RAG tool retrieves relevant chunks for insurance queries
 
 ### Related Issues
+- FM-023: Raw File Upload Failure (root cause - must be fixed first)
 - FM-024: RAG Tool Document Retrieval Failure (resolved - tool works correctly with proper content)
-- This issue prevents proper testing of the RAG tool with real insurance document content
 
 ---
 

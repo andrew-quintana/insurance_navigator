@@ -1,28 +1,40 @@
-# LlamaParse Investigation Handoff - Coding Agent Prompt
+# File Upload and LlamaParse Resolution Handoff - Coding Agent Prompt
 
 ## 🎯 **Mission Statement**
 
-You are tasked with investigating and resolving LlamaParse integration issues that are preventing the Insurance Navigator from processing real document content. The system is currently falling back to mock services, generating generic test content instead of parsing actual PDF documents, which severely impacts the RAG tool's ability to provide relevant responses.
+You are tasked with resolving the root cause of document processing failures in the Insurance Navigator. The issue is **NOT** with LlamaParse itself, but with the upstream file upload process that prevents files from being stored in Supabase storage, causing LlamaParse to generate mock content instead of parsing actual documents.
 
 ## 📋 **Current System State**
 
-### **Critical Issue Summary**
-- **Problem**: Enhanced worker falls back to mock LlamaParse service instead of real API
-- **Impact**: Documents contain generic test content instead of actual PDF content
-- **Consequence**: RAG tool similarity scores are very low (0.001-0.047) because chunks don't contain relevant information
+### **Root Cause Identified**
+- **Primary Issue**: FM-023 - Raw file upload failure (files not stored in Supabase storage)
+- **Secondary Issue**: FM-025 - LlamaParse generates mock content due to missing files
+- **Impact**: RAG tool cannot retrieve relevant content because chunks contain generic test data
 - **User Impact**: Queries like "what is my deductible" return no results despite document containing deductible information
 
-### **Evidence of Mock Service Usage**
+### **Evidence of File Upload Failure**
 ```bash
-# Enhanced worker logs show mock service fallback
-"Real service 'llamaparse' unavailable, using mock service"
-"LlamaParse job submitted successfully"
-"parse_job_id": "mock_parse_3ba00e4a-8afa-4213-b910-9ac48e672a94"
+# Document shows parsed status but file doesn't exist
+Document: 7ff4ca89-0b1e-5bc3-880d-69a788401d89 - Status: parsed
+Raw Path: files/user/61f1d766-14c7-4bbd-8dbe-0b32e7ca3ef0/raw/b78980ba_aa77e516.pdf
 
-# Generated chunks contain generic content
-Chunk 0: "# Test Document"
-Chunk 1: "This is a test document with some content."
-Chunk 2: "Some more content here."
+# File not found in storage
+curl -X GET "http://127.0.0.1:54321/storage/v1/object/files/user/61f1d766-14c7-4bbd-8dbe-0b32e7ca3ef0/raw/b78980ba_aa77e516.pdf"
+# Returns: {"statusCode":"404","error":"not_found","message":"Object not found"}
+
+# Mock content generated due to missing file
+"Mock parsed content from files/user/61f1d766-14c7-4bbd-8dbe-0b32e7ca3ef0/raw/b78980ba_aa77e516.pdf"
+```
+
+### **LlamaParse Status (Working Correctly)**
+```bash
+# API key is present and valid
+✅ LlamaParse API key found: llx-CRtlUR...
+
+# Local PDF file exists and is readable
+✅ PDF file exists: examples/simulated_insurance_document.pdf
+📄 File size: 1782 bytes
+📖 File readable, first 100 bytes: b'%PDF-1.3\n3 0 obj\n<</Type /Page\n/Parent 1 0 R\n/Reso'...
 ```
 
 ### **Real Document Content (What Should Be Parsed)**
@@ -31,234 +43,186 @@ Chunk 2: "Some more content here."
 "Limited coverage for out-of-network services with higher co-pay and deductible requirements."
 ```
 
-### **RAG Tool Results (Correctly Working)**
-```bash
-# Similarity scores are very low due to irrelevant content
-Similarity scores: 0.001-0.047 (all below 0.3 threshold)
-Retrieved 0 chunks (correctly - no relevant content)
-```
-
 ## 🔍 **Investigation Context**
 
-### **Previous Investigation Findings**
-1. **LlamaParse API Key**: Not set in environment variables (`LLAMAPARSE_API_KEY` is empty)
-2. **Service Router**: Falls back to mock service when real service is unavailable
-3. **Document Processing**: PDF contains actual insurance information but chunks contain generic test content
-4. **User Query**: "what is my deductible" should match content about "deductible requirements" in section 3.2
+### **Root Cause Analysis**
+1. **File Upload Failure**: Frontend upload to Supabase storage is failing silently
+2. **Signed URL Issues**: May be related to JWT authentication or CORS problems
+3. **Mock Content Generation**: LlamaParse generates mock content when no file exists
+4. **Pipeline Impact**: This prevents the entire document processing pipeline from working
 
 ### **System Architecture**
-- **Service Router**: `backend/shared/external/service_router.py` - Manages real vs mock service selection
-- **LlamaParse Real Service**: `backend/shared/external/llamaparse_real.py` - Real API implementation
-- **Worker Config**: `backend/shared/config/worker_config.py` - Loads environment variables
-- **Enhanced Worker**: `backend/workers/enhanced_base_worker.py` - Uses service router
+- **Frontend Upload**: Uses signed URLs to upload files to Supabase storage
+- **Signed URL Generation**: `api/upload_pipeline/endpoints/upload.py` - `_generate_signed_url()`
+- **Storage Manager**: `backend/shared/storage/storage_manager.py` - Handles Supabase storage operations
+- **LlamaParse Service**: Working correctly but has no files to parse
+- **Enhanced Worker**: Processes jobs but gets mock content due to missing files
 
-### **Configuration Flow**
-1. `WorkerConfig.from_environment()` loads `LLAMACLOUD_API_KEY` or `LLAMAPARSE_API_KEY`
-2. Service router checks `real_service.is_available()` 
-3. If unavailable, falls back to mock service in development mode
-4. Mock service generates generic test content
+### **Upload Flow**
+1. Frontend requests signed URL from `/api/upload-pipeline/upload`
+2. API generates signed URL for Supabase storage
+3. Frontend uploads file to signed URL
+4. **FAILURE POINT**: File upload fails silently
+5. LlamaParse tries to parse non-existent file
+6. Mock content is generated instead
 
-## 🎯 **Investigation Objectives**
+## 🎯 **Resolution Objectives**
 
 ### **Primary Goals**
-1. **Identify Root Cause**: Why is LlamaParse real service unavailable?
-2. **Fix Authentication**: Ensure proper API key configuration
-3. **Verify API Connectivity**: Test actual LlamaParse API calls
-4. **Validate Document Processing**: Confirm real PDF content is parsed
-5. **Update Documentation**: Record findings and solutions
+1. **Fix File Upload**: Resolve FM-023 - Raw file upload failure
+2. **Test LlamaParse**: Verify LlamaParse works with actual files
+3. **End-to-End Validation**: Confirm complete pipeline works
+4. **Update Documentation**: Record findings and solutions
 
 ### **Secondary Goals**
-1. **Improve Error Handling**: Better logging for service availability issues
-2. **Add Health Monitoring**: Proactive detection of service failures
-3. **Create Test Suite**: Automated testing for LlamaParse integration
+1. **Improve Error Handling**: Better logging for upload failures
+2. **Add Upload Monitoring**: Proactive detection of upload issues
+3. **Create Test Suite**: Automated testing for file upload and parsing
 
-## 🔧 **Investigation Steps**
+## 🔧 **Resolution Steps**
 
-### **Step 1: Environment Configuration Audit**
+### **Step 1: File Upload Investigation**
 ```bash
-# Check current environment variables
-echo "LLAMAPARSE_API_KEY: $LLAMAPARSE_API_KEY"
-echo "LLAMACLOUD_API_KEY: $LLAMACLOUD_API_KEY"
-
-# Verify .env.development file
-cat .env.development | grep -i llama
-
-# Check worker config loading
-python -c "
-from backend.shared.config.worker_config import WorkerConfig
-config = WorkerConfig.from_environment()
-print(f'LlamaParse API Key: {config.llamaparse_api_key[:10]}...' if config.llamaparse_api_key else 'LlamaParse API Key: NOT SET')
-"
-```
-
-### **Step 2: Service Router Debugging**
-```bash
-# Test service router directly
+# Test signed URL generation
 python -c "
 import asyncio
-from backend.shared.external.service_router import ServiceRouter
-from backend.shared.config.worker_config import WorkerConfig
+from api.upload_pipeline.endpoints.upload import _generate_signed_url
 
-async def test_service_router():
-    config = WorkerConfig.from_environment()
-    router = ServiceRouter(config={
-        'llamaparse_config': {
-            'api_key': config.llamaparse_api_key,
-            'api_url': config.llamaparse_api_url
-        }
-    })
-    
-    # Test service availability
-    service = await router.get_service('llamaparse')
-    print(f'Service type: {type(service).__name__}')
-    print(f'Is available: {await service.is_available()}')
-    
-    # Test health check
-    health = await service.get_health()
-    print(f'Health status: {health}')
+async def test_signed_url():
+    try:
+        url = await _generate_signed_url('files/user/test/raw/test.pdf', 3600)
+        print(f'Generated signed URL: {url}')
+    except Exception as e:
+        print(f'Error generating signed URL: {e}')
 
-asyncio.run(test_service_router())
+asyncio.run(test_signed_url())
 "
+
+# Test file upload to signed URL
+curl -X PUT "http://127.0.0.1:54321/storage/v1/object/upload/files/user/test/raw/test.pdf" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU" \
+  -F "file=@examples/simulated_insurance_document.pdf"
 ```
 
-### **Step 3: LlamaParse API Direct Testing**
+### **Step 2: Frontend Upload Testing**
 ```bash
-# Test LlamaParse API directly
-python -c "
-import asyncio
-import httpx
-import os
+# Test complete upload flow from frontend perspective
+python test_production_upload_flow.py
 
-async def test_llamaparse_api():
-    api_key = os.getenv('LLAMAPARSE_API_KEY') or os.getenv('LLAMACLOUD_API_KEY')
-    if not api_key:
-        print('❌ No LlamaParse API key found')
-        return
-    
-    headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-Type': 'application/json'
-    }
-    
-    async with httpx.AsyncClient() as client:
-        # Test health endpoint
-        try:
-            response = await client.post('https://api.cloud.llamaindex.ai/api/v1/parsing/upload', 
-                                       json={}, headers=headers, timeout=10)
-            print(f'API Response: {response.status_code} - {response.text[:200]}')
-        except Exception as e:
-            print(f'API Error: {e}')
-
-asyncio.run(test_llamaparse_api())
-"
+# Check if file was actually uploaded
+curl -X GET "http://127.0.0.1:54321/storage/v1/object/files/user/{user_id}/raw/{filename}.pdf" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
 ```
 
-### **Step 4: Real Service Integration Testing**
+### **Step 3: LlamaParse Integration Testing**
 ```bash
-# Test real service with actual document
+# Test LlamaParse with actual file (once upload is fixed)
 python -c "
 import asyncio
 from backend.shared.external.llamaparse_real import RealLlamaParseService
 from backend.shared.config.worker_config import WorkerConfig
 
-async def test_real_service():
+async def test_llamaparse_with_real_file():
     config = WorkerConfig.from_environment()
     service = RealLlamaParseService(api_key=config.llamaparse_api_key)
     
-    # Test availability
-    print(f'Service available: {await service.is_available()}')
-    
-    # Test health check
-    health = await service.get_health()
-    print(f'Health: {health}')
-    
-    # Test with actual document
-    if await service.is_available():
-        try:
-            result = await service.parse_document(
-                file_path='examples/simulated_insurance_document.pdf',
-                webhook_url='http://localhost:8000/api/upload-pipeline/webhook/llamaparse/test-job',
-                correlation_id='test-correlation'
-            )
-            print(f'Parse result: {result}')
-        except Exception as e:
-            print(f'Parse error: {e}')
+    # Test with local file first
+    try:
+        result = await service.parse_document(
+            file_path='examples/simulated_insurance_document.pdf',
+            webhook_url='http://localhost:8000/api/upload-pipeline/webhook/llamaparse/test-job',
+            correlation_id='test-correlation'
+        )
+        print(f'Parse result: {result}')
+    except Exception as e:
+        print(f'Parse error: {e}')
 
-asyncio.run(test_real_service())
+asyncio.run(test_llamaparse_with_real_file())
+"
+```
+
+### **Step 4: End-to-End Pipeline Testing**
+```bash
+# Test complete pipeline once both issues are fixed
+python -c "
+import asyncio
+from agents.tooling.rag.core import RAGTool, RetrievalConfig
+
+async def test_rag_with_real_content():
+    user_id = 'bc3ca830-8806-4f6c-ab94-a0da85bf20b0'  # Test user
+    config = RetrievalConfig(similarity_threshold=0.3, max_chunks=5)
+    rag_tool = RAGTool(user_id=user_id, config=config)
+    
+    chunks = await rag_tool.retrieve_chunks_from_text('what is my deductible')
+    print(f'Retrieved {len(chunks)} chunks')
+    for chunk in chunks:
+        print(f'Chunk: {chunk.content[:100]}... (similarity: {chunk.similarity:.4f})')
+
+asyncio.run(test_rag_with_real_content())
 "
 ```
 
 ## 🚨 **Potential Root Causes**
 
-### **1. Missing API Key**
-- **Symptom**: `LLAMAPARSE_API_KEY` environment variable not set
-- **Investigation**: Check `.env.development` file and environment loading
-- **Solution**: Set proper API key in environment
+### **1. JWT Authentication Issues**
+- **Symptom**: Frontend upload fails due to invalid JWT token
+- **Investigation**: Check JWT token generation and validation
+- **Solution**: Fix JWT token handling in upload process
 
-### **2. Incorrect API Key Format**
-- **Symptom**: API key exists but authentication fails
-- **Investigation**: Verify key format and permissions
-- **Solution**: Update key format or regenerate
+### **2. CORS Configuration Problems**
+- **Symptom**: Browser blocks file upload due to CORS policy
+- **Investigation**: Check CORS headers in API responses
+- **Solution**: Configure proper CORS headers for file upload
 
-### **3. API Endpoint Issues**
-- **Symptom**: API key valid but endpoints return errors
-- **Investigation**: Test different API endpoints and versions
-- **Solution**: Update endpoint URLs or API version
+### **3. Signed URL Format Issues**
+- **Symptom**: Generated signed URLs are malformed or invalid
+- **Investigation**: Test signed URL generation and format
+- **Solution**: Fix signed URL generation logic
 
-### **4. Network/Connectivity Issues**
-- **Symptom**: API calls timeout or fail
-- **Investigation**: Test network connectivity and firewall rules
-- **Solution**: Fix network configuration
+### **4. Supabase Storage Configuration**
+- **Symptom**: Storage bucket not properly configured for uploads
+- **Investigation**: Check bucket permissions and policies
+- **Solution**: Fix storage bucket configuration
 
-### **5. Service Health Check Logic**
-- **Symptom**: Service reports as unavailable when it should be available
-- **Investigation**: Review `is_available()` and `get_health()` methods
-- **Solution**: Fix health check logic
+### **5. Frontend Upload Implementation**
+- **Symptom**: Frontend code has bugs in file upload logic
+- **Investigation**: Review frontend upload implementation
+- **Solution**: Fix frontend upload code
 
-### **6. Configuration Loading Issues**
-- **Symptom**: Environment variables not loaded correctly
-- **Investigation**: Check `WorkerConfig.from_environment()` method
-- **Solution**: Fix configuration loading
+### **6. Network/Connectivity Issues**
+- **Symptom**: File upload requests fail due to network issues
+- **Investigation**: Test network connectivity to Supabase storage
+- **Solution**: Fix network configuration or retry logic
 
 ## 📊 **Success Criteria**
 
 ### **Immediate Success**
-- [ ] LlamaParse real service reports as available
-- [ ] Enhanced worker uses real service instead of mock
-- [ ] Document chunks contain actual PDF content
+- [ ] Files are successfully uploaded to Supabase storage
+- [ ] Raw files are accessible via storage API (no 404 errors)
+- [ ] LlamaParse processes actual PDF content instead of mock content
+- [ ] Document chunks contain real insurance information
 - [ ] RAG tool retrieves relevant chunks for "what is my deductible"
 
 ### **Validation Tests**
 ```bash
-# Test 1: Service Availability
+# Test 1: File Upload Success
+curl -X GET "http://127.0.0.1:54321/storage/v1/object/files/user/{user_id}/raw/{filename}.pdf" \
+  -H "Authorization: Bearer {service_role_key}"
+# Should return: PDF content (not 404 error)
+
+# Test 2: LlamaParse with Real File
 python -c "
 import asyncio
-from backend.shared.external.service_router import ServiceRouter
+from backend.shared.external.llamaparse_real import RealLlamaParseService
 from backend.shared.config.worker_config import WorkerConfig
 
 async def test():
     config = WorkerConfig.from_environment()
-    router = ServiceRouter(config={'llamaparse_config': config.get_llamaparse_config()})
-    service = await router.get_service('llamaparse')
-    print(f'Service type: {type(service).__name__}')
-    print(f'Is available: {await service.is_available()}')
-
-asyncio.run(test())
-"
-
-# Test 2: Document Processing
-python -c "
-import asyncio
-from backend.shared.external.service_router import ServiceRouter
-from backend.shared.config.worker_config import WorkerConfig
-
-async def test():
-    config = WorkerConfig.from_environment()
-    router = ServiceRouter(config={'llamaparse_config': config.get_llamaparse_config()})
-    service = await router.get_service('llamaparse')
+    service = RealLlamaParseService(api_key=config.llamaparse_api_key)
     
     result = await service.parse_document('examples/simulated_insurance_document.pdf')
     print(f'Parse result: {result}')
+    # Should contain actual PDF content, not mock content
 
 asyncio.run(test())
 "
@@ -277,6 +241,7 @@ async def test():
     print(f'Retrieved {len(chunks)} chunks')
     for chunk in chunks:
         print(f'Chunk: {chunk.content[:100]}... (similarity: {chunk.similarity:.4f})')
+    # Should retrieve chunks with high similarity scores (>0.3)
 
 asyncio.run(test())
 "
@@ -311,20 +276,25 @@ Update `FAILURE_MODES_LOG.md` with:
 
 ## 🚀 **Expected Outcome**
 
-After successful investigation and resolution:
-- Enhanced worker uses real LlamaParse service
-- Documents are parsed with actual content
+After successful resolution:
+- Files are successfully uploaded to Supabase storage
+- LlamaParse processes actual PDF documents instead of generating mock content
+- Document chunks contain real insurance information
 - RAG tool retrieves relevant chunks for insurance queries
 - System provides accurate responses to user questions
-- Upload pipeline works end-to-end with real document processing
+- Complete upload pipeline works end-to-end with real document processing
 
 ## 📞 **Support Resources**
 
+- **Supabase Storage Documentation**: https://supabase.com/docs/guides/storage
 - **LlamaParse Documentation**: https://docs.llamaindex.ai/en/stable/llamaparse/
-- **API Reference**: https://api.cloud.llamaindex.ai/docs
 - **Current Codebase**: Insurance Navigator repository
 - **Previous Investigation**: This document and `FAILURE_MODES_LOG.md`
+- **Key Files**: 
+  - `api/upload_pipeline/endpoints/upload.py` - Signed URL generation
+  - `backend/shared/storage/storage_manager.py` - Storage operations
+  - `test_production_upload_flow.py` - Upload testing
 
 ---
 
-**Remember**: The goal is not just to fix the immediate issue, but to create a robust, reliable LlamaParse integration that will work consistently in both development and production environments.
+**Remember**: The primary issue is file upload failure (FM-023), not LlamaParse integration. Fix the upload process first, then verify LlamaParse works with actual files.

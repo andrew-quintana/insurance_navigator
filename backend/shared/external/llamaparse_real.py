@@ -119,7 +119,7 @@ class RealLlamaParseService(ServiceInterface):
             
             # Test API connectivity with a simple request
             # LlamaParse doesn't have a simple health endpoint, so we'll test with parsing upload
-            response = await self.client.post(f"{self.base_url}/parsing/upload", json={})
+            response = await self.client.post(f"{self.base_url}/api/v1/parsing/upload", json={})
             
             response_time = (datetime.utcnow() - start_time).total_seconds() * 1000
             
