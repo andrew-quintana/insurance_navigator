@@ -1166,7 +1166,7 @@ Final section with more content."""
             except Exception as e:
                 # Fallback to local file
                 self.logger.warning(f"Storage download failed, using local fallback: {str(e)}")
-                local_path = "examples/scan_classic_hmo.pdf"
+                local_path = "examples/simulated_insurance_document.pdf"
                 with open(local_path, 'rb') as f:
                     file_content = f.read()
                 self.logger.info(f"Using local file: {len(file_content)} bytes")

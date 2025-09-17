@@ -2009,6 +2009,136 @@ httpx.post(url, content=file_content, headers={"Authorization": f"Bearer {key}"}
 
 ---
 
+## FM-030: LlamaParse Summarization Instead of Verbatim Extraction
+
+**Status:** ACTIVE  
+**Date:** 2025-09-17  
+**Severity:** HIGH  
+
+### Symptoms
+- LlamaParse returns generic summary content instead of verbatim PDF text
+- Parsed content: "This document contains important insurance information including: Coverage Details, Policy holder information..."
+- Expected content: Actual PDF text with specific details like "Accessa Health Insurance Plan", "200% of the federal poverty line", etc.
+- RAG tool retrieves generic summaries instead of document-specific information
+
+### Observations
+- **Input PDF Content**: Contains specific insurance details, contact information, coverage limits
+- **LlamaParse Output**: Generic summary template with placeholder text
+- **Content Mismatch**: 0% overlap between input and output content
+- **API Configuration**: Using `result_type: 'text'` instead of `result_type: 'markdown'`
+
+### Investigation Notes
+- LlamaParse API call in `backend/shared/external/llamaparse_real.py` line 243
+- Current configuration: `'result_type': 'text'` - causes summarization behavior
+- Web search confirms LlamaParse supports `result_type: 'markdown'` for verbatim extraction
+- Reference documentation shows `result_type` parameter controls output format
+
+### Root Cause
+**Incorrect LlamaParse API Configuration**: The service is using `result_type: 'text'` which triggers LlamaParse's summarization mode instead of verbatim extraction mode. This causes the API to return generic summaries rather than the actual document content.
+
+### Solution
+**Update LlamaParse Configuration**: Change `result_type` from `'text'` to `'markdown'` to enable verbatim PDF-to-markdown extraction instead of summarization.
+
+**Implementation:**
+1. **Code Change**: Updated `backend/shared/external/llamaparse_real.py` line 243
+2. **Configuration Fix**: Changed `'result_type': 'text'` to `'result_type': 'markdown'`
+3. **Service Restart**: Restarted enhanced worker to apply configuration changes
+4. **Verification**: Enhanced worker running with new configuration
+
+**Current Status**: Configuration updated but LlamaParse still returns generic summary content. Need to investigate why `result_type: 'markdown'` is not producing verbatim extraction.
+
+### Evidence
+**Current Configuration (Causing Summarization):**
+```python
+data = {
+    'parsing_instruction': 'Parse this insurance document and extract all text content',
+    'result_type': 'text'  # This causes summarization
+}
+```
+
+**Expected Configuration (For Verbatim Extraction):**
+```python
+data = {
+    'parsing_instruction': 'Parse this insurance document and extract all text content',
+    'result_type': 'markdown'  # This enables verbatim extraction
+}
+```
+
+**Content Comparison:**
+- **Input**: "1. Introduction\nThis document outlines the terms, conditions, and coverage details of the Accessa Health Insurance Plan..."
+- **Output**: "This document contains important insurance information including:\n## Coverage Details\n- Policy holder information..."
+
+### Related Issues
+- FM-025: LlamaParse Mock Content Generation (resolved - now using real API)
+- FM-026: Critical Content Parsing Failure (resolved - API integration working)
+- This issue prevents proper document content extraction for RAG functionality
+
+---
+
+## FM-031: Enhanced Worker Hardcoded Fallback Chunks
+
+**Status:** ACTIVE  
+**Date:** 2025-09-17  
+**Severity:** HIGH  
+
+### Symptoms
+- Enhanced worker generates hardcoded "Test Document" chunks instead of using parsed content
+- Chunks contain placeholder text: "This is a test document with some content. Section 1, Section 2, Section 3"
+- RAG tool retrieves meaningless placeholder content instead of actual document information
+- Document processing appears successful but provides completely wrong content
+
+### Observations
+- **Hardcoded Chunks**: "Test Document", "Some more content here", "Even more content"
+- **Fallback Logic**: Enhanced worker falls back to hardcoded content when storage read fails
+- **Storage Issue**: `storage_manager.read_blob()` is failing to read parsed content from storage
+- **Content Mismatch**: 0% overlap between actual PDF content and generated chunks
+
+### Investigation Notes
+- **Fallback Location**: `backend/workers/enhanced_base_worker.py` lines 783-797 and 805-819
+- **Storage Read Failure**: `self.storage_manager.read_blob(file_path)` returns empty or fails
+- **Error Handling**: Exception handling triggers hardcoded fallback content
+- **Root Cause**: Storage manager cannot read parsed content from Supabase storage
+
+### Root Cause
+**Storage Read Failure**: The enhanced worker's storage manager is failing to read parsed content from Supabase storage, causing the chunking process to fall back to hardcoded placeholder content instead of using the actual parsed document text.
+
+### Solution
+**Fix Storage Read Issue**: Investigate and fix why `storage_manager.read_blob()` cannot read parsed content from storage, ensuring the chunking process uses actual parsed content instead of hardcoded fallbacks.
+
+### Evidence
+**Hardcoded Fallback Content:**
+```python
+# Enhanced worker fallback logic
+parsed_content = """# Test Document
+
+This is a test document with some content.
+
+## Section 1
+
+Some more content here.
+
+## Section 2
+
+Even more content.
+
+## Section 3
+
+Final section with more content."""
+```
+
+**Storage Read Failure Pattern:**
+```bash
+# Enhanced worker logs show storage read failures
+"Failed to read file from storage: {error}"
+"Using mock content as fallback"
+```
+
+### Related Issues
+- FM-030: LlamaParse Summarization (related - both prevent proper content extraction)
+- Storage manager configuration or authentication issues
+
+---
+
 **Last Updated**: 2025-09-17
-**Next Review**: After signed URL authentication investigation
+**Next Review**: After storage read issue investigation
 **Maintainer**: Development Team

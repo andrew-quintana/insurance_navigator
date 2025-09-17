@@ -240,7 +240,7 @@ class RealLlamaParseService(ServiceInterface):
             # Simple form data (no extra fields)
             data = {
                 'parsing_instruction': 'Parse this insurance document and extract all text content',
-                'result_type': 'text'
+                'result_type': 'markdown'
             }
             
             # Simple headers (no extra headers)
