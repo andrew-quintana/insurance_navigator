@@ -58,8 +58,9 @@ async def upload_document(
         db = get_database()
         
         # Mock user for testing (temporarily disabled authentication)
-        from uuid import uuid4
-        current_user = type('MockUser', (), {'user_id': str(uuid4())})()
+        # Use consistent mock user ID to allow content deduplication to work
+        MOCK_USER_ID = "00000000-0000-0000-0000-000000000001"
+        current_user = type('MockUser', (), {'user_id': MOCK_USER_ID})()
         
         # Check concurrent job limits
         await _check_concurrent_job_limits(current_user.user_id, db)

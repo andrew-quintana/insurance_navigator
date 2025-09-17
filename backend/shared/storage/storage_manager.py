@@ -19,6 +19,12 @@ class StorageManager:
         self.service_role_key = config.get("service_role_key", "")
         self.timeout = config.get("timeout", 60)
         
+        # Validate service role key
+        if not self.service_role_key or self.service_role_key.strip() == "":
+            # Use hardcoded key for local development if not provided
+            self.service_role_key = "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
+            logger.warning("Service role key not provided, using hardcoded local development key")
+        
         # HTTP client configuration
         self.client = httpx.AsyncClient(
             timeout=httpx.Timeout(self.timeout),

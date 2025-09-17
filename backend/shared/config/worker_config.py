@@ -6,9 +6,11 @@ from dataclasses import dataclass
 try:
     from dotenv import load_dotenv
     # Load .env.development first, then .env.base as fallback
-    # Use relative paths from the backend directory
-    load_dotenv('../.env.development')
-    load_dotenv('../.env.base', override=False)
+    # Use absolute paths from project root
+    import os
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+    load_dotenv(os.path.join(project_root, '.env.development'))
+    load_dotenv(os.path.join(project_root, '.env.base'), override=False)
 except ImportError:
     # dotenv not available, continue without it
     pass
@@ -69,9 +71,9 @@ class WorkerConfig:
             database_url=database_url,
             
             # Supabase
-            supabase_url=os.getenv("SUPABASE_URL", "***REMOVED***"),
-            supabase_anon_key=os.getenv("SUPABASE_ANON_KEY", ""),
-            supabase_service_role_key=os.getenv("SUPABASE_SERVICE_ROLE_KEY", ""),
+            supabase_url=os.getenv("SUPABASE_URL", "http://127.0.0.1:54321"),
+            supabase_anon_key=os.getenv("SUPABASE_ANON_KEY", os.getenv("SUPABASE_KEY", os.getenv("ANON_KEY", ""))),
+            supabase_service_role_key=os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", "")),
             
             # LlamaParse
             llamaparse_api_url=os.getenv("LLAMAPARSE_BASE_URL", "https://api.cloud.llamaindex.ai/api/v1"),
@@ -84,7 +86,7 @@ class WorkerConfig:
             
             # Worker settings
             poll_interval=int(os.getenv("WORKER_POLL_INTERVAL", "5")),
-            max_retries=int(os.getenv("WORKER_MAX_RETRIES", "3")),
+            max_retries=int(os.getenv("WORKER_MAX_RETRIES", "0")),  # Disable retries to match reference script
             retry_base_delay=int(os.getenv("WORKER_RETRY_BASE_DELAY", "3")),
             
             # Rate limiting
