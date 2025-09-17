@@ -605,7 +605,15 @@ async def get_upload_pipeline_db():
     import asyncpg
     from dotenv import load_dotenv
     
-    load_dotenv('.env.production')
+    # Load environment based on ENVIRONMENT variable (same as main startup)
+    environment = os.getenv('ENVIRONMENT', 'development')
+    if environment == 'development':
+        load_dotenv('.env.development')
+    elif environment == 'production':
+        load_dotenv('.env.production')
+    else:
+        load_dotenv('.env')
+        
     database_url = os.getenv('DATABASE_URL')
     
     if not database_url:
@@ -824,7 +832,12 @@ async def upload_document_backend(
                     # Store file using direct HTTP request (proven to work)
                     import httpx
                     storage_url = os.getenv("SUPABASE_URL", "http://127.0.0.1:54321")
-                    service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))
+                    # Use development key for local development
+                    environment = os.getenv("ENVIRONMENT", "development")
+                    if environment == "development":
+                        service_role_key = os.getenv("SERVICE_ROLE_KEY", "")
+                    else:
+                        service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))
                     
                     async with httpx.AsyncClient() as client:
                         response = await client.post(
@@ -1485,8 +1498,8 @@ async def debug_environment():
     import os
     return {
         "supabase_url": os.getenv("SUPABASE_URL", "NOT_SET"),
-        "service_role_key_present": bool(os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))),
-        "service_role_key_length": len(os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))),
+        "service_role_key_present": bool(os.getenv("SERVICE_ROLE_KEY", "")),
+        "service_role_key_length": len(os.getenv("SERVICE_ROLE_KEY", "")),
         "environment": os.getenv("ENVIRONMENT", "NOT_SET")
     }
 

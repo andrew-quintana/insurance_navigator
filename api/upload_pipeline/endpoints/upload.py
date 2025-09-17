@@ -607,7 +607,12 @@ async def upload_file_proxy(
         
         # Load environment variables explicitly
         storage_url = os.getenv("SUPABASE_URL", "http://127.0.0.1:54321")
-        service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))
+        # Use development key for local development
+        environment = os.getenv("ENVIRONMENT", "development")
+        if environment == "development":
+            service_role_key = os.getenv("SERVICE_ROLE_KEY", "")
+        else:
+            service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))
         
         # Debug environment variable loading
         logger.info(f"Storage URL: {storage_url}")
