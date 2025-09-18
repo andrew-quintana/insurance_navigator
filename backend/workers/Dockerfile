@@ -27,13 +27,10 @@ WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Copy shared modules first
-COPY backend/shared/ ./shared/
+# Copy the entire backend directory structure to maintain imports
+COPY backend/ ./backend/
 COPY core/ ./core/
 COPY utils/ ./utils/
-
-# Copy application code
-COPY backend/workers/ ./
 
 # Remove any conflicting config files that might be imported from the main API
 RUN rm -rf ./config/ 2>/dev/null || true
@@ -45,7 +42,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 
 # Optimized health check
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=2 \
-    CMD python -c "from enhanced_base_worker import EnhancedBaseWorker; print('Enhanced worker import successful')" || exit 1
+    CMD python -c "from backend.workers.enhanced_base_worker import EnhancedBaseWorker; print('Enhanced worker import successful')" || exit 1
 
-# Run the enhanced worker
-CMD ["python", "enhanced_runner.py"]
+# Run the enhanced worker from the workers directory
+CMD ["python", "backend/workers/enhanced_runner.py"]
