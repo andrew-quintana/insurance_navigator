@@ -66,5 +66,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 
 # Start uvicorn with optimized settings
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", \
-     "--workers", "1", "--timeout-keep-alive", "75", "--limit-max-requests", "1000", \
-     "--limit-max-requests-jitter", "100"]
+     "--workers", "1", "--timeout-keep-alive", "75", "--limit-max-requests", "1000"]
