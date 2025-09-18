@@ -232,12 +232,12 @@ Updated httpx version in requirements-prod.txt to `httpx>=0.26.0,<0.29.0` to sat
 - ✅ Local Docker build succeeds
 - ✅ All tests passing locally
 
-### **FM-004: Render API Service Invalid Uvicorn Option (CURRENT)**
+### **FM-004: Render API Service Invalid Uvicorn Option (RESOLVED)**
 **Failure ID**: FM-004  
 **Date**: 2025-01-18  
 **Service**: insurance-navigator-api  
 **Commit**: 0392d5b  
-**Status**: 🔧 **IN PROGRESS**
+**Status**: ✅ **RESOLVED**
 
 **Symptoms:**
 - API service deployment fails with "update_failed" status
@@ -251,9 +251,48 @@ The Dockerfile CMD command includes `--limit-max-requests-jitter` which is not a
 Removed the invalid `--limit-max-requests-jitter` option from the Dockerfile CMD command.
 
 **Evidence:**
-- Error logs show: `Error: No such option: --limit-max-requests-jitter`
-- Service builds successfully but fails at startup
-- uvicorn help shows no such option exists
+- ✅ Service now starts successfully
+- ✅ Deployment completed without errors
+- ✅ API service is responding
+
+### **FM-005: API Service CORS Preflight 503 Error (CURRENT)**
+**Failure ID**: FM-005  
+**Date**: 2025-01-18  
+**Service**: insurance-navigator-api  
+**Commit**: 0392d5b  
+**Status**: 🔧 **IN PROGRESS**
+
+**Symptoms:**
+- Frontend registration fails with CORS preflight error
+- Error: `Preflight response is not successful. Status code: 503`
+- Error: `Fetch API cannot load https://insurance-navigator-api.onrender.com/register due to access control checks`
+- Network error: `TypeError: Load failed`
+
+**Observations:**
+- API service is running (deployment successful)
+- Frontend can reach API base URL: `https://insurance-navigator-api.onrender.com`
+- Registration endpoint `/register` returns 503 status code
+- CORS preflight request fails before actual request
+
+**Investigation Notes:**
+- **Service Status**: API service is running and accessible
+- **Endpoint Issue**: `/register` endpoint returning 503 (Service Unavailable)
+- **CORS Issue**: Preflight request failing due to 503 response
+- **Frontend Impact**: Registration functionality completely broken
+
+**Root Cause:**
+The `/register` endpoint is returning a 503 Service Unavailable status code, which causes CORS preflight requests to fail.
+
+**Proposed Fix:**
+1. Investigate why `/register` endpoint returns 503
+2. Check API service health and endpoint availability
+3. Verify CORS configuration for preflight requests
+4. Test endpoint directly to confirm 503 response
+
+**Evidence:**
+- Safari console logs show 503 status code
+- CORS preflight failure prevents actual request
+- Frontend registration completely non-functional
 
 ---
 
@@ -367,12 +406,12 @@ Dependency version conflict in requirements-prod.txt between:
 5. **Phase 5**: Resume Phase 1 environment configuration testing
 
 ### **Current Status:**
-- **API Service**: 🔧 **FIXING** - Invalid uvicorn option issue
-  - Created missing root-level Dockerfile
-  - Properly copies `api/` directory
-  - **Issue**: Invalid `--limit-max-requests-jitter` option in CMD
-  - **Fix**: Removed invalid option (commit 0392d5b)
-  - **Status**: Deploying fix
+- **API Service**: 🔧 **NEW ISSUE** - CORS preflight 503 error
+  - ✅ Docker configuration fixed and deployed
+  - ✅ Service starts successfully
+  - **Issue**: `/register` endpoint returning 503 status code
+  - **Impact**: Frontend registration completely broken
+  - **Status**: Requires investigation and fix
 - **Worker Service**: ✅ **RESOLVED** - Docker configuration fixed and deployed
   - Updated Dockerfile to maintain backend module structure
   - Fixed import paths and CMD execution
