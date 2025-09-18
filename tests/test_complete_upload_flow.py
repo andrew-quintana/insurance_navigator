@@ -14,7 +14,7 @@ async def test_complete_upload_flow():
     """Test the complete upload flow end-to-end."""
     
     # Test file
-    test_file_path = Path("test_upload_pipeline.md")
+    test_file_path = Path("docs/testing/test_upload_pipeline.md")
     if not test_file_path.exists():
         print("❌ Test file not found")
         return False

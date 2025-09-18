@@ -35,7 +35,7 @@ Resolve critical system integration issues preventing Phase 3 production deploym
 - Max: 20k tokens; 40/40/20 (context/rollups/snippets); overflow → keep signatures.
 
 ## Evidence Links
-- [RCA Validation Report](/docs/initiatives/agents/integration/phase3/rca/20250915_comprehensive_refactor/RCA_VALIDATION_REPORT_20250915.md)
+- [RCA Validation Report](/docs/testing/RCA_VALIDATION_REPORT_20250915.md)
 - [Phase 3 Validation Issues](/docs/initiatives/agents/integration/phase3/rca/202509150538/validation/rca_validation_issues_20250915.md)
 - [UUID Standardization RFC](/docs/initiatives/agents/integration/phase3/rca/202509100800_rag_conformance/uuid_refactor/RFC001_UUID_STANDARDIZATION.md)
 - [System Health Monitoring](/docs/initiatives/agents/integration/phase3/rca/20250915_comprehensive_refactor/monitoring/system_health.md)
