@@ -521,10 +521,14 @@ class EnhancedBaseWorker:
             if environment == "development":
                 # For development, try to get ngrok URL dynamically
                 try:
-                    from backend.shared.utils.ngrok_discovery import get_webhook_base_url
-                    base_url = get_webhook_base_url()
-                except ImportError:
+                    # Import ngrok_discovery only in development
+                    import sys
+                    import importlib
+                    ngrok_module = importlib.import_module("backend.shared.utils.ngrok_discovery")
+                    base_url = ngrok_module.get_webhook_base_url()
+                except (ImportError, Exception) as e:
                     # Fallback if ngrok discovery fails
+                    self.logger.warning(f"Ngrok discovery failed, using localhost fallback: {e}")
                     base_url = "http://localhost:8000"
             else:
                 # For production, use environment variable or default
