@@ -1,145 +1,187 @@
-# 📚 Insurance Navigator Documentation
+# Document Processing System
 
-Welcome to the comprehensive documentation for the Insurance Navigator system. This directory contains all current project documentation organized by category.
+A Supabase-based document processing system that handles document uploads, parsing, and vectorization.
 
-## 📁 Documentation Structure
+## Architecture
 
-### 🏗️ [Architecture](./architecture/)
-System architecture and design documents:
-- System design patterns and diagrams
-- Component interactions
-- Data flow diagrams
-- Agent workflow architecture
+The system consists of several Edge Functions that work together to process documents:
 
-### 🎯 [Design](./design/)
-Design specifications and system-level designs:
-- System-level design
-- Agent-level design
-- I/O specifications
-- Design rationale
+1. `job-processor`: Main entry point that handles document uploads and orchestrates the processing pipeline
+2. `doc-parser`: Parses uploaded documents and extracts text content
+3. `vector-processor`: Converts parsed text into vector embeddings for semantic search
 
-### 🤖 [Agents](./agents/)
-Agent system documentation:
-- Agent organization and structure
-- Regulatory agent documentation
-- Agent troubleshooting guides
-- Agent workflow patterns
+## Setup
 
-### 🚀 [Deployment](./deployment/)
-Production deployment documentation:
-- Deployment guides and procedures
-- Environment configuration
-- Cloud service setup
-- Troubleshooting guides
+1. Install dependencies:
+```bash
+npm install
+```
 
-### 🔐 [Security](./security/)
-Security documentation and compliance:
-- Security configuration
-- CORS management
-- Environment management rules
-- Function security guidelines
+2. Set up environment variables:
+```bash
+# Supabase project URL
+export SUPABASE_URL=your_project_url
+# Supabase service role key (for admin operations)
+export SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+# Supabase anon key (for client operations)
+export SUPABASE_ANON_KEY=your_anon_key
+```
 
-### 📋 [Project](./project/)
-Core project information:
-- Project overview and goals
-- Implementation status
-- Development guidelines
-- Best practices
+3. Deploy Edge Functions:
+```bash
+supabase functions deploy job-processor
+supabase functions deploy doc-parser
+supabase functions deploy vector-processor
+```
 
-### 📊 [Examples](./examples/)
-Usage examples and demonstrations:
-- API usage examples
-- Integration patterns
-- Sample configurations
+4. Apply database migrations:
+```bash
+supabase db reset
+```
 
-### 🔍 [FMEA](./fmea/)
-Failure Mode and Effects Analysis:
-- System-level FMEA
-- Component-level analysis
-- Risk assessment templates
+## Testing
 
-## Historical Documentation
+1. Run the test script:
+```bash
+npm run test:job-processor
+```
 
-For historical context, implementation progress, and past technical decisions, please refer to the [archive](./archive/) directory.
+This will:
+- Create a test user
+- Upload a test document
+- Monitor the processing pipeline
+- Report success/failure
 
-## 🚀 Quick Start
+## Database Schema
 
-1. **New to the project?** Start with [Project README](./project/README.md)
-2. **Ready to deploy?** Check [Deployment Guide](./deployment/deploy-guide.md)
-3. **Having issues?** Browse the troubleshooting guides in each section
+### Documents Table
+- `id`: UUID (primary key)
+- `user_id`: UUID (foreign key to auth.users)
+- `original_filename`: TEXT
+- `content_type`: TEXT
+- `file_size`: BIGINT
+- `storage_path`: TEXT
+- `status`: TEXT
+- `metadata`: JSONB
 
-## 📖 Integration Guides
+### Jobs Table
+- `id`: UUID (primary key)
+- `document_id`: UUID (foreign key to documents)
+- `status`: TEXT
+- `error_message`: TEXT
+- `error_details`: JSONB
+- `metadata`: JSONB
 
-Available in the root docs directory:
-- **[supabase_integration_guide.md](./supabase_integration_guide.md)** - Complete Supabase setup
-- **[fastapi_integration_guide.md](./fastapi_integration_guide.md)** - FastAPI configuration
-- **[supabase_storage_integration.md](./supabase_storage_integration.md)** - File storage setup
-- **[vector_migration_guide.md](./vector_migration_guide.md)** - Vector database migration
-- **[phase2_summary.md](./phase2_summary.md)** - Development phase summary
+## Error Handling
 
-## 🔍 Finding Information
+The system handles various types of errors:
+- Upload failures
+- Parsing errors
+- Vectorization failures
 
-### By Topic:
-- **Setup & Installation** → [Project](./project/)
-- **Production Deployment** → [Deployment](./deployment/)
-- **Agent Configuration** → [Agents](./agents/)
-- **API Integration** → Root directory integration guides
-- **Security Setup** → [Security](./security/)
-- **Troubleshooting** → Check relevant category folders
+Each error is properly logged with:
+- Error message
+- Error details
+- Job status updates
+- Document status updates
 
-### By User Type:
-- **Developers** → [Project](./project/), [Architecture](./architecture/), [Examples](./examples/)
-- **DevOps Engineers** → [Deployment](./deployment/), [Security](./security/)
-- **Product Managers** → [Project](./project/), [Design](./design/)
-- **Data Scientists** → [Prompt Management](./prompt_management/), [Prompt Evaluation](./prompt_evaluation/)
+## Security
 
-## 📝 Contributing to Documentation
+The system implements:
+- Row Level Security (RLS) policies
+- User-based access control
+- Secure file storage
+- Service role authentication for internal operations 
 
-When adding new documentation:
-1. Place it in the appropriate category directory
-2. Update this README if adding new categories
-3. Follow the established format and style
-4. Include clear examples where applicable
-5. Cross-reference related documentation
+A Supabase-based document processing system that handles document uploads, parsing, and vectorization.
 
-## 🏷️ Documentation Standards
+## Architecture
 
-- All documentation should be in Markdown format
-- Use clear headings and subheadings
-- Include code examples where relevant
-- Keep content up-to-date with the current implementation
-- Archive outdated documentation instead of deleting
+The system consists of several Edge Functions that work together to process documents:
 
----
+1. `job-processor`: Main entry point that handles document uploads and orchestrates the processing pipeline
+2. `doc-parser`: Parses uploaded documents and extracts text content
+3. `vector-processor`: Converts parsed text into vector embeddings for semantic search
 
-**Need help?** Start with the most relevant category above or browse the integration guides for specific technical setup instructions.
+## Setup
 
----
+1. Install dependencies:
+```bash
+npm install
+```
 
-# Documentation Contract
+2. Set up environment variables:
+```bash
+# Supabase project URL
+export SUPABASE_URL=your_project_url
+# Supabase service role key (for admin operations)
+export SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+# Supabase anon key (for client operations)
+export SUPABASE_ANON_KEY=your_anon_key
+```
 
-This repository standardizes initiative docs so tools (Cursor, Claude Code) can reliably discover adjacent systems and stay within context budgets.
+3. Deploy Edge Functions:
+```bash
+supabase functions deploy job-processor
+supabase functions deploy doc-parser
+supabase functions deploy vector-processor
+```
 
-**Hierarchy**
-/docs/
+4. Apply database migrations:
+```bash
+supabase db reset
+```
 
-	/initiatives/           # initiative serials (CONTEXTxxx, PRDxxx, RFCxxx, TODOxxx)
+## Testing
 
-	/knowledge/             # cross-initiative knowledge: impl notes, test summaries, tech debt, change logs
+1. Run the test script:
+```bash
+npm run test:job-processor
+```
 
-	/summaries/rollups/     # 200–400 word per-component rollups
+This will:
+- Create a test user
+- Upload a test document
+- Monitor the processing pipeline
+- Report success/failure
 
-	/meta/                  # templates, indices, adjacency graph, search config
+## Database Schema
 
-**Principles**
-1. Adjacent-first: PRDs/RFCs/TODOs must cite the freshest adjacent rollups + interfaces.
-2. Pin contracts: RFCs must include verbatim interface signatures for all integrations.
-3. Budgeted context: Prefer rollups; only include code for interface surfaces.
+### Documents Table
+- `id`: UUID (primary key)
+- `user_id`: UUID (foreign key to auth.users)
+- `original_filename`: TEXT
+- `content_type`: TEXT
+- `file_size`: BIGINT
+- `storage_path`: TEXT
+- `status`: TEXT
+- `metadata`: JSONB
 
-## Isolation Exception
-If an initiative is truly isolated, set in CONTEXTXXX.md:
+### Jobs Table
+- `id`: UUID (primary key)
+- `document_id`: UUID (foreign key to documents)
+- `status`: TEXT
+- `error_message`: TEXT
+- `error_details`: JSONB
+- `metadata`: JSONB
 
-> Isolation: true  
-> Isolation_Justification: {1–2 sentences}
+## Error Handling
 
-CI will skip adjacency freshness & citation checks when `Isolation: true`. 
+The system handles various types of errors:
+- Upload failures
+- Parsing errors
+- Vectorization failures
+
+Each error is properly logged with:
+- Error message
+- Error details
+- Job status updates
+- Document status updates
+
+## Security
+
+The system implements:
+- Row Level Security (RLS) policies
+- User-based access control
+- Secure file storage
+- Service role authentication for internal operations 

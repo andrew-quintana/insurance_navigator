@@ -25,19 +25,25 @@ Phase 3 deploys the fully validated agents integration system to cloud infrastru
 
 ```
 phase3/
-├── tests/           # Test scripts and validation code
+├── planning/        # Phase 3 execution plans and strategy
+├── execution/       # Execution summaries and critical issues
+├── documentation/   # Core documentation and guides
 ├── reports/         # Test reports and analysis
 ├── results/         # Test execution results (JSON)
 ├── deployment/      # Deployment scripts and configurations
 ├── monitoring/      # Monitoring and observability setup
 ├── security/        # Security configurations and policies
-├── PHASE3_EXECUTION_PLAN.md  # Complete execution plan
-└── README.md        # This file
+├── rca/             # Root cause analysis documentation
+├── uuid_refactor/   # UUID standardization refactor specs
+├── bulk_refactor/   # Bulk refactor specifications
+└── README.md        # This file (updated)
 ```
+
+**Note**: Test files have been moved to `/tests/agents/integration/phase3/` for better organization.
 
 ---
 
-## Test Scripts (`tests/`)
+## Test Scripts (`/tests/agents/integration/phase3/`)
 
 ### Cloud Infrastructure Tests
 - **`cloud_infrastructure_test.py`** - Cloud infrastructure validation
