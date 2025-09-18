@@ -5,6 +5,7 @@
 - [ ] Update ADJACENT_INDEX.md with current dates
 - [ ] Collect interface contracts from adjacent systems
 - [ ] Validate token budget allocation
+- [ ] **Create fracas.md** for failure tracking using FRACAS methodology
 - [ ] Block: Implementation cannot proceed until Phase 0 complete
 
 ## Phase 1 — Planning
@@ -17,15 +18,25 @@
 - [ ] {Implementation tasks}
 - [ ] Unit tests
 - [ ] Integration tests
+- [ ] **Document any failures** in fracas.md immediately when encountered
 
 ## Phase 3 — Validation
 - [ ] End-to-end testing
 - [ ] Performance validation
 - [ ] Documentation updates
 - [ ] Deployment readiness
+- [ ] **Resolve all critical failure modes** in fracas.md before deployment
 
 ## Blockers
 - {List current blockers and dependencies}
 
 ## Notes
 - {Implementation notes and decisions}
+
+## FRACAS Integration
+- **Failure Tracking**: All failures, bugs, and unexpected behaviors must be documented in `fracas.md`
+- **Investigation Process**: Follow systematic FRACAS methodology for root cause analysis
+- **Knowledge Building**: Use failure modes to build organizational knowledge and prevent recurrence
+- **Status Management**: Keep failure mode statuses current and move resolved issues to historical section
+
+**FRACAS Document Location**: `docs/initiatives/{initiative_name}/fracas.md`
