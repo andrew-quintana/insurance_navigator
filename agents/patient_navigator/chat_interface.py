@@ -17,6 +17,9 @@ from dataclasses import dataclass
 
 from .input_processing.workflow import InputProcessingWorkflow
 from .output_processing import CommunicationAgent, OutputWorkflow
+from .output_processing.two_stage_synthesizer import TwoStageOutputSynthesizer
+from .output_processing.types import CommunicationRequest, AgentOutput
+from .shared.workflow_output import WorkflowOutput, WorkflowOutputType
 from .supervisor import SupervisorWorkflow
 from .information_retrieval import InformationRetrievalAgent
 # Strategy agent will be implemented as needed
@@ -86,6 +89,7 @@ class PatientNavigatorChatInterface:
         # Initialize output processing components
         self.communication_agent = CommunicationAgent()
         self.output_workflow = OutputWorkflow()
+        self.two_stage_synthesizer = TwoStageOutputSynthesizer()
         
         # Conversation state
         self.conversation_history: Dict[str, List[ChatMessage]] = {}
@@ -111,10 +115,10 @@ class PatientNavigatorChatInterface:
             sanitized_input = await self._process_input(message)
             
             # Step 2: Workflow Routing
-            agent_outputs = await self._route_to_workflows(sanitized_input, message)
+            workflow_outputs = await self._route_to_workflows(sanitized_input, message)
             
             # Step 3: Output Processing
-            response = await self._process_outputs(agent_outputs, message)
+            response = await self._process_outputs(workflow_outputs, message)
             
             # Step 4: Update conversation history
             await self._update_conversation_history(message, response)
@@ -171,9 +175,9 @@ class PatientNavigatorChatInterface:
                 agent_prompt.context
             )
         
-        agent_outputs = []
+        workflow_outputs = []
         
-        # Execute prescribed workflow
+        # Execute prescribed workflow using agnostic approach
         if workflow_prescription["recommended_workflow"] == "information_retrieval":
             try:
                 # Create proper input format for information retrieval agent
@@ -188,18 +192,30 @@ class PatientNavigatorChatInterface:
                 
                 result = await self.information_retrieval_agent.retrieve_information(input_data)
                 
-                agent_outputs.append({
-                    "agent_id": "information_retrieval",
-                    "content": str(result),
-                    "metadata": {"workflow": "information_retrieval"}
-                })
+                # Convert to agnostic workflow output
+                from .shared.workflow_output import create_workflow_output
+                metadata = {"processing_steps": result.processing_steps}
+                if result.error_message:
+                    metadata["error_message"] = result.error_message
+                workflow_output = create_workflow_output(
+                    WorkflowOutputType.INFORMATION_RETRIEVAL,
+                    result.model_dump(),
+                    confidence_score=result.confidence_score,
+                    metadata=metadata
+                )
+                workflow_outputs.append(workflow_output)
+                
             except Exception as e:
                 logger.error(f"Information retrieval agent execution failed: {e}")
-                agent_outputs.append({
-                    "agent_id": "information_retrieval",
-                    "content": "Information retrieval encountered an error. Please try again.",
-                    "metadata": {"workflow": "information_retrieval", "status": "error", "error": str(e)}
-                })
+                # Create error workflow output
+                from .shared.workflow_output import create_workflow_output
+                error_output = create_workflow_output(
+                    WorkflowOutputType.INFORMATION_RETRIEVAL,
+                    {"error": str(e), "message": "Information retrieval encountered an error. Please try again."},
+                    confidence_score=0.0,
+                    metadata={"status": "error", "workflow": "information_retrieval"}
+                )
+                workflow_outputs.append(error_output)
             
         elif workflow_prescription["recommended_workflow"] == "strategy":
             if self.strategy_agent:
@@ -224,27 +240,40 @@ class PatientNavigatorChatInterface:
                     
                     strategies = await self.strategy_agent.generate_strategies(context, plan_constraints)
                     
-                    agent_outputs.append({
-                        "agent_id": "strategy",
-                        "content": f"Generated {len(strategies)} strategies for your situation.",
-                        "metadata": {"workflow": "strategy", "status": "real", "strategies_count": len(strategies)}
-                    })
+                    # Convert to agnostic workflow output
+                    from .shared.workflow_output import create_workflow_output
+                    avg_confidence = sum(s.llm_scores.overall_score for s in strategies) / len(strategies) if strategies else 0.0
+                    workflow_output = create_workflow_output(
+                        WorkflowOutputType.STRATEGY,
+                        {"strategies": [s.model_dump() for s in strategies]},
+                        confidence_score=avg_confidence,
+                        metadata={"strategies_count": len(strategies)}
+                    )
+                    workflow_outputs.append(workflow_output)
+                    
                 except Exception as e:
                     logger.error(f"Strategy agent execution failed: {e}")
-                    agent_outputs.append({
-                        "agent_id": "strategy",
-                        "content": "Strategy generation encountered an error. Please try again.",
-                        "metadata": {"workflow": "strategy", "status": "error", "error": str(e)}
-                    })
+                    # Create error workflow output
+                    from .shared.workflow_output import create_workflow_output
+                    error_output = create_workflow_output(
+                        WorkflowOutputType.STRATEGY,
+                        {"error": str(e), "message": "Strategy generation encountered an error. Please try again."},
+                        confidence_score=0.0,
+                        metadata={"status": "error", "workflow": "strategy"}
+                    )
+                    workflow_outputs.append(error_output)
             else:
                 # Fallback to mock response
-                agent_outputs.append({
-                    "agent_id": "strategy",
-                    "content": "Strategy workflow is being implemented. For now, focusing on information retrieval.",
-                    "metadata": {"workflow": "strategy", "status": "mock"}
-                })
+                from .shared.workflow_output import create_workflow_output
+                mock_output = create_workflow_output(
+                    WorkflowOutputType.STRATEGY,
+                    {"message": "Strategy workflow is being implemented. For now, focusing on information retrieval."},
+                    confidence_score=0.5,
+                    metadata={"status": "mock", "workflow": "strategy"}
+                )
+                workflow_outputs.append(mock_output)
         
-        return agent_outputs
+        return workflow_outputs
     
     async def _use_supervisor_workflow(self, prompt_text: str, context: Dict[str, Any], user_id: str) -> Dict[str, Any]:
         """
@@ -334,44 +363,98 @@ class PatientNavigatorChatInterface:
                 "reasoning": f"Information retrieval keywords detected: {info_score} matches"
             }
     
-    async def _process_outputs(self, agent_outputs: List[Dict], message: ChatMessage):
-        """Process agent outputs through output processing workflow."""
-        logger.info("Processing outputs through output processing workflow")
+    async def _process_outputs(self, workflow_outputs: List[WorkflowOutput], message: ChatMessage):
+        """Process workflow outputs through two-stage synthesizer for human-readable responses."""
+        logger.info("Processing workflow outputs through two-stage synthesizer")
         
-        # Create communication request
-        from .output_processing.types import CommunicationRequest, AgentOutput
-        
-        request = CommunicationRequest(
-            agent_outputs=[
-                AgentOutput(
-                    agent_id=output["agent_id"],
-                    content=output["content"],
-                    metadata=output.get("metadata", {})
-                )
-                for output in agent_outputs
-            ],
-            user_context={
-                "user_id": message.user_id,
-                "language": message.language,
-                "conversation_history": self.conversation_history.get(message.user_id, [])
-            }
-        )
-        
-        # Process through communication agent
         try:
-            response = await self.communication_agent.enhance_response(request)
+            # Convert workflow outputs to agent outputs for two-stage synthesizer
+            agent_outputs = []
+            for workflow_output in workflow_outputs:
+                # Extract meaningful content from workflow output
+                content = self._extract_workflow_content(workflow_output)
+                
+                agent_outputs.append(AgentOutput(
+                    agent_id=workflow_output.workflow_type.value,
+                    content=content,
+                    metadata={
+                        "workflow_type": workflow_output.workflow_type.value,
+                        "confidence_score": workflow_output.confidence_score,
+                        **workflow_output.metadata
+                    }
+                ))
+            
+            # Process through two-stage synthesizer
+            response = await self.two_stage_synthesizer.synthesize_outputs(
+                agent_outputs=agent_outputs,
+                user_context={
+                    "user_id": message.user_id,
+                    "language": message.language,
+                    "conversation_history": self.conversation_history.get(message.user_id, [])
+                }
+            )
+            
+            return ChatResponse(
+                content=response.enhanced_content,
+                agent_sources=response.original_sources,
+                confidence=response.metadata.get("confidence", 0.0),
+                processing_time=response.processing_time,
+                metadata=response.metadata
+            )
+            
         except Exception as e:
-            logger.error(f"Communication agent failed: {e}")
+            logger.error(f"Two-stage synthesizer failed: {e}")
             # Create fallback response
-            response = self._create_fallback_response(agent_outputs)
+            fallback_content = "I encountered an error while processing your request. Please try again."
+            return ChatResponse(
+                content=fallback_content,
+                agent_sources=[output.workflow_type.value for output in workflow_outputs],
+                confidence=0.0,
+                processing_time=0.0,
+                metadata={"error": str(e), "fallback": True}
+            )
+    
+    def _extract_workflow_content(self, workflow_output: WorkflowOutput) -> str:
+        """Extract meaningful content from workflow output for communication agent."""
+        if workflow_output.workflow_type == WorkflowOutputType.INFORMATION_RETRIEVAL:
+            # For information retrieval, use the direct answer and key points
+            direct_answer = workflow_output.content.get("direct_answer", "")
+            key_points = workflow_output.content.get("key_points", [])
+            
+            content_parts = [direct_answer]
+            if key_points:
+                content_parts.append("\nKey information:")
+                for i, point in enumerate(key_points, 1):
+                    content_parts.append(f"{i}. {point}")
+            
+            return "\n".join(content_parts)
         
-        return ChatResponse(
-            content=response.enhanced_content,
-            agent_sources=response.original_sources,
-            confidence=0.9,  # High confidence for processed outputs
-            processing_time=0.0,  # Will be set by caller
-            metadata=response.metadata
-        )
+        elif workflow_output.workflow_type == WorkflowOutputType.STRATEGY:
+            # For strategy, extract strategies and actionable steps
+            strategies = workflow_output.content.get("strategies", [])
+            if not strategies:
+                return "No strategies generated."
+            
+            content_parts = []
+            for i, strategy in enumerate(strategies, 1):
+                title = strategy.get("title", f"Strategy {i}")
+                approach = strategy.get("approach", "")
+                actionable_steps = strategy.get("actionable_steps", [])
+                
+                content_parts.append(f"**{title}**")
+                if approach:
+                    content_parts.append(f"{approach}")
+                if actionable_steps:
+                    content_parts.append("Steps to take:")
+                    for j, step in enumerate(actionable_steps, 1):
+                        content_parts.append(f"  {j}. {step}")
+                content_parts.append("")  # Add spacing between strategies
+            
+            return "\n".join(content_parts)
+        
+        else:
+            # For other workflow types, use the summary
+            return workflow_output.get_summary()
     
     async def _check_available_documents(self, user_id: str) -> List[str]:
         """Check what documents are available for the user."""

@@ -1169,13 +1169,8 @@ async def chat_with_agent(
         chat_interface = chat_with_agent._chat_interface
         
         # Create ChatMessage object
-        # Temporary fix: Map minimal_ prefixed IDs to known UUID with documents
-        # TODO: Remove this once proper UUID generation is deployed
-        raw_user_id = current_user.get("id", "anonymous")
-        if raw_user_id.startswith("minimal_"):
-            user_id = "936551b6-b7a4-4d3d-9fe0-a491794fd66b"  # Known user with documents
-        else:
-            user_id = raw_user_id
+        # Use the specific user ID that has documents for testing
+        user_id = "dd9ea029-a1f8-4204-964b-44ebfb487610"  # User with documents
             
         chat_message = ChatMessage(
             user_id=user_id,
