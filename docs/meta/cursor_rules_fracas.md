@@ -255,6 +255,30 @@ Cursor: "I'll update FM-XXX status to fixed, document the solution with code cha
 - Update documentation with lessons learned
 - Share knowledge with team members
 
+## Testing and Technical Debt Requirements
+
+### Phase Handoff Testing Summaries
+Each phase completion must include:
+- **Testing Summary Document**: Comprehensive validation results for handoff to next phase
+- **Coverage Documentation**: What was tested and any limitations or gaps
+- **Validation Results**: Both automated and manual testing outcomes
+- **Next Phase Prerequisites**: Testing requirements that must be met before next phase can proceed
+
+### Initiative Completion Requirements
+At initiative completion, must provide:
+- **Final Testing Summary**: Comprehensive testing report across all phases
+- **Technical Debt Documentation**: Complete catalog of technical debt with:
+  - Impact assessment for each debt item
+  - Prioritization based on business impact
+  - Remediation roadmap with timelines
+  - Cost/benefit analysis for addressing debt
+
+### Quality Standards for Testing Documentation
+- Testing summaries must be actionable for next phase teams
+- Technical debt must be catalogued with sufficient detail for future remediation
+- All testing gaps must be explicitly documented
+- Performance baselines and regression risks must be documented
+
 ---
 
 These rules ensure consistent, systematic failure tracking and resolution using the FRACAS methodology. Following these guidelines builds organizational knowledge and prevents future issues through comprehensive failure analysis.

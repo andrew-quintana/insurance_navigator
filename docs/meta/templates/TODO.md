@@ -13,12 +13,14 @@
 - [ ] Complete RFC.md
 - [ ] Review with stakeholders
 - [ ] Update adjacency.json if needed
+- [ ] **Phase 1 Testing Summary** for handoff to Phase 2
 
 ## Phase 2 — Implementation
 - [ ] {Implementation tasks}
 - [ ] Unit tests
 - [ ] Integration tests
 - [ ] **Document any failures** in fracas.md immediately when encountered
+- [ ] **Phase 2 Testing Summary** for handoff to Phase 3
 
 ## Phase 3 — Validation
 - [ ] End-to-end testing
@@ -26,6 +28,11 @@
 - [ ] Documentation updates
 - [ ] Deployment readiness
 - [ ] **Resolve all critical failure modes** in fracas.md before deployment
+- [ ] **Phase 3 Testing Summary** for handoff to Phase 4 (if applicable)
+
+## Initiative Completion
+- [ ] **Final Testing Summary** - Comprehensive testing report across all phases
+- [ ] **Technical Debt Documentation** - Complete technical debt catalog and remediation roadmap
 
 ## Blockers
 - {List current blockers and dependencies}
