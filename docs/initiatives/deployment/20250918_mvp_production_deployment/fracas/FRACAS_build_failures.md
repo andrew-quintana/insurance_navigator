@@ -207,7 +207,53 @@ Refactor environment configuration to load variables at module import time or us
 
 ## 🔧 **Resolved Failure Modes**
 
-*No resolved failures yet*
+### **FM-003: Render API Service Dependency Conflict (RESOLVED)**
+**Failure ID**: FM-003  
+**Date**: 2025-01-18  
+**Service**: insurance-navigator-api  
+**Commit**: 240a5bc  
+**Status**: ✅ **RESOLVED**
+
+**Symptoms:**
+- Build fails during pip install step
+- Error: `ResolutionImpossible: for help visit https://pip.pypa.io/en/latest/topics/dependency-resolution/#dealing-with-dependency-conflicts`
+- Specific conflict: httpx version requirements
+
+**Root Cause:**
+Dependency version conflict in requirements-prod.txt between:
+- supabase (requires httpx<0.29 and >=0.26)
+- Explicit httpx==0.25.2 requirement
+
+**Solution Applied:**
+Updated httpx version in requirements-prod.txt to `httpx>=0.26.0,<0.29.0` to satisfy all dependencies.
+
+**Evidence:**
+- ✅ Dependencies now resolve correctly
+- ✅ Local Docker build succeeds
+- ✅ All tests passing locally
+
+### **FM-004: Render API Service Invalid Uvicorn Option (CURRENT)**
+**Failure ID**: FM-004  
+**Date**: 2025-01-18  
+**Service**: insurance-navigator-api  
+**Commit**: 0392d5b  
+**Status**: 🔧 **IN PROGRESS**
+
+**Symptoms:**
+- API service deployment fails with "update_failed" status
+- Service builds successfully but fails to start
+- Error: `No such option: --limit-max-requests-jitter`
+
+**Root Cause:**
+The Dockerfile CMD command includes `--limit-max-requests-jitter` which is not a valid uvicorn option.
+
+**Solution Applied:**
+Removed the invalid `--limit-max-requests-jitter` option from the Dockerfile CMD command.
+
+**Evidence:**
+- Error logs show: `Error: No such option: --limit-max-requests-jitter`
+- Service builds successfully but fails at startup
+- uvicorn help shows no such option exists
 
 ---
 
@@ -321,16 +367,19 @@ Dependency version conflict in requirements-prod.txt between:
 5. **Phase 5**: Resume Phase 1 environment configuration testing
 
 ### **Current Status:**
-- **API Service**: ✅ **RESOLVED** - Docker configuration fixed and deployed
+- **API Service**: 🔧 **FIXING** - Invalid uvicorn option issue
   - Created missing root-level Dockerfile
   - Properly copies `api/` directory
-  - **Status**: All tests passing locally (commit 240a5bc)
+  - **Issue**: Invalid `--limit-max-requests-jitter` option in CMD
+  - **Fix**: Removed invalid option (commit 0392d5b)
+  - **Status**: Deploying fix
 - **Worker Service**: ✅ **RESOLVED** - Docker configuration fixed and deployed
   - Updated Dockerfile to maintain backend module structure
   - Fixed import paths and CMD execution
   - **Status**: All tests passing locally (commit 240a5bc)
-- **Dependency Conflicts**: ✅ **RESOLVED** - Fixed postgrest version conflict
+- **Dependency Conflicts**: ✅ **RESOLVED** - Fixed postgrest and httpx version conflicts
   - Updated postgrest to >=0.20.0,<1.1 to match supabase requirements
+  - Updated httpx to >=0.26.0,<0.29.0 to resolve conflicts
   - **Status**: All dependencies resolving correctly
 - **Local Docker Simulation**: ✅ **IMPLEMENTED** - Added comprehensive local testing
   - Created docker-compose.yml for local development
