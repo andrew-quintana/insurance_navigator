@@ -2210,3 +2210,117 @@ No chunks returned (correctly - zero vectors have no semantic meaning)
 **Last Updated**: 2025-09-17
 **Next Review**: After embedding generation investigation
 **Maintainer**: Development Team
+
+---
+
+## FM-033: Workflow Output Format Coupling - Tight Coupling to InformationRetrievalOutput
+
+**Status:** ACTIVE  
+**Date:** 2025-09-17  
+**Severity:** HIGH  
+
+### Symptoms
+- Strategy workflow generates proper output but appears truncated in final response
+- Output processing workflow expects all workflows to conform to `InformationRetrievalOutput` format
+- Strategy workflow output shows incomplete `direct_answer` and `key_points` fields
+- System architecture is tightly coupled to specific output format instead of being agnostic
+
+### Observations
+**Current Architecture Issues:**
+- All workflows must convert their output to `InformationRetrievalOutput` format
+- Strategy workflow returns structured strategy objects but gets forced into information retrieval format
+- Output processing workflow expects specific fields: `expert_reframe`, `direct_answer`, `key_points`, `confidence_score`
+- This creates artificial constraints on workflow design and output flexibility
+
+**Evidence from Strategy Workflow Output:**
+```
+direct_answer="here is a comprehensive response to the user's question about getting an x-ray: to get an x-ray under your health insurance plan, you would need to follow these steps: 1 the documents indicate that x-rays are a covered service under the plan 2 3 4 5 6"
+key_points=["here is a comprehensive response to the user's question about getting an x-ray: to get an x-ray under your health insurance plan, you would need to follow these steps: 1", 'the documents indicate that x-rays are a covered service under the plan', '2', '3', '4', '5', '6']
+```
+
+**Root Cause:**
+The output processing workflow is tightly coupled to the `InformationRetrievalOutput` format, forcing all workflows to conform to a specific structure that may not be optimal for their natural output format.
+
+### Investigation Notes
+**Current Flow Problems:**
+1. **Strategy Workflow** generates rich strategy objects with `title`, `approach`, `actionable_steps`, `rationale`
+2. **Chat Interface** tries to convert strategy objects to `InformationRetrievalOutput` format
+3. **Conversion Process** loses semantic meaning and creates truncated, generic responses
+4. **Output Processing** receives malformed data and cannot properly synthesize meaningful responses
+
+**Architectural Constraints:**
+- Each workflow must implement conversion logic to `InformationRetrievalOutput`
+- Output processing cannot leverage the natural strengths of different workflow types
+- Strategy workflows lose their structured, actionable nature when forced into information retrieval format
+- Future workflows will face the same conversion burden
+
+### Root Cause
+**Tight Coupling to InformationRetrievalOutput Format**: The output processing workflow is designed around a specific output format rather than being agnostic to workflow output types. This forces all workflows to conform to a single format, losing the semantic richness and natural structure of different workflow types.
+
+### Solution
+**Implement Agnostic Output Processing Architecture**:
+
+1. **Create Workflow Output Abstraction Layer**:
+   - Define a base `WorkflowOutput` interface that all workflows can implement
+   - Allow workflows to return their natural output format
+   - Create adapters for different output types
+
+2. **Enhance Output Processing Workflow**:
+   - Make output processing agnostic to specific output formats
+   - Use content extraction and synthesis rather than format conversion
+   - Leverage the natural structure of each workflow's output
+
+3. **Implement Content Synthesis Strategy**:
+   - Extract meaningful content from any workflow output format
+   - Synthesize responses based on content type and structure
+   - Preserve semantic meaning and actionable information
+
+4. **Create Workflow-Specific Processors**:
+   - Strategy workflow processor: Extract actionable steps, approaches, rationales
+   - Information retrieval processor: Extract direct answers, key points, sources
+   - Future workflow processors: Handle their natural output formats
+
+### Evidence
+**Current Tight Coupling:**
+```python
+# Chat interface forces strategy output into InformationRetrievalOutput
+result = await self.information_retrieval_agent.retrieve_information(input_data)
+agent_outputs.append({
+    "agent_id": "information_retrieval",
+    "content": str(result),  # Forces InformationRetrievalOutput format
+    "metadata": {"workflow": "information_retrieval"}
+})
+```
+
+**Strategy Workflow Natural Output:**
+```python
+# Strategy workflow naturally returns structured strategy objects
+strategies = await self.strategy_agent.generate_strategies(context, plan_constraints)
+# Each strategy has: title, approach, rationale, actionable_steps, llm_scores
+```
+
+**Proposed Agnostic Approach:**
+```python
+# Workflow-agnostic output processing
+workflow_output = await workflow.execute(input_data)
+processed_output = await output_processor.process(workflow_output)
+# Output processor adapts to any workflow output format
+```
+
+### Related Issues
+- FM-032: Embedding Generation Failure (resolved - but output processing still broken)
+- Strategy workflow functionality is working but output is malformed
+- Future workflows will face the same conversion burden
+
+### Next Steps
+1. **Design Workflow Output Abstraction Layer**
+2. **Implement Agnostic Output Processing**
+3. **Create Workflow-Specific Content Extractors**
+4. **Test with Strategy and Information Retrieval Workflows**
+5. **Validate Improved Output Quality and Semantic Preservation**
+
+---
+
+**Last Updated**: 2025-09-17
+**Next Review**: After agnostic output processing implementation
+**Maintainer**: Development Team
