@@ -33,12 +33,37 @@ When encountering any failure, bug, or unexpected behavior:
 Initiative starts → Create docs/initiatives/[initiative_name]/fracas.md
 ```
 
+#### Automatic FRACAS Creation Required For:
+**See complete criteria in `@docs/meta/fracas_trigger_criteria.md`**
+
+**Critical Triggers (Immediate):**
+- **Production system downtime** >5 minutes
+- **Data loss or corruption** of any amount  
+- **Security breach** or vulnerability exploitation
+- **Build failures** taking >30 minutes to resolve
+- **Test failures** requiring more than trivial fixes
+- **API failure rates** >10% for >15 minutes
+
+**High Priority Triggers (Within 4 Hours):**
+- **Performance degradation** >50% from baseline
+- **Integration failures** between system components
+- **Infrastructure failures** affecting system operation
+- **Test failures** requiring >2 hours investigation
+
+**Automated Detection Methods:**
+- CI/CD pipeline integration for build/test failures
+- Monitoring system alerts for performance/availability
+- Security scanning results for vulnerabilities
+- Development tool integration for code quality issues
+
 #### Update Existing FRACAS Document:
 - When any error, bug, or unexpected behavior occurs
 - When investigating issues during development or testing
 - When implementing fixes or workarounds
 - When system behavior doesn't match expectations
 - When performance issues are detected
+- When reproducing issues for verification
+- When implementing workarounds or temporary fixes
 
 ### FRACAS Document Structure
 
@@ -254,6 +279,68 @@ Cursor: "I'll update FM-XXX status to fixed, document the solution with code cha
 - Verify all failure modes are resolved
 - Update documentation with lessons learned
 - Share knowledge with team members
+
+## Commit Message Requirements
+
+### Failure Mode References in Commits
+When working on issues documented in FRACAS, all commits must reference the relevant failure modes:
+
+#### Required Format:
+```
+<type>: <description>
+
+Addresses: FM-XXX, FM-YYY
+Status: [Investigation/Fix/Verification]
+
+<detailed description of changes>
+```
+
+#### Examples:
+```
+fix: increase database connection timeout to prevent failures
+
+Addresses: FM-025
+Status: Fix
+
+Updated connection pool configuration to use 60s timeout instead of 30s.
+This resolves the timeout issues observed during peak load scenarios.
+
+Files modified:
+- config/database.py:45
+- tests/integration/test_db_connection.py
+
+Fixes #123
+```
+
+```
+feat: add retry logic for API calls
+
+Addresses: FM-018, FM-032
+Status: Fix
+
+Implemented exponential backoff retry mechanism for external API calls.
+This addresses both timeout failures and temporary service unavailability.
+
+Files modified:
+- src/services/external_api.py
+- src/utils/retry_logic.py
+- tests/unit/test_retry.py
+```
+
+#### Commit Types Related to FRACAS:
+- **fix**: Direct resolution of documented failure mode
+- **feat**: New functionality to prevent failure modes
+- **refactor**: Code changes to address systemic failure patterns
+- **test**: Additional testing to verify failure mode resolution
+- **docs**: Documentation updates related to failure analysis
+- **config**: Configuration changes to resolve infrastructure issues
+
+### Commit Message Validation Rules:
+- All commits touching FRACAS-documented components must reference relevant FM-XXX
+- Status field must indicate current state: Investigation/Fix/Verification
+- Must include specific file references where changes were made
+- Must link to relevant issue numbers if applicable
+- Must be clear enough for other developers to understand the failure context
 
 ## Testing and Technical Debt Requirements
 

@@ -8,6 +8,29 @@
 - [x] Document existing deployment scripts and automation
 - [x] Block: Implementation cannot proceed until Phase 0 complete
 
+## Phase 0.5 — Local Docker Simulation (Week 0.5)
+### Local Production Environment Simulation
+- [ ] Set up local Docker environment that mirrors Render production
+  - [ ] Create `docker-compose.yml` for local development with production-like setup
+  - [ ] Implement local Docker build process that matches Render Dockerfile
+  - [ ] Set up local environment variables that match production configuration
+- [ ] Local testing and validation
+  - [ ] Test Docker builds locally before pushing to Render
+  - [ ] Validate module imports and Python path structure locally
+  - [ ] Test dependency resolution in local Docker environment
+  - [ ] Implement local health checks that match production endpoints
+- [ ] Development workflow integration
+  - [ ] Update local development scripts to use Docker simulation
+  - [ ] Create local testing procedures that catch production issues early
+  - [ ] Document local Docker development workflow
+
+### Phase 0.5 Handoff Documentation
+Upon completion of Phase 0.5, provide:
+- Local Docker simulation setup and configuration
+- Local testing procedures that catch production issues
+- Development workflow integration documentation
+- Validation that local environment matches production behavior
+
 ## Phase 1 — Environment Configuration Management (Week 1)
 ### Environment Separation & Configuration
 - [ ] Create `config/environments/` directory structure
