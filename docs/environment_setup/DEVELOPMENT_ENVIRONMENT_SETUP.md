@@ -200,6 +200,25 @@ curl -X GET "http://localhost:8000/debug/rag-similarity/test_user_id?query=test&
 2. **Chat with Real Documents**: May have issues without actual document processing
 3. **Memory Usage Alert**: Non-critical memory usage warning (can be ignored)
 
+### 📋 Issue Reporting and FRACAS Integration
+When encountering any issues during testing:
+
+1. **Document in FRACAS**: Add new failure mode to relevant initiative's `fracas.md`
+2. **Include Evidence**: Capture error messages, logs, and reproduction steps
+3. **Use FM-XXX Format**: Assign unique failure mode identifier for tracking
+4. **Update Status**: Track investigation progress and resolution steps
+5. **Reference in Commits**: Include FM-XXX references when fixing issues
+
+**Example Issue Documentation:**
+```markdown
+### FM-042: Document Status Endpoint Returns 500 Error
+- **Severity**: High
+- **Status**: 🔍 Under Investigation  
+- **First Observed**: 2025-09-18
+- **Symptoms**: GET /documents/{id}/status returns 500 instead of document status
+- **Evidence**: Error logs showing database connection timeout
+```
+
 ### 🛡️ Resilience Features to Test
 1. **Circuit Breaker Behavior**: Monitor circuit breaker states during failures
 2. **Graceful Degradation**: Test system behavior when services are unavailable

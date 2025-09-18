@@ -8,14 +8,33 @@
     "start:frontend": "cd ui && npm run dev -- --port 3000",
     "start": "concurrently -n \"BACKEND,FRONTEND\" -c \"blue,green\" -p \"[{name}]\" \"npm run start:backend\" \"npm run start:frontend\"",
     "dev": "npm run start",
+    "dev:docker": "docker-compose up --build",
+    "dev:docker:detached": "docker-compose up -d --build",
+    "test:docker": "docker-compose exec api python -m pytest",
+    "test:local-production": "../scripts/validate-local-production.sh",
+    "pre-deploy:test": "../scripts/pre-deploy-test.sh",
+    "docker:clean": "docker-compose down -v && docker system prune -f",
+    "docker:logs": "docker-compose logs -f",
+    "docker:shell": "docker-compose exec api bash",
     "install:frontend": "cd ui && npm install",
     "build:frontend": "cd ui && npm run build",
     "lint:frontend": "cd ui && npm run lint",
     "clean": "rm -rf ui/.next ui/node_modules/.cache",
-    "setup": "npm run install:frontend && echo 'Setup complete! Run npm run dev to start both servers.'"
+    "setup": "npm run install:frontend && echo 'Setup complete! Run npm run dev to start both servers.'",
+    "validate:environment": "ts-node scripts/validate-environment.ts",
+    "sync:environments": "ts-node scripts/sync-environments.ts",
+    "security:audit": "ts-node scripts/security-audit.ts",
+    "test:environment": "jest config/environments/__tests__/",
+    "test:scripts": "jest scripts/__tests__/"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.0",
+    "@types/node": "^20.0.0",
+    "jest": "^29.0.0",
+    "@jest/globals": "^29.0.0",
+    "@types/jest": "^29.0.0"
   },
   "keywords": [
     "insurance",
