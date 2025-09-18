@@ -22,6 +22,7 @@ from .auth import get_current_user, User
 from .rate_limiter import RateLimiter
 from .endpoints.upload import router as upload_router
 from .endpoints.jobs import router as jobs_router
+from .webhooks import router as webhooks_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -241,6 +242,7 @@ async def debug_environment():
 # Include API routers
 app.include_router(upload_router, prefix="/api/v2", tags=["upload"])
 app.include_router(jobs_router, prefix="/api/v2", tags=["jobs"])
+app.include_router(webhooks_router, prefix="/api/upload-pipeline", tags=["webhooks"])
 
 
 if __name__ == "__main__":
