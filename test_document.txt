@@ -1,1 +1,0 @@
-This is a test insurance document with some content about coverage and deductibles. It contains multiple paragraphs to test chunking and embedding generation. The document has information about policy terms, coverage limits, and contact information for the insurance company.
