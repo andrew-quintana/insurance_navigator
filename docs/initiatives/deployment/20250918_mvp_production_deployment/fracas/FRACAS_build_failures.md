@@ -47,13 +47,26 @@ This document serves as a comprehensive failure tracking system for the MVP Prod
 - Error occurs in `/app/main.py` line 89: `from api.upload_pipeline.webhooks import router as webhook_router`
 
 **Investigation Notes:**
-- Checked Render build logs for the API service
-- Found consistent error: `ModuleNotFoundError: No module named 'api'`
-- Docker build completes successfully but Python can't find the api module
-- Service crashes immediately on startup, preventing health checks from working
+- **Dockerfile History**: At commit 54cef4c, the root-level `Dockerfile` was missing the `api/` directory in COPY instructions
+- **Previous Dockerfile**: The root `Dockerfile` at commit 54cef4c was copying individual directories but **NOT** the `api/` directory:
+  ```dockerfile
+  COPY main.py .
+  COPY config/ ./config/
+  COPY core/ ./core/
+  COPY db/ ./db/
+  COPY backend/ ./backend/
+  COPY shared/ ./shared/
+  COPY utils/ ./utils/
+  COPY agents/ ./agents/
+  # ❌ MISSING: COPY api/ ./api/
+  ```
+- **Render Configuration**: `render.yaml` correctly points to `./Dockerfile` (root level) for both commits
+- **Symbolic Link**: `config/Dockerfile` is a symbolic link to `config/docker/Dockerfile` but this was NOT being used
+- **Current Issue**: The new Dockerfile (commit 997c793) has dependency conflicts during pip install, not module import issues
 
 **Root Cause:**
-Python module path issue - the API container doesn't have the api module in its Python path. The Docker build process is not properly setting up the Python module structure.
+- **Commit 54cef4c**: Missing `api/` directory in Dockerfile COPY instructions
+- **Commit 997c793**: Dependency conflict during pip install (httpx version conflict between llama-index-core and supabase)
 
 **Workaround:**
 None needed - fix implemented
@@ -198,6 +211,45 @@ Refactor environment configuration to load variables at module import time or us
 
 ---
 
+## **FM-003: Render API Service Dependency Conflict (Current)**
+**Failure ID**: FM-003  
+**Date**: 2025-01-18  
+**Service**: insurance-navigator-api  
+**Commit**: 997c793  
+**Status**: 🔧 **IN PROGRESS**
+
+**Symptoms:**
+- Build fails during pip install step
+- Error: `ResolutionImpossible: for help visit https://pip.pypa.io/en/latest/topics/dependency-resolution/#dealing-with-dependency-conflicts`
+- Specific conflict: httpx version requirements
+  - llama-index-core 0.10.11.post1 depends on httpx
+  - supabase 2.15.1 depends on httpx<0.29 and >=0.26
+  - User requested httpx==0.25.2
+
+**Investigation Notes:**
+- Build reaches pip install step successfully
+- Fails on line 25-26 of Dockerfile during `pip install --user --no-warn-script-location -r /tmp/requirements.txt`
+- Dependency conflict between llama-index-core and supabase packages
+- Both packages have incompatible httpx version requirements
+
+**Root Cause:**
+Dependency version conflict in requirements-prod.txt between:
+- llama-index-core (requires httpx)
+- supabase (requires httpx<0.29 and >=0.26)
+- Explicit httpx==0.25.2 requirement
+
+**Proposed Fix:**
+1. Update requirements-prod.txt to resolve httpx version conflict
+2. Use compatible versions of llama-index-core and supabase
+3. Remove explicit httpx version pin if not necessary
+
+**Evidence:**
+- Render build logs show dependency resolution failure
+- Error occurs during pip install, not during Python import
+- Worker service is running successfully (different requirements)
+
+---
+
 ## 🧪 **Testing Scenarios**
 
 ### **Scenario 1: Render API Service Health Check**
@@ -269,14 +321,14 @@ Refactor environment configuration to load variables at module import time or us
 5. **Phase 5**: Resume Phase 1 environment configuration testing
 
 ### **Current Status:**
-- **API Service**: ✅ **FIXED** - Docker configuration updated
+- **API Service**: 🚀 **DEPLOYING** - Docker configuration updated and pushed
   - Created missing root-level Dockerfile
   - Properly copies `api/` directory
-  - **Status**: Ready for deployment
-- **Worker Service**: ✅ **FIXED** - Docker configuration updated
+  - **Status**: Deployment initiated (commit 997c793)
+- **Worker Service**: 🚀 **DEPLOYING** - Docker configuration updated and pushed
   - Updated Dockerfile to maintain backend module structure
   - Fixed import paths and CMD execution
-  - **Status**: Ready for deployment
+  - **Status**: Deployment initiated (commit 997c793)
 - **Environment Config**: ⚠️ Working but needs validation script fixes
 
 ---
