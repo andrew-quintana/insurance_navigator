@@ -120,7 +120,7 @@ class DevSetup:
         self.log("Updating configuration files...")
         
         try:
-            # Update .env.development
+            # Update .env.development (for reference, but services will use dynamic discovery)
             env_dev_path = self.project_root / ".env.development"
             if env_dev_path.exists():
                 self.log("Updating .env.development...")
@@ -139,7 +139,7 @@ class DevSetup:
                 env_dev_path.write_text(f"NGROK_URL={self.ngrok_url}\n")
                 self.log("Created .env.development", "SUCCESS")
             
-            # Update ui/.env.local
+            # Update ui/.env.local (frontend still needs static URLs)
             ui_env_path = self.project_root / "ui" / ".env.local"
             ui_env_content = f"""# Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
@@ -163,18 +163,8 @@ NEXT_PUBLIC_ENABLE_REGULATORY_PROCESSING=true
                 ui_env_path.write_text(ui_env_content)
                 self.log("Created ui/.env.local", "SUCCESS")
             
-            # Update worker configuration
-            worker_path = self.project_root / "backend" / "workers" / "enhanced_base_worker.py"
-            if worker_path.exists():
-                self.log("Updating worker configuration...")
-                content = worker_path.read_text()
-                # Update the hardcoded ngrok URL
-                import re
-                pattern = r'base_url = "https://[a-z0-9]*\.ngrok-free\.app"'
-                replacement = f'base_url = "{self.ngrok_url}"'
-                content = re.sub(pattern, replacement, content)
-                worker_path.write_text(content)
-                self.log("Updated worker configuration", "SUCCESS")
+            # Note: Worker now uses dynamic ngrok discovery, no need to update hardcoded URLs
+            self.log("Worker uses dynamic ngrok discovery - no hardcoded URLs to update", "SUCCESS")
             
             return True
             
@@ -201,9 +191,9 @@ NEXT_PUBLIC_ENABLE_REGULATORY_PROCESSING=true
         print("  • Ngrok Dashboard: http://localhost:4040")
         print()
         print("📁 Updated files:")
-        print("  • .env.development")
-        print("  • ui/.env.local")
-        print("  • backend/workers/enhanced_base_worker.py")
+        print("  • .env.development (for reference)")
+        print("  • ui/.env.local (frontend needs static URLs)")
+        print("  • backend/workers/enhanced_base_worker.py (now uses dynamic discovery)")
         print()
         print("🔄 Next steps:")
         print("  1. Restart the enhanced worker to pick up the new ngrok URL:")

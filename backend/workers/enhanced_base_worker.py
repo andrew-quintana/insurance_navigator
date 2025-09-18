@@ -515,11 +515,9 @@ class EnhancedBaseWorker:
             logger.info(f"Processing document with storage path: {storage_path}")
             
             # Generate webhook URL for LlamaParse callback
-            # Use NGROK_URL for local development, production webhook URL for production
-            import os
-            base_url = os.getenv("NGROK_URL") or os.getenv("WEBHOOK_BASE_URL", "http://localhost:8000")
-            # Use the new ngrok URL for API server
-            base_url = "https://f47df0ded4df.ngrok-free.app"
+            # Dynamically discover ngrok URL at runtime
+            from backend.shared.utils.ngrok_discovery import get_webhook_base_url
+            base_url = get_webhook_base_url()
             webhook_url = f"{base_url}/api/upload-pipeline/webhook/llamaparse/{job_id}"
             webhook_secret = str(uuid.uuid4())  # Generate webhook secret
             

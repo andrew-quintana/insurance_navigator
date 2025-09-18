@@ -145,16 +145,8 @@ EOF
     print_success "Created ui/.env.local"
 fi
 
-# Update worker configuration if it exists
-if [ -f "backend/workers/enhanced_base_worker.py" ]; then
-    print_status "Updating worker configuration..."
-    # Create a backup
-    cp backend/workers/enhanced_base_worker.py backend/workers/enhanced_base_worker.py.bak
-    
-    # Update the hardcoded ngrok URL in the worker
-    sed -i.bak "s|base_url = \"https://[a-z0-9]*\.ngrok-free\.app\"|base_url = \"$NGROK_URL\"|" backend/workers/enhanced_base_worker.py
-    print_success "Updated worker configuration"
-fi
+# Note: Worker now uses dynamic ngrok discovery
+print_status "Worker uses dynamic ngrok discovery - no hardcoded URLs to update"
 
 # Display summary
 echo ""
@@ -167,9 +159,9 @@ echo "  • Frontend: http://localhost:3000 (if running)"
 echo "  • Ngrok Dashboard: http://localhost:4040"
 echo ""
 echo "📁 Updated files:"
-echo "  • .env.development"
-echo "  • ui/.env.local"
-echo "  • backend/workers/enhanced_base_worker.py"
+echo "  • .env.development (for reference)"
+echo "  • ui/.env.local (frontend needs static URLs)"
+echo "  • backend/workers/enhanced_base_worker.py (now uses dynamic discovery)"
 echo ""
 echo "🔄 Next steps:"
 echo "  1. Restart the enhanced worker to pick up the new ngrok URL:"
