@@ -1252,12 +1252,12 @@ class EnhancedBaseWorker:
                 self.logger.info(f"Downloaded file from storage: {len(file_content)} bytes")
                     
             except Exception as e:
-                # Fallback to local file
-                self.logger.warning(f"Storage download failed, using local fallback: {str(e)}")
-                local_path = "examples/simulated_insurance_document.pdf"
-                with open(local_path, 'rb') as f:
-                    file_content = f.read()
-                self.logger.info(f"Using local file: {len(file_content)} bytes")
+                # Storage download failed - cannot proceed without file
+                self.logger.error(f"Storage download failed, cannot process document: {str(e)}")
+                raise UserFacingError(
+                    "Document file is not accessible for processing. Please try uploading again.",
+                    error_code="STORAGE_ACCESS_ERROR"
+                )
             
             # Make direct API call exactly like reference script (fresh client, no custom config)
             async with httpx.AsyncClient(timeout=300) as client:
