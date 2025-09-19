@@ -233,10 +233,28 @@ The production worker was using `localhost:8000` as the webhook URL because the 
 3. Verify webhook processing works correctly
 4. Monitor for successful job completions
 
+### **⚠️ Ongoing Issue (2025-09-19 02:20:15):**
+Despite adding the `WEBHOOK_BASE_URL` environment variable to the Render configuration, the production worker continues to use `localhost:8000` as the webhook URL. This indicates that either:
+- The configuration change has not been deployed to production yet
+- The environment variable is not being read correctly
+- There's a caching issue with the worker
+
+**New Job Failure:**
+- Job ID: `016cea63-3771-4ef7-a9dd-e26d36e92dac`
+- Same webhook URL security validation error
+- Worker still using `http://localhost:8000` instead of production URL
+
+**Debug logging added to track:**
+- Environment variable values (`ENVIRONMENT`, `WEBHOOK_BASE_URL`)
+- Base URL selection logic
+- Final webhook URL generation
+
+See FM-009 for detailed analysis of the persistent failure.
+
 ---
 
 **Created**: 2025-09-18  
 **Updated**: 2025-09-18  
-**Status**: Resolved  
+**Status**: Partially Resolved - Configuration Not Deployed  
 **Assigned**: Development Team  
 **Priority**: High
