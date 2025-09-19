@@ -843,10 +843,11 @@ async def upload_document_backend(
             """, job_id, document_id, 'uploaded', 'queued')
         
         # Create upload response
+        api_base_url = os.getenv("API_BASE_URL", "http://localhost:8000")
         upload_response = type('UploadResponse', (), {
             'document_id': document_id,
             'job_id': job_id,
-            'signed_url': f"http://localhost:8000/upload-complete",
+            'signed_url': f"{api_base_url}/upload-complete",
             'upload_expires_at': None
         })()
         
@@ -868,7 +869,10 @@ async def upload_document_backend(
                     
                     # Store file using direct HTTP request (proven to work)
                     import httpx
-                    storage_url = os.getenv("SUPABASE_URL", "http://127.0.0.1:54321")
+                    storage_url = os.getenv("SUPABASE_URL")
+                    if not storage_url:
+                        raise ValueError("SUPABASE_URL environment variable is required")
+                    
                     # Use development key for local development
                     environment = os.getenv("ENVIRONMENT", "development")
                     if environment == "development":
