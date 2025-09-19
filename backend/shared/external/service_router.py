@@ -241,6 +241,11 @@ class ServiceRouter:
         # Validate production environment configuration
         self._validate_production_config()
         
+        # Disable fallback in production if explicitly set
+        environment = os.getenv("ENVIRONMENT", "development")
+        if environment == "production" and not self.fallback_enabled:
+            logger.info("Fallback to mock services disabled in production")
+        
         self.services: Dict[str, Dict[str, ServiceInterface]] = {}
         self.health_cache: Dict[str, ServiceHealth] = {}
         self.health_check_interval = 30  # seconds

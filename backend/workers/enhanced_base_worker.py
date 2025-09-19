@@ -123,6 +123,8 @@ class EnhancedBaseWorker:
             # Initialize service router
             self.service_router = ServiceRouter(
                 config={
+                    "mode": os.getenv("SERVICE_MODE", "hybrid").lower(),
+                    "fallback_enabled": os.getenv("ENVIRONMENT", "development") != "production",
                     "llamaparse_config": {
                         "api_key": self.config.llamaparse_api_key,
                         "api_url": self.config.llamaparse_api_url
