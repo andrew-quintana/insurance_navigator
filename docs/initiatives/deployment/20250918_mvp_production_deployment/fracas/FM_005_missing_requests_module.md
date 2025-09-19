@@ -2,7 +2,7 @@
 
 **Date**: 2025-09-18  
 **Priority**: High  
-**Status**: Active  
+**Status**: Resolved  
 **Component**: Upload Pipeline Processing  
 **Failure Mode**: Python Import Error  
 
@@ -162,10 +162,45 @@ python -c "import requests; print('requests module available')"
 4. **Monitor**: Watch for similar failures
 5. **Prevent**: Implement dependency validation
 
+## ✅ **Resolution**
+
+**Date Resolved**: 2025-09-18  
+**Resolution Method**: Conditional Import Implementation
+
+### **Final Solution:**
+Instead of adding `requests` as a production dependency, implemented conditional import of `ngrok_discovery` module only in development environment:
+
+```python
+# In enhanced_base_worker.py
+environment = os.getenv("ENVIRONMENT", "development")
+if environment == "development":
+    try:
+        import sys
+        import importlib
+        ngrok_module = importlib.import_module("backend.shared.utils.ngrok_discovery")
+        base_url = ngrok_module.get_webhook_base_url()
+    except (ImportError, Exception) as e:
+        base_url = "http://localhost:8000"
+else:
+    base_url = os.getenv("WEBHOOK_BASE_URL", "***REMOVED***")
+```
+
+### **Benefits:**
+- ✅ No production dependency on `requests` module
+- ✅ Development environment still supports ngrok discovery
+- ✅ Production uses environment variables for webhook URLs
+- ✅ Cleaner separation of concerns between dev and prod
+
+### **Testing Results:**
+- ✅ Worker starts successfully in both development and production modes
+- ✅ Database connections working properly
+- ✅ No import errors in production environment
+- ✅ Webhook URL generation works correctly
+
 ---
 
 **Created**: 2025-09-18  
 **Updated**: 2025-09-18  
-**Status**: Active  
+**Status**: Resolved  
 **Assigned**: Development Team  
 **Priority**: High
