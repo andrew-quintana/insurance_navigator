@@ -10,7 +10,7 @@ import os
 import httpx
 from typing import Dict, Any
 from fastapi import APIRouter, Request, HTTPException, Depends
-from core import get_database
+from .database import get_database
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ async def llamaparse_webhook(job_id: str, request: Request):
         
         # Get webhook secret from database
         logger.info(f"🔔 DATABASE STEP 1: Getting database connection")
-        db = await get_database()
+        db = get_database()
         logger.info(f"🔔 DATABASE STEP 2: Database connection obtained: {db is not None}")
         
         async with db.get_connection() as conn:
