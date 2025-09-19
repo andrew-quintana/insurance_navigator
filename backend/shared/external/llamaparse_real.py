@@ -201,7 +201,10 @@ class RealLlamaParseService(ServiceInterface):
                     raise ServiceExecutionError(f"Invalid file path format: {file_path}")
                 
                 # Get the file directly from storage using simple HTTP request
-                storage_url = os.getenv("SUPABASE_URL", "http://127.0.0.1:54321")
+                storage_url = os.getenv("SUPABASE_URL")
+                if not storage_url:
+                    raise ServiceExecutionError("SUPABASE_URL environment variable is required")
+                
                 service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))
                 if not service_role_key:
                     raise ServiceExecutionError("SUPABASE_SERVICE_ROLE_KEY environment variable not set")
@@ -629,11 +632,17 @@ class RealLlamaParseService(ServiceInterface):
                     raise ServiceExecutionError(f"Invalid parsed_path format: {parsed_path}")
                 
                 # Use service role key for storage
-                service_role_key = "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
+                service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+                if not service_role_key:
+                    raise ServiceExecutionError("SUPABASE_SERVICE_ROLE_KEY environment variable not set")
+                
+                storage_url = os.getenv("SUPABASE_URL")
+                if not storage_url:
+                    raise ServiceExecutionError("SUPABASE_URL environment variable is required")
                 
                 async with httpx.AsyncClient() as client:
                     response = await client.put(
-                        f"http://127.0.0.1:54321/storage/v1/object/{bucket}/{key}",
+                        f"{storage_url}/storage/v1/object/{bucket}/{key}",
                         content=parsed_content.encode('utf-8'),
                         headers={
                             "Content-Type": "text/markdown",

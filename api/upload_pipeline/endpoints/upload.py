@@ -461,10 +461,12 @@ async def _generate_signed_url(storage_path: str, ttl_seconds: int) -> str:
             
             # Return backend proxy URL that frontend can upload to with user token
             # Backend will handle the service role key authentication to Supabase
-            return f"http://localhost:8000/api/upload-pipeline/upload-file-proxy/{bucket}/{key}"
+            api_base_url = os.getenv("API_BASE_URL", "http://localhost:8000")
+            return f"{api_base_url}/api/upload-pipeline/upload-file-proxy/{bucket}/{key}"
         else:
             # Fallback for other path formats
-            return f"http://localhost:8000/api/upload-pipeline/upload-file-proxy/{storage_path}"
+            api_base_url = os.getenv("API_BASE_URL", "http://localhost:8000")
+            return f"{api_base_url}/api/upload-pipeline/upload-file-proxy/{storage_path}"
     
     # For production, use proper Supabase signed URL generation
     try:

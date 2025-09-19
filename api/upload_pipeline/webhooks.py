@@ -114,11 +114,17 @@ async def llamaparse_webhook(job_id: str, request: Request):
             logger.info(f"Uploading parsed content to bucket: {bucket}, key: {key}")
             
             # Use direct HTTP request with service role key (same as upload endpoint)
-            service_role_key = "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
+            service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+            if not service_role_key:
+                raise ValueError("SUPABASE_SERVICE_ROLE_KEY environment variable is required")
+            
+            storage_url = os.getenv("SUPABASE_URL")
+            if not storage_url:
+                raise ValueError("SUPABASE_URL environment variable is required")
             
             async with httpx.AsyncClient() as client:
                 response = await client.put(
-                    f"http://127.0.0.1:54321/storage/v1/object/{bucket}/{key}",
+                    f"{storage_url}/storage/v1/object/{bucket}/{key}",
                     content=parsed_content.encode('utf-8'),
                     headers={
                         "Content-Type": "text/markdown",
