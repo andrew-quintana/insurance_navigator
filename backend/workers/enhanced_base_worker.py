@@ -20,15 +20,15 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime, timedelta
 import traceback
 
-from shared.db import DatabaseManager
-from shared.storage import StorageManager
-from shared.storage.mock_storage import MockStorageManager
-from shared.external import RealLlamaParseService, OpenAIClient
-from shared.external.service_router import ServiceRouter, ServiceMode, ServiceUnavailableError, ServiceExecutionError
-from shared.exceptions import UserFacingError
-from shared.logging import StructuredLogger
-from shared.config import WorkerConfig
-from shared.external.error_handler import (
+from core.database import DatabaseManager
+from backend.shared.storage.storage_manager import StorageManager
+from backend.shared.storage.mock_storage import MockStorageManager
+from backend.shared.external import RealLlamaParseService, OpenAIClient
+from backend.shared.external.service_router import ServiceRouter, ServiceMode, ServiceUnavailableError, ServiceExecutionError
+from backend.shared.exceptions import UserFacingError
+from backend.shared.logging import StructuredLogger
+from backend.shared.config import WorkerConfig
+from backend.shared.external.error_handler import (
     WorkerErrorHandler,
     ErrorContext,
     ErrorSeverity,
@@ -36,7 +36,7 @@ from shared.external.error_handler import (
     create_correlation_id,
     create_error_context
 )
-from shared.external.enhanced_service_client import EnhancedServiceClient
+from backend.shared.external.enhanced_service_client import EnhancedServiceClient
 
 logger = logging.getLogger(__name__)
 
@@ -541,6 +541,7 @@ class EnhancedBaseWorker:
             parse_result = await self._direct_llamaparse_call(
                 file_path=storage_path,
                 job_id=str(job_id),
+                document_id=str(document_id),
                 correlation_id=correlation_id,
                 document_filename=document_filename,
                 webhook_url=webhook_url
@@ -1194,7 +1195,7 @@ class EnhancedBaseWorker:
             # Mark job as permanently failed
             await self._update_job_state(job["job_id"], "failed_parse", correlation_id, f"Non-retryable error: {error_type}: {error_message}")
     
-    async def _direct_llamaparse_call(self, file_path: str, job_id: str, correlation_id: str, document_filename: str, webhook_url: str) -> Dict[str, Any]:
+    async def _direct_llamaparse_call(self, file_path: str, job_id: str, document_id: str, correlation_id: str, document_filename: str, webhook_url: str) -> Dict[str, Any]:
         """
         Direct LlamaParse API call bypassing all service layers.
         Matches the reference script implementation exactly.
