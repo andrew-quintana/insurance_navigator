@@ -234,14 +234,16 @@ class ServiceRouter:
         else:
             self.mode = ServiceMode.HYBRID
         
+        # Set fallback configuration before validation
+        self.fallback_enabled = config.get("fallback_enabled", True)
+        self.fallback_timeout = config.get("fallback_timeout", 10)  # seconds
+        
         # Validate production environment configuration
         self._validate_production_config()
         
         self.services: Dict[str, Dict[str, ServiceInterface]] = {}
         self.health_cache: Dict[str, ServiceHealth] = {}
         self.health_check_interval = 30  # seconds
-        self.fallback_enabled = config.get("fallback_enabled", True)
-        self.fallback_timeout = config.get("fallback_timeout", 10)  # seconds
         
         # Health monitoring setup (but don't start yet)
         self._health_monitor_task = None

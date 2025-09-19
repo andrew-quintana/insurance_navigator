@@ -524,7 +524,11 @@ class EnhancedBaseWorker:
             # Debug logging for environment variables
             self.logger.info(f"Environment detection: ENVIRONMENT={environment}, WEBHOOK_BASE_URL={webhook_base_url}")
             
-            if environment == "development":
+            # Always respect WEBHOOK_BASE_URL when explicitly set (production override)
+            if webhook_base_url:
+                base_url = webhook_base_url
+                self.logger.info(f"Using explicit WEBHOOK_BASE_URL: {base_url}")
+            elif environment == "development":
                 # For development, try to get ngrok URL dynamically
                 try:
                     # Import ngrok_discovery only in development
@@ -538,9 +542,9 @@ class EnhancedBaseWorker:
                     self.logger.warning(f"Ngrok discovery failed, using localhost fallback: {e}")
                     base_url = "http://localhost:8000"
             else:
-                # For production, use environment variable or default
-                base_url = os.getenv("WEBHOOK_BASE_URL", "***REMOVED***")
-                self.logger.info(f"Using production webhook base URL: {base_url}")
+                # For production, use default if WEBHOOK_BASE_URL not set
+                base_url = "***REMOVED***"
+                self.logger.info(f"Using production default webhook base URL: {base_url}")
             
             webhook_url = f"{base_url}/api/upload-pipeline/webhook/llamaparse/{job_id}"
             webhook_secret = str(uuid.uuid4())  # Generate webhook secret
