@@ -1166,10 +1166,32 @@ class EnhancedBaseWorker:
         )
         
         if is_retryable:
-            # Schedule retry (placeholder - implement if needed)
-            await self._update_job_state(job["job_id"], "failed_parse", correlation_id, f"Retryable error: {error_type}: {error_message}")
+            # Schedule retry with exponential backoff
+            retry_delay = min(300, 5 * (2 ** min(job.get("retry_count", 0), 6)))  # Max 5 minutes
+            retry_at = datetime.utcnow() + timedelta(seconds=retry_delay)
+            
+            retry_context = {
+                "error_type": error_type,
+                "error_message": error_message,
+                "retry_count": job.get("retry_count", 0) + 1,
+                "retry_at": retry_at.isoformat(),
+                "retry_delay_seconds": retry_delay,
+                "timestamp": datetime.utcnow().isoformat(),
+                "correlation_id": correlation_id
+            }
+            
+            await self._update_job_state(job["job_id"], "failed_parse", correlation_id, json.dumps(retry_context))
+            
+            self.logger.info(
+                f"Job {job_id} scheduled for retry in {retry_delay} seconds",
+                correlation_id=correlation_id,
+                job_id=str(job_id),
+                retry_count=retry_context["retry_count"],
+                retry_delay_seconds=retry_delay,
+                error_type=error_type
+            )
         else:
-            # Mark job as failed
+            # Mark job as permanently failed
             await self._update_job_state(job["job_id"], "failed_parse", correlation_id, f"Non-retryable error: {error_type}: {error_message}")
     
     async def _direct_llamaparse_call(self, file_path: str, job_id: str, correlation_id: str, document_filename: str, webhook_url: str) -> Dict[str, Any]:
@@ -1277,22 +1299,126 @@ class EnhancedBaseWorker:
                         "message": "Direct API call successful"
                     }
                 elif response.status_code == 429:
-                    self.logger.error(f"LlamaParse rate limited: {response.status_code}")
-                    raise UserFacingError(
+                    self.logger.error(
+                        f"LlamaParse rate limited: {response.status_code}",
+                        job_id=job_id,
+                        document_id=document_id,
+                        api_status_code=response.status_code,
+                        api_response_body=response.text,
+                        api_response_headers=dict(response.headers)
+                    )
+                    # Rate limit errors are retryable
+                    raise ServiceUnavailableError(
                         "Document processing service is currently busy. Please try again in a few minutes.",
                         error_code="LLAMAPARSE_RATE_LIMIT_ERROR"
                     )
                 else:
-                    self.logger.error(f"LlamaParse API error: {response.status_code} - {response.text}")
-                    raise UserFacingError(
-                        "Document processing failed. Please try again later.",
-                        error_code="LLAMAPARSE_API_ERROR"
+                    # Enhanced error logging with full context
+                    self.logger.error(
+                        f"LlamaParse API error: {response.status_code} - {response.text}",
+                        job_id=job_id,
+                        document_id=document_id,
+                        api_status_code=response.status_code,
+                        api_response_body=response.text,
+                        api_response_headers=dict(response.headers),
+                        request_url=f'{LLAMAPARSE_BASE_URL}/api/parsing/upload',
+                        request_headers=headers,
+                        form_data_keys=list(form_data.keys()),
+                        file_size=len(file_content),
+                        document_filename=document_filename,
+                        webhook_url=webhook_url
                     )
+                    
+                    # Store detailed error context in database
+                    error_context = {
+                        "api_status_code": response.status_code,
+                        "api_response_body": response.text,
+                        "api_response_headers": dict(response.headers),
+                        "request_url": f'{LLAMAPARSE_BASE_URL}/api/parsing/upload',
+                        "file_size": len(file_content),
+                        "document_filename": document_filename,
+                        "webhook_url": webhook_url,
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "correlation_id": correlation_id
+                    }
+                    
+                    # Classify error as retryable or non-retryable
+                    if response.status_code in [500, 502, 503, 504]:
+                        # Server errors are retryable
+                        self.logger.warning(f"LlamaParse server error {response.status_code}, marking as retryable")
+                        raise ServiceUnavailableError(
+                            "Document processing service is temporarily unavailable. Please try again later.",
+                            error_code="LLAMAPARSE_SERVER_ERROR"
+                        )
+                    elif response.status_code in [400, 401, 403, 422]:
+                        # Client errors are non-retryable
+                        self.logger.error(f"LlamaParse client error {response.status_code}, marking as non-retryable")
+                        
+                        # Update job with detailed error context
+                        async with self.db.get_db_connection() as conn:
+                            await conn.execute("""
+                                UPDATE upload_pipeline.upload_jobs
+                                SET status = 'failed_parse', last_error = $1, updated_at = now()
+                                WHERE job_id = $2
+                            """, json.dumps(error_context), job_id)
+                        
+                        raise UserFacingError(
+                            "Document processing failed due to an invalid request. Please check your document and try again.",
+                            error_code="LLAMAPARSE_CLIENT_ERROR"
+                        )
+                    else:
+                        # Unknown errors are non-retryable
+                        self.logger.error(f"LlamaParse unknown error {response.status_code}, marking as non-retryable")
+                        
+                        # Update job with detailed error context
+                        async with self.db.get_db_connection() as conn:
+                            await conn.execute("""
+                                UPDATE upload_pipeline.upload_jobs
+                                SET status = 'failed_parse', last_error = $1, updated_at = now()
+                                WHERE job_id = $2
+                            """, json.dumps(error_context), job_id)
+                        
+                        raise UserFacingError(
+                            "Document processing failed. Please try again later.",
+                            error_code="LLAMAPARSE_API_ERROR"
+                        )
                     
         except UserFacingError:
             raise  # Re-raise user-facing errors
         except Exception as e:
-            self.logger.error(f"Direct LlamaParse call failed: {str(e)}")
+            # Enhanced exception logging with full context
+            self.logger.error(
+                f"Direct LlamaParse call failed: {str(e)}",
+                job_id=job_id,
+                document_id=document_id,
+                exception_type=type(e).__name__,
+                exception_message=str(e),
+                file_size=len(file_content) if 'file_content' in locals() else 0,
+                document_filename=document_filename,
+                webhook_url=webhook_url,
+                correlation_id=correlation_id,
+                exc_info=True
+            )
+            
+            # Store detailed error context in database
+            error_context = {
+                "exception_type": type(e).__name__,
+                "exception_message": str(e),
+                "file_size": len(file_content) if 'file_content' in locals() else 0,
+                "document_filename": document_filename,
+                "webhook_url": webhook_url,
+                "timestamp": datetime.utcnow().isoformat(),
+                "correlation_id": correlation_id
+            }
+            
+            # Update job with detailed error context
+            async with self.db.get_db_connection() as conn:
+                await conn.execute("""
+                    UPDATE upload_pipeline.upload_jobs
+                    SET status = 'failed_parse', last_error = $1, updated_at = now()
+                    WHERE job_id = $2
+                """, json.dumps(error_context), job_id)
+            
             raise UserFacingError(
                 "Document processing failed due to an unexpected error. Please try again later.",
                 error_code="LLAMAPARSE_UNEXPECTED_ERROR"
