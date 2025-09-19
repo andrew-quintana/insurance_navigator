@@ -100,6 +100,8 @@ services:
         value: false
       - key: API_BASE_URL
         value: ***REMOVED***
+      - key: WEBHOOK_BASE_URL
+        value: ***REMOVED***
       # Worker optimizations
       - key: PYTHONUNBUFFERED
         value: "1"
