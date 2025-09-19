@@ -7,6 +7,7 @@ import logging
 import hmac
 import hashlib
 import os
+import httpx
 from typing import Dict, Any
 from fastapi import APIRouter, Request, HTTPException, Depends
 from core import get_database
@@ -145,8 +146,7 @@ async def llamaparse_webhook(job_id: str, request: Request):
             logger.info(f"🔔 STORAGE STEP 3: Starting blob storage upload for document {document_id}")
             
             # Store the parsed content in blob storage using direct HTTP request
-            logger.info(f"🔔 STORAGE STEP 4: Importing httpx for HTTP client")
-            import httpx
+            logger.info(f"🔔 STORAGE STEP 4: Using httpx for HTTP client")
             
             # Extract bucket and key from parsed_path
             logger.info(f"🔔 STORAGE STEP 5: Extracting bucket and key from parsed_path")
