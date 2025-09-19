@@ -10,7 +10,6 @@ import os
 from typing import Dict, Any
 from fastapi import APIRouter, Request, HTTPException, Depends
 from core import get_database
-from backend.shared.storage import StorageManager
 
 logger = logging.getLogger(__name__)
 
