@@ -161,8 +161,41 @@ echo $ENVIRONMENT
 
 ---
 
+## ✅ **Partial Resolution**
+
+**Date**: 2025-09-18  
+**Resolution Method**: Remove Hardcoded Fallback Path
+
+### **Fix Applied:**
+```python
+# Before (problematic)
+except Exception as e:
+    local_path = "examples/simulated_insurance_document.pdf"
+    with open(local_path, 'rb') as f:
+
+# After (fixed)
+except Exception as e:
+    self.logger.error(f"Storage download failed, cannot process document: {str(e)}")
+    raise UserFacingError(
+        "Document file is not accessible for processing. Please try uploading again.",
+        error_code="STORAGE_ACCESS_ERROR"
+    )
+```
+
+### **Issues Resolved:**
+- ✅ **Hardcoded Fallback Path**: Removed non-existent file path
+- ✅ **Better Error Handling**: Clear error messages for users
+- ✅ **Error Classification**: Added proper error codes for tracking
+
+### **Issues Still Pending:**
+- ❌ **Storage Access**: Supabase storage still returning 400 Bad Request
+- ❌ **Webhook URL**: Environment variable still not deployed
+- ❌ **Root Cause**: Need to investigate storage permissions
+
+---
+
 **Created**: 2025-09-18  
 **Updated**: 2025-09-18  
-**Status**: Active  
+**Status**: Partially Resolved  
 **Assigned**: Development Team  
 **Priority**: High
