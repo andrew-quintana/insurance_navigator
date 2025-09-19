@@ -53,11 +53,12 @@ class StorageManager:
             # Extract bucket and key from path
             bucket, key = self._parse_storage_path(path)
             
-            # Get signed URL for reading
-            signed_url = await self._get_signed_url(bucket, key, "GET")
+            # Use direct access with service role key (same pattern as webhook)
+            # This avoids the signed URL generation issues in production
+            storage_endpoint = f"{self.base_url}/storage/v1/object/{bucket}/{key}"
             
-            # Read content
-            response = await self.client.get(signed_url)
+            # Read content using direct HTTP request
+            response = await self.client.get(storage_endpoint)
             response.raise_for_status()
             
             content = response.text
@@ -75,13 +76,14 @@ class StorageManager:
             # Extract bucket and key from path
             bucket, key = self._parse_storage_path(path)
             
-            # Get signed URL for writing
-            signed_url = await self._get_signed_url(bucket, key, "POST")
+            # Use direct access with service role key (same pattern as webhook)
+            # This avoids the signed URL generation issues in production
+            storage_endpoint = f"{self.base_url}/storage/v1/object/{bucket}/{key}"
             
-            # Write content
-            response = await self.client.post(
-                signed_url,
-                content=content,
+            # Write content using direct HTTP request
+            response = await self.client.put(
+                storage_endpoint,
+                content=content.encode('utf-8'),
                 headers={"Content-Type": content_type}
             )
             response.raise_for_status()
@@ -119,11 +121,12 @@ class StorageManager:
             # Extract bucket and key from path
             bucket, key = self._parse_storage_path(path)
             
-            # Get signed URL for reading
-            signed_url = await self._get_signed_url(bucket, key, "GET")
+            # Use direct access with service role key (same pattern as webhook)
+            # This avoids the signed URL generation issues in production
+            storage_endpoint = f"{self.base_url}/storage/v1/object/{bucket}/{key}"
             
-            # Check if exists
-            response = await self.client.head(signed_url)
+            # Check if exists using direct HTTP request
+            response = await self.client.head(storage_endpoint)
             return response.status_code == 200
             
         except Exception as e:
@@ -136,11 +139,12 @@ class StorageManager:
             # Extract bucket and key from path
             bucket, key = self._parse_storage_path(path)
             
-            # Get signed URL for reading
-            signed_url = await self._get_signed_url(bucket, key, "GET")
+            # Use direct access with service role key (same pattern as webhook)
+            # This avoids the signed URL generation issues in production
+            storage_endpoint = f"{self.base_url}/storage/v1/object/{bucket}/{key}"
             
-            # Get metadata
-            response = await self.client.head(signed_url)
+            # Get metadata using direct HTTP request
+            response = await self.client.head(storage_endpoint)
             response.raise_for_status()
             
             metadata = {
