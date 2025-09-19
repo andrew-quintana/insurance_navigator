@@ -136,8 +136,33 @@ connection = await asyncpg.connect(
 
 ---
 
+## ✅ **Resolution**
+
+**Date Resolved**: 2025-09-18  
+**Resolution Method**: Disable Prepared Statement Caching
+
+### **Fix Applied:**
+```python
+# Updated main.py line 859
+conn = await asyncpg.connect(os.getenv('DATABASE_URL'), statement_cache_size=0)
+```
+
+### **Root Cause:**
+The API service was using asyncpg with prepared statement caching enabled, which is incompatible with pgbouncer's transaction/statement pool modes. Supabase uses pgbouncer for connection pooling, causing prepared statement duplication errors.
+
+### **Solution:**
+Added `statement_cache_size=0` parameter to the asyncpg connection to disable prepared statement caching, making it compatible with pgbouncer.
+
+### **Expected Results:**
+- ✅ API upload endpoint returns 200 OK instead of 500 errors
+- ✅ No more prepared statement duplication errors
+- ✅ Database queries execute successfully
+- ✅ Upload functionality fully restored
+
+---
+
 **Created**: 2025-09-18  
 **Updated**: 2025-09-18  
-**Status**: Active  
+**Status**: Resolved  
 **Assigned**: Development Team  
 **Priority**: High
