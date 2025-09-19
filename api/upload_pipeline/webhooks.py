@@ -215,7 +215,6 @@ async def llamaparse_webhook(job_id: str, request: Request):
             
             # Compute SHA256 hash of parsed content
             logger.info(f"🔔 DATABASE STEP 1: Computing SHA256 hash of parsed content")
-            import hashlib
             parsed_sha256 = hashlib.sha256(parsed_content.encode('utf-8')).hexdigest()
             logger.info(f"🔔 DATABASE STEP 2: SHA256 hash computed: {parsed_sha256[:16]}...")
             
