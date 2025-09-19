@@ -108,14 +108,41 @@ async def llamaparse_webhook(job_id: str, request: Request):
             
             # Get parsed content from webhook payload
             logger.info(f"🔔 CONTENT STEP 1: Extracting parsed content from payload")
-            # LlamaParse sends content in 'txt', 'md', and 'json' fields
-            parsed_content = (
-                payload.get("md", "") or  # Markdown format (preferred)
-                payload.get("txt", "") or  # Raw text format
-                payload.get("json", "") or  # JSON format (might contain content)
-                payload.get("parsed_content", "") or  # Fallback to old format
-                payload.get("result", {}).get("markdown", "")  # Another fallback
-            )
+            # LlamaParse sends content in 'result' object with 'txt', 'md', and 'json' fields
+            result = payload.get("result", {})
+            logger.info(f"🔔 CONTENT STEP 1.1: Result object type: {type(result)}, keys: {list(result.keys()) if isinstance(result, dict) else 'N/A'}")
+            
+            if isinstance(result, list):
+                # Multi-page document - concatenate all pages
+                logger.info(f"🔔 CONTENT STEP 1.2: Processing multi-page document with {len(result)} pages")
+                parsed_content = "\n\n".join([
+                    page.get("md", "") or page.get("txt", "") or page.get("parsed_content", "")
+                    for page in result
+                    if page.get("md") or page.get("txt") or page.get("parsed_content")
+                ])
+                logger.info(f"🔔 CONTENT STEP 1.3: Multi-page content extracted - length: {len(parsed_content)}")
+            elif isinstance(result, dict):
+                # Single page document
+                logger.info(f"🔔 CONTENT STEP 1.2: Processing single-page document")
+                parsed_content = (
+                    result.get("md", "") or
+                    result.get("txt", "") or
+                    result.get("parsed_content", "") or
+                    # Fallback to old format for backward compatibility
+                    payload.get("md", "") or
+                    payload.get("txt", "") or
+                    payload.get("parsed_content", "")
+                )
+                logger.info(f"🔔 CONTENT STEP 1.3: Single-page content extracted - length: {len(parsed_content)}")
+            else:
+                # Fallback to old format for backward compatibility
+                logger.info(f"🔔 CONTENT STEP 1.2: Using fallback format (no result object)")
+                parsed_content = (
+                    payload.get("md", "") or
+                    payload.get("txt", "") or
+                    payload.get("parsed_content", "")
+                )
+                logger.info(f"🔔 CONTENT STEP 1.3: Fallback content extracted - length: {len(parsed_content)}")
             
             logger.info(f"🔔 CONTENT STEP 2: Parsed content extracted - length: {len(parsed_content) if parsed_content else 0}")
             logger.info(f"🔔 CONTENT STEP 3: Parsed content preview: '{parsed_content[:200] if parsed_content else 'EMPTY'}...'")
