@@ -20,7 +20,7 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime, timedelta
 import traceback
 
-from core.database import DatabaseManager
+from core.database import DatabaseManager, create_database_config
 from backend.shared.storage.storage_manager import StorageManager
 from backend.shared.storage.mock_storage import MockStorageManager
 from backend.shared.external import RealLlamaParseService, OpenAIClient
@@ -100,7 +100,8 @@ class EnhancedBaseWorker:
             )
             
             # Initialize database
-            self.db = DatabaseManager(self.config.database_url)
+            db_config = create_database_config()
+            self.db = DatabaseManager(db_config)
             await self.db.initialize()
             
             # Initialize storage
@@ -294,7 +295,7 @@ class EnhancedBaseWorker:
         )
         
         try:
-            async with self.db.get_db_connection() as conn:
+            async with self.db.get_connection() as conn:
                 job = await conn.fetchrow("""
                     WITH next_job AS (
                         SELECT uj.job_id, uj.document_id, d.user_id, uj.status, uj.state,
@@ -505,7 +506,7 @@ class EnhancedBaseWorker:
                 raise ValueError("No storage_path found in job data")
             
             # Get document filename from database
-            async with self.db.get_db_connection() as conn:
+            async with self.db.get_connection() as conn:
                 doc_result = await conn.fetchrow("""
                     SELECT filename FROM upload_pipeline.documents 
                     WHERE document_id = $1
@@ -548,7 +549,7 @@ class EnhancedBaseWorker:
             )
             
             # Store webhook secret in job for verification
-            async with self.db.get_db_connection() as conn:
+            async with self.db.get_connection() as conn:
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
                     SET webhook_secret = $1, status = 'parse_queued', updated_at = now()
@@ -576,7 +577,7 @@ class EnhancedBaseWorker:
                             error_code=e.error_code)
             
             # Update job status to failed with user message
-            async with self.db.get_db_connection() as conn:
+            async with self.db.get_connection() as conn:
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
                     SET status = 'failed_parse', last_error = $1, updated_at = now()
@@ -615,7 +616,7 @@ class EnhancedBaseWorker:
         
         try:
             # Check retry count
-            async with self.db.get_db_connection() as conn:
+            async with self.db.get_connection() as conn:
                 retry_info = await conn.fetchrow("""
                     SELECT retry_count, last_error
                     FROM upload_pipeline.upload_jobs 
@@ -695,7 +696,7 @@ class EnhancedBaseWorker:
             )
             
             # Get parsed content from storage
-            async with self.db.get_db_connection() as conn:
+            async with self.db.get_connection() as conn:
                 doc_info = await conn.fetchrow("""
                     SELECT parsed_path, parsed_sha256 
                     FROM upload_pipeline.documents 
@@ -724,7 +725,7 @@ class EnhancedBaseWorker:
                 )
             
             # Update job status
-            async with self.db.get_db_connection() as conn:
+            async with self.db.get_connection() as conn:
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
                     SET status = 'parse_validated', updated_at = now()
@@ -775,7 +776,7 @@ class EnhancedBaseWorker:
                 )
             
             # Get parsed content
-            async with self.db.get_db_connection() as conn:
+            async with self.db.get_connection() as conn:
                 doc_info = await conn.fetchrow("""
                     SELECT raw_path, parsed_path, parsed_sha256 
                     FROM upload_pipeline.documents 
@@ -803,7 +804,7 @@ class EnhancedBaseWorker:
             # Read parsed content from storage (not raw file)
             try:
                 # Get parsed content path from database
-                async with self.db.get_db_connection() as conn:
+                async with self.db.get_connection() as conn:
                     parsed_info = await conn.fetchrow("""
                         SELECT parsed_path FROM upload_pipeline.documents 
                         WHERE document_id = $1
@@ -834,7 +835,7 @@ class EnhancedBaseWorker:
             
             # Store chunks in database
             import hashlib
-            async with self.db.get_db_connection() as conn:
+            async with self.db.get_connection() as conn:
                 # Check if chunks already exist for this document
                 existing_chunks = await conn.fetchval("""
                     SELECT COUNT(*) FROM upload_pipeline.document_chunks 
@@ -930,7 +931,7 @@ class EnhancedBaseWorker:
             )
             
             # Get chunks from database
-            async with self.db.get_db_connection() as conn:
+            async with self.db.get_connection() as conn:
                 chunks = await conn.fetch("""
                     SELECT chunk_id, text 
                     FROM upload_pipeline.document_chunks 
@@ -983,7 +984,7 @@ class EnhancedBaseWorker:
                 )
                 
                 # Store embeddings for this batch
-                async with self.db.get_db_connection() as conn:
+                async with self.db.get_connection() as conn:
                     for chunk, embedding in zip(batch_chunks, batch_embeddings):
                         # Convert embedding list to string format for PostgreSQL vector type
                         embedding_str = "[" + ",".join([str(x) for x in embedding]) + "]"
@@ -1009,7 +1010,7 @@ class EnhancedBaseWorker:
                     await asyncio.sleep(0.1)  # 100ms delay between batches
             
             # Update job status
-            async with self.db.get_db_connection() as conn:
+            async with self.db.get_connection() as conn:
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
                     SET status = 'embeddings_stored', updated_at = now()
@@ -1052,7 +1053,7 @@ class EnhancedBaseWorker:
     async def _update_job_state(self, job_id: str, state: str, correlation_id: str, error_message: Optional[str] = None):
         """Update job status in database"""
         try:
-            async with self.db.get_db_connection() as conn:
+            async with self.db.get_connection() as conn:
                 if error_message:
                     await conn.execute("""
                         UPDATE upload_pipeline.upload_jobs
@@ -1285,7 +1286,7 @@ class EnhancedBaseWorker:
                     self.logger.info(f"LlamaParse job submitted successfully: {parse_job_id}")
                     
                     # Update job status to parse_queued (waiting for webhook completion)
-                    async with self.db.get_db_connection() as conn:
+                    async with self.db.get_connection() as conn:
                         await conn.execute("""
                             UPDATE upload_pipeline.upload_jobs
                             SET status = 'parse_queued', state = 'queued', updated_at = now()
@@ -1356,7 +1357,7 @@ class EnhancedBaseWorker:
                         self.logger.error(f"LlamaParse client error {response.status_code}, marking as non-retryable")
                         
                         # Update job with detailed error context
-                        async with self.db.get_db_connection() as conn:
+                        async with self.db.get_connection() as conn:
                             await conn.execute("""
                                 UPDATE upload_pipeline.upload_jobs
                                 SET status = 'failed_parse', last_error = $1, updated_at = now()
@@ -1372,7 +1373,7 @@ class EnhancedBaseWorker:
                         self.logger.error(f"LlamaParse unknown error {response.status_code}, marking as non-retryable")
                         
                         # Update job with detailed error context
-                        async with self.db.get_db_connection() as conn:
+                        async with self.db.get_connection() as conn:
                             await conn.execute("""
                                 UPDATE upload_pipeline.upload_jobs
                                 SET status = 'failed_parse', last_error = $1, updated_at = now()
@@ -1413,7 +1414,7 @@ class EnhancedBaseWorker:
             }
             
             # Update job with detailed error context
-            async with self.db.get_db_connection() as conn:
+            async with self.db.get_connection() as conn:
                 await conn.execute("""
                     UPDATE upload_pipeline.upload_jobs
                     SET status = 'failed_parse', last_error = $1, updated_at = now()
