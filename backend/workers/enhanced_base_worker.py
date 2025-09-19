@@ -519,6 +519,11 @@ class EnhancedBaseWorker:
             # Generate webhook URL for LlamaParse callback
             # Use environment-appropriate base URL
             environment = os.getenv("ENVIRONMENT", "development")
+            webhook_base_url = os.getenv("WEBHOOK_BASE_URL")
+            
+            # Debug logging for environment variables
+            self.logger.info(f"Environment detection: ENVIRONMENT={environment}, WEBHOOK_BASE_URL={webhook_base_url}")
+            
             if environment == "development":
                 # For development, try to get ngrok URL dynamically
                 try:
@@ -527,6 +532,7 @@ class EnhancedBaseWorker:
                     import importlib
                     ngrok_module = importlib.import_module("backend.shared.utils.ngrok_discovery")
                     base_url = ngrok_module.get_webhook_base_url()
+                    self.logger.info(f"Using ngrok URL: {base_url}")
                 except (ImportError, Exception) as e:
                     # Fallback if ngrok discovery fails
                     self.logger.warning(f"Ngrok discovery failed, using localhost fallback: {e}")
@@ -534,9 +540,13 @@ class EnhancedBaseWorker:
             else:
                 # For production, use environment variable or default
                 base_url = os.getenv("WEBHOOK_BASE_URL", "https://insurance-navigator-api.onrender.com")
+                self.logger.info(f"Using production webhook base URL: {base_url}")
             
             webhook_url = f"{base_url}/api/upload-pipeline/webhook/llamaparse/{job_id}"
             webhook_secret = str(uuid.uuid4())  # Generate webhook secret
+            
+            # Debug logging for final webhook URL
+            self.logger.info(f"Generated webhook URL: {webhook_url}")
             
             # DIRECT LlamaParse call (bypassing service layers to avoid rate limiting)
             parse_result = await self._direct_llamaparse_call(
