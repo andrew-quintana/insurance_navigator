@@ -856,7 +856,7 @@ async def upload_document_backend(
             
             # Get the raw_path from the database
             import asyncpg
-            conn = await asyncpg.connect(os.getenv('DATABASE_URL'))
+            conn = await asyncpg.connect(os.getenv('DATABASE_URL'), statement_cache_size=0)
             try:
                 doc_info = await conn.fetchrow("""
                     SELECT raw_path FROM upload_pipeline.documents 
