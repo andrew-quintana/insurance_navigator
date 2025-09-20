@@ -2,7 +2,7 @@
 
 ## 📋 **Current Status**
 
-**FM-012 Status**: IN PROGRESS 🔄  
+**FM-012 Status**: RESOLVED ✅  
 **Priority**: High  
 **Component**: Worker Webhook URL Generation  
 
@@ -10,24 +10,28 @@
 - **Webhook URL Security**: LlamaParse rejecting localhost URLs for security reasons
 - **Environment Detection**: Worker detecting `ENVIRONMENT=development` in production
 - **Webhook Logic Flaw**: Development branch using localhost instead of respecting `WEBHOOK_BASE_URL`
+- **ServiceRouter Initialization**: `fallback_enabled` attribute accessed before initialization
 
 ### **Issues Resolved** ✅
 - **Environment Variable**: Added `ENVIRONMENT=production` to worker service
 - **Webhook Logic**: Fixed to always respect `WEBHOOK_BASE_URL` when set
-- **Deployment**: Triggered worker redeployment with fixes
+- **ServiceRouter Fix**: Fixed initialization order to set `fallback_enabled` before validation
+- **Deployment**: Worker successfully deployed and running
+- **Verification**: Worker now generates production webhook URLs
+- **End-to-End Testing**: Complete pipeline working successfully
 
 ### **Issues Still Pending** ❌
-- **Verification**: Test that worker now generates production webhook URLs
-- **End-to-End Testing**: Verify complete pipeline works with fixed webhook URLs
+- None - All issues resolved
 
 ## 🚨 **Critical Success Criteria**
 
 - [x] **Environment Variable**: `ENVIRONMENT=production` set in worker service
 - [x] **Webhook Logic**: Fixed to respect `WEBHOOK_BASE_URL` in all cases
-- [x] **Deployment**: Worker redeployed with fixes
-- [ ] **Verification**: Worker generates production webhook URLs (not localhost)
-- [ ] **End-to-End**: Complete document processing pipeline works
-- [ ] **Documentation**: All findings and fixes properly documented
+- [x] **ServiceRouter Fix**: Fixed initialization order issue
+- [x] **Deployment**: Worker successfully deployed and running
+- [x] **Verification**: Worker generates production webhook URLs (not localhost)
+- [x] **End-to-End**: Complete document processing pipeline works
+- [x] **Documentation**: All findings and fixes properly documented
 
 ## 🔍 **Root Cause Analysis**
 
@@ -121,14 +125,41 @@ Generated webhook URL: ***REMOVED***/api/upload-pipeline/webhook/llamaparse/{job
 - ✅ Document processing completes successfully
 - ✅ No localhost references in production logs
 
+## 🎉 **Resolution Summary**
+
+**FM-012 Successfully Resolved on 2025-09-19**
+
+### **Final Status**
+- ✅ **Worker Running**: Successfully deployed and processing jobs
+- ✅ **Webhook URLs**: Generating production URLs (`***REMOVED***`)
+- ✅ **LlamaParse Integration**: API accepting webhook URLs (200 OK responses)
+- ✅ **End-to-End Pipeline**: Complete document processing working
+- ✅ **No Localhost URLs**: All webhook URLs use production domain
+
+### **Evidence of Success**
+```
+Generated webhook URL: ***REMOVED***/api/upload-pipeline/webhook/llamaparse/d5e84dec-d559-4070-97bc-3083d9b93ae3
+LlamaParse API response: 200
+LlamaParse job submitted successfully: 4dbf79ac-6c78-4c83-921f-0e8cf37aa04d
+Job processed successfully
+```
+
+### **Root Causes Resolved**
+1. **ServiceRouter Initialization**: Fixed `fallback_enabled` attribute access order
+2. **Environment Detection**: Worker now properly detects production environment
+3. **Webhook Logic**: Fixed to always respect `WEBHOOK_BASE_URL` when set
+4. **Deployment**: All fixes successfully deployed to production
+
 ## 📝 **Notes**
 
 This issue was caused by a combination of:
-1. Missing environment variable enforcement in worker service
-2. Flawed webhook URL generation logic that didn't respect `WEBHOOK_BASE_URL` in development mode
-3. LlamaParse's security validation rejecting localhost URLs
+1. ServiceRouter initialization order problem (`fallback_enabled` accessed before initialization)
+2. Missing environment variable enforcement in worker service
+3. Flawed webhook URL generation logic that didn't respect `WEBHOOK_BASE_URL` in development mode
+4. LlamaParse's security validation rejecting localhost URLs
 
 The fix ensures that:
+- ServiceRouter initializes properly with correct attribute order
 - Environment variables are properly enforced
 - Webhook URLs always use production URLs when `WEBHOOK_BASE_URL` is set
 - The system is more robust against environment detection issues
