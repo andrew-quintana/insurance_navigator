@@ -17,26 +17,96 @@
 **Objective**: Analyze complete repository history across all branches for credential patterns  
 **Priority**: HIGH  
 **Timeline**: 16 hours  
+**Lead**: Git/VCS Specialist  
+
+**Specific Tasks:**
+- [ ] Configure comprehensive git history scanning (all commits, all branches)
+- [ ] Execute full repository credential archaeology using multiple tools
+- [ ] Analyze commit metadata for security-relevant changes
+- [ ] Map credential exposure timeline across repository lifecycle
+- [ ] Cross-reference with Phase 1 findings for validation
+- [ ] Document complete historical credential inventory
+
+**Expected Outputs:**
+- Complete git history credential analysis report
+- Chronological timeline of all credential exposures
+- Commit-level analysis with security impact assessment
 
 ### Area 2: Credential Evolution Tracking
 **Objective**: Track how credentials have changed, been rotated, or removed over time  
 **Priority**: MEDIUM  
 **Timeline**: 12 hours  
+**Lead**: Senior DevOps Engineer  
+
+**Specific Tasks:**
+- [ ] Identify all credential rotation or update events in history
+- [ ] Track credential lifecycle from creation to rotation/removal
+- [ ] Analyze patterns in credential management practices
+- [ ] Document credential replacement and cleanup attempts
+- [ ] Assess effectiveness of historical credential rotation efforts
+- [ ] Map credential evolution to development workflow changes
+
+**Expected Outputs:**
+- Credential evolution timeline with all documented changes
+- Analysis of credential management practice effectiveness
+- Recommendations for improved credential lifecycle management
 
 ### Area 3: Branch and Fork Analysis
 **Objective**: Analyze all branches, tags, and potential forks for credential exposure  
 **Priority**: HIGH  
 **Timeline**: 8 hours  
+**Lead**: Repository Administrator  
+
+**Specific Tasks:**
+- [ ] Inventory all repository branches, tags, and release points
+- [ ] Scan development, feature, and release branches for credentials
+- [ ] Analyze historical merge and branch management for exposure
+- [ ] Identify potential repository forks and external distributions
+- [ ] Assess branch protection and access control history
+- [ ] Document credential distribution across repository structure
+
+**Expected Outputs:**
+- Branch and tag analysis for credential distribution
+- Repository structure security assessment
+- Fork and external distribution risk analysis
 
 ### Area 4: External Repository Risk Assessment
 **Objective**: Assess if credentials may have been pushed to external repositories or services  
 **Priority**: MEDIUM  
 **Timeline**: 8 hours  
+**Lead**: Security Analyst  
+
+**Specific Tasks:**
+- [ ] Research potential external repository mirrors or forks
+- [ ] Analyze CI/CD integration history for external code pushes
+- [ ] Review team member external repository activity
+- [ ] Assess third-party service integration credential exposure
+- [ ] Check for accidental public repository exposure
+- [ ] Document external credential exposure risks and evidence
+
+**Expected Outputs:**
+- External repository risk assessment with exposure evidence
+- Third-party service credential exposure analysis
+- Mitigation requirements for external credential exposure
 
 ### Area 5: Historical Access Pattern Analysis
 **Objective**: Analyze historical access patterns and potential compromise indicators  
 **Priority**: HIGH  
 **Timeline**: 4 hours  
+**Lead**: Infrastructure Security Engineer  
+
+**Specific Tasks:**
+- [ ] Analyze repository access logs and patterns during exposure period
+- [ ] Review commit authorship and timing for anomalies
+- [ ] Identify unusual file access or modification patterns
+- [ ] Correlate credential exposure with access pattern changes
+- [ ] Assess potential unauthorized access indicators
+- [ ] Document suspicious activity timeline and evidence
+
+**Expected Outputs:**
+- Historical access pattern analysis with anomaly identification
+- Potential compromise indicators and timeline
+- Security monitoring gaps and improvement recommendations  
 
 ## Prerequisites
 
@@ -48,12 +118,28 @@
 
 ## Phase 2 Deliverables
 
-- [ ] Complete git history credential analysis report
-- [ ] Credential evolution timeline with all changes
-- [ ] Branch and tag analysis for credential distribution
-- [ ] External repository risk assessment
-- [ ] Historical security incident timeline
-- [ ] Comprehensive exposure archaeology report
+### Core Investigation Reports
+- [ ] Complete git history credential analysis report (investigation_prompt_2_1_complete_history.md)
+- [ ] Credential evolution timeline with all changes (investigation_prompt_2_2_credential_evolution.md)
+- [ ] Branch and tag analysis for credential distribution (investigation_prompt_2_3_branch_analysis.md)
+- [ ] External repository risk assessment (investigation_prompt_2_4_external_risk.md)
+- [ ] Historical access pattern analysis (investigation_prompt_2_5_access_patterns.md)
+- [ ] Comprehensive Phase 2 historical analysis summary
+
+### Evidence and Data Collection
+- [ ] Raw git history scan outputs and logs
+- [ ] Complete credential timeline with evidence
+- [ ] Repository structure analysis documentation
+- [ ] External exposure evidence and validation
+- [ ] Access pattern analysis with anomaly detection
+- [ ] Historical audit trail for compliance requirements
+
+### Analysis and Correlation
+- [ ] Cross-phase correlation with Phase 1 findings
+- [ ] Historical pattern analysis and trends
+- [ ] Credential lifecycle effectiveness assessment
+- [ ] Repository security posture evolution
+- [ ] Risk progression timeline and factors
 
 ## Investigation Prompts
 
