@@ -15,22 +15,41 @@ Reference the refactor specification: docs/initiatives/devops/environment_manage
 Update todos in: docs/initiatives/devops/environment_management/execution_stage/implementation_phases/EXECUTION_PHASE_TODOS.md
 ```
 
-## Phase 2 Prompt: Environment File Setup
+## Phase 2 Prompt: Staging Infrastructure Integration
 ```
-Create and configure environment files for the insurance_navigator project based on research findings. Focus on:
+Integrate the staging infrastructure setup with the environment management system for the insurance_navigator project. Focus on:
+
+1. Validate staging infrastructure setup from infrastructure_setup stage
+2. Integrate staging service configurations with centralized environment management
+3. Update staging service environment variables via Render MCP
+4. Configure staging services to use centralized environment configuration
+5. Validate staging service functionality with new environment configuration
+
+Reference infrastructure setup documentation: docs/initiatives/devops/environment_management/infrastructure_setup/
+
+Reference staging service configurations and handoff documentation from infrastructure setup stage.
+
+Update todos in: docs/initiatives/devops/environment_management/execution_stage/implementation_phases/EXECUTION_PHASE_TODOS.md
+```
+
+## Phase 3 Prompt: Environment File Setup
+```
+Create and configure environment files for the insurance_navigator project based on research findings and staging infrastructure. Focus on:
 
 1. Create comprehensive .env.development with all development values
-2. Create .env.staging with staging-specific configurations
+2. Create .env.staging with staging-specific configurations (using staging infrastructure endpoints)
 3. Create .env.production template for production deployment
 4. Implement validation for environment file completeness
 5. Document all environment variables and their purposes
 
 Reference research findings in: docs/initiatives/devops/environment_management/research_stage/
 
+Reference staging infrastructure endpoints from: docs/initiatives/devops/environment_management/infrastructure_setup/
+
 Update todos in: docs/initiatives/devops/environment_management/execution_stage/implementation_phases/EXECUTION_PHASE_TODOS.md
 ```
 
-## Phase 3 Prompt: Shared Utilities Refactoring
+## Phase 4 Prompt: Shared Utilities Refactoring
 ```
 Refactor shared utilities in the insurance_navigator project to use the new environment management system. Focus on:
 
@@ -45,7 +64,7 @@ Reference the refactor specification: docs/initiatives/devops/environment_manage
 Update todos in: docs/initiatives/devops/environment_management/execution_stage/implementation_phases/EXECUTION_PHASE_TODOS.md
 ```
 
-## Phase 4 Prompt: Frontend Module Refactoring
+## Phase 5 Prompt: Frontend Module Refactoring
 ```
 Refactor frontend components in the insurance_navigator project to remove environment dependencies. Focus on:
 
@@ -60,7 +79,7 @@ Reference research findings for frontend modules and refactor specification.
 Update todos in: docs/initiatives/devops/environment_management/execution_stage/implementation_phases/EXECUTION_PHASE_TODOS.md
 ```
 
-## Phase 5 Prompt: Backend Service Refactoring
+## Phase 6 Prompt: Backend Service Refactoring
 ```
 Refactor backend services in the insurance_navigator project for environment-agnostic operation. Focus on:
 
@@ -75,7 +94,7 @@ Reference research findings for backend services and API configurations.
 Update todos in: docs/initiatives/devops/environment_management/execution_stage/implementation_phases/EXECUTION_PHASE_TODOS.md
 ```
 
-## Phase 6 Prompt: Build System Integration
+## Phase 7 Prompt: Build System Integration
 ```
 Update the build system for the insurance_navigator project to support environment-aware builds. Focus on:
 
@@ -90,7 +109,7 @@ Reference the refactor specification and existing build configurations.
 Update todos in: docs/initiatives/devops/environment_management/execution_stage/implementation_phases/EXECUTION_PHASE_TODOS.md
 ```
 
-## Phase 7 Prompt: Testing and Validation Implementation
+## Phase 8 Prompt: Testing and Validation Implementation
 ```
 Implement comprehensive testing for the environment management system in the insurance_navigator project. Focus on:
 
@@ -105,7 +124,24 @@ Reference testing strategy: docs/initiatives/devops/environment_management/execu
 Update todos in: docs/initiatives/devops/environment_management/execution_stage/implementation_phases/EXECUTION_PHASE_TODOS.md
 ```
 
-## Phase 8 Prompt: Deployment Procedures Implementation
+## Phase 9 Prompt: Staging Infrastructure Maintenance and Optimization
+```
+Optimize and maintain the staging infrastructure for the insurance_navigator project based on usage patterns and performance data. Focus on:
+
+1. Optimize staging service configurations based on usage patterns
+2. Update staging service environment variables via Render MCP as needed
+3. Monitor staging service performance and resource utilization
+4. Implement staging service scaling and resource management procedures
+5. Document staging service maintenance and optimization procedures
+
+Reference staging infrastructure documentation: docs/initiatives/devops/environment_management/infrastructure_setup/
+
+Reference performance baselines and monitoring configurations.
+
+Update todos in: docs/initiatives/devops/environment_management/execution_stage/implementation_phases/EXECUTION_PHASE_TODOS.md
+```
+
+## Phase 10 Prompt: Deployment Procedures Implementation
 ```
 Create automated deployment procedures for the insurance_navigator project environment management. Focus on:
 
@@ -120,7 +156,7 @@ Reference deployment procedures: docs/initiatives/devops/environment_management/
 Update todos in: docs/initiatives/devops/environment_management/execution_stage/implementation_phases/EXECUTION_PHASE_TODOS.md
 ```
 
-## Phase 9 Prompt: Documentation and Training
+## Phase 11 Prompt: Documentation and Training
 ```
 Create comprehensive documentation and training materials for the environment management system. Focus on:
 
