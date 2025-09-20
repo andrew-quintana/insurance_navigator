@@ -182,7 +182,7 @@ result = await self.enhanced_service_client.submit_llamaparse_job(...)
 ### **Success Metrics**
 1. **Enhanced worker processes PDFs successfully** (0% rate limiting failures)
 2. **Real insurance content extracted** with specific text like:
-   - "Accessa Health Insurance Plan"
+   - "Insurance Navigator Health Insurance Plan"
    - "200% of the federal poverty line"
    - "1-800-555-1234"
 3. **RAG similarity scores** between 0.3-0.6 for relevant queries

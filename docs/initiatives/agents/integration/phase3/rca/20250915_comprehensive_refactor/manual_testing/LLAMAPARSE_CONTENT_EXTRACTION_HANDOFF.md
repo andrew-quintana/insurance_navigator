@@ -11,7 +11,7 @@
 #### **FM-030: LlamaParse Still Generating Generic Summaries**
 - **Status**: ACTIVE (previously marked resolved but issue persists)
 - **Problem**: LlamaParse returns generic "Insurance Document Analysis" content instead of actual PDF text
-- **Expected**: "1. Introduction\nThis document outlines the terms, conditions, and coverage details of the Accessa Health Insurance Plan..."
+- **Expected**: "1. Introduction\nThis document outlines the terms, conditions, and coverage details of the Insurance Navigator Health Insurance Plan..."
 - **Actual**: "This document contains important insurance information including: Coverage Details, Policy holder information..."
 
 #### **FM-031: Enhanced Worker Hardcoded Fallback Chunks**
@@ -96,7 +96,7 @@ For questions about your coverage, please contact customer service.
 **Expected Output (from actual PDF):**
 ```markdown
 1. Introduction
-This document outlines the terms, conditions, and coverage details of the Accessa Health Insurance Plan.
+This document outlines the terms, conditions, and coverage details of the Insurance Navigator Health Insurance Plan.
 
 2. Eligibility
 To qualify for coverage under this plan, the applicant must be a legal resident of the state and earn below 200% of the federal poverty line.
@@ -115,7 +115,7 @@ Generic and brand-name prescriptions are covered with tiered co-payment structur
 All claims must be submitted within 60 days of service. Reimbursement is subject to eligibility and plan limits.
 
 5. Contact Information
-For questions, contact Accessa Support at 1-800-555-1234 or email support@accessa.org.
+For questions, contact Insurance Navigator Support at 1-800-555-1234 or email support@insurancenavigator.org.
 ```
 
 ### **Hardcoded Chunk Content**

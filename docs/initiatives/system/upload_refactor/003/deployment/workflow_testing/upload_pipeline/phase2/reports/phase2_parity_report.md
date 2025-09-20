@@ -20,7 +20,7 @@ Phase 2 testing **SUCCESSFULLY VALIDATED** schema and configuration parity betwe
 
 ### Environment Variables Used
 ```bash
-DATABASE_URL=postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres
+DATABASE_URL=postgresql://postgres:<REDACTED>@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres
 UPLOAD_PIPELINE_SUPABASE_URL=***REMOVED***
 UPLOAD_PIPELINE_SUPABASE_ANON_KEY=***REMOVED***...
 UPLOAD_PIPELINE_SUPABASE_SERVICE_ROLE_KEY=***REMOVED***...

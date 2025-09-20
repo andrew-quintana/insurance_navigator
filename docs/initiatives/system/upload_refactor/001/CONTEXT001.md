@@ -1,4 +1,4 @@
-# Accessa Ingestion Context (MVP) — v0.3
+# Insurance Navigator Ingestion Context (MVP) — v0.3
 
 **Purpose**: Single source of truth for the coding agent to implement the MVP ingestion pipeline (upload → parse → chunk → embed → finalize) for the insurance PDF workflow.
 

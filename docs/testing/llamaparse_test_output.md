@@ -1,6 +1,6 @@
 1. Introduction
 
-This document outlines the terms, conditions, and coverage details of the Accessa Health Insurance
+This document outlines the terms, conditions, and coverage details of the Insurance Navigator Health Insurance
 
 Plan.
 
@@ -34,4 +34,4 @@ plan limits.
 
 5. Contact Information
 
-For questions, contact Accessa Support at 1-800-555-1234 or email support@accessa.org.
+For questions, contact Insurance Navigator Support at 1-800-555-1234 or email support@insurancenavigator.org.

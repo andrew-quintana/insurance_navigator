@@ -31,7 +31,7 @@ This TODO builds upon **PRD001.md** and **RFC001.md** to provide detailed implem
 ### Context for Claude
 **IMPORTANT**: This is a new session for Phase 1. Use only the inputs provided below.
 
-You are implementing the foundation for Accessa's insurance document ingestion pipeline refactor. This phase focuses on:
+You are implementing the foundation for Insurance Navigator's insurance document ingestion pipeline refactor. This phase focuses on:
 1. Legacy system dependency mapping
 2. Database schema creation
 3. Shared utility development

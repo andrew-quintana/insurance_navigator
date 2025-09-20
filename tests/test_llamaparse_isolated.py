@@ -148,7 +148,7 @@ async def test_llamaparse_complete_workflow():
                         
                         expected_keywords = [
                             'Introduction',
-                            'Accessa Health Insurance',
+                            'Insurance Navigator Health Insurance',
                             'Eligibility',
                             'Coverage Details',
                             'In-Network Services',

@@ -46,7 +46,7 @@
     "medicare",
     "fullstack"
   ],
-  "author": "Accessa",
+  "author": "Insurance Navigator",
   "license": "PROPRIETARY",
   "engines": {
     "node": ">=18.0.0",

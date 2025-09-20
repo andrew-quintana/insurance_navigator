@@ -1,7 +1,7 @@
 # Phase 1 Handoff: Foundation & Legacy Assessment
 
 ## Overview
-This document provides the handoff information for Phase 2 of the Accessa insurance document ingestion pipeline refactor. Phase 1 has been completed successfully, establishing the foundation for the new system.
+This document provides the handoff information for Phase 2 of the Insurance Navigator insurance document ingestion pipeline refactor. Phase 1 has been completed successfully, establishing the foundation for the new system.
 
 ## Phase 1 Completion Status
 

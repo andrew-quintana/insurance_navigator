@@ -71,7 +71,7 @@ class RealSupabaseStorage:
             "apikey": self.config.service_role_key,
             "Authorization": f"Bearer {self.config.service_role_key}",
             "Content-Type": "application/json",
-            "User-Agent": "Accessa-Insurance-Navigator/1.0"
+            "User-Agent": "Insurance-Navigator/1.0"
         }
         
         self.client = httpx.AsyncClient(

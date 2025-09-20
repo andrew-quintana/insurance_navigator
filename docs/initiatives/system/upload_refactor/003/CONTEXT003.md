@@ -1,4 +1,4 @@
-# Accessa Ingestion Context (003 Worker Refactor) — v1.0
+# Insurance Navigator Ingestion Context (003 Worker Refactor) — v1.0
 
 **Purpose**: Single source of truth for implementing the 003 Worker Refactor iteration - a local-first development approach with Docker-based testing environments, building upon the 002 BaseWorker architecture while addressing critical infrastructure validation and deployment verification gaps.
 

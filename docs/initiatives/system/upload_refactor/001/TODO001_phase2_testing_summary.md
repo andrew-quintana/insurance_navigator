@@ -1,7 +1,7 @@
 # Phase 2 Testing Summary: Core API & Job Queue Implementation
 
 ## Overview
-This document summarizes all testing activities, validation results, and quality assurance measures completed during Phase 2 of the Accessa insurance document ingestion pipeline refactor.
+This document summarizes all testing activities, validation results, and quality assurance measures completed during Phase 2 of the Insurance Navigator insurance document ingestion pipeline refactor.
 
 ## Testing Scope
 

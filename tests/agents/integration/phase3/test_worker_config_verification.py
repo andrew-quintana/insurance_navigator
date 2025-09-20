@@ -80,7 +80,7 @@ class WorkerConfigVerifier:
         print("🔍 Testing RAG system with existing data...")
         
         # Set production database URL
-        os.environ["DATABASE_URL"] = "postgresql://postgres.znvwzkdblknkkztqyfnu:Accessa2024!@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
+        os.environ["DATABASE_URL"] = "postgresql://postgres.znvwzkdblknkkztqyfnu:InsuranceNavigator2024!@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
         os.environ["DATABASE_SCHEMA"] = "upload_pipeline"
         
         from agents.tooling.rag.core import RAGTool, RetrievalConfig

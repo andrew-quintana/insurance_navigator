@@ -206,8 +206,8 @@ class MockLlamaParseService(LlamaParseService):
 **Implementation**:
 ```bash
 # Development environment
-LLAMAPARSE_API_KEY=llx-X9bRG4r7mq5Basype0fCvfvlj1372pDdQXi7KaxVqkRlkoSb
-OPENAI_API_KEY=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
+LLAMAPARSE_API_KEY=llx-<REDACTED>
+OPENAI_API_KEY=sk-proj-<REDACTED>
 ```
 
 **Outcome**: ✅ **SUCCESSFUL** - Secure API key management implemented

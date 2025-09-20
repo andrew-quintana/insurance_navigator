@@ -1,7 +1,7 @@
 # DEBT001: Technical Debt Documentation
 
 ## Overview
-This document captures all technical debt identified and accumulated during the Accessa insurance document ingestion pipeline refactor project. Technical debt represents design or implementation choices that were made for expediency but may create future maintenance burden or limit system evolution.
+This document captures all technical debt identified and accumulated during the Insurance Navigator insurance document ingestion pipeline refactor project. Technical debt represents design or implementation choices that were made for expediency but may create future maintenance burden or limit system evolution.
 
 **Status**: Template - To be completed at project completion  
 **Project**: Insurance Document Ingestion Pipeline Refactor  

@@ -6,4 +6,4 @@ as specified in RFC001 and CONTEXT.md.
 """
 
 __version__ = "1.0.0"
-__author__ = "Accessa Team"
+__author__ = "Insurance Navigator Team"

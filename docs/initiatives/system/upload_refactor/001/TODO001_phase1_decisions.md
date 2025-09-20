@@ -1,7 +1,7 @@
 # Phase 1 Architectural Decisions: Upload Pipeline Refactor
 
 ## Overview
-This document captures the key architectural decisions made during Phase 1 of the Accessa insurance document ingestion pipeline refactor. These decisions align with the technical specifications in RFC001 and CONTEXT.md.
+This document captures the key architectural decisions made during Phase 1 of the Insurance Navigator insurance document ingestion pipeline refactor. These decisions align with the technical specifications in RFC001 and CONTEXT.md.
 
 ## Database Architecture Decisions
 

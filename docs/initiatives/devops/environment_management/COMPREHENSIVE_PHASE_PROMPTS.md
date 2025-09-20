@@ -62,7 +62,41 @@ Document findings in: docs/initiatives/devops/environment_management/research_st
 Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
 ```
 
-## Phase 7 Prompt: Module-Level Environment Analysis
+## Phase 7 Prompt: Docker Build Optimization and Acceleration
+```
+Investigate and implement comprehensive Docker build optimization strategies for the insurance_navigator project to accelerate builds and improve deployment efficiency. Focus on:
+
+1. Investigate current Dockerfile configurations across the project and analyze performance bottlenecks
+2. Research and implement Docker build acceleration best practices including:
+   - Multi-stage Docker builds for optimal layer caching
+   - Docker BuildKit configuration for enhanced build performance
+   - Layer caching strategies for CI/CD pipelines
+   - Build cache storage solutions (Registry caching, local cache, remote cache)
+3. Optimize dependency installation and package management in Docker builds:
+   - Node.js dependency caching strategies
+   - Python package caching (if applicable)
+   - Efficient package manager usage (npm ci, yarn, etc.)
+4. Implement .dockerignore optimization to reduce build context size
+5. Configure build secrets management for secure and efficient builds
+6. Investigate and implement build acceleration techniques:
+   - Parallel builds where applicable
+   - Build context optimization
+   - Layer reuse strategies
+7. Test and validate optimized Docker builds across all environments (development, staging, production)
+8. Measure and document performance improvements (build time reduction, cache hit rates)
+9. Create best practices documentation for Docker build optimization
+10. Integrate optimized builds with existing CI/CD pipelines (Render, Vercel)
+
+Research industry best practices from Docker documentation, container registries (Docker Hub, ECR, GCR), and CI/CD platforms.
+
+Document findings in: docs/initiatives/devops/environment_management/infrastructure_setup/configuration_management/
+
+Reference existing Docker configurations and deployment setups.
+
+Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
+```
+
+## Phase 8 Prompt: Module-Level Environment Analysis
 ```
 Examine each major module and workflow in the insurance_navigator codebase for environment-specific behavior. Focus on:
 
@@ -71,18 +105,18 @@ Examine each major module and workflow in the insurance_navigator codebase for e
 3. Review database connection configurations and patterns
 4. Examine API endpoint configurations across the application
 5. Check authentication/authorization environment dependencies
-6. Review build scripts and configurations for environment handling (including Vercel build configurations)
-7. Analyze deployment-related files and CI/CD configurations (including Vercel deployment configurations)
+6. Review build scripts and configurations for environment handling (including Vercel build configurations and Docker builds)
+7. Analyze deployment-related files and CI/CD configurations (including Vercel deployment configurations and Docker configurations)
 8. Identify CI/CD environment dependencies and requirements
 
 Document findings in: docs/initiatives/devops/environment_management/infrastructure_setup/configuration_management/
 
-Reference codebase analysis from Phase 6 and Vercel deployment setup from Phase 4.5.
+Reference codebase analysis from Phase 6, Vercel deployment setup from Phase 4.5, and Docker optimization from Phase 7.
 
 Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
 ```
 
-## Phase 8 Prompt: Core Environment Management Infrastructure
+## Phase 9 Prompt: Core Environment Management Infrastructure
 ```
 Implement the central environment management infrastructure for the insurance_navigator project based on research findings. Focus on:
 
@@ -93,14 +127,12 @@ Implement the central environment management infrastructure for the insurance_na
 5. Create .env.example template with all required variables from research
 6. Implement comprehensive error handling and logging for configuration issues
 
-Reference research findings from Phases 6-7 for implementation requirements.
-
-Reference the refactor specification: docs/initiatives/devops/environment_management/execution_stage/refactor_specification/ENVIRONMENT_REFACTOR_SPEC.md
+Reference research findings from Phases 6-8 for implementation requirements.
 
 Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
 ```
 
-## Phase 9 Prompt: Environment File Updates and Validation
+## Phase 10 Prompt: Environment File Updates and Validation
 ```
 Update and validate existing environment files for the insurance_navigator project based on staging infrastructure and research findings. Focus on:
 
@@ -117,7 +149,7 @@ Reference staging infrastructure configuration from completed setup phases.
 Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
 ```
 
-## Phase 10 Prompt: Shared Utilities and Core Module Refactoring
+## Phase 11 Prompt: Shared Utilities and Core Module Refactoring
 ```
 Refactor shared utilities in the insurance_navigator project to use the new environment management system. Focus on:
 
@@ -127,14 +159,14 @@ Refactor shared utilities in the insurance_navigator project to use the new envi
 4. Create utility functions for environment detection
 5. Update shared type definitions for environment configurations
 
-Reference the core environment management infrastructure from Phase 8.
+Reference the core environment management infrastructure from Phase 9.
 
-Reference module analysis findings from Phase 7.
+Reference module analysis findings from Phase 8.
 
 Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
 ```
 
-## Phase 11 Prompt: Frontend Module Environment Integration
+## Phase 12 Prompt: Frontend Module Environment Integration
 ```
 Refactor frontend components in the insurance_navigator project to remove environment dependencies. Focus on:
 
@@ -145,16 +177,16 @@ Refactor frontend components in the insurance_navigator project to remove enviro
 5. Update frontend error handling for configuration issues
 6. Test frontend changes across all Vercel deployments (development, preview/staging, production)
 
-Reference frontend analysis findings from Phase 7.
+Reference frontend analysis findings from Phase 8.
 
-Reference environment files and configuration system from Phases 8-9.
+Reference environment files and configuration system from Phases 9-10.
 
 Reference Vercel deployment setup from Phase 4.5.
 
 Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
 ```
 
-## Phase 12 Prompt: Backend Service Environment Integration
+## Phase 13 Prompt: Backend Service Environment Integration
 ```
 Refactor backend services in the insurance_navigator project for environment-agnostic operation. Focus on:
 
@@ -164,34 +196,35 @@ Refactor backend services in the insurance_navigator project for environment-agn
 4. Implement environment-aware service discovery
 5. Update middleware for environment-specific behavior
 
-Reference backend analysis findings from Phase 7.
+Reference backend analysis findings from Phase 8.
 
 Reference staging service configurations and environment management system.
 
 Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
 ```
 
-## Phase 13 Prompt: Build System and CI/CD Integration
+## Phase 14 Prompt: Build System and CI/CD Integration
 ```
 Update the build system for the insurance_navigator project to support environment-aware builds. Focus on:
 
 1. Update package.json scripts for environment-specific builds
 2. Implement build-time configuration validation
 3. Create environment-specific build optimizations
-4. Update CI/CD pipeline for environment awareness (including Vercel deployments)
+4. Update CI/CD pipeline for environment awareness (including Vercel deployments and optimized Docker builds)
 5. Implement automated environment variable validation
 6. Configure Vercel deployment automation and environment variable management
+7. Integrate optimized Docker builds into CI/CD pipeline
 
-Reference build system analysis from Phase 7.
+Reference build system analysis from Phase 8.
 
 Reference environment configuration system and validation from previous phases.
 
-Reference Vercel deployment setup from Phase 4.5.
+Reference Vercel deployment setup from Phase 4.5 and Docker optimization from Phase 7.
 
 Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
 ```
 
-## Phase 14 Prompt: Comprehensive Testing and Validation
+## Phase 15 Prompt: Comprehensive Testing and Validation
 ```
 Implement comprehensive testing for the environment management system in the insurance_navigator project. Focus on:
 
@@ -202,15 +235,16 @@ Implement comprehensive testing for the environment management system in the ins
 5. Test error handling for missing or invalid configurations
 6. Test full-stack integration across all environments using Vercel frontend deployments
 7. Validate frontend-backend communication across all environment combinations
+8. Test Docker build optimization performance and reliability
 
 Reference all previous implementation phases for testing requirements.
 
-Reference Vercel deployment setup from Phase 4.5 for full-stack testing.
+Reference Vercel deployment setup from Phase 4.5 for full-stack testing and Docker optimization from Phase 7.
 
 Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
 ```
 
-## Phase 15 Prompt: Staging Infrastructure Optimization
+## Phase 16 Prompt: Staging Infrastructure Optimization
 ```
 Optimize and maintain the staging infrastructure for the insurance_navigator project based on usage patterns and performance data. Focus on:
 
@@ -227,7 +261,7 @@ Reference performance data and monitoring configurations.
 Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
 ```
 
-## Phase 16 Prompt: Deployment Procedures and Automation
+## Phase 17 Prompt: Deployment Procedures and Automation
 ```
 Create automated deployment procedures for the insurance_navigator project environment management. Focus on:
 
@@ -236,15 +270,16 @@ Create automated deployment procedures for the insurance_navigator project envir
 3. Create comprehensive rollback procedures for each environment
 4. Document deployment procedures and safety checks
 5. Set up monitoring for environment-specific metrics
-
-Reference deployment procedures: docs/initiatives/devops/environment_management/execution_stage/deployment_procedures/
+6. Integrate optimized Docker builds into deployment procedures
 
 Reference all previous implementation phases for deployment requirements.
+
+Reference Docker optimization from Phase 7 for deployment integration.
 
 Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
 ```
 
-## Phase 17 Prompt: Documentation and Training
+## Phase 18 Prompt: Documentation and Training
 ```
 Create comprehensive documentation and training materials for the environment management system. Focus on:
 
@@ -262,4 +297,6 @@ Complete final validation of todos in: docs/initiatives/devops/environment_manag
 ```
 
 ## Usage Instructions
-Each phase builds upon the previous phases. Start with Phase 5 since Phases 1-4 (infrastructure setup) are already completed. Each prompt references specific documentation and previous phase findings to ensure continuity and comprehensive implementation.
+Each phase builds upon the previous phases. Start with Phase 4.5 since Phases 1-4 (infrastructure setup) are already completed. Each prompt references specific documentation and previous phase findings to ensure continuity and comprehensive implementation.
+
+**Updated Phase Count**: Now 18 total phases (added Phase 4.5 for Vercel deployment and Phase 7 for Docker optimization)

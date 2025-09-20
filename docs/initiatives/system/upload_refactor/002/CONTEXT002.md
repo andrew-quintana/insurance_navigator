@@ -1,4 +1,4 @@
-# Accessa Ingestion Context (002 Worker Refactor) — v1.0
+# Insurance Navigator Ingestion Context (002 Worker Refactor) — v1.0
 
 **Purpose**: Single source of truth for implementing the 002 Worker Refactor iteration - a unified BaseWorker architecture with buffer-driven pipeline orchestration for the insurance PDF workflow.
 

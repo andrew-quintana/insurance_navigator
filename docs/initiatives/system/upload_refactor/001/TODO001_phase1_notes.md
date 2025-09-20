@@ -1,7 +1,7 @@
 # Phase 1 Implementation Notes: Foundation & Legacy Assessment
 
 ## Overview
-Phase 1 of the Accessa insurance document ingestion pipeline refactor has been completed. This phase focused on establishing the foundation for the new system while assessing legacy dependencies.
+Phase 1 of the Insurance Navigator insurance document ingestion pipeline refactor has been completed. This phase focused on establishing the foundation for the new system while assessing legacy dependencies.
 
 ## Completed Tasks
 

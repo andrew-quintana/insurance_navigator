@@ -14,8 +14,8 @@ This guide explains how to run Phase C UUID standardization tests using your loc
 
 ### Database: Production Supabase
 - **Supabase URL**: `***REMOVED***`
-- **Database URL**: `postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres`
-- **Pooler URL**: `postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres`
+- **Database URL**: `postgresql://postgres:<REDACTED>@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres`
+- **Pooler URL**: `postgresql://postgres.znvwzkdblknkkztqyfnu:<REDACTED>@aws-0-us-west-1.pooler.supabase.com:6543/postgres`
 
 ## Prerequisites
 
@@ -215,7 +215,7 @@ curl -f http://localhost:8000/health
 - Verify Supabase credentials in `.env.production`
 - Test database connection manually:
 ```bash
-python -c "import asyncpg; import asyncio; asyncio.run(asyncpg.connect('postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres'))"
+python -c "import asyncpg; import asyncio; asyncio.run(asyncpg.connect('postgresql://postgres:<REDACTED>@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres'))"
 ```
 
 #### 3. Missing Dependencies

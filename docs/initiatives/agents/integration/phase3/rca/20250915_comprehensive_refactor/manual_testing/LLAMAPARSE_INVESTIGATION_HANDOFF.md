@@ -29,7 +29,7 @@ curl -X GET "http://127.0.0.1:54321/storage/v1/object/files/user/61f1d766-14c7-4
 ### **LlamaParse Status (Working Correctly)**
 ```bash
 # API key is present and valid
-✅ LlamaParse API key found: llx-CRtlUR...
+✅ LlamaParse API key found: llx-<REDACTED>...
 
 # Local PDF file exists and is readable
 ✅ PDF file exists: examples/simulated_insurance_document.pdf

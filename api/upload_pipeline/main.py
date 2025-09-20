@@ -117,7 +117,7 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI application
 app = FastAPI(
-    title="Accessa Insurance Document Ingestion Pipeline",
+    title="Insurance Navigator Document Ingestion Pipeline",
     description="API for uploading and processing insurance documents",
     version="2.0.0",
     docs_url="/docs" if get_config().environment == "development" else None,
