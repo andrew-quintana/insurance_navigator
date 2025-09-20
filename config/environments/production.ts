@@ -32,7 +32,7 @@ export const productionConfig: EnvironmentConfig = {
 
   frontend: {
     appUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://insurance-navigator.vercel.app',
-    apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://insurance-navigator-api.onrender.com',
+    apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api-service-production.onrender.com',
     analyticsEnabled: true,
     debugMode: false
   },

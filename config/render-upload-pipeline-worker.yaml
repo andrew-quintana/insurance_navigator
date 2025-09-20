@@ -37,7 +37,7 @@ services:
       - key: SECURITY_BYPASS_ENABLED
         value: false
       - key: API_BASE_URL
-        value: https://insurance-navigator-api.onrender.com
+        value: https://api-service-production.onrender.com
       # Upload pipeline specific settings
       - key: UPLOAD_PIPELINE_ENVIRONMENT
         value: production
