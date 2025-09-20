@@ -170,11 +170,11 @@ async def working_llamaparse_integration():
             
             # Split content into meaningful chunks (this logic should be in chunking service)
             sections = [
-                '1. Introduction\n\nThis document outlines the terms, conditions, and coverage details of the Accessa Health Insurance Plan.',
+                '1. Introduction\n\nThis document outlines the terms, conditions, and coverage details of the Insurance Navigator Health Insurance Plan.',
                 '2. Eligibility\n\nTo qualify for coverage under this plan, the applicant must be a legal resident of the state and earn below 200% of the federal poverty line.',
                 '3. Coverage Details\n\n3.1 In-Network Services\n\nCovers primary care visits, specialist consultations, diagnostic tests, and emergency services within the provider network.',
                 '3.2 Out-of-Network Services\n\nLimited coverage for out-of-network services with higher co-pay and deductible requirements.\n\n3.3 Prescription Drugs\n\nGeneric and brand-name prescriptions are covered with tiered co-payment structure.',
-                '4. Claims and Reimbursement\n\nAll claims must be submitted within 60 days of service. Reimbursement is subject to eligibility and plan limits.\n\n5. Contact Information\n\nFor questions, contact Accessa Support at 1-800-555-1234 or email support@accessa.org.'
+                '4. Claims and Reimbursement\n\nAll claims must be submitted within 60 days of service. Reimbursement is subject to eligibility and plan limits.\n\n5. Contact Information\n\nFor questions, contact Insurance Navigator Support at 1-800-555-1234 or email support@insurancenavigator.org.'
             ]
             
             # Generate embeddings and create chunks

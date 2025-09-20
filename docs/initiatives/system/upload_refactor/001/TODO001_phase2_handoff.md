@@ -1,7 +1,7 @@
 # Phase 2 Handoff: Core API & Job Queue Implementation
 
 ## Overview
-This document provides the handoff information for Phase 3 of the Accessa insurance document ingestion pipeline refactor. Phase 2 has been completed successfully, implementing the core FastAPI application with comprehensive API endpoints and job management functionality.
+This document provides the handoff information for Phase 3 of the Insurance Navigator insurance document ingestion pipeline refactor. Phase 2 has been completed successfully, implementing the core FastAPI application with comprehensive API endpoints and job management functionality.
 
 ## Phase 2 Completion Status
 

@@ -26,7 +26,7 @@
 #### **1.1 Environment Variables**
 ```bash
 # LlamaParse API
-LLAMAPARSE_API_KEY=llx-your-actual-key
+LLAMAPARSE_API_KEY=llx-<REDACTED>
 LLAMAPARSE_API_URL=https://api.cloud.llamaindex.ai
 
 # OpenAI API  

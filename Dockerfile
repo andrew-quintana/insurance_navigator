@@ -50,7 +50,7 @@ ENV PATH=/home/app/.local/bin:$PATH
 ENV PYTHONPATH=/home/app/.local/lib/python3.11/site-packages:$PYTHONPATH
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
-ENV PORT=8000
+ENV PORT=${PORT:-8000}
 ENV KEEP_ALIVE=75
 ENV MAX_REQUESTS=1000
 ENV MAX_REQUESTS_JITTER=100
@@ -60,10 +60,9 @@ ENV WORKERS=1
 USER app
 
 # Expose port and configure health check
-EXPOSE 8000
+EXPOSE ${PORT:-8000}
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
 # Start uvicorn with optimized settings
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", \
-     "--workers", "1", "--timeout-keep-alive", "75", "--limit-max-requests", "1000"]
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-keep-alive 75 --limit-max-requests 1000"]

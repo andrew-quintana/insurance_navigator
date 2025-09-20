@@ -1669,7 +1669,7 @@ Chunk 1:
 - **Mock Content Message**: Shows the exact path where the file should be but isn't
 - **File Path**: `files/user/61f1d766-14c7-4bbd-8dbe-0b32e7ca3ef0/raw/b78980ba_aa77e516.pdf`
 - **File Status**: 404 Not Found when accessed via storage API
-- **LlamaParse API Key**: Present and valid (`llx-CRtlUR...`)
+- **LlamaParse API Key**: Present and valid (`llx-<REDACTED>...`)
 - **Real Document Available**: `examples/simulated_insurance_document.pdf` exists and is readable
 
 ### Investigation Notes
@@ -1699,7 +1699,7 @@ curl -X GET "http://127.0.0.1:54321/storage/v1/object/files/user/61f1d766-14c7-4
 **LlamaParse API Status:**
 ```bash
 # API key is present and valid
-✅ LlamaParse API key found: llx-CRtlUR...
+✅ LlamaParse API key found: llx-<REDACTED>...
 
 # Local PDF file exists and is readable
 ✅ PDF file exists: examples/simulated_insurance_document.pdf
@@ -1728,7 +1728,7 @@ curl -X GET "http://127.0.0.1:54321/storage/v1/object/files/user/61f1d766-14c7-4
 **Actual PDF Content:**
 ```
 1. Introduction
-This document outlines the terms, conditions, and coverage details of the Accessa Health Insurance Plan.
+This document outlines the terms, conditions, and coverage details of the Insurance Navigator Health Insurance Plan.
 
 2. Eligibility  
 To qualify for coverage under this plan, the applicant must be a legal resident of the state and earn below 200% of the federal poverty line.
@@ -1747,7 +1747,7 @@ Generic and brand-name prescriptions are covered with tiered co-payment structur
 All claims must be submitted within 60 days of service. Reimbursement is subject to eligibility and plan limits.
 
 5. Contact Information
-For questions, contact Accessa Support at 1-800-555-1234 or email support@accessa.org.
+For questions, contact Insurance Navigator Support at 1-800-555-1234 or email support@insurancenavigator.org.
 ```
 
 **Generated Chunks Content (Before Fix):**
@@ -1798,7 +1798,7 @@ Final section with more content.
 
 # Isolated test confirms real parsing works
 ✅ Content Coverage: 100.0% (11/11 keywords found)
-✅ Real PDF content parsed correctly: "1. Introduction", "Accessa Health Insurance", etc.
+✅ Real PDF content parsed correctly: "1. Introduction", "Insurance Navigator Health Insurance", etc.
 ```
 
 **Current Status**: LlamaParse API integration is fully functional. Rate limiting (429 errors) may occur during high usage but the integration itself works correctly.
@@ -2018,7 +2018,7 @@ httpx.post(url, content=file_content, headers={"Authorization": f"Bearer {key}"}
 ### Symptoms
 - LlamaParse returns generic summary content instead of verbatim PDF text
 - Parsed content: "This document contains important insurance information including: Coverage Details, Policy holder information..."
-- Expected content: Actual PDF text with specific details like "Accessa Health Insurance Plan", "200% of the federal poverty line", etc.
+- Expected content: Actual PDF text with specific details like "Insurance Navigator Health Insurance Plan", "200% of the federal poverty line", etc.
 - RAG tool retrieves generic summaries instead of document-specific information
 
 ### Observations
@@ -2065,7 +2065,7 @@ data = {
 ```
 
 **Content Comparison:**
-- **Input**: "1. Introduction\nThis document outlines the terms, conditions, and coverage details of the Accessa Health Insurance Plan..."
+- **Input**: "1. Introduction\nThis document outlines the terms, conditions, and coverage details of the Insurance Navigator Health Insurance Plan..."
 - **Output**: "This document contains important insurance information including:\n## Coverage Details\n- Policy holder information..."
 
 ### Related Issues

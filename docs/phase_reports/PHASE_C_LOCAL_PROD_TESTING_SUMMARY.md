@@ -62,8 +62,8 @@ Phase C testing has been enhanced to support **local backend with production Sup
 
 ### Database: Production Supabase
 - **Supabase URL**: `https://znvwzkdblknkkztqyfnu.supabase.co`
-- **Database URL**: `postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres`
-- **Pooler URL**: `postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres`
+- **Database URL**: `postgresql://postgres:<REDACTED>@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres`
+- **Pooler URL**: `postgresql://postgres.znvwzkdblknkkztqyfnu:<REDACTED>@aws-0-us-west-1.pooler.supabase.com:6543/postgres`
 
 ### Environment Variables
 The test script automatically configures:
@@ -100,7 +100,7 @@ python run_phase_c_local_prod_tests.py --help-examples
 curl -f http://localhost:8000/health
 
 # Check if production Supabase is accessible
-python -c "import asyncpg; import asyncio; asyncio.run(asyncpg.connect('postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres'))"
+python -c "import asyncpg; import asyncio; asyncio.run(asyncpg.connect('postgresql://postgres:<REDACTED>@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres'))"
 ```
 
 ### Test Execution

@@ -1,7 +1,7 @@
 # Phase 2 Architectural Decisions: Core API & Job Queue Implementation
 
 ## Overview
-This document captures the key architectural decisions made during Phase 2 of the Accessa insurance document ingestion pipeline refactor. These decisions focus on the API layer design, authentication strategy, rate limiting approach, and job management patterns.
+This document captures the key architectural decisions made during Phase 2 of the Insurance Navigator insurance document ingestion pipeline refactor. These decisions focus on the API layer design, authentication strategy, rate limiting approach, and job management patterns.
 
 ## API Architecture Decisions
 

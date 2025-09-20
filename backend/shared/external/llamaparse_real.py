@@ -89,7 +89,7 @@ class RealLlamaParseService(ServiceInterface):
         """Set up HTTP client with proper headers and configuration."""
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "User-Agent": "Accessa-Insurance-Navigator/1.0"
+            "User-Agent": "Insurance-Navigator/1.0"
         }
         
         self.client = httpx.AsyncClient(

@@ -85,7 +85,7 @@ class RealOpenAIService(ServiceInterface):
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "User-Agent": "Accessa-Insurance-Navigator/1.0"
+            "User-Agent": "Insurance-Navigator/1.0"
         }
         
         if self.organization:

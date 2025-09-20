@@ -30,7 +30,7 @@
 
 ### ✅ **PRODUCTION CREDENTIALS VALIDATED**
 - [x] **Supabase URL**: `https://znvwzkdblknkkztqyfnu.supabase.co` - Verified accessible
-- [x] **Database Connection**: `postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres` - Tested and working
+- [x] **Database Connection**: `postgresql://postgres:<REDACTED>@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres` - Tested and working
 - [x] **API Keys**: OpenAI and LlamaParse keys configured for production testing
 - [x] **Service Role Key**: Supabase service role key configured for admin operations
 

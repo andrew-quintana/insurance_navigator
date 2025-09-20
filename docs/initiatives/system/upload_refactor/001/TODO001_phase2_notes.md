@@ -1,7 +1,7 @@
 # Phase 2 Implementation Notes: Core API & Job Queue Implementation
 
 ## Overview
-Phase 2 of the Accessa insurance document ingestion pipeline refactor has been completed successfully. This phase implemented the core FastAPI application with authentication, rate limiting, upload endpoints, and job management functionality.
+Phase 2 of the Insurance Navigator insurance document ingestion pipeline refactor has been completed successfully. This phase implemented the core FastAPI application with authentication, rate limiting, upload endpoints, and job management functionality.
 
 ## Completed Tasks
 

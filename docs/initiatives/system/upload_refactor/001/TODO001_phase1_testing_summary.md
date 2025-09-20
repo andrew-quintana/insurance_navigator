@@ -1,7 +1,7 @@
 # Phase 1 Testing Summary: Foundation & Legacy Assessment
 
 ## Overview
-This document summarizes all testing activities, validation results, and quality assurance measures completed during Phase 1 of the Accessa insurance document ingestion pipeline refactor.
+This document summarizes all testing activities, validation results, and quality assurance measures completed during Phase 1 of the Insurance Navigator insurance document ingestion pipeline refactor.
 
 ## Testing Scope
 
