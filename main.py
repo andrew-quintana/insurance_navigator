@@ -1663,10 +1663,23 @@ async def debug_rag_similarity(
 
 if __name__ == "__main__":
     import uvicorn
+    
+    # Debug environment variables
+    print("=== Environment Variables Debug ===")
+    print(f"PORT: {os.getenv('PORT', 'NOT SET')}")
+    print(f"API_HOST: {os.getenv('API_HOST', 'NOT SET')}")
+    print(f"API_PORT: {os.getenv('API_PORT', 'NOT SET')}")
+    print(f"ENVIRONMENT: {os.getenv('ENVIRONMENT', 'NOT SET')}")
+    
+    # Get port configuration
     port = int(os.getenv("PORT", "8000"))
+    host = os.getenv("API_HOST", "0.0.0.0")
+    
+    print(f"=== Starting server on {host}:{port} ===")
+    
     uvicorn.run(
         app,
-        host="0.0.0.0",
+        host=host,
         port=port,
         log_level="info",
         access_log=True
