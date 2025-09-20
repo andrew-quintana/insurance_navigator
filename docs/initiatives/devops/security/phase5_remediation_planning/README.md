@@ -98,6 +98,8 @@ Prevention Framework:
 **5.1.3 Repository Security**
 - [ ] Remove all hardcoded credentials from repository
 - [ ] Scrub git history of credential references
+- [ ] Remove credentials from investigation documentation files
+- [ ] Delete sensitive files from devops/security initiative directory
 - [ ] Implement pre-commit hooks for credential detection
 - [ ] Set up repository secret scanning
 - [ ] Configure branch protection with required checks
@@ -208,12 +210,12 @@ CONTEXT:
 - Time-sensitive remediation required
 
 EXPOSED CREDENTIALS (requiring immediate rotation):
-- OpenAI API Key: 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
-- Anthropic API Key: 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
-- Supabase Database Password: tukwof-pyVxo5-qejnoj
-- Document Encryption Key: iSUAmk2NHMNW5bsn8F0UnPSCk9L+IxZhu/v/UyDwFcc=
-- LlamaCloud API Key: llx-CRtlURo7FT74ZMydik58KjPHC5aTpOSuGjWqOkTXjrPQucUS
-- LangChain API Key: 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
+- OpenAI API Key: [REDACTED - refer to original RENDER_ENVIRONMENT_VARIABLES.md file]
+- Anthropic API Key: [REDACTED - refer to original RENDER_ENVIRONMENT_VARIABLES.md file]
+- Supabase Database Password: [REDACTED - refer to original RENDER_ENVIRONMENT_VARIABLES.md file]
+- Document Encryption Key: [REDACTED - refer to original RENDER_ENVIRONMENT_VARIABLES.md file]
+- LlamaCloud API Key: [REDACTED - refer to original RENDER_ENVIRONMENT_VARIABLES.md file]
+- LangChain API Key: [REDACTED - refer to original RENDER_ENVIRONMENT_VARIABLES.md file]
 
 REMEDIATION PRIORITIES:
 1. Immediate credential rotation (0-24 hours)
@@ -464,6 +466,34 @@ OUTPUT: Create prevention_detection_system.md with comprehensive system design
 - Conduct security audit and validation
 - Optimize and tune security systems
 
+## Phase 6: Investigation Cleanup (CRITICAL)
+
+**⚠️ MANDATORY CLEANUP PHASE**: After completing the investigation and remediation, ALL files containing sensitive information must be removed or sanitized.
+
+### 6.1 Documentation Cleanup Tasks
+- [ ] Remove all investigation files containing actual credentials
+- [ ] Delete the original RENDER_ENVIRONMENT_VARIABLES.md file
+- [ ] Sanitize any remaining documentation to remove credential references
+- [ ] Remove exposed_credentials_catalog.md and similar files
+- [ ] Clean up any investigation prompts containing actual credential values
+- [ ] Verify no sensitive information remains in the security initiative directory
+
+### 6.2 Repository History Cleanup
+- [ ] Use git filter-branch or BFG to remove credential history
+- [ ] Verify git history is clean of all exposed credentials
+- [ ] Force push cleaned history (if safe to do so)
+- [ ] Document the cleanup process for audit purposes
+
+### 6.3 Final Security Verification
+- [ ] Run comprehensive credential scan on entire repository
+- [ ] Verify no sensitive information exists in any branch
+- [ ] Confirm all team members understand new security procedures
+- [ ] Archive investigation summary without sensitive details
+
+**CLEANUP DEADLINE**: Phase 6 must be completed within 48 hours of Phase 5 completion to ensure no sensitive information remains in the repository.
+
 ---
 
 **⚠️ CRITICAL IMPLEMENTATION NOTICE**: Phase 5 remediation must be executed with extreme care to avoid service disruptions while ensuring complete security. All actions should be tested in staging environments before production implementation.
+
+**⚠️ MANDATORY CLEANUP NOTICE**: Phase 6 cleanup is REQUIRED and must not be skipped. Leaving credential information in investigation files defeats the purpose of the security remediation.
