@@ -545,7 +545,7 @@ class EnhancedBaseWorker:
                     base_url = "http://localhost:8000"
             else:
                 # For production, use default if WEBHOOK_BASE_URL not set
-                base_url = "***REMOVED***"
+                base_url = "https://api-service-production.onrender.com"
                 self.logger.info(f"Using production default webhook base URL: {base_url}")
             
             webhook_url = f"{base_url}/api/upload-pipeline/webhook/llamaparse/{job_id}"
