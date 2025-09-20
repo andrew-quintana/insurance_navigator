@@ -19,17 +19,18 @@ Update todos in: docs/initiatives/devops/environment_management/infrastructure_s
 
 ## Phase 2 Prompt: Staging Environment Planning
 ```
-Plan the staging environment configuration based on production service audit findings. Focus on:
+Plan the staging environment configuration based on production service audit findings and existing staging database setup. Focus on:
 
-1. Define staging-specific environment variable adaptations
-2. Plan staging database and external service configurations
-3. Design staging domain and networking requirements
-4. Define appropriate resource allocations for staging workload
-5. Create staging service naming and organizational strategy
+1. Review existing staging database configuration from .env.staging file
+2. Define staging-specific environment variable adaptations for Render services
+3. Plan staging external service configurations (excluding database which already exists)
+4. Design staging domain and networking requirements for API and worker services
+5. Define appropriate resource allocations for staging workload
+6. Create staging service naming and organizational strategy
 
 Document findings in: docs/initiatives/devops/environment_management/infrastructure_setup/configuration_management/
 
-Reference the infrastructure specification and production service documentation.
+Reference the infrastructure specification, production service documentation, and existing .env.staging configuration.
 
 Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
 ```
@@ -39,14 +40,14 @@ Update todos in: docs/initiatives/devops/environment_management/infrastructure_s
 Create and configure the insurance-navigator-staging-api service using Render MCP based on production service specifications. Focus on:
 
 1. Create staging API service with identical production configurations
-2. Apply staging-specific environment variables and settings
-3. Configure staging database connections and dependencies
+2. Apply staging-specific environment variables and settings (using existing .env.staging database config)
+3. Connect API service to existing staging database using credentials from .env.staging
 4. Set up staging domain and networking configurations
 5. Validate staging API service health and basic functionality
 
 Reference the infrastructure specification: docs/initiatives/devops/environment_management/infrastructure_setup/refactor_specification/STAGING_INFRASTRUCTURE_SPEC.md
 
-Reference production service documentation from Phase 1.
+Reference production service documentation from Phase 1 and existing .env.staging database configuration.
 
 Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
 ```
@@ -56,14 +57,14 @@ Update todos in: docs/initiatives/devops/environment_management/infrastructure_s
 Create and configure the insurance-navigator-staging-worker service using Render MCP based on production worker specifications. Focus on:
 
 1. Create staging worker service with identical production configurations
-2. Apply staging-specific environment variables and worker settings
-3. Configure staging database and queue connections
+2. Apply staging-specific environment variables and worker settings (using existing .env.staging database config)
+3. Connect worker service to existing staging database using credentials from .env.staging
 4. Set up staging external service integrations
 5. Validate staging worker service health and job processing capabilities
 
 Reference the infrastructure specification and production worker documentation.
 
-Reference staging environment planning from Phase 2.
+Reference staging environment planning from Phase 2 and existing .env.staging database configuration.
 
 Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
 ```
