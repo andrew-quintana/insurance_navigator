@@ -23,7 +23,7 @@ Technical specification for replicating production Render services to create sta
 - Region and resource plan specifications
 
 **Environment Variable Adaptations**:
-- Database connections → staging database instances
+- Database connections → use existing staging database configuration from .env.staging
 - API endpoints → staging-specific endpoints
 - External service integrations → staging/test environments
 - Domain configurations → staging domain settings
@@ -47,7 +47,7 @@ Technical specification for replicating production Render services to create sta
 
 **Environment Variable Adaptations**:
 - Queue service connections → staging queue instances
-- Database worker connections → staging database
+- Database worker connections → use existing staging database configuration from .env.staging
 - External API integrations → staging/test endpoints
 - Logging and monitoring → staging-specific configurations
 
@@ -61,8 +61,8 @@ Technical specification for replicating production Render services to create sta
 
 ### Phase 2: Staging Service Creation
 1. **Service Replication**: Use Render MCP to create staging services with identical base configurations
-2. **Configuration Application**: Apply staging-specific environment variables and settings
-3. **Dependency Setup**: Configure staging-specific database and external service connections
+2. **Configuration Application**: Apply staging-specific environment variables and settings using existing .env.staging database config
+3. **Dependency Setup**: Connect services to existing staging database and configure external service connections
 4. **Network Configuration**: Set up staging-specific domain and networking configurations
 
 ### Phase 3: Validation and Testing
@@ -94,7 +94,7 @@ await render.createWebService({
 
 ### Environment Variable Management
 **Staging Environment Variables**:
-- Database URLs → staging database instances
+- Database URLs → use existing staging database configuration from .env.staging
 - API keys → staging/test API keys
 - External service endpoints → staging service endpoints
 - Feature flags → staging-specific feature configurations
@@ -103,7 +103,7 @@ await render.createWebService({
 **Security Considerations**:
 - Staging-specific secrets management
 - Test API keys with limited scope
-- Staging database isolation from production
+- Existing staging database already isolated from production
 - Secure staging domain configurations
 
 ## Validation Criteria
@@ -117,7 +117,7 @@ await render.createWebService({
 ### Functionality Validation
 - [ ] API endpoints respond correctly in staging environment
 - [ ] Worker processes handle test workloads appropriately
-- [ ] Database connections established and functional
+- [ ] Database connections established and functional using existing staging database from .env.staging
 - [ ] External service integrations working with staging endpoints
 
 ### Configuration Parity
@@ -149,7 +149,7 @@ await render.createWebService({
 - Database and external service staging instances
 
 ### Infrastructure Dependencies
-- Staging database instances available
+- Existing staging database (configured in .env.staging)
 - Staging domain and SSL configurations
 - External service staging/test environments configured
 - Monitoring and logging infrastructure for staging

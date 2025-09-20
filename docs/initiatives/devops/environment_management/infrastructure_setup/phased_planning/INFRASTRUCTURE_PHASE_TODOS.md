@@ -18,26 +18,26 @@
 - Resource allocations and performance metrics analyzed
 
 ## Phase 2: Staging Environment Planning
-- [ ] Define staging-specific environment variable requirements
-- [ ] Plan staging database instance configurations
-- [ ] Identify staging external service endpoints and integrations
-- [ ] Plan staging domain and networking configurations
-- [ ] Define staging-specific resource allocation requirements
+- [ ] Review existing staging database configuration from .env.staging
+- [ ] Define staging-specific environment variable requirements for Render services
+- [ ] Identify staging external service endpoints and integrations (excluding database)
+- [ ] Plan staging domain and networking configurations for Render services
+- [ ] Define staging-specific resource allocation requirements for API and worker services
 - [ ] Create staging service naming and organization strategy
 
 ## Phase 3: Staging API Service Creation
 - [ ] Create insurance-navigator-staging-api service via Render MCP
 - [ ] Apply production API service configuration to staging service
-- [ ] Configure staging-specific environment variables for API service
-- [ ] Set up staging database connections for API service
+- [ ] Configure staging-specific environment variables for API service (using existing .env.staging database config)
+- [ ] Connect API service to existing staging database using .env.staging credentials
 - [ ] Configure staging domain and networking for API service
 - [ ] Validate staging API service health and basic functionality
 
 ## Phase 4: Staging Worker Service Creation
 - [ ] Create insurance-navigator-staging-worker service via Render MCP
 - [ ] Apply production worker service configuration to staging service
-- [ ] Configure staging-specific environment variables for worker service
-- [ ] Set up staging database and queue connections for worker service
+- [ ] Configure staging-specific environment variables for worker service (using existing .env.staging database config)
+- [ ] Connect worker service to existing staging database using .env.staging credentials
 - [ ] Configure staging external service integrations for worker
 - [ ] Validate staging worker service health and job processing
 
