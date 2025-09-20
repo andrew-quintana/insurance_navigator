@@ -262,19 +262,20 @@ class RAGTool:
             List of floats representing the embedding
         """
         try:
-            import openai
+            from openai import AsyncOpenAI
             import os
             
-            # Set OpenAI API key if not already set
-            if not openai.api_key:
-                openai.api_key = os.getenv('OPENAI_API_KEY')
-            
-            if not openai.api_key:
+            # Get OpenAI API key
+            api_key = os.getenv('OPENAI_API_KEY')
+            if not api_key:
                 self.logger.warning("OPENAI_API_KEY not found, falling back to mock embedding")
                 return self._generate_mock_embedding(text)
             
+            # Initialize OpenAI client
+            client = AsyncOpenAI(api_key=api_key)
+            
             # Generate real OpenAI embedding
-            response = openai.embeddings.create(
+            response = await client.embeddings.create(
                 model="text-embedding-3-small",
                 input=text
             )
