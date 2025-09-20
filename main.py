@@ -1173,8 +1173,13 @@ async def chat_with_agent(
         chat_interface = chat_with_agent._chat_interface
         
         # Create ChatMessage object
-        # Use the specific user ID that has documents for testing
-        user_id = "dd9ea029-a1f8-4204-964b-44ebfb487610"  # User with documents
+        # Use the authenticated user's ID
+        user_id = current_user.get("id")
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User ID not found in authentication token"
+            )
             
         chat_message = ChatMessage(
             user_id=user_id,
