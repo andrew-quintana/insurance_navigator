@@ -1,5 +1,27 @@
 # Environment Management Project - Comprehensive Phase Prompts
 
+## Phase 4.5 Prompt: Vercel Frontend Deployment Setup
+```
+Set up comprehensive Vercel deployment infrastructure for the insurance_navigator frontend to establish consistent deployment across all environments. Focus on:
+
+1. Set up Vercel development deployment via CLI for consistent development testing
+2. Configure Vercel development deployment with .env.development variables
+3. Set up Vercel preview deployment for staging environment testing
+4. Configure Vercel preview deployment with .env.staging variables (connecting to staging backend services)
+5. Set up Vercel production deployment configuration
+6. Configure Vercel production deployment with .env.production variables
+7. Test development Vercel deployment with staging backend services (insurance-navigator-staging-api and insurance-navigator-staging-worker)
+8. Validate development frontend connects properly to staging API and worker services
+9. Document Vercel deployment configurations and access methods for all environments
+10. Create consistent frontend testing strategy using Vercel deployments instead of local hosting
+
+Reference staging infrastructure configuration from completed setup phases.
+
+Reference existing .env files for proper environment variable configuration.
+
+Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
+```
+
 ## Phase 5 Prompt: Service Integration and Communication Validation
 ```
 Complete the validation of staging infrastructure and ensure proper inter-service communication. Focus on:
@@ -11,10 +33,13 @@ Complete the validation of staging infrastructure and ensure proper inter-servic
 5. Validate staging service networking and security configurations
 6. Complete staging API service health and basic functionality validation
 7. Complete staging worker service health and job processing validation
+8. Test full-stack integration using Vercel development frontend with staging backend services
 
 Document findings in: docs/initiatives/devops/environment_management/infrastructure_setup/validation_procedures/
 
 Reference staging service configurations from completed infrastructure setup phases.
+
+Reference Vercel deployment setup from Phase 4.5.
 
 Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
 ```
@@ -46,13 +71,13 @@ Examine each major module and workflow in the insurance_navigator codebase for e
 3. Review database connection configurations and patterns
 4. Examine API endpoint configurations across the application
 5. Check authentication/authorization environment dependencies
-6. Review build scripts and configurations for environment handling
-7. Analyze deployment-related files and CI/CD configurations
+6. Review build scripts and configurations for environment handling (including Vercel build configurations)
+7. Analyze deployment-related files and CI/CD configurations (including Vercel deployment configurations)
 8. Identify CI/CD environment dependencies and requirements
 
-Document findings in: docs/initiatives/devops/environment_management/research_stage/module_identification/
+Document findings in: docs/initiatives/devops/environment_management/infrastructure_setup/configuration_management/
 
-Reference codebase analysis from Phase 6.
+Reference codebase analysis from Phase 6 and Vercel deployment setup from Phase 4.5.
 
 Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
 ```
@@ -115,13 +140,16 @@ Refactor frontend components in the insurance_navigator project to remove enviro
 
 1. Remove all hardcoded API endpoints from frontend components
 2. Implement configuration service for frontend environment handling
-3. Update build process to inject environment configurations
+3. Update build process to inject environment configurations (including Vercel build process)
 4. Refactor feature flags to use environment configuration
 5. Update frontend error handling for configuration issues
+6. Test frontend changes across all Vercel deployments (development, preview/staging, production)
 
 Reference frontend analysis findings from Phase 7.
 
 Reference environment files and configuration system from Phases 8-9.
+
+Reference Vercel deployment setup from Phase 4.5.
 
 Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
 ```
@@ -150,12 +178,15 @@ Update the build system for the insurance_navigator project to support environme
 1. Update package.json scripts for environment-specific builds
 2. Implement build-time configuration validation
 3. Create environment-specific build optimizations
-4. Update CI/CD pipeline for environment awareness
+4. Update CI/CD pipeline for environment awareness (including Vercel deployments)
 5. Implement automated environment variable validation
+6. Configure Vercel deployment automation and environment variable management
 
 Reference build system analysis from Phase 7.
 
 Reference environment configuration system and validation from previous phases.
+
+Reference Vercel deployment setup from Phase 4.5.
 
 Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
 ```
@@ -169,10 +200,12 @@ Implement comprehensive testing for the environment management system in the ins
 3. Create end-to-end tests for each environment (development, staging, production)
 4. Validate configuration loading across all environments
 5. Test error handling for missing or invalid configurations
-
-Reference testing strategy: docs/initiatives/devops/environment_management/execution_stage/testing_strategy/
+6. Test full-stack integration across all environments using Vercel frontend deployments
+7. Validate frontend-backend communication across all environment combinations
 
 Reference all previous implementation phases for testing requirements.
+
+Reference Vercel deployment setup from Phase 4.5 for full-stack testing.
 
 Update todos in: docs/initiatives/devops/environment_management/infrastructure_setup/phased_planning/INFRASTRUCTURE_PHASE_TODOS.md
 ```
