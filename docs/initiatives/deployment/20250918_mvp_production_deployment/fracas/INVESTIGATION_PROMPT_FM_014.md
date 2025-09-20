@@ -128,3 +128,4 @@ The two main remaining issues are:
 2. **Storage Access**: 400 Bad Request errors when accessing Supabase storage
 
 These need to be investigated and fixed to complete the resolution.
+
