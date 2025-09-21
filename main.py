@@ -761,28 +761,7 @@ async def create_upload_job(conn, job_id: str, document_id: str, user_id: str,
 # Upload Pipeline Endpoint moved to router at /api/upload-pipeline/upload
 
 # Upload pipeline endpoints are now handled by the router at /api/upload-pipeline/*
-
-# Metadata-only endpoint for proper signed URL flow
-@app.post("/upload-metadata")
-async def upload_metadata(
-    request: UploadRequest,
-    current_user: Dict[str, Any] = Depends(get_current_user)
-):
-    """Metadata-only endpoint - frontend calculates metadata and requests signed URL."""
-    logger.info(f"📋 Upload metadata request - File: {request.filename}, User: {current_user.get('email', 'unknown')}")
-    
-    try:
-        # Call the upload pipeline endpoint to create records and get signed URL
-        from api.upload_pipeline.endpoints.upload import upload_document
-        upload_response = await upload_document(request)
-        
-        logger.info(f"✅ Signed URL generated - document_id: {upload_response.document_id}")
-        return upload_response
-        
-    except Exception as e:
-        logger.error(f"❌ Metadata upload failed: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Metadata upload failed: {str(e)}")
-
+# Use /api/upload-pipeline/upload directly for file uploads
 
 # Legacy endpoint for backward compatibility with existing frontend
 @app.post("/upload-document-backend")
