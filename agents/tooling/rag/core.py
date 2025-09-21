@@ -224,6 +224,10 @@ class RAGTool:
         Returns:
             List of ChunkWithContext objects
         """
+        if not query_text or not query_text.strip():
+            self.logger.error("Empty query text provided to RAG")
+            return []
+        
         # Start performance monitoring with query text
         operation_metrics = self.performance_monitor.start_operation(
             user_id=self.user_id,
@@ -235,8 +239,17 @@ class RAGTool:
         
         try:
             # Step 1: Generate embedding for the query text (MUST happen first)
+            self.logger.info(f"Generating embedding for query: {query_text[:100]}...")
             query_embedding = await self._generate_embedding(query_text)
+            
+            # Validate embedding
+            if not self._validate_embedding(query_embedding, "query"):
+                self.logger.error("Invalid query embedding generated")
+                self.performance_monitor.complete_operation(operation_metrics.operation_uuid, success=False, error_message="Invalid query embedding")
+                return []
+            
             operation_metrics.query_embedding_dim = len(query_embedding)
+            self.logger.info(f"Query embedding generated successfully: {len(query_embedding)} dimensions")
             
             # Step 2: Use the generated embedding to perform similarity search
             chunks = await self.retrieve_chunks(query_embedding)
@@ -261,6 +274,10 @@ class RAGTool:
         Returns:
             List of floats representing the embedding
         """
+        if not text or not text.strip():
+            self.logger.error("Empty text provided for embedding generation")
+            raise ValueError("Empty text cannot be embedded")
+        
         try:
             from openai import AsyncOpenAI
             import os
@@ -268,23 +285,67 @@ class RAGTool:
             # Get OpenAI API key
             api_key = os.getenv('OPENAI_API_KEY')
             if not api_key:
-                self.logger.warning("OPENAI_API_KEY not found, falling back to mock embedding")
-                return self._generate_mock_embedding(text)
+                self.logger.error("OPENAI_API_KEY not found - RAG will not work properly")
+                raise ValueError("OPENAI_API_KEY is required for RAG functionality")
             
-            # Initialize OpenAI client
-            client = AsyncOpenAI(api_key=api_key)
+            # Initialize OpenAI client with better error handling
+            client = AsyncOpenAI(
+                api_key=api_key,
+                max_retries=5,
+                timeout=60.0
+            )
             
-            # Generate real OpenAI embedding
+            # Generate real OpenAI embedding with explicit error handling
+            self.logger.info(f"Generating embedding for text: {text[:100]}...")
             response = await client.embeddings.create(
                 model="text-embedding-3-small",
-                input=text
+                input=text,
+                encoding_format="float"
             )
-            return response.data[0].embedding
+            
+            embedding = response.data[0].embedding
+            self.logger.info(f"Successfully generated embedding: {len(embedding)} dimensions")
+            
+            # Validate embedding quality
+            if not self._validate_embedding(embedding, "query"):
+                raise ValueError("Generated embedding failed validation")
+            
+            return embedding
             
         except Exception as e:
-            self.logger.warning(f"OpenAI embedding failed ({e}), falling back to mock embedding")
-            return self._generate_mock_embedding(text)
+            self.logger.error(f"OpenAI embedding generation failed: {e}")
+            # Don't fall back to mock - fail explicitly
+            raise RuntimeError(f"Failed to generate query embedding: {e}")
     
+    def _validate_embedding(self, embedding: List[float], source: str) -> bool:
+        """
+        Validate embedding quality and characteristics.
+        
+        Args:
+            embedding: The embedding to validate
+            source: Source of the embedding (e.g., "query", "document")
+        Returns:
+            True if embedding is valid, False otherwise
+        """
+        if not embedding:
+            self.logger.error(f"Empty embedding from {source}")
+            return False
+        
+        if len(embedding) != 1536:
+            self.logger.error(f"Wrong embedding dimension: {len(embedding)} (expected 1536) from {source}")
+            return False
+        
+        # Check for mock embedding characteristics (all zeros or very small values)
+        if all(abs(x) < 1e-6 for x in embedding):
+            self.logger.error(f"Mock embedding detected from {source}")
+            return False
+        
+        # Check for reasonable value ranges
+        if max(embedding) > 10 or min(embedding) < -10:
+            self.logger.warning(f"Unusual embedding values from {source}: min={min(embedding):.3f}, max={max(embedding):.3f}")
+        
+        return True
+
     def _generate_mock_embedding(self, text: str) -> List[float]:
         """
         Generate a mock embedding for testing purposes.
