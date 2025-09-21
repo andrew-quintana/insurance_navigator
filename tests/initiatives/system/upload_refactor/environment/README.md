@@ -47,7 +47,7 @@ pytest tests/environment -m production
 - Local JWT configuration
 
 #### Staging Environment
-- Uses correct Supabase project ID (dfgzeastcxnoqshgyotp)
+- Uses correct Supabase project ID (${SUPABASE_PROJECT_REF})
 - Proper hosted ports (6543 for pooler, 5432 for direct)
 - Staging credentials
 - Edge function compatibility
@@ -69,31 +69,8 @@ The tests verify three types of database connections:
 
 2. **Transaction Pooler** (`SUPABASE_POOLER_URL`)
    - Development: `postgresql://postgres:postgres@127.0.0.1:54321/postgres`
-   - Hosted: `postgresql://postgres.[project-id]:[password]@aws-0-us-west-1.pooler.supabase.com:6543/postgres`
-
-3. **Session Pooler** (`SUPABASE_SESSION_POOLER_URL`)
-   - Development: `postgresql://postgres:postgres@127.0.0.1:54321/postgres`
-   - Hosted: `postgresql://postgres.[project-id]:[password]@aws-0-us-west-1.pooler.supabase.com:6543/postgres`
-
-## Edge Function Requirements
-
-For edge functions to work properly, your environment must have:
-- Correct pooler configuration (port 6543 for hosted environments)
-- Valid JWT secret (32+ characters)
-- Service role key for authentication
-- Proper database connection strings
-
-## Adding New Tests
-
-To add new environment variable checks:
-1. Add checks to the relevant verification function
-2. Add environment-specific assertions in the test functions
-3. Update this README to document the new requirements
-
-## Troubleshooting
-
-If tests fail, check:
-1. Port numbers match the environment (54321/54322 for local, 5432/6543 for hosted)
+   - Hosted: `${DATABASE_URL}//postgres:postgres@127.0.0.1:54321/postgres`
+   - Hosted: `${DATABASE_URL}/54322 for local, 5432/6543 for hosted)
 2. Database URLs use the correct format for the environment
 3. JWT tokens are properly formatted
 4. SSL is enabled for production connections

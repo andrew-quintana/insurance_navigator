@@ -73,8 +73,8 @@ Staging API Service ──┐
 - **Status**: ✅ Configured and deployed
 
 ### Environment Variables
-- **Database**: `postgresql://postgres:postgres@db.dfgzeastcxnoqshgyotp.supabase.co:5432/postgres`
-- **Supabase URL**: `***REMOVED***`
+- **Database**: `postgresql://postgres:postgres@db.${SUPABASE_PROJECT_REF}.supabase.co:5432/postgres`
+- **Supabase URL**: `https://${SUPABASE_PROJECT_REF}.supabase.co`
 - **Service Role Key**: Configured for staging environment
 - **API Keys**: Staging-specific keys for external services
 

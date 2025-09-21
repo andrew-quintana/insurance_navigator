@@ -22,14 +22,14 @@ DATABASE_URL = "postgresql://postgres:postgres@localhost:54322/postgres"
 
 # JWT configuration for testing
 # The API is using the service role key as the JWT secret
-JWT_SECRET = "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
+JWT_SECRET = "${SUPABASE_JWT_TOKEN}"
 SUPABASE_URL = "http://127.0.0.1:54321"
 
 def create_test_jwt_token(user_id: str) -> str:
     """Use the Supabase anon key as a test JWT token"""
     # The anon key is already a valid JWT token from Supabase
     # We'll use it directly instead of creating our own
-    return "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
+    return "${SUPABASE_JWT_TOKEN}"
 
 async def create_test_document() -> str:
     """Create a test document via upload endpoint"""

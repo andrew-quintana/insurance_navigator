@@ -116,7 +116,7 @@ def show_llamaparse_api_example():
         "parsed_file_url": "***REMOVED***/storage/v1/object/files/files/user/123/parsed/doc_20250906_150202.md?token=...",
         "webhook_url": "https://your-api.com/webhook/llamaparse/job_123",
         "result_type": "markdown",
-        "api_key": "llx-1234567890abcdef"
+        "api_key": "${LLAMAPARSE_API_KEY}"
     }
     
     print("POST https://api.cloud.llamaindex.ai/api/parsing/upload")

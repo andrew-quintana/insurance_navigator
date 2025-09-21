@@ -25,31 +25,13 @@ Since you have Supabase already configured, collect these values:
 ### From Supabase Dashboard (Settings → API):
 ```bash
 SUPABASE_URL=https://your-project-ref.supabase.co
-SUPABASE_ANON_KEY=***REMOVED***...
-SUPABASE_SERVICE_ROLE_KEY=***REMOVED***...
+SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
+SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_JWT_TOKEN}
 ```
 
 ### From Supabase Dashboard (Settings → Database):
 ```bash
-DATABASE_URL=postgresql://postgres.your-project-ref:your-password@aws-0-us-east-1.pooler.supabase.com:6543/postgres
-```
-
-### Use Supabase JWT Secret:
-```bash
-JWT_SECRET_KEY=your-existing-supabase-jwt-secret
-```
-
-## 🚀 Deploy to Render FREE - 5 Minutes
-
-### 1. Push to GitHub (if not done):
-```bash
-git add .
-git commit -m "Add FREE TIER deployment files"
-git push origin main
-```
-
-### 2. Create Render Service (FREE):
-1. Go to [render.com](https://render.com) → Sign up/Login (FREE)
+DATABASE_URL=${DATABASE_URL}//render.com) → Sign up/Login (FREE)
 2. Click **"New +"** → **"Blueprint"**
 3. Connect your GitHub repository
 4. Render auto-detects `render.yaml` with **FREE TIER** ✅
@@ -61,13 +43,7 @@ In Render dashboard → Your service → Environment tab, add:
 SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_ANON_KEY=your-anon-key-here
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
-DATABASE_URL=postgresql://postgres.your-project-ref:password@aws-0-us-east-1.pooler.supabase.com:6543/postgres
-JWT_SECRET_KEY=your-existing-supabase-jwt-secret
-```
-
-### 4. Deploy & Test:
-- Render automatically builds and deploys (FREE)
-- Your API will be live at: `https://your-app-name.onrender.com`
+DATABASE_URL=${DATABASE_URL}//your-app-name.onrender.com`
 - Test: `https://your-app-name.onrender.com/health`
 
 ## ⚠️ **Free Tier Considerations**

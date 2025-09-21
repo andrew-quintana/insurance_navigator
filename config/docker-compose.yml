@@ -27,8 +27,8 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@host.docker.internal:54322/postgres
       UPLOAD_PIPELINE_SUPABASE_URL: http://localhost:54321
-      UPLOAD_PIPELINE_SUPABASE_ANON_KEY: ***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-      UPLOAD_PIPELINE_SUPABASE_SERVICE_ROLE_KEY: ***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+      UPLOAD_PIPELINE_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      UPLOAD_PIPELINE_SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       UPLOAD_PIPELINE_LLAMAPARSE_API_URL: http://mock-llamaparse:8001
       UPLOAD_PIPELINE_OPENAI_API_URL: http://mock-openai:8002
       UPLOAD_PIPELINE_ENVIRONMENT: development
@@ -50,8 +50,8 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@host.docker.internal:54322/postgres
       SUPABASE_URL: http://localhost:54321
-      SUPABASE_ANON_KEY: ***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-      SUPABASE_SERVICE_ROLE_KEY: ***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+      SUPABASE_ANON_KEY: ${SUPABASE_JWT_TOKEN}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_JWT_TOKEN}
       LLAMAPARSE_API_URL: https://api.cloud.llamaindex.ai
       OPENAI_API_URL: https://api.openai.com
       UPLOAD_PIPELINE_ENVIRONMENT: development
@@ -59,8 +59,8 @@ services:
       UPLOAD_PIPELINE_STORAGE_URL: http://127.0.0.1:54321
       # Enhanced worker configuration
       SERVICE_MODE: HYBRID
-      LLAMAPARSE_API_KEY: llx-X9bRG4r7mq5Basype0fCvfvlj1372pDdQXi7KaxVqkRlkoSb
-      OPENAI_API_KEY: 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
+      LLAMAPARSE_API_KEY: ${LLAMAPARSE_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
     depends_on:
       postgres:
         condition: service_healthy

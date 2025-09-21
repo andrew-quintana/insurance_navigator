@@ -175,7 +175,7 @@ test.describe('Security Validation', () => {
     const invalidTokens = [
       'invalid-token',
       'Bearer invalid-token',
-      '***REMOVED***.invalid',
+      '${SUPABASE_JWT_TOKEN}',
       '',
       null,
       'Bearer ',

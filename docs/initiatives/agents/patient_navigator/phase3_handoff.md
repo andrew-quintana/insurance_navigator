@@ -120,7 +120,7 @@ DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
 DATABASE_SCHEMA=upload_pipeline
 
 # Authentication
-SUPABASE_SERVICE_ROLE_KEY=***REMOVED***...
+SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_JWT_TOKEN}
 
 # API Configuration
 UPLOAD_PIPELINE_ENVIRONMENT=development

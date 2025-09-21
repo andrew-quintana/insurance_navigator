@@ -54,7 +54,7 @@ TypeError: __init__() got an unexpected keyword argument 'proxy'
 - The storage service requires this key for document encryption functionality
 
 **Technical Details**:
-- Key exists in `.env.development`: `iSUAmk2NHMNW5bsn8F0UnPSCk9L+IxZhu/v/UyDwFcc=`
+- Key exists in `.env.development`: `${DOCUMENT_ENCRYPTION_KEY}`
 - Environment variable loading was not properly configured for the main API service
 - Storage service initialization failed during startup sequence
 
@@ -83,7 +83,7 @@ client = create_client('http://127.0.0.1:54321', 'anon_key')
 
 **Action**: Added missing environment variable to startup command
 ```bash
-export DOCUMENT_ENCRYPTION_KEY=iSUAmk2NHMNW5bsn8F0UnPSCk9L+IxZhu/v/UyDwFcc=
+export DOCUMENT_ENCRYPTION_KEY=${DOCUMENT_ENCRYPTION_KEY}
 ```
 
 **Rationale**:
@@ -110,13 +110,13 @@ curl http://localhost:8000/health
 #### User Registration
 ```bash
 curl -X POST http://localhost:8000/register -H "Content-Type: application/json" -d '{"email":"test@example.com","password":"test12345","name":"Test User"}'
-# Response: {"user":{"id":"d8046418-2065-45d2-9e84-7d4fa261d2eb","email":"test@example.com","name":"Test User"},"access_token":"***REMOVED***...","token_type":"bearer"}
+# Response: {"user":{"id":"d8046418-2065-45d2-9e84-7d4fa261d2eb","email":"test@example.com","name":"Test User"},"access_token":"${SUPABASE_JWT_TOKEN}","token_type":"bearer"}
 ```
 
 #### User Login
 ```bash
 curl -X POST http://localhost:8000/login -H "Content-Type: application/json" -d '{"email":"test@example.com","password":"test12345"}'
-# Response: {"access_token":"***REMOVED***...","token_type":"bearer","user":{"id":"cff2712e-6be4-4e15-90f5-237fb9675659","email":"test@example.com","name":"test"}}
+# Response: {"access_token":"${SUPABASE_JWT_TOKEN}","token_type":"bearer","user":{"id":"cff2712e-6be4-4e15-90f5-237fb9675659","email":"test@example.com","name":"test"}}
 ```
 
 ### Service Integration ✅

@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = 'https://jhrespvvhbnloxrieycf.supabase.co'
-const serviceRoleKey = '***REMOVED***.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpocmVzcHZ2aGJubG94cmlleWNmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NzcwNzQxOCwiZXhwIjoyMDYzMjgzNDE4fQ.eWQdAqwRPs64Ce8UJvtfFuPlNBEgXfSo-_lFyMZwFag'
+const serviceRoleKey = '${SUPABASE_JWT_TOKEN}'
 
 async function testUpload() {
   // Test upload endpoint with service role key
@@ -25,7 +25,7 @@ async function testUpload() {
 testUpload().catch(console.error) 
 
 const supabaseUrl = 'https://jhrespvvhbnloxrieycf.supabase.co'
-const serviceRoleKey = '***REMOVED***.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpocmVzcHZ2aGJubG94cmlleWNmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NzcwNzQxOCwiZXhwIjoyMDYzMjgzNDE4fQ.eWQdAqwRPs64Ce8UJvtfFuPlNBEgXfSo-_lFyMZwFag'
+const serviceRoleKey = '${SUPABASE_JWT_TOKEN}'
 
 async function testUpload() {
   // Test upload endpoint with service role key

@@ -112,10 +112,10 @@ The staging API service successfully initializes all components but times out du
 ### 1. Update Staging Service Environment Variables
 ```bash
 # Correct staging database credentials
-DATABASE_URL=postgresql://postgres:postgres@db.dfgzeastcxnoqshgyotp.supabase.co:5432/postgres
-SUPABASE_URL=***REMOVED***
-SUPABASE_ANON_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmZ3plYXN0Y3hub3FzaGd5b3RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2ODA0ODMsImV4cCI6MjA2NzI1NjQ4M30.wV0kgqo20D1EghH47bO-4MoXpksiyQ_bvANaZlzScyM
-SUPABASE_SERVICE_ROLE_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmZ3plYXN0Y3hub3FzaGd5b3RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2ODA0ODMsImV4cCI6MjA2NzI1NjQ4M30.wV0kgqo20D1EghH47bO-4MoXpksiyQ_bvANaZlzScyM
+DATABASE_URL=postgresql://postgres:postgres@db.${SUPABASE_PROJECT_REF}.supabase.co:5432/postgres
+SUPABASE_URL=https://${SUPABASE_PROJECT_REF}.supabase.co
+SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
+SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_JWT_TOKEN}
 SERVICE_PORT=10000
 ```
 

@@ -1,0 +1,18 @@
+94c1503 project directory reorganization
+c261e4e Phase 1 cleanup: Remove low-risk deprecated directories
+fa13db7 upload refactor file testing 001 complete
+b8c9af3 supabase initialization and upload-handler preparation and unit testing complete
+22c8afd end of the last attempt - moving to manual impelemntation
+115495b Migrate to LlamaCloud architecture - Remove heavy dependencies (sentence-transformers, PyPDF2) - Update requirements.txt to use llama-cloud instead of local processing - Add environment configuration for LLAMACLOUD_API_KEY and OPENAI_API_KEY - Reduce memory footprint from 512MB+ to <100MB - Enable external document processing via LlamaCloud servers
+dec0e53 ♻️ Refactor CORS to use environment variables - Move CORS origins from hardcoded to .env for easier management - Add CORS_ALLOWED_ORIGINS and CORS_VERCEL_PREVIEW_PATTERN - Update documentation with CORS management guide - Not for security (CORS URLs aren't sensitive) but for config flexibility
+2d03390 📝 Update env templates and deployment docs - Merge mvp-integration updates
+e67daeb Major agent reorganization: flatten agent structure, fix imports, and update AsyncPG configuration
+3c10d4c feat: integrate security config with authentication system and update environment template
+773c227 Implement agent modules with prompt management system and testing framework
+b8c9af3 supabase initialization and upload-handler preparation and unit testing complete
+115495b Migrate to LlamaCloud architecture - Remove heavy dependencies (sentence-transformers, PyPDF2) - Update requirements.txt to use llama-cloud instead of local processing - Add environment configuration for LLAMACLOUD_API_KEY and OPENAI_API_KEY - Reduce memory footprint from 512MB+ to <100MB - Enable external document processing via LlamaCloud servers
+dec0e53 ♻️ Refactor CORS to use environment variables - Move CORS origins from hardcoded to .env for easier management - Add CORS_ALLOWED_ORIGINS and CORS_VERCEL_PREVIEW_PATTERN - Update documentation with CORS management guide - Not for security (CORS URLs aren't sensitive) but for config flexibility
+2d03390 📝 Update env templates and deployment docs - Merge mvp-integration updates
+e67daeb Major agent reorganization: flatten agent structure, fix imports, and update AsyncPG configuration
+3c10d4c feat: integrate security config with authentication system and update environment template
+773c227 Implement agent modules with prompt management system and testing framework

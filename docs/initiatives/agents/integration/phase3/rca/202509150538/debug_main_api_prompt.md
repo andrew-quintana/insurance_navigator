@@ -39,8 +39,8 @@ TypeError: __init__() got an unexpected keyword argument 'proxy'
 The following environment variables are set and working for other services:
 ```bash
 export SUPABASE_URL=http://127.0.0.1:54321
-export SUPABASE_ANON_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-export SUPABASE_SERVICE_ROLE_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+export SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
+export SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_JWT_TOKEN}
 export SUPABASE_STORAGE_URL=http://127.0.0.1:54321
 export DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
 export ENVIRONMENT=development
@@ -85,7 +85,7 @@ export ENVIRONMENT=development
    from supabase import create_client
    client = create_client(
        "http://127.0.0.1:54321",
-       "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
+       "${SUPABASE_JWT_TOKEN}"
    )
    ```
 
@@ -118,8 +118,8 @@ Based on findings, implement one of these solutions:
 # Start the main API service
 cd /Users/aq_home/1Projects/accessa/insurance_navigator
 export SUPABASE_URL=http://127.0.0.1:54321
-export SUPABASE_ANON_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-export SUPABASE_SERVICE_ROLE_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+export SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
+export SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_JWT_TOKEN}
 export SUPABASE_STORAGE_URL=http://127.0.0.1:54321
 export DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
 export ENVIRONMENT=development

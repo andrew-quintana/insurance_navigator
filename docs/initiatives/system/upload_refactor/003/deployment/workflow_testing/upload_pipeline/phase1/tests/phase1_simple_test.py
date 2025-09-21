@@ -12,7 +12,7 @@ from datetime import datetime
 
 # Configuration
 API_BASE_URL = "http://localhost:8000"
-SUPABASE_SERVICE_KEY = "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
+SUPABASE_SERVICE_KEY = "${SUPABASE_JWT_TOKEN}"
 
 def get_jwt_token():
     """Generate a test JWT token"""
@@ -35,7 +35,7 @@ def get_jwt_token():
     }
     
     # Use the Supabase service role key as the secret
-    secret = "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
+    secret = "${SUPABASE_JWT_TOKEN}"
     return jwt.encode(payload, secret, algorithm="HS256")
 
 def test_api_health():

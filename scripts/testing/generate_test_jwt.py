@@ -16,7 +16,7 @@ def generate_test_jwt_token(
     email: str = "test@example.com",
     role: str = "user",
     supabase_url: str = "http://localhost:54321",  # Match docker-compose SUPABASE_URL
-    service_role_key: str = "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
+    service_role_key: str = "${SUPABASE_JWT_TOKEN}"
 ) -> str:
     """
     Generate a valid JWT token for testing production endpoints.
@@ -65,7 +65,7 @@ def generate_test_tokens():
     
     # Use the exact values from docker-compose.yml
     docker_supabase_url = "http://localhost:54321"  # From docker-compose
-    docker_service_role_key = "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
+    docker_service_role_key = "${SUPABASE_JWT_TOKEN}"
     
     # Generate tokens for different test scenarios
     test_cases = [

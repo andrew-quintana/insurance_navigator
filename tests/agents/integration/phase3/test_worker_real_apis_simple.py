@@ -19,7 +19,7 @@ class SimpleWorkerTester:
     def __init__(self):
         self.api_base_url = "***REMOVED***"
         # Use existing user from previous tests
-        self.auth_token = "***REMOVED***.eyJzdWIiOiI5MzY1NTFiNi1iN2E0LTRkM2QtOWZlMC1hNDkxNzk0ZmQ2NjYiLCJlbWFpbCI6InRlc3RfdXNlckBleGFtcGxlLmNvbSIsImV4cCI6MTczNjQ0NDAwMH0.test_token"
+        self.auth_token = "${SUPABASE_JWT_TOKEN}"
         self.test_document_id = None
         self.test_job_id = None
         
@@ -154,77 +154,7 @@ class SimpleWorkerTester:
         print("🔍 Testing RAG system...")
         
         # Set production database URL
-        os.environ["DATABASE_URL"] = "postgresql://postgres.znvwzkdblknkkztqyfnu:InsuranceNavigator2024!@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
-        os.environ["DATABASE_SCHEMA"] = "upload_pipeline"
-        
-        from agents.tooling.rag.core import RAGTool, RetrievalConfig
-        
-        # Use the user ID from the uploaded document
-        user_id = "936551b6-b7a4-4d3d-9fe0-a491794fd66b"
-        
-        # Initialize RAG system
-        config = RetrievalConfig(
-            max_chunks=5,
-            similarity_threshold=0.3
-        )
-        
-        rag_tool = RAGTool(user_id, config)
-        
-        # Test queries
-        test_queries = [
-            "What is my deductible?",
-            "What are the coverage details?",
-            "What is covered under this policy?"
-        ]
-        
-        results = {}
-        
-        for query in test_queries:
-            print(f"   Testing: {query}")
-            
-            try:
-                # Get chunks directly from RAG tool
-                chunks = await rag_tool.retrieve_chunks_from_text(query)
-                
-                print(f"     Retrieved {len(chunks)} chunks")
-                
-                # Check content quality
-                real_content_found = False
-                for chunk in chunks:
-                    content = chunk.content.lower()
-                    if any(keyword in content for keyword in ['deductible', 'coverage', 'policy', 'insurance', 'premium', 'copay']):
-                        real_content_found = True
-                        print(f"     ✅ Found real insurance content: {chunk.content[:100]}...")
-                        break
-                
-                if not real_content_found and chunks:
-                    print(f"     ⚠️  Content may be mock: {chunks[0].content[:100]}...")
-                
-                results[query] = {
-                    "chunks_count": len(chunks),
-                    "has_real_content": real_content_found,
-                    "chunks": [chunk.content[:200] for chunk in chunks]
-                }
-                
-            except Exception as e:
-                print(f"     ❌ Error: {str(e)}")
-                results[query] = {"error": str(e)}
-        
-        # Save results
-        timestamp = int(datetime.now().timestamp())
-        results_file = f"worker_real_apis_test_results_{timestamp}.json"
-        
-        with open(results_file, 'w') as f:
-            json.dump(results, f, indent=2, default=str)
-        
-        print(f"💾 Results saved to: {results_file}")
-        
-        # Summary
-        successful_queries = sum(1 for r in results.values() if "error" not in r)
-        real_content_queries = sum(1 for r in results.values() if r.get("has_real_content", False))
-        
-        print(f"\n📊 Test Summary:")
-        print(f"   Successful queries: {successful_queries}/{len(test_queries)}")
+        os.environ["DATABASE_URL"] = "${DATABASE_URL}/{len(test_queries)}")
         print(f"   Queries with real content: {real_content_queries}/{len(test_queries)}")
         
         if real_content_queries > 0:

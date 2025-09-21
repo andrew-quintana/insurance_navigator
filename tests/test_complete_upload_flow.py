@@ -67,7 +67,7 @@ async def test_complete_upload_flow():
             content=file_content,
             headers={
                 "Content-Type": "application/pdf",
-                "Authorization": "Bearer ***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
+                "Authorization": "Bearer ${SUPABASE_JWT_TOKEN}"
             }
         )
         

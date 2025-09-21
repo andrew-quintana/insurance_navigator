@@ -12,12 +12,12 @@ pip install gotrue==2.8.1
 
 # Fix 2: Start service with all required environment variables
 export SUPABASE_URL=http://127.0.0.1:54321
-export SUPABASE_ANON_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-export SUPABASE_SERVICE_ROLE_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+export SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
+export SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_JWT_TOKEN}
 export SUPABASE_STORAGE_URL=http://127.0.0.1:54321
 export DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
 export ENVIRONMENT=development
-export DOCUMENT_ENCRYPTION_KEY=iSUAmk2NHMNW5bsn8F0UnPSCk9L+IxZhu/v/UyDwFcc=
+export DOCUMENT_ENCRYPTION_KEY=${DOCUMENT_ENCRYPTION_KEY}
 python main.py
 ```
 
@@ -59,13 +59,13 @@ client = create_client('http://127.0.0.1:54321', 'anon_key')
 - Location: `db/services/storage_service.py:27`
 
 **Solution**: Load environment variable from `.env.development`
-- Key: `iSUAmk2NHMNW5bsn8F0UnPSCk9L+IxZhu/v/UyDwFcc=`
+- Key: `${DOCUMENT_ENCRYPTION_KEY}`
 - Added to runtime environment for main API service
 
 **Verification**:
 ```bash
 grep DOCUMENT_ENCRYPTION_KEY .env.development
-# Output: DOCUMENT_ENCRYPTION_KEY=iSUAmk2NHMNW5bsn8F0UnPSCk9L+IxZhu/v/UyDwFcc=
+# Output: DOCUMENT_ENCRYPTION_KEY=${DOCUMENT_ENCRYPTION_KEY}
 ```
 
 ## Service Architecture
@@ -90,8 +90,8 @@ grep DOCUMENT_ENCRYPTION_KEY .env.development
 ```bash
 # Supabase Configuration
 SUPABASE_URL=http://127.0.0.1:54321
-SUPABASE_ANON_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-SUPABASE_SERVICE_ROLE_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
+SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_JWT_TOKEN}
 SUPABASE_STORAGE_URL=http://127.0.0.1:54321
 
 # Database Configuration
@@ -99,7 +99,7 @@ DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
 
 # Application Configuration
 ENVIRONMENT=development
-DOCUMENT_ENCRYPTION_KEY=iSUAmk2NHMNW5bsn8F0UnPSCk9L+IxZhu/v/UyDwFcc=
+DOCUMENT_ENCRYPTION_KEY=${DOCUMENT_ENCRYPTION_KEY}
 ```
 
 ## Dependencies
@@ -155,7 +155,7 @@ uvicorn==0.24.0
     "email": "test@example.com",
     "name": "Test User"
   },
-  "access_token": "***REMOVED***...",
+  "access_token": "${SUPABASE_JWT_TOKEN}",
   "token_type": "bearer"
 }
 ```

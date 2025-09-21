@@ -723,8 +723,8 @@ async def main():
     config = WorkerConfig(
         database_url="postgresql://postgres:postgres@localhost:5432/accessa_dev",
         supabase_url="http://localhost:5000",
-        supabase_anon_key="***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0",
-        supabase_service_role_key="***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nk0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU",
+        supabase_anon_key="${SUPABASE_JWT_TOKEN}",
+        supabase_service_role_key="${SUPABASE_JWT_TOKEN}",
         llamaparse_api_url="http://localhost:8001",
         llamaparse_api_key="test_key",
         openai_api_url="http://localhost:8002",

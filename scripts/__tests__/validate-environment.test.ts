@@ -148,7 +148,7 @@ describe('EnvironmentValidator', () => {
       process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
       process.env.OPENAI_API_KEY = 'sk-test-key';
       process.env.ANTHROPIC_API_KEY = 'sk-ant-test-key';
-      process.env.LLAMAPARSE_API_KEY = 'llx-test-key';
+      process.env.LLAMAPARSE_API_KEY = '${LLAMAPARSE_API_KEY}';
       process.env.RESEND_API_KEY = 're-test-key';
       process.env.JWT_SECRET_KEY = 'dev-jwt-secret-not-for-production';
       
@@ -201,7 +201,7 @@ describe('EnvironmentValidator', () => {
       process.env.DATABASE_URL = 'postgresql://user:pass@localhost:5432/db';
       process.env.OPENAI_API_KEY = 'sk-test-key';
       process.env.ANTHROPIC_API_KEY = 'sk-ant-test-key';
-      process.env.LLAMAPARSE_API_KEY = 'llx-test-key';
+      process.env.LLAMAPARSE_API_KEY = '${LLAMAPARSE_API_KEY}';
       process.env.RESEND_API_KEY = 're-test-key';
       process.env.JWT_SECRET_KEY = 'test-jwt-secret-32-chars-minimum';
       process.env.ENCRYPTION_KEY = 'test-encryption-key-32-chars-minimum';

@@ -172,21 +172,7 @@ The staging worker service is experiencing persistent network connectivity issue
 ### Evidence
 1. **Local Connectivity**: ✅ Database connection works from local machine
 2. **Direct URL**: ❌ `postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres`
-3. **Pooler URL**: ❌ `postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres`
-
-### Root Cause Analysis
-This appears to be a **Render platform network restriction** issue:
-- Render may have firewall rules blocking outbound database connections
-- Network policies may prevent connections to external databases
-- Possible IP whitelisting requirements for Supabase
-- Regional network routing issues between Render and Supabase
-
-### Potential Solutions
-1. **Check Supabase IP Whitelisting**: Add Render's IP ranges to Supabase allowlist
-2. **Use Render's Database Service**: Consider using Render's managed PostgreSQL
-3. **Network Configuration**: Check Render's network settings and restrictions
-4. **Alternative Connection Method**: Use Supabase's REST API instead of direct database connection
-5. **VPN/Proxy**: Set up network tunneling if allowed by Render
+3. **Pooler URL**: ❌ `${DATABASE_URL}/Proxy**: Set up network tunneling if allowed by Render
 
 ## Expected Resolution
 

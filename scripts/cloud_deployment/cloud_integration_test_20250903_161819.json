@@ -6,8 +6,8 @@
     "api_url": "***REMOVED***",
     "worker_url": "https://insurance-navigator-worker.onrender.com",
     "supabase_url": "***REMOVED***",
-    "supabase_key": "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpudnd6a2RibGtua2t6dHF5Zm51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2ODA0NTYsImV4cCI6MjA2NzI1NjQ1Nn0.k0QHYOgm4EilyyTml57kCGDpbikpEtJCzq-qzGYQZqY",
-    "supabase_service_key": "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpudnd6a2RibGtua2t6dHF5Zm51Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTY4MDQ1NiwiZXhwIjoyMDY3MjU2NDU2fQ.9Urox9-xr5TJz8a9LbSZsGUMcSTThc3QM6XDMJD-j-o"
+    "supabase_key": "${SUPABASE_JWT_TOKEN}",
+    "supabase_service_key": "${SUPABASE_JWT_TOKEN}"
   },
   "tests": {
     "environment_validation": {

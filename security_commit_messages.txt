@@ -1,0 +1,37 @@
+4939290 feat: Add authentication validation and improved error handling
+13cc472 fix: Add missing /forgot-password endpoint and improve CORS handling - Add ForgotPasswordRequest model and /forgot-password endpoint - Add explicit OPTIONS handler for CORS preflight requests - Update CORS middleware with more permissive settings - Add specific Vercel preview deployment URL to allowed origins - Fix authentication token verification method call - This should resolve the 400 Bad Request preflight errors
+16f98a6 Complete API client inlining: Fix all remaining import issues - Inline API calls in chat, forgot-password, page, welcome components - Use process.env.NEXT_PUBLIC_API_BASE_URL consistently across all pages - Remove all @/lib/api-client and relative import dependencies - Build now compiles successfully: ✓ Compiled successfully in 1000ms - Ready for production deployment with proper environment variable access
+bf04057 Fix hardcoded localhost URLs to use API client - Replace all http://localhost:8000 URLs with proper API client usage in login, register, forgot-password, chat, welcome, and home pages - This should resolve production deployment issue where frontend was connecting to localhost instead of production API
+59e148b Complete FM-016 and FM-017 resolution
+3ee78b6 Fix FM-017: Worker storage access issue
+1bfb21e Fix critical hardcoded development values in production code
+e37240b Fix FM-013: Update db_pool.py to use environment variables instead of hardcoded localhost
+df5dc05 Complete end-to-end pipeline fixes and webhook solution
+70bc7f4 Fix hardcoded environment variables for local development
+811e9d0 Enhanced worker LlamaParse integration COMPLETE + new failure mode FM-029
+a1d4230 Implement proper metadata-only upload flow and fix environment variables
+ea86076 Complete enhanced worker and upload flow fixes
+ba92e9c CORRECTED ANALYSIS: Root cause is file upload failure, not LlamaParse issues
+be486df Investigation: RAG tool similarity issues and LlamaParse mock service fallback
+90d0842 fix: resolve remaining worker deployment issues with logger and database constraints
+90e2001 fix: resolve worker deployment issues with logger and database schema
+7b01f74 Fix StorageManager constructor parameters
+82521ae Fix Supabase HTTP client compatibility issue
+81616e8 refactor: standardize LlamaParse API key environment variable name to LLAMA_CLOUD_API_KEY
+e433276 fix: update VectorService to accept api_key and pool parameters in constructor
+b3bafc9 fix: encryption service implementation and Supabase RPC functions
+5fc0501 fix: Add api_key and pool parameters to VectorService initialization
+85774e8 🔧 Fix edge function apikey header
+f757e88 🔧 Fix document upload pipeline authentication and regulatory upload
+3ad0b22 Fix Edge Function authentication - use service role key instead of user JWT
+19d528c Fix Edge Function authentication - use user JWT token instead of service key
+6830a9a Fix token storage key mismatch - Change from authToken to token to match login process
+d2bf9fe Fix foreign key constraint violation - encryption key lookup: Replace dummy encryption key UUID with dynamic database lookup, Query for active encryption key from encryption_keys table, Add comprehensive error handling for missing encryption keys, Expected result: 100% upload success rate instead of 0% foreign key violations
+43ac013 🔧 Fix: Critical chat errors - backend API key & frontend response handling - Add missing ANTHROPIC_API_KEY configuration - Fix response field mismatch (text vs response) - Add null safety to renderMessage function - Resolves both TypeError issues in backend and frontend
+16b95b1 feat(encryption): Add encryption service and key manager implementation
+91d54ae feat(encryption): Add encryption service and update key manager
+1bfb21e Fix critical hardcoded development values in production code
+a7dd326 Add critical FRACAS analysis for silent production errors
+58ebe72 Fix deployment: correct branch name, add explicit port 8000, use existing JWT secret
+7ea45d8 Replace 'Accessa' with 'Insurance Navigator' throughout codebase
+7f43a04 fix: Update CORS configuration and login preflight handler to properly handle credentials and headers

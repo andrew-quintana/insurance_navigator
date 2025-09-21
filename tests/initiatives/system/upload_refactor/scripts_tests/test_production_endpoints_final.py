@@ -22,7 +22,7 @@ def setup_test_environment():
     
     # Override environment variables for testing
     os.environ['UPLOAD_PIPELINE_SUPABASE_URL'] = 'http://localhost:54321'
-    os.environ['UPLOAD_PIPELINE_SUPABASE_SERVICE_ROLE_KEY'] = '***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJmcKHUkt3pV/LC87Dkk='
+    os.environ['UPLOAD_PIPELINE_SUPABASE_SERVICE_ROLE_KEY'] = '${SUPABASE_JWT_TOKEN}/LC87Dkk='
     os.environ['UPLOAD_PIPELINE_LLAMAPARSE_API_URL'] = 'http://localhost:8001'
     os.environ['UPLOAD_PIPELINE_OPENAI_API_URL'] = 'http://localhost:8002'
     os.environ['UPLOAD_PIPELINE_ENVIRONMENT'] = 'development'
@@ -34,7 +34,7 @@ def generate_test_jwt_token():
     
     supabase_url = "http://localhost:54321"
     # Use the correct service role key from docker-compose.yml
-    service_role_key = "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
+    service_role_key = "${SUPABASE_JWT_TOKEN}"
     
     payload = {
         "sub": str(uuid.uuid4()),

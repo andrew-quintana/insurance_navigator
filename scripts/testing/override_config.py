@@ -17,7 +17,7 @@ def override_environment_variables():
     
     # Set the required environment variables
     os.environ['UPLOAD_PIPELINE_SUPABASE_URL'] = 'http://localhost:54321'
-    os.environ['UPLOAD_PIPELINE_SUPABASE_SERVICE_ROLE_KEY'] = '***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJmcKHUkt3pV/LC87Dkk='
+    os.environ['UPLOAD_PIPELINE_SUPABASE_SERVICE_ROLE_KEY'] = '${SUPABASE_JWT_TOKEN}/LC87Dkk='
     os.environ['UPLOAD_PIPELINE_LLAMAPARSE_API_URL'] = 'http://localhost:8001'
     os.environ['UPLOAD_PIPELINE_OPENAI_API_URL'] = 'http://localhost:8002'
     os.environ['UPLOAD_PIPELINE_ENVIRONMENT'] = 'development'

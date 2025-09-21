@@ -28,27 +28,7 @@ class FrontendClientSimulator:
     
     def __init__(self):
         self.api_url = "***REMOVED***"
-        self.database_url = os.getenv('POOLER_URL', 'postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres?sslmode=require')
-        self.user_id = None
-        self.access_token = None
-        self.document_id = None
-        self.job_id = None
-        self.test_results = []
-        
-    async def step1_register_user(self) -> Dict[str, Any]:
-        """Step 1: Register a new user (simulating frontend registration)"""
-        logger.info("👤 Step 1: Registering new user...")
-        
-        try:
-            async with httpx.AsyncClient() as client:
-                registration_data = {
-                    "email": f"frontend-test-{int(time.time())}@example.com",
-                    "password": "testpassword123",
-                    "name": "Frontend Test User"
-                }
-                
-                response = await client.post(
-                    f"{self.api_url}/register", 
+        self.database_url = os.getenv('POOLER_URL', '${DATABASE_URL}/register", 
                     json=registration_data, 
                     timeout=30
                 )

@@ -1,0 +1,330 @@
+7ea45d8 Replace 'Accessa' with 'Insurance Navigator' throughout codebase
+0be3745 environment management 001 infrastructure setup stage phase 3-4 complete and 5+ rescoped
+b162637 environment management 001 infrastructure setup stage phase 2 complete
+78acff0 environment management 001 phase 1 complete
+240a5bc feat: implement local Docker simulation and fix dependency conflicts
+f278a0d 20250918_mvp_production_deployment 001 scoped
+c345ddb feat: add automated development environment setup scripts
+88384f6 feat: Fix embedding generation, RAG functionality, and frontend authentication
+dfa758c Fix LlamaParse result_type configuration and document content extraction issues
+df5dc05 Complete end-to-end pipeline fixes and webhook solution
+674c89b Fix enhanced worker LlamaParse integration rate limiting issues
+ba92e9c CORRECTED ANALYSIS: Root cause is file upload failure, not LlamaParse issues
+be486df Investigation: RAG tool similarity issues and LlamaParse mock service fallback
+0f60532 Fix upload pipeline webhook storage and path format issues
+0fe6474 comprehensive rca output refactor 001 phase 2 complete
+a27b263 comprehensive rca output refactor 001 phase 1 complete
+7b7345e 20250915_comprehensive_refactor scoped
+dcf268c rca rag response failure complete validation scoped
+f24a556 issue with starting up api service to test locally
+68bac14 feat: add comprehensive Phase 3 validation test with 100% success rate
+64ccf76 phase 3 refactor 001 phase 2 complete
+d28742f phase 3 refactor scoping
+24b7263 Fix LlamaParse API configuration
+bf7ef5a Fix duplicate detection to be user-scoped
+4bef3af feat: Complete comprehensive Phase 3 validation with 100% success rate
+7ba2614 feat: Complete Phase C production cloud backend testing with 100% success rate
+ed65914 feat: Implement Phase C UUID Standardization Cloud Integration Testing
+734b89d agent integration 001 phase 3 general functionality conformance (no errors) but rca001 initiated to investigate no chunks being identified
+92d9fb9 Fix psutil dependency for production deployment
+b9ea8e1 feat: Update worker service to use production APIs
+36604a1 agent integration 001 phase 2 complete
+6ab153f agent integration 001 phase 0 complete
+ffe8841 agent checkpoint
+6d9efef feat: Complete Phase 3 Cloud Deployment Integration
+0587374 upload_pipleine workflow testing complete
+95a27e4 agent integration scoped
+6efd8dd upload pipeline deployment phase 2 complete
+10e3de2 upload pipeline deployment phase 2 complete
+019f03d upload pipeline deployment phase 2 complete
+3a1da97 upload pipeline deployment scoping
+6b93b54 local testing with production supabase integrated and local calls to deployed render services
+61085f1 Implement simple authentication system to bypass email confirmation
+94c1503 project directory reorganization
+0309c4e cloud deployment validation 001 phase 4 complete
+a2a6ac0 cloud deployment validation 001 phase 1 complete
+577c2f2 Phase 1: Cloud deployment configuration and testing framework
+7b95b0c mvp frontend integration 001 through phase 4
+27dc2e0 mvp frontend integration 001 scoped
+695e464 Phase 3 cleanup: Remove deprecated systems and conflicting workflows
+c672abe Phase 2 cleanup: Remove medium-risk development artifacts
+c261e4e Phase 1 cleanup: Remove low-risk deprecated directories
+2dc40d7 upload refactor integration 001 complete
+323030b upload refactor integration 001 mock testing complete
+5a14ad9 Phase 3: Input/Output Processing Workflow Integration - Complete chat interface with input processing, agent workflows, and output processing
+fb2d633 upload refactor integration 001 phase 2 complete but realized input/output processing was never merged so we'll need to bring that in and integrate it with what we have
+ca40f26 upload refactor integration 001 phase 2 mock validation
+fa13db7 upload refactor file testing 001 complete
+6c518a1 upload refactor file testing 001 phase 6 dummy document upload pipeline verified but with wrong state
+6fbfe91 phase 6 prompt update
+8bf01e8 upload refactor file testing 001 phase 6 complete
+e145bf0 upload refactor file testing 001 phase 2.1 complete and phase 3 rescoped
+020630e upload refactor testing validation and debugging 001 phase 8 complete
+bc9e397 upload refactor testing validation and debugging 001 phase 7 complete
+b0acc01 upload refactor testing validation and debugging 001 phase 6 complete
+3e01589 upload refactor testing validation and debugging 001 phase 3.5 complete
+950795b upload refactor testing validation and debugging 001 phase 3 complete
+81a3ec6 upload refactor testing validation and debugging 001 phase 3 complete
+2998b5b upload refactor testing validation and debugging 001 phase 1 complete
+0ec575b upload refactor 003 phase 7 complete
+fa82d19 upload refactor 003 phase 6 complete
+48b0637 upload refactor 003 phase 5 complete
+0081d7b upload refactor 003 phase 3 complete
+daaeecd upload refactor 003 phase 2 complete
+cd7cd64 upload refactor 003 phase 1 complete
+d845ab3 upload refactor 003 preparation with desired file structure
+a5e36fd upload refactor 002 post-mortem and 003 prep
+0b4f6f1 upload refactor 002 scoping documentation prepared
+2628df2 update refactor 001 documentation prepared
+bcc45e2 output processing workflow 001 completed
+68a6fa1 input processing workflow 001 complete
+313611e input processing workflow 001 phase 3 complete
+97a6243 input processing workflow 001 phase 2 complete
+0142509 input processing workflow 001 phase 1 complete
+a788a76 short term memory 001 complete
+9f80950 short term memory 001 phase 3 complete and templates updated
+1605965 supervisor and orchestration 001 completed
+26af5e1  strategy 002 completed
+df1d873 strategy workflow 002 phase 3 implemented
+807f864 strategy workflow 002 phase 2 complete
+32860f5 strategy effor 002 phase 1 complete
+cf32aa2 plan 002 scoped
+e9ceef5 phase 3 complete
+eaef7db RAG implementation scoping and phase 1 implementation
+99ffbf4 simplified chunking to leverage markdown output so llm not necessary
+bd98d77 minor tweaks to imports to get back to valid state with small document
+de4aede full pipeline functional with small document but chunking llm step fails to maintain structured output with larger document
+7432342 all but the test polling works in the pipeline
+266a29a updated with chunker ability
+aa620ff doc-parser success in pipeline
+094acd1 doc-parser setup
+b8c9af3 supabase initialization and upload-handler preparation and unit testing complete
+22c8afd end of the last attempt - moving to manual impelemntation
+25a09a1 test(doc-processor): improve test logging and fix status handling
+b07ab63 feat: complete production deployment setup with monitoring and edge functions
+11b642b refactor: restore and consolidate schema state across environments
+d82eb5d fix: update schema and migrations for document processing
+945a83d Implement job-based document processing pipeline
+7e05828 refactor: implement memory management and retry logic in Edge Functions
+cba08d7 feat(doc-parser): integrate LlamaParse for PDF text extraction
+489efcd fix: Add comprehensive logging and fix JSON parsing\n\n- Add detailed logging to job-processor function\n- Fix JSON parsing in vector-processor\n- Move vector processing to dedicated function\n- Add error handling and logging
+4b39bc0 refactor: Implement Edge Function-based document processing
+591a1ed feat: Implement document processing pipeline
+41534f4 fix: remove unused service declarations causing deployment errors
+a29ba5e feat: add free tier optimized configurations
+4248bff fix: restore full FastAPI app with proper imports and initialization
+f3b197c fix: correct indentation in get_document_status function
+c141c33 fix: move render.yaml to root for Render deployment
+c5430c2 refactor: cleanup old files and update Edge Functions for document processing
+a37d78d MVP PRODUCTION READINESS FIXES
+57c5cc2 Fix: Replace mock content with real LlamaParse integration in doc-parser
+7d35a67 Fix document upload pipeline: edge function orchestration, WebSocket connections, and Render timeouts
+f757e88 🔧 Fix document upload pipeline authentication and regulatory upload
+2217c35 feat: Add comprehensive deployment documentation and testing infrastructure - Added DEPLOYMENT_SUCCESS_REPORT.md with complete deployment status - Added regulatory processing documentation and test scripts - Included Edge Functions deployment guides and verification tools - Added comprehensive testing suite for end-to-end validation - Updated main.py with latest fixes and improvements - Ready for production deployment with full documentation
+118446c ✨ Implement LlamaParse integration for PDF processing - Replace PyPDF2 with LlamaParse as primary method, add environment detection, fallback support, integrates with Supabase Edge Functions
+2edba9d Major file organization: move config files to config/, deployment docs to docs/deployment/, deployment scripts to scripts/deployment/, notebooks to notebooks/, create symlinks for backward compatibility, add comprehensive documentation
+484c761 🚀 MAJOR FIX: Enhanced vector-processor with comprehensive error handling and graceful degradation - Resolves OpenAI quota exceeded issue with zero vector placeholders - Documents process successfully even when embeddings fail - Enhanced error classification and detailed logging - Text search available when semantic search unavailable
+bd08e7d MVP: Fix doc-parser with fallback text extraction and comprehensive logging for missing LLAMAPARSE_API_KEY
+b87aa2e feat: Complete serverless migration - replace Render backend with direct OpenAI API calls. Vector-processor now calls OpenAI directly. True serverless: Frontend → Edge Functions → OpenAI → Supabase Storage
+e07dcca feat: Complete serverless migration with Edge Functions - Deploy 4 Supabase Edge Functions, add DocumentUploadServerless component, create automated deployment scripts, add comprehensive migration guide - Ready for Vercel frontend + Supabase Edge Functions deployment
+115495b Migrate to LlamaCloud architecture - Remove heavy dependencies (sentence-transformers, PyPDF2) - Update requirements.txt to use llama-cloud instead of local processing - Add environment configuration for LLAMACLOUD_API_KEY and OPENAI_API_KEY - Reduce memory footprint from 512MB+ to <100MB - Enable external document processing via LlamaCloud servers
+2d03390 📝 Update env templates and deployment docs - Merge mvp-integration updates
+f9add13 Documentation & Support: Complete project documentation, deployment guides, testing checklists, database fixes, and comprehensive progress tracking for all 7 phases
+760d7a6 Phase 3-4: Edge Functions and LlamaParse Integration - Complete Supabase edge functions for document processing, LlamaParse integration, comprehensive testing suite, and issue resolution with 85%+ success rate
+5d9d4e8 📊 Add build logs and deployment history - Document successful MVP integration milestone - Track authentication, chat, and agent workflow fixes - Preserve deployment timeline for buildout/mvp-integration
+43ac013 🔧 Fix: Critical chat errors - backend API key & frontend response handling - Add missing ANTHROPIC_API_KEY configuration - Fix response field mismatch (text vs response) - Add null safety to renderMessage function - Resolves both TypeError issues in backend and frontend
+15f6a36 feat: Implement vector-first architecture migration - Consolidate policy_documents and policy_records into unified vector schema - Add encryption-aware embedding service with 384-dim vector support - Implement unified RAG interface for agent integration - Add comprehensive migration scripts with rollback support
+a8e859c feat: implement enhanced security configuration system with environment variable priority
+f5a2a59 feat: Add Chat Communicator Agent with Claude API integration
+b5d1124 docs: Remove obsolete RCA document in favor of structured troubleshooting guide
+393ac9f feat: Complete regulatory agent implementation with dual-agent architecture - Add consolidated regulatory agent with mock and isolated variants - Implement internet search with DuckDuckGo integration - Add PostgreSQL caching and Supabase document storage - Create comprehensive testing framework with 3 test suites - Add database migrations for regulatory search enhancements - Include troubleshooting documentation and integration examples - Resolve dependency conflicts through import bypass strategy - Support both zero-dependency testing and production deployment
+66a9195 refactor: implement standardized base agent, error handling, testing utils, and config management
+cc6efff Refactor: Standardize agent model configuration and abstraction
+46b6bf1 Complete agent structure refactoring and standardization
+bd7dc88 Refactor agent structure and logging configuration
+3e7cf95 Improve test environment and LangSmith integration
+79e772f Fix and enable tests for agents after restructuring
+fe17730 Implement LangSmith versioning and self-consistency in prompt security agent
+773c227 Implement agent modules with prompt management system and testing framework
+4d070b3 chore: Initial repository setup with README and configuration files
+9aa997a feat: Implement DocumentParser with LlamaParse integration and comprehensive test suite
+cf03306 chore: Update project documentation and structure
+7ea45d8 Replace 'Accessa' with 'Insurance Navigator' throughout codebase
+0be3745 environment management 001 infrastructure setup stage phase 3-4 complete and 5+ rescoped
+240a5bc feat: implement local Docker simulation and fix dependency conflicts
+36604a1 agent integration 001 phase 2 complete
+0587374 upload_pipleine workflow testing complete
+95a27e4 agent integration scoped
+6efd8dd upload pipeline deployment phase 2 complete
+202f50f upload pipeline deployment phase 1 complete
+94c1503 project directory reorganization
+a2a6ac0 cloud deployment validation 001 phase 1 complete
+577c2f2 Phase 1: Cloud deployment configuration and testing framework
+7b95b0c mvp frontend integration 001 through phase 4
+5a0e989 mvp frontend integration 001 through phase 3
+10919a8 mvp frontend integration 001 scoped
+27dc2e0 mvp frontend integration 001 scoped
+695e464 Phase 3 cleanup: Remove deprecated systems and conflicting workflows
+c672abe Phase 2 cleanup: Remove medium-risk development artifacts
+c261e4e Phase 1 cleanup: Remove low-risk deprecated directories
+e145bf0 upload refactor file testing 001 phase 2.1 complete and phase 3 rescoped
+020630e upload refactor testing validation and debugging 001 phase 8 complete
+bc9e397 upload refactor testing validation and debugging 001 phase 7 complete
+b0acc01 upload refactor testing validation and debugging 001 phase 6 complete
+3e01589 upload refactor testing validation and debugging 001 phase 3.5 complete
+950795b upload refactor testing validation and debugging 001 phase 3 complete
+81a3ec6 upload refactor testing validation and debugging 001 phase 3 complete
+2998b5b upload refactor testing validation and debugging 001 phase 1 complete
+0ec575b upload refactor 003 phase 7 complete
+fa82d19 upload refactor 003 phase 6 complete
+48b0637 upload refactor 003 phase 5 complete
+cd7cd64 upload refactor 003 phase 1 complete
+a5e36fd upload refactor 002 post-mortem and 003 prep
+b2ab3bc completed regulatory documents update phase 1
+3218b08 prepared the scope for the regulatory upload process
+bd98d77 minor tweaks to imports to get back to valid state with small document
+de4aede full pipeline functional with small document but chunking llm step fails to maintain structured output with larger document
+b8c9af3 supabase initialization and upload-handler preparation and unit testing complete
+22c8afd end of the last attempt - moving to manual impelemntation
+b07ab63 feat: complete production deployment setup with monitoring and edge functions
+11b642b refactor: restore and consolidate schema state across environments
+7e05828 refactor: implement memory management and retry logic in Edge Functions
+591a1ed feat: Implement document processing pipeline
+a29ba5e feat: add free tier optimized configurations
+c141c33 fix: move render.yaml to root for Render deployment
+c5430c2 refactor: cleanup old files and update Edge Functions for document processing
+157b3a0 Add comprehensive deployment testing summary - 71.4% success rate with core infrastructure working
+4e9d1ac fix: health check SECRET_KEY error
+697ed54 feat: Add unified API for regulatory document processing with vector generation
+2edba9d Major file organization: move config files to config/, deployment docs to docs/deployment/, deployment scripts to scripts/deployment/, notebooks to notebooks/, create symlinks for backward compatibility, add comprehensive documentation
+2d03390 📝 Update env templates and deployment docs - Merge mvp-integration updates
+f9add13 Documentation & Support: Complete project documentation, deployment guides, testing checklists, database fixes, and comprehensive progress tracking for all 7 phases
+760d7a6 Phase 3-4: Edge Functions and LlamaParse Integration - Complete Supabase edge functions for document processing, LlamaParse integration, comprehensive testing suite, and issue resolution with 85%+ success rate
+f2cf248 feat: Add Vercel deployment configuration and production optimizations
+f90fdf8 Organize documentation: Move root .md files to docs/ subdirectories - README.md → docs/project/ (main project documentation) - DEPLOYMENT_STATUS.md → docs/deployment/ (current status) - DEPLOYMENT_SUMMARY.md → docs/deployment/ (summary guide) - deploy-guide.md → docs/deployment/ (complete guide) - AGENT_REORGANIZATION_SUMMARY.md → docs/agents/ (structure changes) - Created docs/README.md comprehensive documentation index - Organized by category with navigation by topic and user type - Cleaner root directory with logical categorization
+f51c8a6 ADD: Deployment simulation test script - Simulates render.com deployment conditions locally - Tests clean imports, environment vars, database connection, app startup - Catches render.com-style issues that local tests miss - Clears Python caches to mimic production deployment - 71.4% success rate with expected database/endpoint failures - Prevents deployment failures by catching import issues early
+e67daeb Major agent reorganization: flatten agent structure, fix imports, and update AsyncPG configuration
+2381744 Update config.yaml to use wildcard patterns for version-agnostic file references - Replace current_* files with {file}_{agent_name}_v***** pattern - Update all agent prompts and examples to use v***** wildcard - Fix chat_communicator core file path after reorganization - Add regulatory agent to config with proper file paths - Maintain human-readable, static config without regeneration needs
+324b604 Add FREE TIER deployment configuration - Dockerfile, render.yaml, guides, and scripts for /bin/zsh/month deployment
+228f76f chore: organize project structure and cleanup temp files - move test files to tests/ directories, move docs to docs/ subdirectories, move utility scripts to scripts/, clean up temporary files and prepare clean baseline for backend refactoring
+15f6a36 feat: Implement vector-first architecture migration - Consolidate policy_documents and policy_records into unified vector schema - Add encryption-aware embedding service with 384-dim vector support - Implement unified RAG interface for agent integration - Add comprehensive migration scripts with rollback support
+0b27261 Complete Task 4: Supabase Storage Integration - Full storage service with upload/download, signed URLs, role-based permissions, metadata storage, soft/hard delete, multi-file type support, comprehensive testing (100% passing), and production-ready security features
+3c10d4c feat: integrate security config with authentication system and update environment template
+a8e859c feat: implement enhanced security configuration system with environment variable priority
+773c227 Implement agent modules with prompt management system and testing framework
+7ea45d8 Replace 'Accessa' with 'Insurance Navigator' throughout codebase
+0be3745 environment management 001 infrastructure setup stage phase 3-4 complete and 5+ rescoped
+b162637 environment management 001 infrastructure setup stage phase 2 complete
+78acff0 environment management 001 phase 1 complete
+240a5bc feat: implement local Docker simulation and fix dependency conflicts
+f278a0d 20250918_mvp_production_deployment 001 scoped
+f48213a comprehensive rca validation and debugging - dedupe issues resolved
+0fe6474 comprehensive rca output refactor 001 phase 2 complete
+a27b263 comprehensive rca output refactor 001 phase 1 complete
+36604a1 agent integration 001 phase 2 complete
+94c1503 project directory reorganization
+0309c4e cloud deployment validation 001 phase 4 complete
+577c2f2 Phase 1: Cloud deployment configuration and testing framework
+10919a8 mvp frontend integration 001 scoped
+5d1bdd9 frontend mvp integration 001 phase 1 complete
+695e464 Phase 3 cleanup: Remove deprecated systems and conflicting workflows
+c261e4e Phase 1 cleanup: Remove low-risk deprecated directories
+2dc40d7 upload refactor integration 001 complete
+ca40f26 upload refactor integration 001 phase 2 mock validation
+e2ae996 upload refactor file testing 001 phase 3.1 complete and following phases restructured
+e145bf0 upload refactor file testing 001 phase 2.1 complete and phase 3 rescoped
+ea5fbd9 upload refactor file testing 001 phase 2 complete and 2.1 scoped
+b0acc01 upload refactor testing validation and debugging 001 phase 6 complete
+0ec575b upload refactor 003 phase 7 complete
+0081d7b upload refactor 003 phase 3 complete
+9f80950 short term memory 001 phase 3 complete and templates updated
+e9ceef5 phase 3 complete
+b8c9af3 supabase initialization and upload-handler preparation and unit testing complete
+22c8afd end of the last attempt - moving to manual impelemntation
+b07ab63 feat: complete production deployment setup with monitoring and edge functions
+11b642b refactor: restore and consolidate schema state across environments
+7e05828 refactor: implement memory management and retry logic in Edge Functions
+4b39bc0 refactor: Implement Edge Function-based document processing
+c5430c2 refactor: cleanup old files and update Edge Functions for document processing
+2217c35 feat: Add comprehensive deployment documentation and testing infrastructure - Added DEPLOYMENT_SUCCESS_REPORT.md with complete deployment status - Added regulatory processing documentation and test scripts - Included Edge Functions deployment guides and verification tools - Added comprehensive testing suite for end-to-end validation - Updated main.py with latest fixes and improvements - Ready for production deployment with full documentation
+cff4e80 🔧 Fix upload system: SBERT numpy arrays + Edge Functions integration - Fix SentenceTransformer mock models to return numpy arrays (not lists) - Resolves 'list' object has no attribute 'tolist' error - Add /upload-document-backend endpoint for Edge Functions pipeline - Prioritize LlamaParse via Supabase Edge Functions over PyPDF2 - Frontend immediate completion + background processing notifications
+a431f75 Implement service authentication for serverless document processing - Add TODO comments for future security upgrades
+b87aa2e feat: Complete serverless migration - replace Render backend with direct OpenAI API calls. Vector-processor now calls OpenAI directly. True serverless: Frontend → Edge Functions → OpenAI → Supabase Storage
+e07dcca feat: Complete serverless migration with Edge Functions - Deploy 4 Supabase Edge Functions, add DocumentUploadServerless component, create automated deployment scripts, add comprehensive migration guide - Ready for Vercel frontend + Supabase Edge Functions deployment
+2d03390 📝 Update env templates and deployment docs - Merge mvp-integration updates
+760d7a6 Phase 3-4: Edge Functions and LlamaParse Integration - Complete Supabase edge functions for document processing, LlamaParse integration, comprehensive testing suite, and issue resolution with 85%+ success rate
+b5da7ef Add CORS monitoring, build logs, upload resilience docs and test results
+f2cf248 feat: Add Vercel deployment configuration and production optimizations
+228f76f chore: organize project structure and cleanup temp files - move test files to tests/ directories, move docs to docs/ subdirectories, move utility scripts to scripts/, clean up temporary files and prepare clean baseline for backend refactoring
+15f6a36 feat: Implement vector-first architecture migration - Consolidate policy_documents and policy_records into unified vector schema - Add encryption-aware embedding service with 384-dim vector support - Implement unified RAG interface for agent integration - Add comprehensive migration scripts with rollback support
+0b27261 Complete Task 4: Supabase Storage Integration - Full storage service with upload/download, signed URLs, role-based permissions, metadata storage, soft/hard delete, multi-file type support, comprehensive testing (100% passing), and production-ready security features
+3c10d4c feat: integrate security config with authentication system and update environment template
+a8e859c feat: implement enhanced security configuration system with environment variable priority
+79e772f Fix and enable tests for agents after restructuring
+7ea45d8 Replace 'Accessa' with 'Insurance Navigator' throughout codebase
+0be3745 environment management 001 infrastructure setup stage phase 3-4 complete and 5+ rescoped
+b162637 environment management 001 infrastructure setup stage phase 2 complete
+78acff0 environment management 001 phase 1 complete
+be486df Investigation: RAG tool similarity issues and LlamaParse mock service fallback
+a27b263 comprehensive rca output refactor 001 phase 1 complete
+7b7345e 20250915_comprehensive_refactor scoped
+5c87de2 rca reintegration scoped
+131d6d9 phase 3 refactor 001 phase 1 complete
+92d9fb9 Fix psutil dependency for production deployment
+0587374 upload_pipleine workflow testing complete
+3a1da97 upload pipeline deployment scoping
+6b93b54 local testing with production supabase integrated and local calls to deployed render services
+e7b6d3a deployment workflow testing 001 scoped
+94c1503 project directory reorganization
+0309c4e cloud deployment validation 001 phase 4 complete
+bdd99f3 cloud deployment validation 001 phase 3 complete
+7b95b0c mvp frontend integration 001 through phase 4
+5a0e989 mvp frontend integration 001 through phase 3
+27dc2e0 mvp frontend integration 001 scoped
+695e464 Phase 3 cleanup: Remove deprecated systems and conflicting workflows
+c672abe Phase 2 cleanup: Remove medium-risk development artifacts
+c261e4e Phase 1 cleanup: Remove low-risk deprecated directories
+2dc40d7 upload refactor integration 001 complete
+5a14ad9 Phase 3: Input/Output Processing Workflow Integration - Complete chat interface with input processing, agent workflows, and output processing
+ca40f26 upload refactor integration 001 phase 2 mock validation
+066381e upload refactor integration 001 phase 1 complete
+6edc0ae upload refactor integration 001 scoped
+e145bf0 upload refactor file testing 001 phase 2.1 complete and phase 3 rescoped
+0ec575b upload refactor 003 phase 7 complete
+fa82d19 upload refactor 003 phase 6 complete
+48b0637 upload refactor 003 phase 5 complete
+daaeecd upload refactor 003 phase 2 complete
+cd7cd64 upload refactor 003 phase 1 complete
+a5e36fd upload refactor 002 post-mortem and 003 prep
+97a6243 input processing workflow 001 phase 2 complete
+0142509 input processing workflow 001 phase 1 complete
+a788a76 short term memory 001 complete
+e9ceef5 phase 3 complete
+3218b08 prepared the scope for the regulatory upload process
+8c1ba9a RAG implementation scoping and phase 1 implementation
+eaef7db RAG implementation scoping and phase 1 implementation
+bd98d77 minor tweaks to imports to get back to valid state with small document
+de4aede full pipeline functional with small document but chunking llm step fails to maintain structured output with larger document
+266a29a updated with chunker ability
+b8c9af3 supabase initialization and upload-handler preparation and unit testing complete
+22c8afd end of the last attempt - moving to manual impelemntation
+b07ab63 feat: complete production deployment setup with monitoring and edge functions
+11b642b refactor: restore and consolidate schema state across environments
+c5430c2 refactor: cleanup old files and update Edge Functions for document processing
+7d35a67 Fix document upload pipeline: edge function orchestration, WebSocket connections, and Render timeouts
+d8f2192 Force deployment refresh - fix storage service caching issue - Add deployment timestamp to force fresh build - Ensure upload_policy_document fixes are deployed
+df0b9f1 Fix critical API errors: storage method calls and chat syntax - Fix StorageService missing upload_policy_document method by using upload_document - Fix chat endpoint syntax error with broken if/else structure - Both issues causing 500 errors in production deployment
+6a84b35 feat: Add unified API for regulatory document processing with vector generation
+697ed54 feat: Add unified API for regulatory document processing with vector generation
+0617d3d Organize document processing files: move scripts to appropriate directories, update references, add documentation, clean up temporary files
+7064ced Fix vector-processor 400 error by removing non-existent Supabase embeddings fallback - Replace with graceful error handling for OpenAI quota exceeded - This fixes the 400 error preventing document processing pipeline completion
+e07dcca feat: Complete serverless migration with Edge Functions - Deploy 4 Supabase Edge Functions, add DocumentUploadServerless component, create automated deployment scripts, add comprehensive migration guide - Ready for Vercel frontend + Supabase Edge Functions deployment
+2d03390 📝 Update env templates and deployment docs - Merge mvp-integration updates
+228f76f chore: organize project structure and cleanup temp files - move test files to tests/ directories, move docs to docs/ subdirectories, move utility scripts to scripts/, clean up temporary files and prepare clean baseline for backend refactoring
+4523c67 feat: Integrate encryption-aware services and update application - Update FastAPI main.py with new service integrations - Enhance storage service with encryption support - Update agent configurations for vector RAG - Add comprehensive integration testing framework
+0b27261 Complete Task 4: Supabase Storage Integration - Full storage service with upload/download, signed URLs, role-based permissions, metadata storage, soft/hard delete, multi-file type support, comprehensive testing (100% passing), and production-ready security features
+3c10d4c feat: integrate security config with authentication system and update environment template
+b5d1124 docs: Remove obsolete RCA document in favor of structured troubleshooting guide
+393ac9f feat: Complete regulatory agent implementation with dual-agent architecture - Add consolidated regulatory agent with mock and isolated variants - Implement internet search with DuckDuckGo integration - Add PostgreSQL caching and Supabase document storage - Create comprehensive testing framework with 3 test suites - Add database migrations for regulatory search enhancements - Include troubleshooting documentation and integration examples - Resolve dependency conflicts through import bypass strategy - Support both zero-dependency testing and production deployment
+a2a39e5 feat(db): comprehensive database infrastructure, migrations, and access logging refactor
+33bdc07 feat(database): Implement core database infrastructure and services - Add migration scripts, encryption, storage, access control, and audit services with test infrastructure

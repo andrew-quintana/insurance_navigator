@@ -31,12 +31,12 @@ ValueError: SUPABASE_URL and SUPABASE_KEY environment variables must be set
 1. **Fixed Environment Variable Names**:
    ```bash
    # Changed from:
-   SUPABASE_KEY=***REMOVED***...
-   SERVICE_ROLE_KEY=***REMOVED***...
+   SUPABASE_KEY=${SUPABASE_JWT_TOKEN}
+   SERVICE_ROLE_KEY=${SUPABASE_JWT_TOKEN}
    
    # To:
-   SUPABASE_ANON_KEY=***REMOVED***...
-   SUPABASE_SERVICE_ROLE_KEY=***REMOVED***...
+   SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
+   SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_JWT_TOKEN}
    ```
 
 2. **Renamed Service in Render Dashboard**:
@@ -72,14 +72,14 @@ ValueError: Document encryption key not configured
 1. **Identified Missing Variable**:
    ```bash
    # Found in .env.development:
-   DOCUMENT_ENCRYPTION_KEY=iSUAmk2NHMNW5bsn8F0UnPSCk9L+IxZhu/v/UyDwFcc=
+   DOCUMENT_ENCRYPTION_KEY=${DOCUMENT_ENCRYPTION_KEY}
    
    # Missing from .env.production
    ```
 
 2. **Added to Production Environment**:
    ```bash
-   echo "DOCUMENT_ENCRYPTION_KEY=iSUAmk2NHMNW5bsn8F0UnPSCk9L+IxZhu/v/UyDwFcc=" >> .env.production
+   echo "DOCUMENT_ENCRYPTION_KEY=${DOCUMENT_ENCRYPTION_KEY}" >> .env.production
    ```
 
 3. **Configured in Render Dashboard**:

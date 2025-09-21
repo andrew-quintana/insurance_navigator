@@ -31,8 +31,8 @@
 1. **Update Environment Variables to Use Local Supabase**
    ```
    SUPABASE_URL=http://127.0.0.1:54321
-   SUPABASE_ANON_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-   SUPABASE_SERVICE_ROLE_KEY=***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+   SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
+   SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_JWT_TOKEN}
    DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
    ```
 
@@ -46,7 +46,7 @@
 1. **Get Admin Access**
    - Contact Supabase project admin
    - Unpause production project (znvwzkdblknkkztqyfnu)
-   - Unpause staging project (dfgzeastcxnoqshgyotp)
+   - Unpause staging project (${SUPABASE_PROJECT_REF})
 
 2. **Configure Production Supabase**
    - Link to production project
@@ -72,7 +72,7 @@
    ```bash
    vercel env add NEXT_PUBLIC_API_BASE_URL production ***REMOVED***
    vercel env add NEXT_PUBLIC_SUPABASE_URL production http://127.0.0.1:54321
-   vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production ***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+   vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production ${SUPABASE_JWT_TOKEN}
    ```
 
 2. **Redeploy Vercel**
@@ -138,7 +138,7 @@ python scripts/cloud_deployment/phase1_test.py
 # 1. Set Vercel environment variables
 vercel env add NEXT_PUBLIC_API_BASE_URL production ***REMOVED***
 vercel env add NEXT_PUBLIC_SUPABASE_URL production http://127.0.0.1:54321
-vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production ***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production ${SUPABASE_JWT_TOKEN}
 
 # 2. Redeploy Vercel
 vercel --prod

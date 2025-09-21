@@ -15,7 +15,7 @@ import os
 # Configuration
 API_BASE_URL = "http://localhost:8000"
 SUPABASE_URL = "http://localhost:54321"
-SUPABASE_SERVICE_KEY = "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsg3W5XoXU8dI"
+SUPABASE_SERVICE_KEY = "${SUPABASE_JWT_TOKEN}"
 DATABASE_URL = "postgresql://postgres:postgres@localhost:54322/postgres"
 
 # Test files

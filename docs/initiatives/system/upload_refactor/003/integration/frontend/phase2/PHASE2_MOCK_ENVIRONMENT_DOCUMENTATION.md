@@ -61,8 +61,8 @@ Content-Type: application/json
 **Response:**
 ```json
 {
-  "access_token": "***REMOVED***...",
-  "refresh_token": "***REMOVED***...",
+  "access_token": "${SUPABASE_JWT_TOKEN}",
+  "refresh_token": "${SUPABASE_JWT_TOKEN}",
   "user": {
     "id": "user_12345",
     "email": "user@example.com",
@@ -90,7 +90,7 @@ POST /auth/v1/token?grant_type=refresh_token
 Content-Type: application/json
 
 {
-  "refresh_token": "***REMOVED***..."
+  "refresh_token": "${SUPABASE_JWT_TOKEN}"
 }
 ```
 
