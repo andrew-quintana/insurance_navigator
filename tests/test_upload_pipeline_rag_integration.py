@@ -131,11 +131,11 @@ class UploadPipelineRAGTester:
         """Set up environment variables for production cloud backend."""
         # Production Supabase configuration
         os.environ["SUPABASE_URL"] = self.supabase_url
-        os.environ["SUPABASE_ANON_KEY"] = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpudnd6a2RibGtua2t6dHF5Zm51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2ODA0NTYsImV4cCI6MjA2NzI1NjQ1Nn0.k0QHYOgm4EilyyTml57kCGDpbikpEtJCzq-qzGYQZqY"
-        os.environ["SUPABASE_SERVICE_ROLE_KEY"] = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpudnd6a2RibGtua2t6dHF5Zm51Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTY4MDQ1NiwiZXhwIjoyMDY3MjU2NDU2fQ.9Urox9-xr5TJz8a9LbSZsGUMcSTThc3QM6XDMJD-j-o"
+        os.environ["SUPABASE_ANON_KEY"] = os.getenv("SUPABASE_ANON_KEY", "your_supabase_anon_key_here")
+        os.environ["SUPABASE_SERVICE_ROLE_KEY"] = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "your_supabase_service_role_key_here")
         os.environ["DATABASE_URL"] = self.database_url
-        os.environ["OPENAI_API_KEY"] = "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"
-        os.environ["LLAMAPARSE_API_KEY"] = "llx-X9bRG4r7mq5Basype0fCvfvlj1372pDdQXi7KaxVqkRlkoSb"
+        os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
+        os.environ["LLAMAPARSE_API_KEY"] = os.getenv("LLAMAPARSE_API_KEY", "your_llamaparse_api_key_here")
         
     async def run_comprehensive_test(self):
         """Execute comprehensive upload pipeline and RAG integration test."""

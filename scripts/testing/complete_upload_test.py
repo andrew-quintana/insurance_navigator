@@ -13,7 +13,7 @@ from typing import Dict, Any
 
 # Configuration
 API_BASE_URL = "http://localhost:8000"
-JWT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjNlNDU2Ny1lODliLTEyZDMtYTQ1Ni00MjY2MTQxNzQwMDAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo1NDMyMSIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzU1ODk1MTEyLCJleHAiOjE3NTU5ODE1MTIsIm5iZiI6MTc1NTg5NTExMn0.YNSseeKTFuNqR8Apwot2_2MRcKlkVOBbDy3sV1HN3yU"
+JWT_TOKEN = "${SUPABASE_JWT_TOKEN}"
 
 # Timeout configuration with safety factors
 TIMEOUTS = {

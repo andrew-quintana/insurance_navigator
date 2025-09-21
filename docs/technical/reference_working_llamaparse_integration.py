@@ -34,7 +34,7 @@ async def working_llamaparse_integration():
     print('=' * 60)
     
     # Configuration (these should match system config)
-    LLAMAPARSE_API_KEY = os.getenv("LLAMAPARSE_API_KEY", "llx-CRtlURo7FT74ZMyd...")
+    LLAMAPARSE_API_KEY = os.getenv("LLAMAPARSE_API_KEY", "${LLAMAPARSE_API_KEY}...")
     LLAMAPARSE_BASE_URL = "https://api.cloud.llamaindex.ai"
     SUPABASE_URL = "http://127.0.0.1:54321"
     SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))

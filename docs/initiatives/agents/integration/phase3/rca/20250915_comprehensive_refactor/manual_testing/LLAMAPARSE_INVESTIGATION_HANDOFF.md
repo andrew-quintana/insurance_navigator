@@ -100,7 +100,7 @@ asyncio.run(test_signed_url())
 
 # Test file upload to signed URL
 curl -X PUT "http://127.0.0.1:54321/storage/v1/object/upload/files/user/test/raw/test.pdf" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU" \
+  -H "Authorization: Bearer ${SUPABASE_JWT_TOKEN}" \
   -F "file=@examples/simulated_insurance_document.pdf"
 ```
 
@@ -111,7 +111,7 @@ python test_production_upload_flow.py
 
 # Check if file was actually uploaded
 curl -X GET "http://127.0.0.1:54321/storage/v1/object/files/user/{user_id}/raw/{filename}.pdf" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
+  -H "Authorization: Bearer ${SUPABASE_JWT_TOKEN}"
 ```
 
 ### **Step 3: LlamaParse Integration Testing**

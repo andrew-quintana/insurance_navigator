@@ -122,7 +122,7 @@ Database (PostgreSQL)
 - **`ENVIRONMENT=development`**
 - **`DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable`**
 - **`SUPABASE_URL=http://localhost:54321`**
-- **`SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`**
+- **`SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_JWT_TOKEN}`**
 
 ## 🔧 **Investigation Steps**
 

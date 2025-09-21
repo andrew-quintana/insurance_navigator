@@ -12,8 +12,8 @@ services:
       - NODE_ENV=test
       - NEXT_PUBLIC_API_URL=http://api-server:8000
       - NEXT_PUBLIC_SUPABASE_URL=http://supabase:54321
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-      - NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
+      - NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_JWT_TOKEN}
     depends_on:
       api-server:
         condition: service_healthy
@@ -41,8 +41,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
       - UPLOAD_PIPELINE_SUPABASE_URL=http://supabase:54321
-      - UPLOAD_PIPELINE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-      - UPLOAD_PIPELINE_SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+      - UPLOAD_PIPELINE_SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
+      - UPLOAD_PIPELINE_SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_JWT_TOKEN}
       - UPLOAD_PIPELINE_LLAMAPARSE_API_URL=https://api.cloud.llamaindex.ai
       - UPLOAD_PIPELINE_OPENAI_API_URL=https://api.openai.com
       - UPLOAD_PIPELINE_ENVIRONMENT=test
@@ -69,16 +69,16 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
       - SUPABASE_URL=http://supabase:54321
-      - SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-      - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+      - SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_JWT_TOKEN}
       - LLAMAPARSE_API_URL=https://api.cloud.llamaindex.ai
       - OPENAI_API_URL=https://api.openai.com
       - UPLOAD_PIPELINE_ENVIRONMENT=test
       - UPLOAD_PIPELINE_STORAGE_ENVIRONMENT=test
       - UPLOAD_PIPELINE_STORAGE_URL=http://supabase:54321
       - SERVICE_MODE=HYBRID
-      - LLAMAPARSE_API_KEY=llx-X9bRG4r7mq5Basype0fCvfvlj1372pDdQXi7KaxVqkRlkoSb
-      - OPENAI_API_KEY=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
+      - LLAMAPARSE_API_KEY=${LLAMAPARSE_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     depends_on:
       postgres:
         condition: service_healthy
@@ -104,8 +104,8 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - JWT_SECRET=super-secret-jwt-token-with-at-least-32-characters-long
-      - ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-      - SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+      - ANON_KEY=${SUPABASE_JWT_TOKEN}
+      - SERVICE_ROLE_KEY=${SUPABASE_JWT_TOKEN}
     depends_on:
       postgres:
         condition: service_healthy

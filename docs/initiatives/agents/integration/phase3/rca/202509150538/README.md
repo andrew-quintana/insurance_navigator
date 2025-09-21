@@ -29,7 +29,7 @@ The main API service (`main.py`) was failing to start with two critical issues:
 
 ### Fix #2: Environment Variable Loading
 - **Action**: Added `DOCUMENT_ENCRYPTION_KEY` to runtime environment
-- **Value**: `iSUAmk2NHMNW5bsn8F0UnPSCk9L+IxZhu/v/UyDwFcc=`
+- **Value**: `${DOCUMENT_ENCRYPTION_KEY}`
 - **Result**: Storage service initialization successful
 
 ## Current Service Status ✅ ALL OPERATIONAL

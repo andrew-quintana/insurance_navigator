@@ -10,7 +10,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from jose import jwt, JWTError
 
 # Test token from main API server
-token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0MDg3OGE2YS0xNmUxLTRjMGYtODViZC00MWQ3OTE4NTY4MTciLCJlbWFpbCI6InRlc3RfdXNlckBleGFtcGxlLmNvbSIsImV4cCI6MTc1ODE0NjM5MiwiaWF0IjoxNzU4MDU5OTkyLCJpc3MiOiJpbnN1cmFuY2UtbmF2aWdhdG9yLW1pbmltYWwtYXV0aCIsImF1ZCI6Imluc3VyYW5jZS1uYXZpZ2F0b3ItdXNlcnMifQ.ynzZNwMtri3m2hN1j0IxHM34hL9B8PtFI9qp96YyPTI"
+token = "${SUPABASE_JWT_TOKEN}"
 
 print("Testing JWT token validation...")
 

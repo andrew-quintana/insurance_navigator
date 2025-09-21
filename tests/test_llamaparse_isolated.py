@@ -204,7 +204,7 @@ async def test_storage_integration():
     
     # Test downloading from storage (like our real implementation)
     storage_path = 'files/user/115d11d4-da35-4487-93e2-255111c3603b/raw/a10c575c_70939511.pdf'
-    service_role_key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
+    service_role_key = '${SUPABASE_JWT_TOKEN}'
     
     try:
         async with httpx.AsyncClient() as client:

@@ -17,30 +17,7 @@ async def test_unique_pipeline():
     """Test with completely unique file hash to avoid duplicate detection"""
     
     # Database connection
-    database_url = os.getenv('POOLER_URL', 'postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres?sslmode=require')
-    
-    print("🔍 Phase 3 Unique Test - Avoiding Duplicate Detection")
-    print("=" * 60)
-    
-    try:
-        # Connect to database
-        conn = await asyncpg.connect(database_url, statement_cache_size=0)
-        print("✅ Connected to database successfully")
-        
-        # Create a test document record with completely unique hash
-        document_id = str(uuid.uuid4())
-        user_id = "e6114f0c-df44-41e6-a5df-33d69f95bab1"  # Existing user ID
-        # Use timestamp + random UUID to ensure uniqueness
-        file_hash = f"unique_{int(datetime.utcnow().timestamp())}_{uuid.uuid4().hex}"
-        
-        print(f"📄 Creating test document: {document_id}")
-        print(f"🔑 Using unique file hash: {file_hash}")
-        
-        # Insert document record
-        await conn.execute("""
-            INSERT INTO upload_pipeline.documents (document_id, user_id, filename, mime, bytes_len, file_sha256, raw_path, processing_status, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        """, document_id, user_id, "unique_test_document.pdf", "application/pdf", 2048, file_hash, "files/test/unique_test.pdf", "uploaded", datetime.utcnow(), datetime.utcnow())
+    database_url = os.getenv('POOLER_URL', '${DATABASE_URL}/pdf", 2048, file_hash, "files/test/unique_test.pdf", "uploaded", datetime.utcnow(), datetime.utcnow())
         
         # Insert upload job record
         job_id = str(uuid.uuid4())

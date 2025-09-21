@@ -1,0 +1,24 @@
+3116689 security refactor
+eb03c93 Update security README
+9ae03d8 Sync deployment/cloud-infrastructure with latest backend/workers structure
+40a6951 Fix production webhook URL configuration issue
+7ba2614 feat: Complete Phase C production cloud backend testing with 100% success rate
+ed65914 feat: Implement Phase C UUID Standardization Cloud Integration Testing
+e88b568 Fix Dockerfile network connectivity issues for Render deployment
+4939290 feat: Add authentication validation and improved error handling
+1caaf83 prepared documentation for short term memory, input/output workflows, and security agent
+f47b499 feat: Implement Supabase Storage best practices for uploads and security
+712c7cc SECURITY: Disable JWT verification for doc-processor (MVP ONLY) - Add comprehensive TODO for security workflow - Temporarily allow public access for serverless testing - MUST re-enable verify_jwt=true before production
+a431f75 Implement service authentication for serverless document processing - Add TODO comments for future security upgrades
+dec0e53 ♻️ Refactor CORS to use environment variables - Move CORS origins from hardcoded to .env for easier management - Add CORS_ALLOWED_ORIGINS and CORS_VERCEL_PREVIEW_PATTERN - Update documentation with CORS management guide - Not for security (CORS URLs aren't sensitive) but for config flexibility
+9ad69c1 Enhanced CORS handling and upload resilience - Custom CORS middleware with comprehensive error handling - Pattern-based origin validation with security checks - Enhanced upload endpoint with timeouts, batching, and resilience - Comprehensive CORS testing system with future prediction - Fixed 502 error prevention during large document processing - Added monitoring and alerting for CORS issues
+4a42632 CRITICAL FIX: Resolve AgentOrchestrator import failures - Fix security_models import path from models.security_models to security_models - Remove duplicate/broken imports in agents/__init__.py - Remove non-existent exception imports - Fix model class names (TaskProcessingResult, ServiceAccessStrategy) - Update config.yaml prompt_security path to actual file location - All agents now import and initialize successfully (100% test pass rate) - Ready for production deployment
+159dbdd updating prompt security config
+688b3e2 feat: Implement comprehensive RLS and function security - Add Row Level Security policies for all tables - Fix critical security vulnerabilities in database functions - Implement secure user context isolation - Add comprehensive security audit and testing scripts
+0b27261 Complete Task 4: Supabase Storage Integration - Full storage service with upload/download, signed URLs, role-based permissions, metadata storage, soft/hard delete, multi-file type support, comprehensive testing (100% passing), and production-ready security features
+3c10d4c feat: integrate security config with authentication system and update environment template
+a8e859c feat: implement enhanced security configuration system with environment variable priority
+b10488c Update prompt security agent to load examples from JSON and integrate them into prompts
+fe17730 Implement LangSmith versioning and self-consistency in prompt security agent
+db14d4a feat: Add encryption-related security checks
+6ea942a feat: Add comprehensive test suite with security checks

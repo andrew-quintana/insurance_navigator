@@ -69,20 +69,7 @@ supabase link --project-ref your-project-ref
    SUPABASE_URL=https://your-project-ref.supabase.co
    SUPABASE_ANON_KEY=your-anon-key
    SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-   DATABASE_URL=postgresql://postgres.your-project-ref:password@aws-0-us-east-1.pooler.supabase.com:6543/postgres
-   ```
-
-### Method 2: Manual Web Service Creation
-
-1. **Create Web Service**
-   - New + → Web Service
-   - Connect repository
-   - Environment: Docker
-   - Build Command: (leave empty)
-   - Start Command: (leave empty, uses Dockerfile CMD)
-
-2. **Configure Settings**
-   - Instance Type: Starter ($7/month)
+   DATABASE_URL=${DATABASE_URL}/month)
    - Auto-Deploy: Yes
    - Health Check Path: `/health`
 
@@ -93,20 +80,11 @@ Create these environment variables in Render:
 ```bash
 # Supabase Configuration
 SUPABASE_URL=https://xyzcompany.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
+SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_JWT_TOKEN}
 
 # Database (from Supabase Settings → Database)
-DATABASE_URL=postgresql://postgres.xyzcompany:your-password@aws-0-us-east-1.pooler.supabase.com:6543/postgres
-
-# JWT Secret (generate new for production)
-JWT_SECRET_KEY=$(openssl rand -base64 64)
-
-# App Configuration
-ENVIRONMENT=production
-LOG_LEVEL=INFO
-SECURITY_BYPASS_ENABLED=false
-API_BASE_URL=https://your-app-name.onrender.com
+DATABASE_URL=${DATABASE_URL}//your-app-name.onrender.com
 ```
 
 ## 🔌 Step 4: Database Connection Test

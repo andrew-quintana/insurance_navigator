@@ -15,24 +15,7 @@ This guide explains how to run Phase C UUID standardization tests using your loc
 ### Database: Production Supabase
 - **Supabase URL**: `https://znvwzkdblknkkztqyfnu.supabase.co`
 - **Database URL**: `postgresql://postgres:<REDACTED>@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres`
-- **Pooler URL**: `postgresql://postgres.znvwzkdblknkkztqyfnu:<REDACTED>@aws-0-us-west-1.pooler.supabase.com:6543/postgres`
-
-## Prerequisites
-
-### 1. Local Backend Running
-Ensure your local backend is running on port 8000:
-
-```bash
-# Start the local backend
-python main.py
-
-# Or using uvicorn directly
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-Verify the backend is running:
-```bash
-curl -f http://localhost:8000/health
+- **Pooler URL**: `${DATABASE_URL}//localhost:8000/health
 ```
 
 ### 2. Required Python Packages

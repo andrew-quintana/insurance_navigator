@@ -17,7 +17,7 @@ def generate_test_jwt_token():
     
     # Use the values that match the current docker-compose configuration
     supabase_url = "http://localhost:54321"
-    service_role_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJmcKHUkt3pV/LC87Dkk="
+    service_role_key = "${SUPABASE_JWT_TOKEN}/LC87Dkk="
     
     # Create payload
     payload = {

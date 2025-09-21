@@ -19,8 +19,8 @@ import jwt
 
 # Configuration
 SUPABASE_URL = "https://znvwzkdblknkkztqyfnu.supabase.co"
-SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
-LLAMAPARSE_API_KEY = os.getenv("LLAMA_CLOUD_API_KEY", "llx-1234567890abcdef")
+SUPABASE_SERVICE_KEY = "${SUPABASE_JWT_TOKEN}"
+LLAMAPARSE_API_KEY = os.getenv("LLAMA_CLOUD_API_KEY", "${LLAMAPARSE_API_KEY}")
 
 class SimplifiedUploadPipeline:
     def __init__(self):

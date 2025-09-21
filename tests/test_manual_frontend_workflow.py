@@ -80,11 +80,11 @@ class ManualFrontendWorkflowTester:
         """Set up environment variables for production cloud backend."""
         # Production Supabase configuration
         os.environ["SUPABASE_URL"] = "https://znvwzkdblknkkztqyfnu.supabase.co"
-        os.environ["SUPABASE_ANON_KEY"] = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpudnd6a2RibGtua2t6dHF5Zm51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2ODA0NTYsImV4cCI6MjA2NzI1NjQ1Nn0.k0QHYOgm4EilyyTml57kCGDpbikpEtJCzq-qzGYQZqY"
-        os.environ["SUPABASE_SERVICE_ROLE_KEY"] = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpudnd6a2RibGtua2t6dHF5Zm51Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTY4MDQ1NiwiZXhwIjoyMDY3MjU2NDU2fQ.9Urox9-xr5TJz8a9LbSZsGUMcSTThc3QM6XDMJD-j-o"
+        os.environ["SUPABASE_ANON_KEY"] = "${SUPABASE_JWT_TOKEN}"
+        os.environ["SUPABASE_SERVICE_ROLE_KEY"] = "${SUPABASE_JWT_TOKEN}"
         os.environ["DATABASE_URL"] = "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres"
-        os.environ["OPENAI_API_KEY"] = "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"
-        os.environ["LLAMAPARSE_API_KEY"] = "llx-X9bRG4r7mq5Basype0fCvfvlj1372pDdQXi7KaxVqkRlkoSb"
+        os.environ["OPENAI_API_KEY"] = "${OPENAI_API_KEY}"
+        os.environ["LLAMAPARSE_API_KEY"] = "${LLAMAPARSE_API_KEY}"
         
     async def run_workflow_test(self):
         """Execute the core workflow test."""

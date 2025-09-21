@@ -90,17 +90,17 @@
 #### **Frontend (Vercel)**
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
 NEXT_PUBLIC_API_BASE_URL=https://insurance-navigator-api.onrender.com
 ```
 
 #### **Backend API (Render)**
 ```bash
 SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
+SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_JWT_TOKEN}
 DATABASE_URL=postgresql://postgres:<REDACTED>@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres
-DOCUMENT_ENCRYPTION_KEY=iSUAmk2NHMNW5bsn8F0UnPSCk9L+IxZhu/v/UyDwFcc=
+DOCUMENT_ENCRYPTION_KEY=${DOCUMENT_ENCRYPTION_KEY}
 OPENAI_API_KEY=sk-proj-<REDACTED>
 ANTHROPIC_API_KEY=sk-ant-<REDACTED>
 LLAMAPARSE_API_KEY=llx-<REDACTED>
@@ -109,8 +109,8 @@ LLAMAPARSE_API_KEY=llx-<REDACTED>
 #### **Worker Service (Render)**
 ```bash
 SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
+SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_JWT_TOKEN}
 DATABASE_URL=postgresql://postgres:<REDACTED>@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres
 OPENAI_API_KEY=sk-proj-<REDACTED>
 ANTHROPIC_API_KEY=sk-ant-<REDACTED>

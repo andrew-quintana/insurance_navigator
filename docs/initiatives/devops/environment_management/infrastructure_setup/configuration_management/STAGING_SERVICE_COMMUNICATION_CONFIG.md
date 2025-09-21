@@ -46,7 +46,7 @@ API Service ──┐
 ```bash
 # Supabase Database Connection
 SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpudnd6a2RibGtua2t6dHF5Zm51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2ODA0NTYsImV4cCI6MjA2NzI1NjQ1Nn0.k0QHYOgm4EilyyTml57kCGDpbikpEtJCzq-qzGYQZqY
+SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
 SUPABASE_SERVICE_ROLE_KEY=<staging_service_role_key>
 DATABASE_URL=postgresql://postgres:<password>@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres
 SUPABASE_DB_HOST=db.znvwzkdblknkkztqyfnu.supabase.co
@@ -84,7 +84,7 @@ RAG_VECTOR_DIMENSION=1536
 ```bash
 OPENAI_API_KEY=sk-staging-...
 ANTHROPIC_API_KEY=sk-ant-staging-...
-LLAMAPARSE_API_KEY=llx-staging-...
+LLAMAPARSE_API_KEY=${LLAMAPARSE_API_KEY}...
 ```
 
 #### Worker-Specific Configuration

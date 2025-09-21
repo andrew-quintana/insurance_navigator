@@ -31,53 +31,7 @@ logger = logging.getLogger(__name__)
 
 # Cloud service URLs
 API_BASE_URL = "https://insurance-navigator-api.onrender.com"
-DATABASE_URL = "postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres?sslmode=require"
-
-class Phase3DatabaseFlowTester:
-    """Test complete upload pipeline with database monitoring."""
-    
-    def __init__(self):
-        self.api_url = API_BASE_URL
-        self.database_url = DATABASE_URL
-        self.test_results = []
-        self.start_time = time.time()
-        self.db_connection = None
-        
-        logger.info("=" * 80)
-        logger.info("🚀 PHASE 3 COMPLETE DATABASE FLOW TEST INITIALIZED")
-        logger.info("=" * 80)
-        logger.info(f"API URL: {self.api_url}")
-        logger.info(f"Database URL: {self.database_url[:50]}...")
-        logger.info(f"Test Start Time: {datetime.now().isoformat()}")
-        logger.info("=" * 80)
-    
-    async def connect_to_database(self) -> bool:
-        """Connect to the production database."""
-        logger.info("🔗 Connecting to production database...")
-        
-        try:
-            self.db_connection = await asyncpg.connect(
-                self.database_url,
-                statement_cache_size=0
-            )
-            logger.info("✅ Database connection established")
-            return True
-        except Exception as e:
-            logger.error(f"❌ Database connection failed: {e}")
-            return False
-    
-    async def disconnect_from_database(self):
-        """Disconnect from the database."""
-        if self.db_connection:
-            await self.db_connection.close()
-            logger.info("🔌 Database connection closed")
-    
-    def _generate_mock_pdf_content(self, title: str) -> bytes:
-        """Generate mock PDF content for testing."""
-        pdf_content = f"""%PDF-1.4
-1 0 obj
-<<
-/Type /Catalog
+DATABASE_URL = "${DATABASE_URL}/Type /Catalog
 /Pages 2 0 R
 >>
 endobj

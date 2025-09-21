@@ -16,7 +16,7 @@ async def test_llamaparse():
     
     # Initialize client
     client = LlamaParseClient({
-        "api_key": os.getenv("LLAMAPARSE_API_KEY", "llx-X9bRG4r7mq5Basype0fCvfvlj1372pDdQXi7KaxVqkRlkoSb"),
+        "api_key": os.getenv("LLAMAPARSE_API_KEY", "${LLAMAPARSE_API_KEY}"),
         "api_url": "https://api.llamaindex.ai",
         "timeout": 120,
         "max_retries": 3

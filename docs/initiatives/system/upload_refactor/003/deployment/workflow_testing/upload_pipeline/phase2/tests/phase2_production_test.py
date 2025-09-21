@@ -31,8 +31,8 @@ TEST_USER_ID = "766e8693-7fd5-465e-9ee4-4a9b3a696480"  # Same as Phase 1
 # Production Supabase configuration
 PRODUCTION_CONFIG = {
     "SUPABASE_URL": "https://znvwzkdblknkkztqyfnu.supabase.co",
-    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpudnd6a2RibGtua2t6dHF5Zm51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2ODA0NTYsImV4cCI6MjA2NzI1NjQ1Nn0.k0QHYOgm4EilyyTml57kCGDpbikpEtJCzq-qzGYQZqY",
-    "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpudnd6a2RibGtua2t6dHF5Zm51Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTY4MDQ1NiwiZXhwIjoyMDY3MjU2NDU2fQ.9Urox9-xr5TJz8a9LbSZsGUMcSTThc3QM6XDMJD-j-o",
+    "SUPABASE_ANON_KEY": "${SUPABASE_JWT_TOKEN}",
+    "SUPABASE_SERVICE_ROLE_KEY": "${SUPABASE_JWT_TOKEN}",
     "DATABASE_URL": "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres"
 }
 

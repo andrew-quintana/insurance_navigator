@@ -45,11 +45,11 @@
           "email": "phase3-test-1757195710@example.com",
           "name": "Phase 3 Test User"
         },
-        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJtaW5pbWFsXzIzYTc2ZTE1OTMxMmRiODY3MjBkNDg2MzAxODU0OWE4IiwiZW1haWwiOiJwaGFzZTMtdGVzdC0xNzU3MTk1NzEwQGV4YW1wbGUuY29tIiwiZXhwIjoxNzU3MjgyMTExLCJpYXQiOjE3NTcxOTU3MTEsImlzcyI6Imluc3VyYW5jZS1uYXZpZ2F0b3ItbWluaW1hbC1hdXRoIiwiYXVkIjoiaW5zdXJhbmNlLW5hdmlnYXRvci11c2VycyJ9.mVm0M413zFc5YxXiGUTFI84gsD2OWS45FaLLh4qNN1Y",
+        "access_token": "${SUPABASE_JWT_TOKEN}",
         "token_type": "bearer"
       },
       "login_response": {
-        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJtaW5pbWFsXzk1MWU2ZmRmNzUwODNkNDY4M2U0NzBiZTFlZTczZDU5IiwiZW1haWwiOiJwaGFzZTMtdGVzdC0xNzU3MTk1NzEwQGV4YW1wbGUuY29tIiwiZXhwIjoxNzU3MjgyMTEyLCJpYXQiOjE3NTcxOTU3MTIsImlzcyI6Imluc3VyYW5jZS1uYXZpZ2F0b3ItbWluaW1hbC1hdXRoIiwiYXVkIjoiaW5zdXJhbmNlLW5hdmlnYXRvci11c2VycyJ9.Aa0OOsnLx9I_wPtYZlDwXaLfuG-c3DGhGwhSTpgVJK0",
+        "access_token": "${SUPABASE_JWT_TOKEN}",
         "token_type": "bearer",
         "user": {
           "id": "minimal_951e6fdf75083d4683e470be1ee73d59",

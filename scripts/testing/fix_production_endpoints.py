@@ -22,7 +22,7 @@ def setup_environment_override():
     
     # Set the correct environment variables that match docker-compose.yml
     os.environ['UPLOAD_PIPELINE_SUPABASE_URL'] = 'http://localhost:54321'
-    os.environ['UPLOAD_PIPELINE_SUPABASE_SERVICE_ROLE_KEY'] = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJmcKHUkt3pV/LC87Dkk='
+    os.environ['UPLOAD_PIPELINE_SUPABASE_SERVICE_ROLE_KEY'] = '${SUPABASE_JWT_TOKEN}/LC87Dkk='
     os.environ['UPLOAD_PIPELINE_LLAMAPARSE_API_URL'] = 'http://localhost:8001'
     os.environ['UPLOAD_PIPELINE_OPENAI_API_URL'] = 'http://localhost:8002'
     os.environ['UPLOAD_PIPELINE_ENVIRONMENT'] = 'development'
@@ -38,7 +38,7 @@ def generate_valid_jwt_token():
     print("\n🔐 Generating valid JWT token for production endpoints...")
     
     supabase_url = "http://localhost:54321"
-    service_role_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJmcKHUkt3pV/LC87Dkk="
+    service_role_key = "${SUPABASE_JWT_TOKEN}/LC87Dkk="
     
     payload = {
         "sub": str(uuid.uuid4()),

@@ -63,41 +63,7 @@ Phase C testing has been enhanced to support **local backend with production Sup
 ### Database: Production Supabase
 - **Supabase URL**: `https://znvwzkdblknkkztqyfnu.supabase.co`
 - **Database URL**: `postgresql://postgres:<REDACTED>@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres`
-- **Pooler URL**: `postgresql://postgres.znvwzkdblknkkztqyfnu:<REDACTED>@aws-0-us-west-1.pooler.supabase.com:6543/postgres`
-
-### Environment Variables
-The test script automatically configures:
-- `SUPABASE_URL`: Production Supabase URL
-- `SUPABASE_ANON_KEY`: Production Supabase anonymous key
-- `SUPABASE_SERVICE_ROLE_KEY`: Production Supabase service role key
-- `DATABASE_URL`: Production database connection string
-- `API_BASE_URL`: Local backend API URL
-- `OPENAI_API_KEY`: OpenAI API key for testing
-- `LLAMAPARSE_API_KEY`: LlamaParse API key for testing
-
----
-
-## 🚀 Usage Instructions
-
-### Quick Start
-```bash
-# 1. Start local backend
-python main.py
-
-# 2. Run Phase C tests with local backend + production Supabase
-python run_phase_c_local_prod_tests.py
-
-# 3. Run with verbose output for debugging
-python run_phase_c_local_prod_tests.py --verbose
-
-# 4. Show help and examples
-python run_phase_c_local_prod_tests.py --help-examples
-```
-
-### Prerequisites Check
-```bash
-# Check if local backend is running
-curl -f http://localhost:8000/health
+- **Pooler URL**: `${DATABASE_URL}//localhost:8000/health
 
 # Check if production Supabase is accessible
 python -c "import asyncpg; import asyncio; asyncio.run(asyncpg.connect('postgresql://postgres:<REDACTED>@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres'))"

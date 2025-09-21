@@ -49,8 +49,8 @@ config/environments/
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `SUPABASE_URL` | Supabase project URL | `https://project.supabase.co` |
-| `SUPABASE_ANON_KEY` | Supabase anonymous key | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` |
+| `SUPABASE_ANON_KEY` | Supabase anonymous key | `${SUPABASE_JWT_TOKEN}` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | `${SUPABASE_JWT_TOKEN}` |
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:port/db` |
 
 #### Frontend Variables (Vercel)

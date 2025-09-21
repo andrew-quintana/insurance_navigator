@@ -67,7 +67,7 @@ def test_auth_header_construction():
     print("\n🔑 Testing Auth Header Construction")
     print("=" * 40)
     
-    test_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test"
+    test_token = "${SUPABASE_JWT_TOKEN}"
     
     # Test different header formats
     formats = [

@@ -18,28 +18,7 @@ async def test_worker_job_processing():
     """Test if worker service can process jobs"""
     
     # Database connection
-    database_url = os.getenv('POOLER_URL', 'postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres?sslmode=require')
-    
-    print("🔍 Testing worker job processing...")
-    print(f"📊 Database URL: {database_url[:50]}...")
-    
-    try:
-        # Connect to database
-        conn = await asyncpg.connect(database_url, statement_cache_size=0)
-        print("✅ Connected to database successfully")
-        
-        # Create a test document record
-        document_id = str(uuid.uuid4())
-        user_id = "e6114f0c-df44-41e6-a5df-33d69f95bab1"  # Existing user ID
-        
-        print(f"📄 Creating test document: {document_id}")
-        
-        # Insert document record
-        file_hash = f"test_hash_{uuid.uuid4().hex[:8]}"
-        await conn.execute("""
-            INSERT INTO upload_pipeline.documents (document_id, user_id, filename, mime, bytes_len, file_sha256, raw_path, processing_status, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        """, document_id, user_id, "test_worker_processing.pdf", "application/pdf", 1024, file_hash, "files/test/worker_test.pdf", "uploaded", datetime.utcnow(), datetime.utcnow())
+    database_url = os.getenv('POOLER_URL', '${DATABASE_URL}/pdf", 1024, file_hash, "files/test/worker_test.pdf", "uploaded", datetime.utcnow(), datetime.utcnow())
         
         # Insert upload job record
         await conn.execute("""

@@ -55,35 +55,7 @@ The staging worker service is now in a fully conforming state as a component. Al
 - No network connectivity issues with pooler URL
 
 **Connection Details**:
-- **URL**: `postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres`
-- **Pool Size**: 5-20 connections
-- **Status**: Active and healthy
-
-### 3. Configuration Parsing ✅
-
-**Test**: Verify all environment variables are parsed correctly  
-**Result**: ✅ **PASS**
-
-**Evidence**:
-```
-Enhanced worker configuration loaded and validated, config_keys=['database_url', 'supabase_url', 'supabase_anon_key', 'supabase_service_role_key', 'llamaparse_api_url', 'llamaparse_api_key', 'openai_api_url', 'openai_api_key', 'openai_model', 'poll_interval', 'max_retries', 'retry_base_delay', 'openai_requests_per_minute', 'openai_tokens_per_minute', 'openai_max_batch_size', 'failure_threshold', 'recovery_timeout', 'log_level', 'terminal_stage', 'use_mock_storage']
-```
-
-**Configuration Status**:
-- ✅ All 20 configuration keys loaded successfully
-- ✅ No type conversion errors
-- ✅ Environment variables properly formatted
-
-### 4. Job Processing Pipeline ✅
-
-**Test**: Verify worker actively processes jobs from the queue  
-**Result**: ✅ **PASS**
-
-**Evidence**:
-```
-2025-09-20 18:39:27,800 - Processing job with enhanced error handling
-2025-09-20 18:39:27,800 - Delegating document parsing to LlamaParse service
-2025-09-20 18:39:27,972 - Generated webhook URL: https://insurance-navigator-api.onrender.com/api/upload-pipeline/webhook/llamaparse/31bf04eb-441f-4f97-855f-c3946a4e5512
+- **URL**: `${DATABASE_URL}//insurance-navigator-api.onrender.com/api/upload-pipeline/webhook/llamaparse/31bf04eb-441f-4f97-855f-c3946a4e5512
 ```
 
 **Processing Capabilities**:

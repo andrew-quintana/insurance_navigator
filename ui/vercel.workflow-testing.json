@@ -32,7 +32,7 @@
   "build": {
     "env": {
       "NEXT_PUBLIC_SUPABASE_URL": "https://znvwzkdblknkkztqyfnu.supabase.co",
-      "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpudnd6a2RibGtua2t6dHF5Zm51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2ODA0NTYsImV4cCI6MjA2NzI1NjQ1Nn0.k0QHYOgm4EilyyTml57kCGDpbikpEtJCzq-qzGYQZqY",
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY": "${SUPABASE_JWT_TOKEN}",
       "NEXT_PUBLIC_API_URL": "https://insurance-navigator-api.onrender.com",
       "NEXT_PUBLIC_API_BASE_URL": "https://insurance-navigator-api.onrender.com",
       "FRONTEND_HEALTH_CHECK_ENABLED": "true"
