@@ -29,6 +29,18 @@ python-dotenv==1.0.1
 # OpenAI for embeddings (used by RAG system)
 openai==1.108.1
 
+# ========== DATABASE CLIENT - ESSENTIAL ==========
+# Supabase client for database operations
+supabase>=2.3.0
+
+# ========== HTTP CLIENT - ESSENTIAL ==========
+# HTTP client for external API calls
+httpx>=0.25.0
+
+# ========== RETRY LOGIC - ESSENTIAL ==========
+# Retry logic for database connections
+tenacity>=8.2.0
+
 # ========== OPTIONAL DEPENDENCIES - NOT NEEDED FOR STARTUP ==========
 # Testing
 pytest==8.3.5
