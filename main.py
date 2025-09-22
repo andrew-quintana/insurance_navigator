@@ -1184,11 +1184,9 @@ async def chat_with_agent(
                 detail="Chat service temporarily unavailable - import error"
             )
         
-        # Initialize chat interface (singleton pattern for efficiency)
-        if not hasattr(chat_with_agent, '_chat_interface'):
-            chat_with_agent._chat_interface = PatientNavigatorChatInterface()
-        
-        chat_interface = chat_with_agent._chat_interface
+        # Create fresh chat interface instance for each request to ensure isolation
+        # This prevents state contamination between different user requests
+        chat_interface = PatientNavigatorChatInterface()
         
         # Create ChatMessage object
         # Use the authenticated user's ID
