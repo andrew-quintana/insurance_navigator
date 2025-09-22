@@ -58,6 +58,14 @@ def _get_claude_haiku_llm():
                 elif content.startswith("```"):
                     content = content.split("```")[1].split("```")[0].strip()
                 
+                # Try to find JSON object in the response if it's not at the start
+                if not content.startswith('{'):
+                    # Look for JSON object pattern
+                    import re
+                    json_match = re.search(r'\{.*\}', content, re.DOTALL)
+                    if json_match:
+                        content = json_match.group(0).strip()
+                
                 # Validate that we have valid JSON
                 try:
                     import json
@@ -109,14 +117,23 @@ def _get_claude_haiku_llm():
                     
                     # If all else fails, create a fallback response
                     logging.error("Could not extract valid JSON from Claude Haiku response, creating fallback")
+                    
+                    # Clean up the content for better fallback response
+                    cleaned_content = content.strip()
+                    if cleaned_content.startswith('```'):
+                        # Remove markdown formatting
+                        cleaned_content = cleaned_content.split('```')[1].split('```')[0].strip()
+                    
+                    # Use the full content, not truncated
                     fallback_response = {
-                        "enhanced_content": f"Based on the information provided: {content[:200]}...",
+                        "enhanced_content": f"Based on the information provided: {cleaned_content}",
                         "original_sources": ["unknown"],
                         "processing_time": 0.0,
                         "metadata": {
                             "fallback_created": True,
-                            "original_response": content[:500],
-                            "error": "Invalid JSON format"
+                            "original_response": cleaned_content,
+                            "error": "Invalid JSON format",
+                            "content_length": len(cleaned_content)
                         }
                     }
                     return json.dumps(fallback_response)
