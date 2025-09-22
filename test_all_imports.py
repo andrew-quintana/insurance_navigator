@@ -46,7 +46,7 @@ def main():
         ("pandas", "pandas"),
         ("scipy", "scipy"),
         ("sklearn", "scikit-learn"),
-        ("sentence_transformers", "sentence-transformers"),
+        ("sentence_transformers", "sentence-transformers"),  # Only available in testing environment
         ("langchain", "langchain"),
         ("llama_index", "llama-index"),
     ]

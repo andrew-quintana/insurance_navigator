@@ -20,7 +20,7 @@ ENV PIP_NO_CACHE_DIR=1
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Copy and install requirements as separate layer for better caching
-COPY --chown=app:app requirements.txt /tmp/requirements.txt
+COPY --chown=app:app requirements-api.txt /tmp/requirements.txt
 COPY --chown=app:app constraints.txt /tmp/constraints.txt
 USER app
 # Use constraints file to force exact pydantic versions
