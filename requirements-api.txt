@@ -31,6 +31,26 @@ python-dotenv==1.0.1
 # OpenAI for embeddings (used by RAG system)
 openai==1.108.1
 
+# Anthropic for Claude LLM integration (used by chat interface)
+anthropic>=0.8.0
+
+# LangChain ecosystem for AI workflows
+langchain>=0.1.0
+langgraph>=0.0.15
+langchain-anthropic>=0.1.0
+langchain-community>=0.0.10
+langchain-core>=0.1.0
+langsmith>=0.0.69
+
+# Sentence transformers for embeddings
+sentence-transformers>=2.2.2
+
+# PyTorch for sentence transformers (CPU-only for production)
+torch>=2.0.0,<3.0.0
+
+# NumPy for numerical operations
+numpy>=1.24.0
+
 # ========== DATABASE CLIENT - ESSENTIAL ==========
 # Supabase client for database operations
 supabase>=2.3.0
