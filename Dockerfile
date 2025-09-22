@@ -21,11 +21,11 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Copy and install requirements as separate layer for better caching
 COPY --chown=app:app requirements.txt /tmp/requirements.txt
+COPY --chown=app:app constraints.txt /tmp/constraints.txt
 USER app
-# Install pydantic first to prevent conflicts, then install everything else
+# Use constraints file to force exact pydantic versions
 RUN --mount=type=cache,target=/home/app/.cache/pip,sharing=locked \
-    pip install --user --no-warn-script-location --no-cache-dir --force-reinstall pydantic==2.5.0 pydantic-core==2.18.2 && \
-    pip install --user --no-warn-script-location --no-cache-dir --force-reinstall -r /tmp/requirements.txt
+    pip install --user --no-warn-script-location --no-cache-dir --force-reinstall -r /tmp/requirements.txt -c /tmp/constraints.txt
 
 # Final stage - smaller image
 FROM python:3.11-slim
