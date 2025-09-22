@@ -7,6 +7,7 @@ fastapi==0.110.0
 uvicorn[standard]==0.27.1
 python-multipart==0.0.9
 pydantic==2.5.0
+pydantic-settings==2.1.0
 
 # Database - Essential
 asyncpg==0.29.0
