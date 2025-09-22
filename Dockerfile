@@ -20,7 +20,7 @@ ENV PIP_NO_CACHE_DIR=1
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Copy and install requirements as separate layer for better caching
-COPY --chown=app:app config/python/requirements-prod.txt /tmp/requirements.txt
+COPY --chown=app:app requirements.txt /tmp/requirements.txt
 USER app
 RUN --mount=type=cache,target=/home/app/.cache/pip,sharing=locked \
     pip install --user --no-warn-script-location -r /tmp/requirements.txt
