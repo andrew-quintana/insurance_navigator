@@ -3,7 +3,7 @@ services:
     name: upload-pipeline-worker
     env: docker
     plan: starter
-    dockerfilePath: ./Dockerfile.upload-pipeline-worker
+    dockerfilePath: ./backend/workers/Dockerfile
     region: oregon
     branch: main
     # Worker-specific settings for upload pipeline API
@@ -37,6 +37,8 @@ services:
       - key: SECURITY_BYPASS_ENABLED
         value: false
       - key: API_BASE_URL
+        value: ***REMOVED***
+      - key: WEBHOOK_BASE_URL
         value: ***REMOVED***
       # Upload pipeline specific settings
       - key: UPLOAD_PIPELINE_ENVIRONMENT
