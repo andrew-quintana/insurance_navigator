@@ -12,7 +12,7 @@ def get_cors_config() -> Dict[str, Any]:
     allowed_origins = [
             "http://localhost:3000",
             "https://insurance-navigator.vercel.app",  # Production Vercel URL
-        "https://api-service-production.onrender.com",  # Add Render API
+        "***REMOVED***",  # Add Render API
         "https://insurance-navigator-*.vercel.app",  # More permissive pattern for Vercel previews
         "https://*-andrew-quintanas-projects.vercel.app",  # Handle all user preview URLs
         # Specific preview URLs
