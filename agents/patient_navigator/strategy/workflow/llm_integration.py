@@ -49,7 +49,11 @@ class LLMIntegration:
             if not api_key:
                 raise ValueError("OpenAI API key not provided and OPENAI_API_KEY not set in environment")
             
-            self.client = AsyncOpenAI(api_key=api_key)
+            self.client = AsyncOpenAI(
+                api_key=api_key,
+                max_retries=3,
+                timeout=30.0
+            )
             self.logger.info("Initialized OpenAI client for real API calls (Claude 4 Haiku for completions, OpenAI for embeddings)")
         else:
             self.logger.info("Using mock responses for LLM integration")
@@ -142,7 +146,8 @@ class LLMIntegration:
             start_time = time.time()
             response = await self.client.embeddings.create(
                 model=model,
-                input=text
+                input=text,
+                encoding_format="float"
             )
             
             # Record request time for rate limiting

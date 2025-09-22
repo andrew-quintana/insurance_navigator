@@ -288,20 +288,36 @@ class RAGTool:
                 self.logger.error("OPENAI_API_KEY not found - RAG will not work properly")
                 raise ValueError("OPENAI_API_KEY is required for RAG functionality")
             
-            # Initialize OpenAI client with better error handling
+            # Initialize OpenAI client with Pydantic v2 compatibility
             client = AsyncOpenAI(
                 api_key=api_key,
                 max_retries=5,
                 timeout=60.0
             )
             
-            # Generate real OpenAI embedding with explicit error handling
+            # Generate real OpenAI embedding with Pydantic error handling
             self.logger.info(f"Generating embedding for text: {text[:100]}...")
-            response = await client.embeddings.create(
-                model="text-embedding-3-small",
-                input=text,
-                encoding_format="float"
-            )
+            
+            try:
+                response = await client.embeddings.create(
+                    model="text-embedding-3-small",
+                    input=text,
+                    encoding_format="float"
+                )
+            except Exception as pydantic_error:
+                # Handle specific Pydantic v2 error pattern
+                if "Fields must not use names with leading underscores" in str(pydantic_error):
+                    self.logger.warning(f"Pydantic v2 compatibility issue detected: {pydantic_error}")
+                    self.logger.info("Attempting workaround with different client configuration...")
+                    
+                    # Try with minimal client configuration
+                    minimal_client = AsyncOpenAI(api_key=api_key)
+                    response = await minimal_client.embeddings.create(
+                        model="text-embedding-3-small",
+                        input=text
+                    )
+                else:
+                    raise pydantic_error
             
             embedding = response.data[0].embedding
             self.logger.info(f"Successfully generated embedding: {len(embedding)} dimensions")
