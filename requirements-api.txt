@@ -29,6 +29,16 @@ python-dotenv==1.0.1
 # OpenAI for embeddings (used by RAG system)
 openai==1.108.1
 
+# ========== AGENT FRAMEWORK - ESSENTIAL ==========
+# LangChain and LangGraph for agent orchestration
+langchain>=0.1.0
+langgraph>=0.0.15
+langchain-anthropic>=0.1.0
+langchain-community>=0.0.10
+langchain-core>=0.1.0
+langsmith>=0.0.69
+anthropic>=0.8.0
+
 # ========== DATABASE CLIENT - ESSENTIAL ==========
 # Supabase client for database operations
 supabase>=2.3.0
