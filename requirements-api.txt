@@ -1,0 +1,69 @@
+# ========== API SERVICE REQUIREMENTS ==========
+# Core dependencies for the main API service
+
+# ========== CORE DEPENDENCIES - ESSENTIAL FOR STARTUP ==========
+# API Framework - Keep minimal for fast startup
+fastapi==0.110.0
+uvicorn[standard]==0.27.1
+python-multipart==0.0.9
+pydantic==2.5.0
+
+# Database - Essential
+asyncpg==0.29.0
+SQLAlchemy==2.0.28
+psycopg2-binary==2.9.9
+
+# Security - Essential
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+cryptography==45.0.4
+
+# HTTP Client - Essential
+aiohttp>=3.8.0
+requests>=2.31.0
+
+# Environment - Essential
+python-dotenv==1.0.1
+
+# ========== AI/ML DEPENDENCIES - FOR RAG SYSTEM ==========
+# OpenAI for embeddings (used by RAG system)
+openai==1.108.1
+
+# ========== OPTIONAL DEPENDENCIES - NOT NEEDED FOR STARTUP ==========
+# Testing
+pytest==8.3.5
+pytest-asyncio==0.26.0
+pytest-cov==6.1.1
+pytest-mock==3.14.0
+
+# Database migrations (not needed for startup)
+alembic==1.13.1
+
+# Utilities
+pytz==2024.1
+psutil>=5.9.0
+
+# Web scraping
+beautifulsoup4>=4.12.0
+duckduckgo-search>=4.1.1
+wikipedia>=1.4.0
+
+# Development tools (not needed in production)
+black>=23.0.0
+isort>=5.12.0
+mypy>=1.0.0
+ruff>=0.1.0
+
+# Data analysis (not needed for startup)
+pandas>=2.0.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+jupyter>=1.0.0
+ipykernel>=6.25.0
+notebook>=7.0.0
+
+# New dependencies
+llama-parse>=0.1.1
+
+# Added from the code block
+backoff>=2.2.1
