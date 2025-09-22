@@ -1006,7 +1006,9 @@ async def startup_event():
             logger.info(f"✅ RAG tool initialized with similarity threshold: {rag_config.similarity_threshold}")
             
         except ImportError as e:
-            logger.warning(f"⚠️ RAG tool or chat interface import failed: {e}")
+            logger.error(f"❌ RAG tool or chat interface import failed: {e}")
+            import traceback
+            logger.error(f"Import error traceback: {traceback.format_exc()}")
             app.state.rag_tool = None
             app.state.rag_config = None
         
@@ -1129,20 +1131,57 @@ async def chat_with_agent(
                 detail="RAG service not available"
             )
         
-        # Import the chat interface using safe imports
-        from utils.import_utilities import (
-            safe_import_patient_navigator_chat_interface,
-            safe_import_chat_message
-        )
-        
-        PatientNavigatorChatInterface = safe_import_patient_navigator_chat_interface()
-        ChatMessage = safe_import_chat_message()
-        
-        if not PatientNavigatorChatInterface or not ChatMessage:
-            logger.error("Failed to import required chat interface classes")
+        # Import the chat interface using safe imports with detailed error logging
+        try:
+            from utils.import_utilities import (
+                safe_import_patient_navigator_chat_interface,
+                safe_import_chat_message
+            )
+            
+            logger.info("Attempting to import chat interface classes...")
+            PatientNavigatorChatInterface = safe_import_patient_navigator_chat_interface()
+            ChatMessage = safe_import_chat_message()
+            
+            logger.info(f"Import results - PatientNavigatorChatInterface: {PatientNavigatorChatInterface is not None}, ChatMessage: {ChatMessage is not None}")
+            
+            if not PatientNavigatorChatInterface or not ChatMessage:
+                logger.error("Failed to import required chat interface classes")
+                logger.error(f"PatientNavigatorChatInterface: {PatientNavigatorChatInterface}")
+                logger.error(f"ChatMessage: {ChatMessage}")
+                
+                # Try direct import to get the actual error
+                try:
+                    logger.info("Attempting direct import...")
+                    from agents.patient_navigator.chat_interface import PatientNavigatorChatInterface as DirectChatInterface
+                    from agents.patient_navigator.chat_interface import ChatMessage as DirectChatMessage
+                    logger.info("Direct import successful - safe import issue")
+                    # Use direct imports if safe imports failed
+                    PatientNavigatorChatInterface = DirectChatInterface
+                    ChatMessage = DirectChatMessage
+                except ImportError as direct_error:
+                    logger.error(f"Direct import failed: {direct_error}")
+                    import traceback
+                    logger.error(f"Direct import traceback: {traceback.format_exc()}")
+                    
+                    # Check if agents directory exists
+                    import os
+                    agents_path = os.path.join(os.getcwd(), 'agents')
+                    logger.error(f"Current working directory: {os.getcwd()}")
+                    logger.error(f"Agents directory exists: {os.path.exists(agents_path)}")
+                    if os.path.exists(agents_path):
+                        logger.error(f"Agents directory contents: {os.listdir(agents_path)}")
+                    
+                    raise HTTPException(
+                        status_code=500, 
+                        detail="Chat service temporarily unavailable - missing required components"
+                    )
+        except Exception as import_error:
+            logger.error(f"Error during chat interface import: {import_error}")
+            import traceback
+            logger.error(f"Import error traceback: {traceback.format_exc()}")
             raise HTTPException(
                 status_code=500, 
-                detail="Chat service temporarily unavailable - missing required components"
+                detail="Chat service temporarily unavailable - import error"
             )
         
         # Initialize chat interface (singleton pattern for efficiency)
