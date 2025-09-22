@@ -29,7 +29,8 @@ python-dotenv==1.0.1
 
 # ========== AI/ML DEPENDENCIES - FOR RAG SYSTEM ==========
 # OpenAI for embeddings (used by RAG system)
-openai==1.108.1
+# Using 1.100.0 to avoid Pydantic 2.5.0 underscore field naming issues
+openai==1.100.0
 
 # Anthropic for Claude LLM integration (used by chat interface)
 anthropic>=0.8.0
