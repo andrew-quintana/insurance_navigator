@@ -244,12 +244,17 @@ class RAGSystemDebugger:
         
         try:
             import openai
-            client = openai.AsyncOpenAI(api_key=openai_key)
+            client = openai.AsyncOpenAI(
+                api_key=openai_key,
+                max_retries=3,
+                timeout=30.0
+            )
             
             # Test with a simple embedding
             response = await client.embeddings.create(
                 model="text-embedding-3-small",
-                input="test"
+                input="test",
+                encoding_format="float"
             )
             
             embedding = response.data[0].embedding
