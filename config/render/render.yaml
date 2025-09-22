@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: api-service-production
+    name: insurance-navigator-api
     env: docker
     plan: starter
     dockerfilePath: ./Dockerfile
@@ -42,7 +42,7 @@ services:
       - key: SECURITY_BYPASS_ENABLED
         value: false
       - key: API_BASE_URL
-        value: https://api-service-production.onrender.com
+        value: https://insurance-navigator-api.onrender.com
       # Render startup optimizations
       - key: PYTHONUNBUFFERED
         value: "1"
@@ -99,9 +99,9 @@ services:
       - key: SECURITY_BYPASS_ENABLED
         value: false
       - key: API_BASE_URL
-        value: https://api-service-production.onrender.com
+        value: https://insurance-navigator-api.onrender.com
       - key: WEBHOOK_BASE_URL
-        value: https://api-service-production.onrender.com
+        value: https://insurance-navigator-api.onrender.com
       # Worker optimizations
       - key: PYTHONUNBUFFERED
         value: "1"
