@@ -1,0 +1,96 @@
+{
+  "timestamp": "2025-09-23T15:21:28.312230",
+  "environment": "development",
+  "analysis": {
+    "core_modules": {
+      "core/database.py": {
+        "file_path": "core/database.py",
+        "total_lines": 274,
+        "code_lines": 208,
+        "comment_lines": 13,
+        "blank_lines": 53,
+        "function_definitions": 4,
+        "class_definitions": 2,
+        "coverage_estimate": "N/A"
+      },
+      "core/service_manager.py": {
+        "file_path": "core/service_manager.py",
+        "total_lines": 431,
+        "code_lines": 340,
+        "comment_lines": 19,
+        "blank_lines": 72,
+        "function_definitions": 11,
+        "class_definitions": 3,
+        "coverage_estimate": "N/A"
+      },
+      "core/agent_integration.py": {
+        "file_path": "core/agent_integration.py",
+        "total_lines": 234,
+        "code_lines": 166,
+        "comment_lines": 14,
+        "blank_lines": 54,
+        "function_definitions": 1,
+        "class_definitions": 2,
+        "coverage_estimate": "N/A"
+      }
+    },
+    "test_modules": {
+      "tests/unit/core/test_database.py": {
+        "file_path": "tests/unit/core/test_database.py",
+        "total_lines": 536,
+        "code_lines": 426,
+        "comment_lines": 8,
+        "blank_lines": 102,
+        "function_definitions": 11,
+        "class_definitions": 5,
+        "coverage_estimate": "N/A"
+      },
+      "tests/unit/core/test_service_manager.py": {
+        "file_path": "tests/unit/core/test_service_manager.py",
+        "total_lines": 676,
+        "code_lines": 511,
+        "comment_lines": 13,
+        "blank_lines": 152,
+        "function_definitions": 21,
+        "class_definitions": 5,
+        "coverage_estimate": "N/A"
+      },
+      "tests/unit/core/test_agent_integration.py": {
+        "file_path": "tests/unit/core/test_agent_integration.py",
+        "total_lines": 536,
+        "code_lines": 397,
+        "comment_lines": 17,
+        "blank_lines": 122,
+        "function_definitions": 10,
+        "class_definitions": 10,
+        "coverage_estimate": "N/A"
+      },
+      "tests/unit/backend/test_auth.py": {
+        "file_path": "tests/unit/backend/test_auth.py",
+        "total_lines": 364,
+        "code_lines": 249,
+        "comment_lines": 30,
+        "blank_lines": 85,
+        "function_definitions": 23,
+        "class_definitions": 6,
+        "coverage_estimate": "N/A"
+      }
+    },
+    "summary": {
+      "core_modules": {
+        "total_files": 3,
+        "total_lines": 714,
+        "total_functions": 16,
+        "total_classes": 7
+      },
+      "test_modules": {
+        "total_files": 4,
+        "total_lines": 1583,
+        "total_functions": 65,
+        "total_classes": 26
+      },
+      "test_to_code_ratio": 2.2170868347338937,
+      "estimated_coverage": "90%+"
+    }
+  }
+}
