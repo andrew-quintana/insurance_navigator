@@ -1,0 +1,160 @@
+{
+  "timestamp": "2025-09-23T16:26:08.986310",
+  "environment": "vercel_cli_component_testing",
+  "summary": {
+    "total_tests": 5,
+    "passed_tests": 3,
+    "partial_tests": 2,
+    "error_tests": 0,
+    "success_rate": 60.0
+  },
+  "test_results": [
+    {
+      "test_name": "vercel_cli_installation",
+      "platform": "vercel",
+      "environment": "development",
+      "start_time": "2025-09-23T16:25:53.107337",
+      "status": "passed",
+      "details": "Vercel CLI installation: 2/2 tests passed",
+      "test_results": [
+        {
+          "test": "vercel_cli_installed",
+          "success": true,
+          "details": "Vercel CLI installed: 42.3.0"
+        },
+        {
+          "test": "vercel_project_initialized",
+          "success": true,
+          "details": "Vercel project is initialized (.vercel directory exists)"
+        }
+      ],
+      "end_time": "2025-09-23T16:25:53.342945"
+    },
+    {
+      "test_name": "vercel_environment_configuration",
+      "platform": "vercel",
+      "environment": "development",
+      "start_time": "2025-09-23T16:25:53.343004",
+      "status": "passed",
+      "details": "Vercel environment configuration: 7/7 tests passed",
+      "test_results": [
+        {
+          "test": "env_file__env_local",
+          "success": true,
+          "details": "Environment file .env.local exists"
+        },
+        {
+          "test": "env_file__env_production",
+          "success": true,
+          "details": "Environment file .env.production exists"
+        },
+        {
+          "test": "env_file__env_example",
+          "success": true,
+          "details": "Environment file .env.example exists"
+        },
+        {
+          "test": "vercel_config_exists",
+          "success": true,
+          "details": "vercel.json configuration file exists"
+        },
+        {
+          "test": "vercel_config_buildCommand",
+          "success": true,
+          "details": "vercel.json contains buildCommand"
+        },
+        {
+          "test": "vercel_config_outputDirectory",
+          "success": true,
+          "details": "vercel.json contains outputDirectory"
+        },
+        {
+          "test": "vercel_config_framework",
+          "success": true,
+          "details": "vercel.json contains framework"
+        }
+      ],
+      "end_time": "2025-09-23T16:25:53.343895"
+    },
+    {
+      "test_name": "vercel_build_process",
+      "platform": "vercel",
+      "environment": "development",
+      "start_time": "2025-09-23T16:25:53.343912",
+      "status": "partial",
+      "details": "Vercel build process: 2/3 tests passed",
+      "test_results": [
+        {
+          "test": "npm_build_success",
+          "success": true,
+          "details": "npm run build completed successfully"
+        },
+        {
+          "test": "build_output_exists",
+          "success": true,
+          "details": "Build output directory .next exists"
+        },
+        {
+          "test": "vercel_build_command",
+          "success": false,
+          "details": "Vercel build command: failed"
+        }
+      ],
+      "end_time": "2025-09-23T16:26:01.938676"
+    },
+    {
+      "test_name": "vercel_cli_commands",
+      "platform": "vercel",
+      "environment": "development",
+      "start_time": "2025-09-23T16:26:01.938720",
+      "status": "partial",
+      "details": "Vercel CLI commands: 2/3 tests passed",
+      "test_results": [
+        {
+          "test": "vercel_help_command",
+          "success": false,
+          "details": "vercel --help: failed"
+        },
+        {
+          "test": "vercel_whoami_command",
+          "success": true,
+          "details": "vercel whoami: authenticated"
+        },
+        {
+          "test": "vercel_env_ls_command",
+          "success": true,
+          "details": "vercel env ls: success"
+        }
+      ],
+      "end_time": "2025-09-23T16:26:03.212889"
+    },
+    {
+      "test_name": "vercel_local_development",
+      "platform": "vercel",
+      "environment": "development",
+      "start_time": "2025-09-23T16:26:03.212946",
+      "status": "passed",
+      "details": "Vercel local development: 3/3 tests passed",
+      "test_results": [
+        {
+          "test": "vercel_dev_server_start",
+          "success": true,
+          "details": "Vercel dev server started successfully on port 3001"
+        },
+        {
+          "test": "vercel_root_endpoint",
+          "success": true,
+          "status_code": 200,
+          "response_time_ms": 55.677
+        },
+        {
+          "test": "vercel_api_routes",
+          "success": true,
+          "status_code": 404,
+          "response_time_ms": 509.15200000000004
+        }
+      ],
+      "end_time": "2025-09-23T16:26:08.986256"
+    }
+  ]
+}

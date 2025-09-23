@@ -16,6 +16,7 @@ from typing import List, Optional, Any, Dict
 from dataclasses import dataclass, field
 import asyncpg
 import logging
+from datetime import datetime
 from .observability import RAGPerformanceMonitor, threshold_manager
 
 # --- RetrievalConfig ---
@@ -335,7 +336,91 @@ class RAGTool:
     
     def _validate_embedding(self, embedding: List[float], source: str) -> bool:
         """
-        Validate embedding quality and characteristics.
+        Enhanced embedding validation with comprehensive issue detection.
+        
+        Args:
+            embedding: The embedding to validate
+            source: Source of the embedding (e.g., "query", "document")
+        Returns:
+            True if embedding is valid, False otherwise
+        """
+        # Import validator here to avoid circular imports
+        try:
+            from backend.shared.validation.embedding_validator import EmbeddingValidator, EmbeddingIssueType
+            from backend.shared.monitoring.embedding_monitor import EmbeddingQualityMonitor
+        except ImportError:
+            # Fallback to basic validation if modules not available
+            return self._basic_validate_embedding(embedding, source)
+        
+        # Use enhanced validator
+        validator = EmbeddingValidator()
+        monitor = EmbeddingQualityMonitor(validator=validator)
+        
+        source_info = {
+            "source": source,
+            "user_id": self.user_id,
+            "context": self.context,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+        try:
+            # Validate embedding with comprehensive checks
+            result = validator.validate_embedding(embedding, source_info)
+            
+            if not result.is_valid:
+                # Log detailed error information
+                self.logger.error(
+                    f"EMBEDDING_VALIDATION_FAILED: {result.issue_type.value} from {source}",
+                    extra={
+                        "issue_type": result.issue_type.value,
+                        "severity": result.severity,
+                        "details": result.details,
+                        "confidence": result.confidence,
+                        "metrics": result.metrics,
+                        "recommendations": result.recommendations,
+                        "source_info": source_info
+                    }
+                )
+                
+                # Handle critical issues that should be raised as errors
+                if result.severity == "critical":
+                    if result.issue_type == EmbeddingIssueType.ALL_ZEROS:
+                        raise ValueError(f"ZERO_EMBEDDING_DETECTED: All embedding values are zero from {source}. This indicates a critical failure in embedding generation.")
+                    elif result.issue_type == EmbeddingIssueType.MOSTLY_ZEROS:
+                        raise ValueError(f"MOSTLY_ZERO_EMBEDDING_DETECTED: {result.metrics.get('zero_fraction', 0)*100:.1f}% of embedding values are zero from {source}. This suggests partial failure in embedding generation.")
+                    elif result.issue_type == EmbeddingIssueType.INVALID_DIMENSIONS:
+                        raise ValueError(f"INVALID_EMBEDDING_DIMENSIONS: Expected 1536 dimensions, got {result.metrics.get('actual_dimension', 'unknown')} from {source}.")
+                    elif result.issue_type in [EmbeddingIssueType.NAN_VALUES, EmbeddingIssueType.INFINITE_VALUES]:
+                        raise ValueError(f"INVALID_EMBEDDING_VALUES: Embedding contains NaN or infinite values from {source}.")
+                
+                return False
+            
+            # Log successful validation for monitoring
+            self.logger.debug(
+                f"Embedding validation successful from {source}",
+                extra={
+                    "metrics": result.metrics,
+                    "quality_indicators": {
+                        "zero_fraction": result.metrics.get("zero_fraction", 0),
+                        "variance": result.metrics.get("variance", 0),
+                        "max_abs_value": result.metrics.get("max_abs_value", 0)
+                    }
+                }
+            )
+            
+            return True
+            
+        except Exception as e:
+            # Log validation error and fall back to basic validation
+            self.logger.warning(
+                f"Enhanced embedding validation failed, falling back to basic validation: {str(e)}",
+                extra={"source": source, "error": str(e)}
+            )
+            return self._basic_validate_embedding(embedding, source)
+    
+    def _basic_validate_embedding(self, embedding: List[float], source: str) -> bool:
+        """
+        Basic embedding validation (fallback implementation).
         
         Args:
             embedding: The embedding to validate
@@ -344,21 +429,40 @@ class RAGTool:
             True if embedding is valid, False otherwise
         """
         if not embedding:
-            self.logger.error(f"Empty embedding from {source}")
+            self.logger.error(f"EMPTY_EMBEDDING: Empty embedding from {source}")
             return False
         
         if len(embedding) != 1536:
-            self.logger.error(f"Wrong embedding dimension: {len(embedding)} (expected 1536) from {source}")
+            self.logger.error(f"WRONG_EMBEDDING_DIMENSION: Expected 1536, got {len(embedding)} from {source}")
             return False
         
-        # Check for mock embedding characteristics (all zeros or very small values)
-        if all(abs(x) < 1e-6 for x in embedding):
-            self.logger.error(f"Mock embedding detected from {source}")
-            return False
+        # Check for all zeros (critical issue)
+        if all(abs(x) < 1e-10 for x in embedding):
+            self.logger.error(f"ZERO_EMBEDDING_DETECTED: All embedding values are zero from {source}")
+            raise ValueError(f"ZERO_EMBEDDING_DETECTED: All embedding values are zero from {source}. This indicates a critical failure in embedding generation.")
         
-        # Check for reasonable value ranges
-        if max(embedding) > 10 or min(embedding) < -10:
-            self.logger.warning(f"Unusual embedding values from {source}: min={min(embedding):.3f}, max={max(embedding):.3f}")
+        # Check for mostly zeros (critical issue)
+        zero_count = sum(1 for x in embedding if abs(x) < 1e-10)
+        zero_fraction = zero_count / len(embedding)
+        if zero_fraction > 0.95:
+            self.logger.error(f"MOSTLY_ZERO_EMBEDDING: {zero_fraction*100:.1f}% of values are zero from {source}")
+            raise ValueError(f"MOSTLY_ZERO_EMBEDDING_DETECTED: {zero_fraction*100:.1f}% of embedding values are zero from {source}. This suggests partial failure in embedding generation.")
+        
+        # Check for NaN or infinite values
+        import math
+        for i, val in enumerate(embedding):
+            if math.isnan(val):
+                self.logger.error(f"NAN_VALUE_DETECTED: NaN found at index {i} from {source}")
+                raise ValueError(f"NAN_VALUE_DETECTED: Embedding contains NaN values from {source}")
+            if math.isinf(val):
+                self.logger.error(f"INFINITE_VALUE_DETECTED: Infinite value found at index {i} from {source}")
+                raise ValueError(f"INFINITE_VALUE_DETECTED: Embedding contains infinite values from {source}")
+        
+        # Check for reasonable value ranges (warning level)
+        max_val = max(embedding)
+        min_val = min(embedding)
+        if max_val > 10 or min_val < -10:
+            self.logger.warning(f"UNUSUAL_EMBEDDING_VALUES: Extreme values from {source}: min={min_val:.3f}, max={max_val:.3f}")
         
         return True
 

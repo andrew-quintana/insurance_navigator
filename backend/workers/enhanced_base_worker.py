@@ -965,6 +965,20 @@ class EnhancedBaseWorker:
             batch_size = 256  # OpenAI's maximum batch size
             all_embeddings = []
             
+            # Initialize embedding quality monitor
+            try:
+                from backend.shared.validation.embedding_validator import EmbeddingValidator
+                from backend.shared.monitoring.embedding_monitor import EmbeddingQualityMonitor
+                
+                validator = EmbeddingValidator()
+                monitor = EmbeddingQualityMonitor(validator=validator)
+                
+                self.logger.info("Embedding quality monitoring enabled")
+            except ImportError:
+                validator = None
+                monitor = None
+                self.logger.warning("Embedding quality monitoring not available - validation modules not found")
+            
             self.logger.info(
                 f"Processing {total_chunks} chunks in batches of {batch_size}",
                 correlation_id=correlation_id,
@@ -999,11 +1013,75 @@ class EnhancedBaseWorker:
                     correlation_id=correlation_id
                 )
                 
-                # Store embeddings for this batch
+                # Validate and store embeddings for this batch
                 async with self.db.get_connection() as conn:
-                    for chunk, embedding in zip(batch_chunks, batch_embeddings):
+                    for chunk_idx, (chunk, embedding) in enumerate(zip(batch_chunks, batch_embeddings)):
+                        # Validate embedding quality if monitor is available
+                        if monitor:
+                            try:
+                                source_info = {
+                                    "user_id": user_id,
+                                    "job_id": str(job_id),
+                                    "document_id": str(document_id),
+                                    "chunk_id": str(chunk["chunk_id"]),
+                                    "batch_index": i // batch_size,
+                                    "chunk_index_in_batch": chunk_idx,
+                                    "correlation_id": correlation_id,
+                                    "text_length": len(chunk.get("text", "")),
+                                    "text_preview": chunk.get("text", "")[:100]
+                                }
+                                
+                                # Validate embedding - this will raise an exception for critical issues
+                                validation_result = await monitor.validate_embedding(
+                                    embedding, 
+                                    source_info, 
+                                    raise_on_critical=True
+                                )
+                                
+                                # Log validation success with quality metrics
+                                if validation_result.is_valid:
+                                    self.logger.debug(
+                                        f"Embedding validation successful for chunk {chunk['chunk_id']}",
+                                        extra={
+                                            "chunk_id": str(chunk["chunk_id"]),
+                                            "validation_metrics": validation_result.metrics,
+                                            "correlation_id": correlation_id
+                                        }
+                                    )
+                                
+                            except Exception as validation_error:
+                                # Critical embedding validation failure
+                                self.logger.error(
+                                    f"CRITICAL_EMBEDDING_VALIDATION_FAILURE: {str(validation_error)}",
+                                    extra={
+                                        "chunk_id": str(chunk["chunk_id"]),
+                                        "embedding_preview": embedding[:5] if len(embedding) >= 5 else embedding,
+                                        "embedding_stats": {
+                                            "length": len(embedding),
+                                            "min_value": min(embedding) if embedding else None,
+                                            "max_value": max(embedding) if embedding else None,
+                                            "zero_count": sum(1 for x in embedding if abs(x) < 1e-10) if embedding else None
+                                        },
+                                        "source_info": source_info,
+                                        "correlation_id": correlation_id,
+                                        "error": str(validation_error)
+                                    }
+                                )
+                                
+                                # For critical issues like zero embeddings, fail the entire job
+                                if "ZERO_EMBEDDING_DETECTED" in str(validation_error) or "MOSTLY_ZERO_EMBEDDING_DETECTED" in str(validation_error):
+                                    raise RuntimeError(
+                                        f"Critical embedding quality failure: {str(validation_error)}. "
+                                        f"Job {job_id} cannot proceed with invalid embeddings."
+                                    )
+                                else:
+                                    # For less critical issues, log but continue
+                                    self.logger.warning(f"Embedding validation warning for chunk {chunk['chunk_id']}: {str(validation_error)}")
+                        
                         # Convert embedding list to string format for PostgreSQL vector type
                         embedding_str = "[" + ",".join([str(x) for x in embedding]) + "]"
+                        
+                        # Store embedding in database
                         await conn.execute("""
                             UPDATE upload_pipeline.document_chunks 
                             SET embedding = $1, updated_at = now()
