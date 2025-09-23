@@ -1,0 +1,11 @@
+{
+  "timestamp": "2025-09-23T15:21:06.971301",
+  "environment": "development",
+  "test_suites": {},
+  "summary": {
+    "total_tests": 24,
+    "failures": 0,
+    "errors": 0,
+    "success_rate": 100.0
+  }
+}
