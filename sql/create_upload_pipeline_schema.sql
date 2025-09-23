@@ -1,87 +1,118 @@
--- Create upload pipeline schema and tables for production Supabase
-BEGIN;
+-- Create Upload Pipeline Schema and Tables
+-- This script creates the missing database schema and tables for the enhanced base worker
 
--- Create upload_pipeline schema
+-- Create schema if it doesn't exist
 CREATE SCHEMA IF NOT EXISTS upload_pipeline;
 
--- Create documents table for upload pipeline
+-- Grant permissions
+GRANT USAGE ON SCHEMA upload_pipeline TO postgres;
+GRANT CREATE ON SCHEMA upload_pipeline TO postgres;
+
+-- Create upload_jobs table
+CREATE TABLE IF NOT EXISTS upload_pipeline.upload_jobs (
+    job_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    document_id UUID,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    error_message TEXT,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    correlation_id UUID,
+    request_id UUID
+);
+
+-- Create documents table
 CREATE TABLE IF NOT EXISTS upload_pipeline.documents (
     document_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL,
-    filename TEXT NOT NULL,
-    file_path TEXT NOT NULL,
-    file_size BIGINT NOT NULL,
-    mime_type TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'uploaded',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    filename VARCHAR(255) NOT NULL,
+    file_size BIGINT,
+    mime_type VARCHAR(100),
+    status VARCHAR(50) NOT NULL DEFAULT 'uploaded',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    metadata JSONB DEFAULT '{}'::jsonb,
+    file_path TEXT,
+    storage_bucket VARCHAR(100),
+    storage_key VARCHAR(500)
 );
 
--- Create upload_jobs table for processing queue
-CREATE TABLE IF NOT EXISTS upload_pipeline.upload_jobs (
-    job_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    document_id UUID NOT NULL REFERENCES upload_pipeline.documents(document_id) ON DELETE CASCADE,
-    stage TEXT NOT NULL DEFAULT 'job_created',
-    state TEXT NOT NULL DEFAULT 'pending',
-    payload JSONB,
-    retry_count INTEGER NOT NULL DEFAULT 0,
-    last_error TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    started_at TIMESTAMPTZ,
-    completed_at TIMESTAMPTZ
-);
-
--- Create document_chunks table for processed chunks
+-- Create document_chunks table
 CREATE TABLE IF NOT EXISTS upload_pipeline.document_chunks (
     chunk_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     document_id UUID NOT NULL REFERENCES upload_pipeline.documents(document_id) ON DELETE CASCADE,
-    chunk_index INTEGER NOT NULL,
+    chunk_ord INTEGER NOT NULL,
     text TEXT NOT NULL,
+    embedding VECTOR(1536),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    metadata JSONB DEFAULT '{}'::jsonb,
     tokens INTEGER,
-    vector JSONB,
-    metadata JSONB,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    page_number INTEGER,
+    section_title VARCHAR(500)
 );
 
 -- Create indexes for performance
-CREATE INDEX IF NOT EXISTS idx_upload_jobs_stage_state ON upload_pipeline.upload_jobs(stage, state);
-CREATE INDEX IF NOT EXISTS idx_upload_jobs_document_id ON upload_pipeline.upload_jobs(document_id);
+CREATE INDEX IF NOT EXISTS idx_upload_jobs_user_id ON upload_pipeline.upload_jobs(user_id);
+CREATE INDEX IF NOT EXISTS idx_upload_jobs_status ON upload_pipeline.upload_jobs(status);
+CREATE INDEX IF NOT EXISTS idx_upload_jobs_created_at ON upload_pipeline.upload_jobs(created_at);
+CREATE INDEX IF NOT EXISTS idx_upload_jobs_correlation_id ON upload_pipeline.upload_jobs(correlation_id);
+
 CREATE INDEX IF NOT EXISTS idx_documents_user_id ON upload_pipeline.documents(user_id);
+CREATE INDEX IF NOT EXISTS idx_documents_status ON upload_pipeline.documents(status);
+CREATE INDEX IF NOT EXISTS idx_documents_created_at ON upload_pipeline.documents(created_at);
+
 CREATE INDEX IF NOT EXISTS idx_document_chunks_document_id ON upload_pipeline.document_chunks(document_id);
+CREATE INDEX IF NOT EXISTS idx_document_chunks_chunk_ord ON upload_pipeline.document_chunks(document_id, chunk_ord);
+CREATE INDEX IF NOT EXISTS idx_document_chunks_embedding ON upload_pipeline.document_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 
--- Grant permissions
-GRANT USAGE ON SCHEMA upload_pipeline TO postgres, anon, authenticated, service_role;
-GRANT ALL ON ALL TABLES IN SCHEMA upload_pipeline TO postgres, service_role;
-GRANT SELECT ON ALL TABLES IN SCHEMA upload_pipeline TO authenticated;
+-- Create updated_at trigger function
+CREATE OR REPLACE FUNCTION upload_pipeline.update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
 
--- Enable RLS
-ALTER TABLE upload_pipeline.documents ENABLE ROW LEVEL SECURITY;
-ALTER TABLE upload_pipeline.upload_jobs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE upload_pipeline.document_chunks ENABLE ROW LEVEL SECURITY;
+-- Add updated_at triggers
+DROP TRIGGER IF EXISTS update_upload_jobs_updated_at ON upload_pipeline.upload_jobs;
+CREATE TRIGGER update_upload_jobs_updated_at
+    BEFORE UPDATE ON upload_pipeline.upload_jobs
+    FOR EACH ROW
+    EXECUTE FUNCTION upload_pipeline.update_updated_at_column();
 
--- Create RLS policies
-CREATE POLICY "Users can view their own documents" ON upload_pipeline.documents
-    FOR SELECT USING (auth.uid() = user_id);
+DROP TRIGGER IF EXISTS update_documents_updated_at ON upload_pipeline.documents;
+CREATE TRIGGER update_documents_updated_at
+    BEFORE UPDATE ON upload_pipeline.documents
+    FOR EACH ROW
+    EXECUTE FUNCTION upload_pipeline.update_updated_at_column();
 
-CREATE POLICY "Users can insert their own documents" ON upload_pipeline.documents
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
+-- Grant permissions to postgres user
+GRANT ALL PRIVILEGES ON SCHEMA upload_pipeline TO postgres;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA upload_pipeline TO postgres;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA upload_pipeline TO postgres;
 
-CREATE POLICY "Users can update their own documents" ON upload_pipeline.documents
-    FOR UPDATE USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can view jobs for their documents" ON upload_pipeline.upload_jobs
-    FOR SELECT USING (
-        document_id IN (
-            SELECT document_id FROM upload_pipeline.documents WHERE user_id = auth.uid()
-        )
-    );
-
-CREATE POLICY "Users can view chunks for their documents" ON upload_pipeline.document_chunks
-    FOR SELECT USING (
-        document_id IN (
-            SELECT document_id FROM upload_pipeline.documents WHERE user_id = auth.uid()
-        )
-    );
-
-COMMIT;
+-- Verify schema creation
+DO $$
+BEGIN
+    -- Check if schema exists
+    IF NOT EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'upload_pipeline') THEN
+        RAISE EXCEPTION 'upload_pipeline schema was not created';
+    END IF;
+    
+    -- Check if tables exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'upload_pipeline' AND table_name = 'upload_jobs') THEN
+        RAISE EXCEPTION 'upload_jobs table was not created';
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'upload_pipeline' AND table_name = 'documents') THEN
+        RAISE EXCEPTION 'documents table was not created';
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'upload_pipeline' AND table_name = 'document_chunks') THEN
+        RAISE EXCEPTION 'document_chunks table was not created';
+    END IF;
+    
+    RAISE NOTICE 'upload_pipeline schema and tables created successfully';
+END $$;
