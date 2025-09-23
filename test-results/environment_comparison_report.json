@@ -1,0 +1,35 @@
+{
+  "timestamp": "2025-09-23T15:59:20.804986",
+  "environments_tested": 3,
+  "environments": {
+    "development": {
+      "success": true,
+      "total_tests": 24,
+      "success_rate": 100.0,
+      "returncode": 0,
+      "has_errors": true
+    },
+    "staging": {
+      "success": true,
+      "total_tests": 24,
+      "success_rate": 100.0,
+      "returncode": 0,
+      "has_errors": true
+    },
+    "production": {
+      "success": true,
+      "total_tests": 24,
+      "success_rate": 100.0,
+      "returncode": 0,
+      "has_errors": true
+    }
+  },
+  "summary": {
+    "total_environments": 3,
+    "successful_environments": 3,
+    "failed_environments": 0,
+    "consistency_score": 100.0,
+    "average_success_rate": 100.0,
+    "total_tests_across_environments": 72
+  }
+}
