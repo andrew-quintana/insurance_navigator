@@ -1,0 +1,264 @@
+{
+  "timestamp": "2025-09-23T16:15:12.149892",
+  "environment": "component_validation",
+  "summary": {
+    "total_tests": 6,
+    "passed_tests": 1,
+    "partial_tests": 5,
+    "error_tests": 0,
+    "success_rate": 16.666666666666664
+  },
+  "test_results": [
+    {
+      "test_name": "fastapi_application_structure",
+      "platform": "render",
+      "environment": "development",
+      "start_time": "2025-09-23T16:15:11.241928",
+      "status": "passed",
+      "details": "FastAPI application structure: 7/7 tests passed",
+      "test_results": [
+        {
+          "test": "main_py_exists",
+          "success": true,
+          "details": "main.py file exists"
+        },
+        {
+          "test": "main_py_importable",
+          "success": true,
+          "details": "main.py can be imported successfully"
+        },
+        {
+          "test": "fastapi_app_defined",
+          "success": true,
+          "details": "FastAPI app is defined in main.py"
+        },
+        {
+          "test": "requirements_txt_exists",
+          "success": true,
+          "details": "requirements.txt file exists"
+        },
+        {
+          "test": "core_module_core_database_py",
+          "success": true,
+          "details": "Core module core/database.py exists"
+        },
+        {
+          "test": "core_module_core_service_manager_py",
+          "success": true,
+          "details": "Core module core/service_manager.py exists"
+        },
+        {
+          "test": "core_module_core_agent_integration_py",
+          "success": true,
+          "details": "Core module core/agent_integration.py exists"
+        }
+      ],
+      "end_time": "2025-09-23T16:15:12.149634"
+    },
+    {
+      "test_name": "vercel_frontend_structure",
+      "platform": "vercel",
+      "environment": "development",
+      "start_time": "2025-09-23T16:15:12.149702",
+      "status": "partial",
+      "details": "Vercel frontend structure: 2/4 tests passed",
+      "test_results": [
+        {
+          "test": "package_json_exists",
+          "success": false,
+          "details": "package.json file does not exist"
+        },
+        {
+          "test": "vercel_config_vercel_json",
+          "success": false,
+          "details": "Vercel config file vercel.json does not exist"
+        },
+        {
+          "test": "vercel_config__vercelignore",
+          "success": true,
+          "details": "Vercel config file .vercelignore exists"
+        },
+        {
+          "test": "ui_directory_ui",
+          "success": true,
+          "details": "UI directory ui exists"
+        }
+      ],
+      "end_time": "2025-09-23T16:15:12.149745"
+    },
+    {
+      "test_name": "database_integration_structure",
+      "platform": "render",
+      "environment": "development",
+      "start_time": "2025-09-23T16:15:12.149748",
+      "status": "partial",
+      "details": "Database integration structure: 9/10 tests passed",
+      "test_results": [
+        {
+          "test": "supabase_supabase_config_toml",
+          "success": true,
+          "details": "Supabase file supabase/config.toml exists"
+        },
+        {
+          "test": "supabase_supabase_migrations",
+          "success": true,
+          "details": "Supabase file supabase/migrations exists"
+        },
+        {
+          "test": "supabase_supabase_seed_sql",
+          "success": true,
+          "details": "Supabase file supabase/seed.sql exists"
+        },
+        {
+          "test": "env_file__env_development",
+          "success": true,
+          "details": "Environment file .env.development exists"
+        },
+        {
+          "test": "env_file__env_staging",
+          "success": true,
+          "details": "Environment file .env.staging exists"
+        },
+        {
+          "test": "env_file__env_production",
+          "success": true,
+          "details": "Environment file .env.production exists"
+        },
+        {
+          "test": "env_file__env_local",
+          "success": false,
+          "details": "Environment file .env.local does not exist"
+        },
+        {
+          "test": "db_module_core_database_py",
+          "success": true,
+          "details": "Database module core/database.py exists"
+        },
+        {
+          "test": "db_module_db_config_py",
+          "success": true,
+          "details": "Database module db/config.py exists"
+        },
+        {
+          "test": "db_module_db_services",
+          "success": true,
+          "details": "Database module db/services exists"
+        }
+      ],
+      "end_time": "2025-09-23T16:15:12.149798"
+    },
+    {
+      "test_name": "worker_components_structure",
+      "platform": "render",
+      "environment": "development",
+      "start_time": "2025-09-23T16:15:12.149801",
+      "status": "partial",
+      "details": "Worker components structure: 2/3 tests passed",
+      "test_results": [
+        {
+          "test": "worker_directory_backend_workers",
+          "success": true,
+          "details": "Worker directory backend/workers exists"
+        },
+        {
+          "test": "worker_config_requirements_worker_txt",
+          "success": true,
+          "details": "Worker config file requirements-worker.txt exists"
+        },
+        {
+          "test": "worker_config_render_upload_pipeline_worker_yaml",
+          "success": false,
+          "details": "Worker config file render-upload-pipeline-worker.yaml does not exist"
+        }
+      ],
+      "end_time": "2025-09-23T16:15:12.149820"
+    },
+    {
+      "test_name": "security_components_structure",
+      "platform": "both",
+      "environment": "development",
+      "start_time": "2025-09-23T16:15:12.149822",
+      "status": "partial",
+      "details": "Security components structure: 1/5 tests passed",
+      "test_results": [
+        {
+          "test": "auth_module_backend_shared_auth_py",
+          "success": false,
+          "details": "Authentication module backend/shared/auth.py does not exist"
+        },
+        {
+          "test": "auth_module_core_auth_py",
+          "success": false,
+          "details": "Authentication module core/auth.py does not exist"
+        },
+        {
+          "test": "auth_module_auth_",
+          "success": false,
+          "details": "Authentication module auth/ does not exist"
+        },
+        {
+          "test": "security_config__env_production_example",
+          "success": false,
+          "details": "Security config file .env.production.example does not exist"
+        },
+        {
+          "test": "security_config_config_auth_config_py",
+          "success": true,
+          "details": "Security config file config/auth_config.py exists"
+        }
+      ],
+      "end_time": "2025-09-23T16:15:12.149857"
+    },
+    {
+      "test_name": "deployment_configurations",
+      "platform": "both",
+      "environment": "development",
+      "start_time": "2025-09-23T16:15:12.149859",
+      "status": "partial",
+      "details": "Deployment configurations: 4/8 tests passed",
+      "test_results": [
+        {
+          "test": "render_config_render_yaml",
+          "success": false,
+          "details": "Render config file render.yaml does not exist"
+        },
+        {
+          "test": "render_config_render_upload_pipeline_yaml",
+          "success": false,
+          "details": "Render config file render-upload-pipeline.yaml does not exist"
+        },
+        {
+          "test": "render_config_render_upload_pipeline_worker_yaml",
+          "success": false,
+          "details": "Render config file render-upload-pipeline-worker.yaml does not exist"
+        },
+        {
+          "test": "docker_Dockerfile",
+          "success": true,
+          "details": "Docker file Dockerfile exists"
+        },
+        {
+          "test": "docker_docker_compose_yml",
+          "success": true,
+          "details": "Docker file docker-compose.yml exists"
+        },
+        {
+          "test": "docker_docker_compose_yml",
+          "success": true,
+          "details": "Docker file docker-compose.yml exists"
+        },
+        {
+          "test": "vercel_config_vercel_json",
+          "success": false,
+          "details": "Vercel config file vercel.json does not exist"
+        },
+        {
+          "test": "vercel_config__vercelignore",
+          "success": true,
+          "details": "Vercel config file .vercelignore exists"
+        }
+      ],
+      "end_time": "2025-09-23T16:15:12.149885"
+    }
+  ]
+}
