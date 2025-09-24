@@ -1,0 +1,126 @@
+{
+  "success": false,
+  "success_rate": 0.7142857142857143,
+  "passed_tests": 5,
+  "total_tests": 7,
+  "results": [
+    {
+      "test_name": "System Health Monitoring",
+      "success": true,
+      "timestamp": "2025-09-16T02:22:14.818759",
+      "details": {
+        "health_endpoint": {
+          "status": "healthy",
+          "timestamp": "2025-09-16T02:22:14.816928",
+          "services": {
+            "database": "healthy",
+            "supabase_auth": "healthy",
+            "llamaparse": "healthy",
+            "openai": "healthy"
+          },
+          "version": "3.0.0"
+        },
+        "system_status": {
+          "overall_health": 1.0,
+          "status": "healthy",
+          "health_checks": {},
+          "active_alerts": 0,
+          "critical_alerts": 0,
+          "timestamp": 1757989334.8187509
+        },
+        "overall_health": 1.0
+      }
+    },
+    {
+      "test_name": "Circuit Breaker Functionality",
+      "success": false,
+      "timestamp": "2025-09-16T02:22:14.819065",
+      "details": {
+        "error": "Missing circuit breakers: ['service_database', 'service_rag']",
+        "registered": []
+      }
+    },
+    {
+      "test_name": "Graceful Degradation",
+      "success": false,
+      "timestamp": "2025-09-16T02:22:14.819110",
+      "details": {
+        "error": "Missing degradation managers: ['rag', 'upload', 'database']",
+        "registered": []
+      }
+    },
+    {
+      "test_name": "Complete Upload Workflow",
+      "success": true,
+      "timestamp": "2025-09-16T02:22:20.384934",
+      "details": {
+        "upload_result": {
+          "job_id": "3e972160-1a7d-490b-b814-b34686f271d1",
+          "document_id": "857a7638-5dd2-59d4-a7a4-46dcf7dd6b49",
+          "signed_url": "https://storage.supabase.co/files/files/user/667f5bf0-a237-4777-8d3a-80f3bb935dcb/raw/1757989334_63d5f0f9.pdf?signed=true&ttl=3600",
+          "upload_expires_at": "2025-09-16T03:22:15.000712"
+        },
+        "document_id": "857a7638-5dd2-59d4-a7a4-46dcf7dd6b49",
+        "chat_response": {
+          "text_length": 734,
+          "has_metadata": true,
+          "conversation_id": "test_conv_1757989336"
+        }
+      }
+    },
+    {
+      "test_name": "Error Handling and Resilience",
+      "success": true,
+      "timestamp": "2025-09-16T02:22:25.335274",
+      "details": {
+        "invalid_auth_test": "passed",
+        "malformed_request_test": "handled",
+        "degradation_test": "system_responsive"
+      }
+    },
+    {
+      "test_name": "Integration Dependencies",
+      "success": true,
+      "timestamp": "2025-09-16T02:22:25.350748",
+      "details": {
+        "service_integrations": {
+          "database": "healthy",
+          "supabase_auth": "healthy",
+          "openai": "healthy"
+        },
+        "auth_integration": true,
+        "config_integration": true,
+        "overall_health": "healthy"
+      }
+    },
+    {
+      "test_name": "Performance Requirements",
+      "success": true,
+      "timestamp": "2025-09-16T02:22:29.021437",
+      "details": {
+        "performance_results": {
+          "health_check": {
+            "duration": 0.003885030746459961,
+            "target": 1.0,
+            "passed": true
+          },
+          "authentication": {
+            "duration": 0.003131866455078125,
+            "target": 2.0,
+            "passed": true
+          },
+          "chat_response": {
+            "duration": 3.6634840965270996,
+            "target": 10.0,
+            "passed": true
+          }
+        },
+        "performance_score": 1.0,
+        "passed_tests": 3,
+        "total_tests": 3
+      }
+    }
+  ],
+  "timestamp": "2025-09-16T02:22:29.021498",
+  "production_ready": false
+}

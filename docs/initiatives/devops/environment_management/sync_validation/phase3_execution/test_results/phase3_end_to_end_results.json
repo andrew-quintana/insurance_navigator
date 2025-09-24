@@ -1,0 +1,63 @@
+{
+  "test_timestamp": "2025-09-15T06:00:32.991996",
+  "test_name": "Phase 3 End-to-End Processing",
+  "total_tests": 6,
+  "passed_tests": 0,
+  "failed_tests": 6,
+  "test_results": [
+    {
+      "test_name": "User Creation and Authentication",
+      "passed": false,
+      "details": {
+        "status_code": 422,
+        "error": "Failed to create user"
+      },
+      "timestamp": "2025-09-15T06:00:33.105562"
+    },
+    {
+      "test_name": "Document Upload",
+      "passed": false,
+      "details": {
+        "error": "No authentication token available"
+      },
+      "timestamp": "2025-09-15T06:00:33.105822"
+    },
+    {
+      "test_name": "Worker Processing",
+      "passed": false,
+      "details": {
+        "error": "No job ID available"
+      },
+      "timestamp": "2025-09-15T06:00:33.105858"
+    },
+    {
+      "test_name": "Chunk Generation",
+      "passed": false,
+      "details": {
+        "error": "No document ID available"
+      },
+      "timestamp": "2025-09-15T06:00:33.105908"
+    },
+    {
+      "test_name": "Embedding Creation",
+      "passed": false,
+      "details": {
+        "error": "No document ID available"
+      },
+      "timestamp": "2025-09-15T06:00:33.105938"
+    },
+    {
+      "test_name": "RAG Query with Processed Content",
+      "passed": false,
+      "details": {
+        "error": "No authentication token available"
+      },
+      "timestamp": "2025-09-15T06:00:33.105961"
+    }
+  ],
+  "document_id": null,
+  "job_id": null,
+  "chunks_created": 0,
+  "embeddings_created": 0,
+  "errors": []
+}

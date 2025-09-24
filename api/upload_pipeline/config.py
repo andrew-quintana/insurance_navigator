@@ -66,7 +66,7 @@ class UploadPipelineConfig(BaseSettings):
     database_schema: str = "upload_pipeline"
     
     class Config:
-        env_file = ".env"
+        env_file = ".env.development" if os.getenv('ENVIRONMENT') == 'development' else ".env.production" if os.getenv('ENVIRONMENT') == 'production' else ".env"
         env_prefix = "UPLOAD_PIPELINE_"
         # Allow environment variables to override defaults
         extra = "ignore"

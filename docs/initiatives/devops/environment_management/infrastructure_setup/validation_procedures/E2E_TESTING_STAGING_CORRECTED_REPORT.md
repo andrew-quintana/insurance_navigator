@@ -71,7 +71,7 @@ POST https://insurance-navigator-staging-api.onrender.com/login
 **Result**: ✅ **PASS**
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "access_token": "${SUPABASE_ANON_KEY}...",
   "token_type": "bearer",
   "user": {
     "id": "38f1a44c-8cff-42ed-b82f-25ef44c8a190",

@@ -71,7 +71,11 @@ class DatabaseManager:
             logger.info(f"Initializing database pool: {self.config.host}:{self.config.port}")
             
             # Create connection pool with SSL configuration for Supabase
-            ssl_config = "require" if self._is_supabase_connection() else self.config.ssl_mode
+            # For local development, disable SSL; for production, require SSL
+            if self._is_supabase_connection():
+                ssl_config = "disable" if any(host in self.config.host for host in ["127.0.0.1", "localhost", "supabase_db_insurance_navigator"]) else "require"
+            else:
+                ssl_config = self.config.ssl_mode
             
             self.pool = await create_pool(
                 self.config.connection_string,
@@ -171,7 +175,8 @@ class DatabaseManager:
         return (
             "supabase.com" in self.config.host or 
             "supabase.co" in self.config.host or
-            "znvwzkdblknkkztqyfnu" in self.config.host
+            "znvwzkdblknkkztqyfnu" in self.config.host or
+            "supabase_db_insurance_navigator" in self.config.host
         )
     
     async def _setup_connection(self, conn: Connection) -> None:
@@ -218,7 +223,7 @@ def create_database_config() -> DatabaseConfig:
             database=parsed.path.lstrip('/') or "postgres",
             user=parsed.username or "postgres",
             password=parsed.password or "",
-            ssl_mode="require" if "supabase" in db_url else "prefer"
+            ssl_mode="disable" if any(host in db_url for host in ["127.0.0.1", "localhost", "supabase_db_insurance_navigator"]) else "require"
         )
     
     # Fallback to individual environment variables

@@ -21,7 +21,7 @@ async def test_rag_tool():
     
     # Set production environment variables
     os.environ["DATABASE_URL"] = "postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
-    os.environ["OPENAI_API_KEY"] = "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"
+    os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "sk-test-key-for-testing")
     os.environ["DATABASE_SCHEMA"] = "upload_pipeline"
     
     try:

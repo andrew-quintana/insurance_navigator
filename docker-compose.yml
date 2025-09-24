@@ -7,10 +7,11 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - ENVIRONMENT=production
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - ENVIRONMENT=${ENVIRONMENT}
+      - DATABASE_URL=postgresql://postgres:postgres@supabase_db_insurance_navigator:5432/postgres
+      - SUPABASE_URL=http://supabase_kong_insurance_navigator:8000
+      - SUPABASE_ANON_KEY=${SUPABASE_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
       - JWT_SECRET=${JWT_SECRET}
       - DOCUMENT_ENCRYPTION_KEY=${DOCUMENT_ENCRYPTION_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -26,16 +27,19 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+    networks:
+      - supabase_network_insurance_navigator
 
   worker:
     build:
       context: .
       dockerfile: backend/workers/Dockerfile
     environment:
-      - ENVIRONMENT=production
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - ENVIRONMENT=${ENVIRONMENT}
+      - DATABASE_URL=postgresql://postgres:postgres@supabase_db_insurance_navigator:5432/postgres
+      - SUPABASE_URL=http://supabase_kong_insurance_navigator:8000
+      - SUPABASE_ANON_KEY=${SUPABASE_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
       - JWT_SECRET=${JWT_SECRET}
       - DOCUMENT_ENCRYPTION_KEY=${DOCUMENT_ENCRYPTION_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -51,6 +55,8 @@ services:
       timeout: 5s
       retries: 2
       start_period: 10s
+    networks:
+      - supabase_network_insurance_navigator
 
   frontend:
     build:
@@ -70,3 +76,9 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+    networks:
+      - supabase_network_insurance_navigator
+
+networks:
+  supabase_network_insurance_navigator:
+    external: true

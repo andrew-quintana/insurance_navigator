@@ -43,7 +43,7 @@
     "email": "test@staging.com",
     "name": "Staging Test User"
   },
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "access_token": "${SUPABASE_ANON_KEY}...",
   "token_type": "bearer"
 }
 ```
@@ -52,7 +52,7 @@
 ### ✅ **3. User Authentication (Login)**
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "access_token": "${SUPABASE_ANON_KEY}...",
   "token_type": "bearer",
   "user": {
     "id": "bf1b38ba-0770-4e42-a83d-aa32fb65b946",

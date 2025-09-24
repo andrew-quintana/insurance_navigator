@@ -7,7 +7,7 @@ testing: true
 
 # Database Configuration
 database:
-  url: postgresql://postgres:postgres@localhost:5432/postgres
+  url: postgresql://postgres:postgres@supabase_db_insurance_navigator:5432/postgres?sslmode=disable
   schema: upload_pipeline
   pool_size: 5
   max_overflow: 10
@@ -37,27 +37,49 @@ worker:
   health_check_interval: 30
   graceful_shutdown_timeout: 60
 
-# External Services Configuration (Mocks for local development)
+# External Services Configuration
 external_services:
   llamaparse:
-    api_url: http://mock-llamaparse:8001
+    api_url: ${LLAMAPARSE_API_URL}
+    api_key: ${LLAMAPARSE_API_KEY}
+    timeout: 120
+    max_retries: 3
+    retry_delay: 5
+  
   openai:
-    api_url: http://mock-openai:8002
+    api_url: ${OPENAI_API_URL}
+    api_key: ${OPENAI_API_KEY}
+    timeout: 60
+    max_retries: 3
+    retry_delay: 5
+    batch_size: 256
+    rate_limit_delay: 1
 
 # Storage Configuration
 storage:
   environment: development
-  url: http://127.0.0.1:54321
+  url: http://supabase_kong_insurance_navigator:8000
   supabase:
-    url: http://127.0.0.1:54321
-    anon_key: ${SUPABASE_JWT_TOKEN}
-    service_role_key: ${SUPABASE_JWT_TOKEN}
-    storage_url: http://127.0.0.1:54321
-
+    url: http://supabase_kong_insurance_navigator:8000
+    anon_key: ${SUPABASE_ANON_KEY}
+    service_role_key: ${SUPABASE_SERVICE_ROLE_KEY}
+    storage_url: http://supabase_kong_insurance_navigator:8000
+  
   buckets:
-    raw: raw
-    parsed: parsed
-  signed_url_ttl_seconds: 300
+    raw:
+      name: raw
+      public: false
+      max_file_size: 268435456  # 256MB
+      allowed_mime_types:
+        - application/pdf
+    
+    parsed:
+      name: parsed
+      public: false
+      max_file_size: 10485760   # 10MB
+      allowed_mime_types:
+        - text/markdown
+        - text/plain
 
 # Monitoring Configuration
 monitoring:
