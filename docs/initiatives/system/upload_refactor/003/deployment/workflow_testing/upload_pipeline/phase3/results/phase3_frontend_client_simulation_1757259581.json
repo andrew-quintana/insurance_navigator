@@ -30,7 +30,7 @@
       "step": "login_user",
       "status": "passed",
       "user_id": "minimal_cb79c5a4910f0d582c4f63997955c6bd",
-      "access_token": "eyJhbGciOiJIUzI1NiIs...",
+      "access_token": "${SUPABASE_ANON_KEY}...",
       "timestamp": "2025-09-07T15:39:40.988636"
     },
     {

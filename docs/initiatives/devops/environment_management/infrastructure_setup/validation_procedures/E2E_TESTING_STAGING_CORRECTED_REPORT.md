@@ -71,7 +71,7 @@ POST ***REMOVED***/login
 **Result**: ✅ **PASS**
 ```json
 {
-  "access_token": "***REMOVED***...",
+  "access_token": "${SUPABASE_ANON_KEY}...",
   "token_type": "bearer",
   "user": {
     "id": "38f1a44c-8cff-42ed-b82f-25ef44c8a190",

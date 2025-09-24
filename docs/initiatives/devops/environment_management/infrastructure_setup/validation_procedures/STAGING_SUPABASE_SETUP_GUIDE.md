@@ -65,11 +65,11 @@ After applying all migrations, test the setup:
 ```bash
 # Test users table
 curl -s "***REMOVED***/rest/v1/users" \
-  -H "apikey: ***REMOVED***.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmZ3plYXN0Y3hub3FzaGd5b3RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2ODA0ODMsImV4cCI6MjA2NzI1NjQ4M30.wV0kgqo20D1EghH47bO-4MoXpksiyQ_bvANaZlzScyM"
+  -H "apikey: ${SUPABASE_ANON_KEY}"
 
 # Test documents table
 curl -s "***REMOVED***/rest/v1/upload_pipeline.documents" \
-  -H "apikey: ***REMOVED***.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmZ3plYXN0Y3hub3FzaGd5b3RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2ODA0ODMsImV4cCI6MjA2NzI1NjQ4M30.wV0kgqo20D1EghH47bO-4MoXpksiyQ_bvANaZlzScyM"
+  -H "apikey: ${SUPABASE_ANON_KEY}"
 ```
 
 ## 🔄 **Alternative: Use Supabase CLI**

@@ -1,0 +1,116 @@
+{
+  "test_name": "Phase 3 Production Full Workflow Test",
+  "timestamp": 1757376484.3291662,
+  "test_user_id": "4e94aaf5-36c9-46a2-8ee0-0b3801d1f62b",
+  "test_email": "full_workflow_test_1757376484@example.com",
+  "api_base_url": "***REMOVED***",
+  "tests": {
+    "Production API Health": {
+      "status": "PASSED",
+      "duration": 0.3470642566680908,
+      "details": {
+        "api_health": {
+          "status": "healthy",
+          "timestamp": "2025-09-09T00:07:49.481009",
+          "services": {
+            "database": "healthy",
+            "supabase_auth": "healthy",
+            "llamaparse": "healthy",
+            "openai": "healthy"
+          },
+          "version": "3.0.0"
+        },
+        "upload_endpoint_status": 405,
+        "jobs_endpoint_status": 405,
+        "api_base_url": "***REMOVED***"
+      }
+    },
+    "Create New User": {
+      "status": "PASSED",
+      "duration": 0.5101301670074463,
+      "details": {
+        "status_code": 200,
+        "response": {
+          "user": {
+            "id": "minimal_8c72da6e569ea576378dc026d2c04d7e",
+            "email": "full_workflow_test_1757376484@example.com",
+            "name": "full_workflow_test_1757376484"
+          },
+          "access_token": "${SUPABASE_JWT_TOKEN}",
+          "token_type": "bearer"
+        },
+        "user_id": "4e94aaf5-36c9-46a2-8ee0-0b3801d1f62b",
+        "email": "full_workflow_test_1757376484@example.com"
+      }
+    },
+    "Sign In User": {
+      "status": "PASSED",
+      "duration": 0.10526895523071289,
+      "details": {
+        "status_code": 200,
+        "response": {
+          "access_token": "${SUPABASE_JWT_TOKEN}",
+          "token_type": "bearer",
+          "user": {
+            "id": "minimal_9ae61be84ae4dc23b4ce28091541c479",
+            "email": "full_workflow_test_1757376484@example.com",
+            "name": "full_workflow_test_1757376484"
+          }
+        },
+        "auth_token_received": true
+      }
+    },
+    "Upload Insurance Document": {
+      "status": "FAILED",
+      "duration": 0.15082979202270508,
+      "error": "Document upload failed: Document upload failed: 500 - {\"detail\":\"Internal server error\"}"
+    },
+    "Wait for Document Processing": {
+      "status": "FAILED",
+      "duration": 1.0967254638671875e-05,
+      "error": "Document processing wait failed: No document ID available"
+    },
+    "RAG Similarity Search Queries": {
+      "status": "FAILED",
+      "duration": 4.76837158203125e-06,
+      "error": "RAG similarity search queries failed: No document ID available"
+    },
+    "Direct RAG System with Real User": {
+      "status": "PASSED",
+      "duration": 2.941701889038086,
+      "details": {
+        "queries_tested": 5,
+        "queries_with_chunks": 0,
+        "query_results": {
+          "What's my deductible?": {
+            "chunks_retrieved": 0,
+            "chunks": []
+          },
+          "What does my insurance cover?": {
+            "chunks_retrieved": 0,
+            "chunks": []
+          },
+          "How much do I pay for doctor visits?": {
+            "chunks_retrieved": 0,
+            "chunks": []
+          },
+          "What are my prescription benefits?": {
+            "chunks_retrieved": 0,
+            "chunks": []
+          },
+          "Is physical therapy covered?": {
+            "chunks_retrieved": 0,
+            "chunks": []
+          }
+        }
+      }
+    }
+  },
+  "summary": {
+    "total_tests": 7,
+    "passed_tests": 4,
+    "failed_tests": 3,
+    "success_rate": 57.14285714285714,
+    "overall_status": "FAILED"
+  }
+}
