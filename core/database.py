@@ -74,8 +74,13 @@ class DatabaseManager:
             # For local development, disable SSL; for production, require SSL
             if self._is_supabase_connection():
                 ssl_config = "disable" if any(host in self.config.host for host in ["127.0.0.1", "localhost", "supabase_db_insurance_navigator"]) else "require"
+                logger.info(f"Supabase connection detected, using SSL config: {ssl_config}")
             else:
                 ssl_config = self.config.ssl_mode
+                logger.info(f"Non-Supabase connection, using SSL config: {ssl_config}")
+            
+            logger.info(f"Connection string: {self.config.connection_string[:50]}...")
+            logger.info(f"Host: {self.config.host}, Port: {self.config.port}")
             
             self.pool = await create_pool(
                 self.config.connection_string,
@@ -176,7 +181,9 @@ class DatabaseManager:
             "supabase.com" in self.config.host or 
             "supabase.co" in self.config.host or
             "znvwzkdblknkkztqyfnu" in self.config.host or
-            "supabase_db_insurance_navigator" in self.config.host
+            "supabase_db_insurance_navigator" in self.config.host or
+            "pooler.supabase.com" in self.config.host or
+            "dfgzeastcxnoqshgyotp" in self.config.host  # Supabase project ID pattern
         )
     
     async def _setup_connection(self, conn: Connection) -> None:
