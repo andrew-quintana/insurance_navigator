@@ -70,7 +70,7 @@ class APIKeeper:
         try:
             async with httpx.AsyncClient(timeout=30) as client:
                 # Test the upload limits endpoint (read-only, safe to call)
-                response = await client.get(f"{self.api_url}/api/v2/upload/limits")
+                response = await client.get(f"{self.api_url}/api/upload-pipeline/upload/limits")
                 
                 if response.status_code == 200:
                     logger.info("✅ Endpoint test passed")

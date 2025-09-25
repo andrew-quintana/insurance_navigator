@@ -149,7 +149,7 @@ class Phase3CompleteWorkflowTest:
                     'Authorization': f'Bearer {self.auth_token}'
                 }
                 
-                async with session.post(f"{self.base_url}/api/v2/upload", data=data, headers=headers) as response:
+                async with session.post(f"{self.base_url}/api/upload-pipeline/upload", data=data, headers=headers) as response:
                     if response.status != 200:
                         response_text = await response.text()
                         raise Exception(f"Upload failed: {response.status} - {response_text}")

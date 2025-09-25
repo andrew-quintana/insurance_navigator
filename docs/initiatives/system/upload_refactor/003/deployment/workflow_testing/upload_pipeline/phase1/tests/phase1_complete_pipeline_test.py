@@ -64,7 +64,7 @@ async def upload_test_file(file_path: str) -> str:
     }
     
     async with httpx.AsyncClient() as client:
-        response = await client.post(f"{API_BASE_URL}/api/v2/upload", json=upload_data, headers=headers, timeout=10)
+        response = await client.post(f"{API_BASE_URL}/api/upload-pipeline/upload", json=upload_data, headers=headers, timeout=10)
         
         if response.status_code != 200:
             raise Exception(f"Upload failed: {response.status_code} - {response.text}")

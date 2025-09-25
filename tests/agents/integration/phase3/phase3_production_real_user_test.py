@@ -267,7 +267,7 @@ class Phase3ProductionRealUserTest:
                 data.add_field('file', file_data, filename='test_insurance_document.pdf', content_type='application/pdf')
                 data.add_field('user_id', test_user_id)
                 
-                async with session.post(f"{self.api_base_url}/api/v2/upload", data=data, headers=headers) as response:
+                async with session.post(f"{self.api_base_url}/api/upload-pipeline/upload", data=data, headers=headers) as response:
                     response_text = await response.text()
                     
                     return {

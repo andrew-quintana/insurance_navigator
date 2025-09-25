@@ -137,7 +137,7 @@ async def test_development_full_pipeline():
         
         headers = {"Authorization": f"Bearer {auth_token}"}
         
-        async with session.post(f"{base_url}/api/v2/upload", json=upload_data, headers=headers) as response:
+        async with session.post(f"{base_url}/api/upload-pipeline/upload", json=upload_data, headers=headers) as response:
             if response.status != 200:
                 logger.error(f"❌ Upload failed: {response.status}")
                 response_text = await response.text()

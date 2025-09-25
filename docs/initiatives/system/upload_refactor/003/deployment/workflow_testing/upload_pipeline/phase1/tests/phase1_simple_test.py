@@ -85,7 +85,7 @@ def upload_test_file(file_path):
     }
     
     try:
-        response = requests.post(f"{API_BASE_URL}/api/v2/upload", json=upload_data, headers=headers, timeout=10)
+        response = requests.post(f"{API_BASE_URL}/api/upload-pipeline/upload", json=upload_data, headers=headers, timeout=10)
         
         if response.status_code != 200:
             print(f"❌ Upload failed: {response.status_code} - {response.text}")

@@ -58,7 +58,7 @@ class ManualFrontendWorkflowTester:
         
         # Production cloud backend endpoints
         self.api_base_url = "***REMOVED***"
-        self.upload_endpoint = f"{self.api_base_url}/api/v2/upload"
+        self.upload_endpoint = f"{self.api_base_url}/api/upload-pipeline/upload"
         self.chat_endpoint = f"{self.api_base_url}/chat"
         self.health_endpoint = f"{self.api_base_url}/health"
         self.auth_signup_endpoint = f"{self.api_base_url}/auth/signup"

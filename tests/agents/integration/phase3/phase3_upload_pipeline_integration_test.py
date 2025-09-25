@@ -112,7 +112,7 @@ class Phase3UploadPipelineIntegrationTest:
         
         async with aiohttp.ClientSession() as session:
             # Test with GET to check if endpoint exists
-            async with session.get(f"{self.base_url}/api/v2/upload", headers=headers) as response:
+            async with session.get(f"{self.base_url}/api/upload-pipeline/upload", headers=headers) as response:
                 if response.status == 405:  # Method Not Allowed is expected for GET
                     return {"endpoint_available": True, "method_supported": "POST"}
                 elif response.status == 200:
@@ -148,7 +148,7 @@ class Phase3UploadPipelineIntegrationTest:
         form_data.add_field('user_id', self.test_user_id)
         
         async with aiohttp.ClientSession() as session:
-            async with session.post(f"{self.base_url}/api/v2/upload", data=form_data, headers=headers) as response:
+            async with session.post(f"{self.base_url}/api/upload-pipeline/upload", data=form_data, headers=headers) as response:
                 if response.status == 200:
                     result = await response.json()
                     self.upload_job_id = result.get("job_id")

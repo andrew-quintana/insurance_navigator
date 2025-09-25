@@ -70,7 +70,7 @@ def test_signed_url_generation():
     
     print("\n📝 Next Steps:")
     print("   1. The signed URL generation is now configured correctly")
-    print("   2. When you call the /api/v2/upload endpoint, it will generate URLs like:")
+    print("   2. When you call the /api/upload-pipeline/upload endpoint, it will generate URLs like:")
     print("      http://localhost:5001/storage/v1/object/upload/{path}")
     print("   3. Instead of production URLs like:")
     print("      https://storage.supabase.co/files/{path}?signed=true&ttl=300")

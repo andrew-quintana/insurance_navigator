@@ -90,7 +90,7 @@ class CorrectUploadPipelineTester:
                 print(f"📊 Upload data: {json.dumps(document_data, indent=2)}")
                 
                 async with session.post(
-                    f"{self.external_api_url}/api/v2/upload",
+                    f"{self.external_api_url}/api/upload-pipeline/upload",
                     json=document_data,
                     headers=headers
                 ) as response:

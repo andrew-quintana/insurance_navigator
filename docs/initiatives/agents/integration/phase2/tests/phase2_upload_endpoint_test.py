@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Phase 2 - Upload Endpoint Functionality Test
-Tests the /api/v2/upload endpoint functionality
+Tests the /api/upload-pipeline/upload endpoint functionality
 """
 
 import asyncio
@@ -15,7 +15,7 @@ from pathlib import Path
 
 # Test configuration
 UPLOAD_PIPELINE_URL = "http://localhost:8000"
-UPLOAD_ENDPOINT = "/api/v2/upload"
+UPLOAD_ENDPOINT = "/api/upload-pipeline/upload"
 JOBS_ENDPOINT = "/api/v2/jobs"
 AUTH_ENDPOINT = "/auth/v1/signup"
 TOKEN_ENDPOINT = "/auth/v1/token"
