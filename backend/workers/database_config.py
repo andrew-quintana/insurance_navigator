@@ -20,6 +20,14 @@ class DatabaseConfig:
     user: str
     password: str
     ssl_mode: str = "prefer"
+    min_connections: int = 5
+    max_connections: int = 20
+    command_timeout: int = 60
+    
+    @property
+    def connection_string(self) -> str:
+        """Generate PostgreSQL connection string."""
+        return f"postgresql://{self.user}:{self.password}@{self.host}:{self.port}/{self.database}?sslmode={self.ssl_mode}"
 
 
 def create_database_config() -> DatabaseConfig:
