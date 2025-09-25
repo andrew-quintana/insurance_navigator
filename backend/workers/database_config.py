@@ -43,14 +43,19 @@ def create_database_config() -> DatabaseConfig:
     logger.info(f"DEBUG: Using worker-specific database config with pooler URL support")
     
     if is_cloud_deployment:
-        # Use direct DATABASE_URL for cloud deployments (documented fix for SCRAM auth issues)
-        # Pooler URLs cause asyncpg SCRAM authentication failures - use direct connection
-        db_url = os.getenv("DATABASE_URL")
-        if db_url:
-            logger.info(f"Using direct DATABASE_URL for cloud deployment (SCRAM auth fix): {db_url[:50]}...")
+        # Use pooler URL for IPv4 connectivity in cloud deployments
+        # Direct DATABASE_URL has IPv6 connectivity issues from Render
+        pooler_url = os.getenv("SUPABASE_SESSION_POOLER_URL") or os.getenv("SUPABASE_POOLER_URL")
+        if pooler_url:
+            logger.info(f"Using Supabase pooler URL for IPv4 connectivity: {pooler_url[:50]}...")
+            db_url = pooler_url
         else:
-            # Fallback to individual environment variables if no DATABASE_URL
-            logger.warning("No DATABASE_URL found, falling back to individual environment variables")
+            # Fallback to direct DATABASE_URL if no pooler available
+            db_url = os.getenv("DATABASE_URL")
+            if db_url:
+                logger.warning("No pooler URL found, using direct DATABASE_URL (may have IPv6 connectivity issues)")
+            else:
+                logger.warning("No database URL found")
     else:
         # Local development: use DATABASE_URL directly
         db_url = os.getenv("DATABASE_URL")
@@ -69,6 +74,15 @@ def create_database_config() -> DatabaseConfig:
             ssl_mode = "require"
         else:
             ssl_mode = "require"
+        
+        # For pooler URLs, add connection parameters to avoid SCRAM authentication issues
+        if "pooler.supabase.com" in db_url:
+            # Add connection parameters to avoid SCRAM authentication
+            if "?" in db_url:
+                db_url += "&sslmode=require&application_name=insurance_navigator_worker"
+            else:
+                db_url += "?sslmode=require&application_name=insurance_navigator_worker"
+            logger.info("Added connection parameters to pooler URL to avoid SCRAM authentication issues")
         
         logger.info(f"Database connection SSL mode: {ssl_mode}")
         logger.info(f"Database host: {parsed.hostname}")
