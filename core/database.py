@@ -210,8 +210,25 @@ class DatabaseManager:
 
 def create_database_config() -> DatabaseConfig:
     """Create database configuration from environment variables."""
+    # For cloud deployments (Render, Vercel, etc.), prefer pooler URL to avoid IPv6 issues
     # For local development, use DATABASE_URL directly
-    db_url = os.getenv("DATABASE_URL")
+    is_cloud_deployment = any(os.getenv(var) for var in ['RENDER', 'VERCEL', 'HEROKU_APP_NAME', 'AWS_LAMBDA_FUNCTION_NAME', 'K_SERVICE'])
+    
+    if is_cloud_deployment:
+        # Try pooler URL first for cloud deployments to avoid IPv6 connectivity issues
+        pooler_url = os.getenv("SUPABASE_SESSION_POOLER_URL") or os.getenv("SUPABASE_POOLER_URL")
+        if pooler_url:
+            logger.info("Using Supabase pooler URL for cloud deployment")
+            db_url = pooler_url
+        else:
+            # Fallback to direct DATABASE_URL if no pooler available
+            db_url = os.getenv("DATABASE_URL")
+            if db_url:
+                logger.warning("No pooler URL found, using direct DATABASE_URL (may have IPv6 connectivity issues)")
+    else:
+        # Local development: use DATABASE_URL directly
+        db_url = os.getenv("DATABASE_URL")
+    
     if db_url:
         # Parse DATABASE_URL if available
         import urllib.parse
