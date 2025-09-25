@@ -169,7 +169,7 @@ class RCAValidationTester:
                 headers = {"Authorization": f"Bearer {self.auth_token}"}
                 
                 async with session.post(
-                    f"{self.base_url}/api/v2/upload", 
+                    f"{self.base_url}/api/upload-pipeline/upload", 
                     json=upload_data,
                     headers=headers,
                     timeout=30

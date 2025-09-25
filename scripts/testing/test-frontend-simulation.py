@@ -121,7 +121,7 @@ class FrontendSimulator:
             
             response = await self.make_request(
                 "POST", 
-                f"{self.api_url}/api/v2/upload",
+                f"{self.api_url}/api/upload-pipeline/upload",
                 json=upload_data
             )
             
@@ -252,7 +252,7 @@ class FrontendSimulator:
             
             response = await self.make_request(
                 "POST", 
-                f"{self.api_url}/api/v2/upload",
+                f"{self.api_url}/api/upload-pipeline/upload",
                 json=invalid_size_data
             )
             
@@ -275,7 +275,7 @@ class FrontendSimulator:
             
             response = await self.make_request(
                 "POST", 
-                f"{self.api_url}/api/v2/upload",
+                f"{self.api_url}/api/upload-pipeline/upload",
                 json=invalid_mime_data
             )
             
@@ -313,7 +313,7 @@ class FrontendSimulator:
                 
                 response = await self.make_request(
                     "POST", 
-                    f"{self.api_url}/api/v2/upload",
+                    f"{self.api_url}/api/upload-pipeline/upload",
                     json=data
                 )
                 
@@ -356,7 +356,7 @@ class FrontendSimulator:
             
             response = await self.make_request(
                 "POST", 
-                f"{self.api_url}/api/v2/upload",
+                f"{self.api_url}/api/upload-pipeline/upload",
                 json=job1_data
             )
             
@@ -379,7 +379,7 @@ class FrontendSimulator:
             
             response = await self.make_request(
                 "POST", 
-                f"{self.api_url}/api/v2/upload",
+                f"{self.api_url}/api/upload-pipeline/upload",
                 json=job2_data
             )
             
@@ -402,7 +402,7 @@ class FrontendSimulator:
             
             response = await self.make_request(
                 "POST", 
-                f"{self.api_url}/api/v2/upload",
+                f"{self.api_url}/api/upload-pipeline/upload",
                 json=job3_data
             )
             

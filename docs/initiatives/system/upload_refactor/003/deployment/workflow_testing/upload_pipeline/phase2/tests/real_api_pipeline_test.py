@@ -115,7 +115,7 @@ class RealAPIPipelineTest:
             
             # Step 1: Create upload job
             response = await self.api_client.post(
-                f"{API_CONFIG['LOCAL_API_URL']}/api/v1/upload/initiate",
+                f"{API_CONFIG['LOCAL_API_URL']}/api/upload-pipeline/upload/initiate",
                 headers=headers,
                 json=upload_data
             )
@@ -133,7 +133,7 @@ class RealAPIPipelineTest:
             }
             
             file_response = await self.api_client.post(
-                f"{API_CONFIG['LOCAL_API_URL']}/api/v1/upload/file",
+                f"{API_CONFIG['LOCAL_API_URL']}/api/upload-pipeline/upload/file",
                 headers=file_headers,
                 files={"file": (doc_info['name'], file_data, "application/pdf")},
                 data={"job_id": upload_result.get("job_id")}
@@ -200,7 +200,7 @@ class RealAPIPipelineTest:
             
             # Check job status
             response = await self.api_client.get(
-                f"{API_CONFIG['LOCAL_API_URL']}/api/v1/upload/status/{job_id}",
+                f"{API_CONFIG['LOCAL_API_URL']}/api/upload-pipeline/upload/status/{job_id}",
                 headers=headers
             )
             

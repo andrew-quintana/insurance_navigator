@@ -127,7 +127,7 @@ class ComprehensivePipelineTester:
             
             # Call upload endpoint
             response = await self.api_client.post(
-                "/api/v2/upload",
+                "/api/upload-pipeline/upload",
                 headers=headers,
                 json=upload_request
             )

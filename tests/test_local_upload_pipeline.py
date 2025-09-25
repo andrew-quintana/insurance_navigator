@@ -70,7 +70,7 @@ async def test_local_upload_pipeline():
         
         # Test upload limits first
         try:
-            async with session.get(f"{base_url}/api/v2/upload/limits") as response:
+            async with session.get(f"{base_url}/api/upload-pipeline/upload/limits") as response:
                 if response.status == 200:
                     limits = await response.json()
                     logger.info(f"✅ Upload limits: {limits}")

@@ -144,7 +144,7 @@ class CloudPerformanceMonitor:
         endpoints = {
             "frontend": self.config['vercel_url'],
             "api_health": f"{self.config['api_url']}/health",
-            "api_upload": f"{self.config['api_url']}/api/v1/upload",
+            "api_upload": f"{self.config['api_url']}/api/upload-pipeline/upload",
             "api_chat": f"{self.config['api_url']}/chat",
             "supabase_auth": f"{self.config['supabase_url']}/auth/v1/health",
             "supabase_db": f"{self.config['supabase_url']}/rest/v1/"

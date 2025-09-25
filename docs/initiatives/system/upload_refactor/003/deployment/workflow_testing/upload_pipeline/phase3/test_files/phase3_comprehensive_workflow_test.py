@@ -125,7 +125,7 @@ Test Type: Old API Workflow
             return False
     
     async def test_new_api_workflow(self):
-        """Test the new API workflow (api/v2/upload)"""
+        """Test the new API workflow (api/upload-pipeline/upload)"""
         logger.info("🔍 Testing NEW API workflow...")
         
         # Create test file content
@@ -152,11 +152,11 @@ Test Type: New API Workflow
             "ocr": False
         }
         
-        logger.info(f"📤 Testing new API endpoint: /api/v2/upload")
+        logger.info(f"📤 Testing new API endpoint: /api/upload-pipeline/upload")
         
         try:
             new_api_response = await self.client.post(
-                f"{self.api_url}/api/v2/upload",
+                f"{self.api_url}/api/upload-pipeline/upload",
                 json=upload_request,
                 headers=headers,
                 timeout=60
@@ -193,7 +193,7 @@ Test Type: New API Workflow
                 
                 # Check for specific endpoints
                 has_old_api = "/upload-document-backend" in paths
-                has_new_api = "/api/v2/upload" in paths
+                has_new_api = "/api/upload-pipeline/upload" in paths
                 
                 logger.info(f"✅ Old API endpoint available: {has_old_api}")
                 logger.info(f"✅ New API endpoint available: {has_new_api}")
