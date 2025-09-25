@@ -50,7 +50,7 @@ async def create_test_document() -> str:
     }
     
     async with httpx.AsyncClient() as client:
-        response = await client.post(f"{API_BASE_URL}/api/v2/upload", json=upload_request, headers=headers)
+        response = await client.post(f"{API_BASE_URL}/api/upload-pipeline/upload", json=upload_request, headers=headers)
         
         if response.status_code != 200:
             raise Exception(f"Failed to create upload request: {response.text}")

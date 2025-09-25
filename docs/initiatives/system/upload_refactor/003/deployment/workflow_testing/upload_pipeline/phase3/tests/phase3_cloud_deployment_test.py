@@ -132,7 +132,7 @@ class Phase3CloudTester:
             
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{self.api_url}/api/v2/upload", 
+                    f"{self.api_url}/api/upload-pipeline/upload", 
                     json=upload_data, 
                     headers=headers, 
                     timeout=30

@@ -83,7 +83,7 @@ Test Type: Corrected API Workflow
             logger.info(f"📄 Test document prepared - Size: {len(test_content)} bytes, SHA256: {file_sha256[:16]}...")
             
             # Step 4: Call correct API endpoint to initiate upload
-            logger.info("🔍 Step 4: Calling correct API endpoint (/api/v2/upload)...")
+            logger.info("🔍 Step 4: Calling correct API endpoint (/api/upload-pipeline/upload)...")
             
             headers = {"Authorization": f"Bearer {access_token}"}
             
@@ -98,7 +98,7 @@ Test Type: Corrected API Workflow
             logger.info(f"📤 Upload request: {json.dumps(upload_request, indent=2)}")
             
             upload_response = await client.post(
-                f"{api_url}/api/v2/upload",
+                f"{api_url}/api/upload-pipeline/upload",
                 json=upload_request,
                 headers=headers,
                 timeout=60

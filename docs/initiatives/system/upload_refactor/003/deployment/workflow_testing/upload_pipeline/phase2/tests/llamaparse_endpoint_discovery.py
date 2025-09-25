@@ -35,7 +35,7 @@ async def discover_llamaparse_endpoints():
         "/api/v1/parsing",
         "/api/v1/documents",
         "/api/v1/files",
-        "/api/v1/upload",
+        "/api/upload-pipeline/upload",
         "/api/v1/jobs",
         
         # Alternative patterns
@@ -148,7 +148,7 @@ async def test_document_parsing():
         "/api/v1/parse",
         "/v1/parse", 
         "/parse",
-        "/api/v1/upload",
+        "/api/upload-pipeline/upload",
         "/v1/upload",
         "/upload"
     ]

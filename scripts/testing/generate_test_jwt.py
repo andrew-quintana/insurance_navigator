@@ -129,7 +129,7 @@ def generate_test_tokens():
     print("curl -H 'Authorization: Bearer <TOKEN>' \\")
     print("     -H 'Content-Type: application/json' \\")
     print("     -d '{\"filename\": \"test.pdf\", ...}' \\")
-    print("     http://localhost:8000/api/v2/upload")
+    print("     http://localhost:8000/api/upload-pipeline/upload")
 
 if __name__ == "__main__":
     generate_test_tokens()

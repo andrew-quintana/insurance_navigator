@@ -61,7 +61,7 @@ def upload_file(file_path):
         "content_type": "application/pdf"
     }
     
-    response = requests.post(f"{API_BASE_URL}/api/v2/upload", json=upload_data, headers=headers)
+    response = requests.post(f"{API_BASE_URL}/api/upload-pipeline/upload", json=upload_data, headers=headers)
     
     if response.status_code != 200:
         print(f"❌ Upload failed: {response.status_code} - {response.text}")

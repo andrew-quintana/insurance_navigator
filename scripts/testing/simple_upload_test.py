@@ -29,13 +29,13 @@ def test_upload():
         "Authorization": f"Bearer {JWT_TOKEN}"
     }
     
-    print(f"📤 POST to {API_BASE_URL}/api/v2/upload")
+    print(f"📤 POST to {API_BASE_URL}/api/upload-pipeline/upload")
     print(f"📋 Data: {json.dumps(test_data, indent=2)}")
     
     try:
         start_time = time.time()
         response = requests.post(
-            f"{API_BASE_URL}/api/v2/upload",
+            f"{API_BASE_URL}/api/upload-pipeline/upload",
             headers=headers,
             json=test_data,
             timeout=30

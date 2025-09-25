@@ -1,0 +1,221 @@
+{
+  "timestamp": "2025-09-25T10:42:35.401566",
+  "test_id": "c005876e-0687-4bc1-bb9c-62f336abcdd8",
+  "config": {
+    "vercel_url": "https://insurance-navigator.vercel.app",
+    "api_url": "https://insurance-navigator-api.onrender.com",
+    "worker_url": "https://insurance-navigator-worker.onrender.com",
+    "supabase_url": "https://znvwzkdblknkkztqyfnu.supabase.co",
+    "supabase_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpudnd6a2RibGtua2t6dHF5Zm51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2ODA0NTYsImV4cCI6MjA2NzI1NjQ1Nn0.k0QHYOgm4EilyyTml57kCGDpbikpEtJCzq-qzGYQZqY",
+    "supabase_service_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpudnd6a2RibGtua2t6dHF5Zm51Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTY4MDQ1NiwiZXhwIjoyMDY3MjU2NDU2fQ.9Urox9-xr5TJz8a9LbSZsGUMcSTThc3QM6XDMJD-j-o"
+  },
+  "tests": {
+    "environment_validation": {
+      "status": "passed",
+      "checks": {
+        "vercel_url_configured": true,
+        "api_url_configured": true,
+        "supabase_url_configured": true,
+        "supabase_credentials": true
+      },
+      "errors": [],
+      "warnings": []
+    },
+    "service_health": {
+      "status": "passed",
+      "services": {
+        "api": {
+          "status_code": 200,
+          "response_time": 0,
+          "healthy": true,
+          "data": {
+            "status": "healthy",
+            "timestamp": "2025-09-25T17:42:31.348808",
+            "services": {
+              "database": {
+                "status": "healthy",
+                "healthy": true,
+                "last_check": 2767406.945,
+                "error": null
+              },
+              "rag": {
+                "status": "healthy",
+                "healthy": true,
+                "last_check": 2767406.945,
+                "error": null
+              },
+              "user_service": {
+                "status": "healthy",
+                "healthy": true,
+                "last_check": null,
+                "error": null
+              },
+              "conversation_service": {
+                "status": "healthy",
+                "healthy": true,
+                "last_check": null,
+                "error": null
+              },
+              "storage_service": {
+                "status": "healthy",
+                "healthy": true,
+                "last_check": null,
+                "error": null
+              }
+            },
+            "version": "3.0.0"
+          }
+        },
+        "worker": {
+          "status_code": 404,
+          "accessible": true,
+          "note": "404 expected for background workers"
+        }
+      },
+      "errors": [],
+      "warnings": []
+    },
+    "frontend_accessibility": {
+      "status": "passed",
+      "checks": {
+        "main_page_accessible": true,
+        "main_page_status": 200,
+        "endpoint__api_health": {
+          "accessible": true,
+          "status": 404
+        },
+        "endpoint__api_upload": {
+          "accessible": true,
+          "status": 404
+        },
+        "endpoint__api_documents": {
+          "accessible": true,
+          "status": 404
+        }
+      },
+      "errors": [],
+      "warnings": []
+    },
+    "api_endpoints": {
+      "status": "warning",
+      "endpoints": {
+        "health": {
+          "status_code": 200,
+          "healthy": true,
+          "data": {
+            "status": "healthy",
+            "timestamp": "2025-09-25T17:42:31.348808",
+            "services": {
+              "database": {
+                "status": "healthy",
+                "healthy": true,
+                "last_check": 2767406.945,
+                "error": null
+              },
+              "rag": {
+                "status": "healthy",
+                "healthy": true,
+                "last_check": 2767406.945,
+                "error": null
+              },
+              "user_service": {
+                "status": "healthy",
+                "healthy": true,
+                "last_check": null,
+                "error": null
+              },
+              "conversation_service": {
+                "status": "healthy",
+                "healthy": true,
+                "last_check": null,
+                "error": null
+              },
+              "storage_service": {
+                "status": "healthy",
+                "healthy": true,
+                "last_check": null,
+                "error": null
+              }
+            },
+            "version": "3.0.0"
+          }
+        },
+        "upload": {
+          "status_code": 405,
+          "accessible": true,
+          "note": "Method not allowed expected for GET request"
+        },
+        "documents": {
+          "status_code": 405,
+          "accessible": false,
+          "note": "Authentication may be required"
+        }
+      },
+      "errors": [],
+      "warnings": [
+        "Some endpoints not accessible: ['health', 'documents']"
+      ]
+    },
+    "database_connectivity": {
+      "status": "warning",
+      "checks": {
+        "database_healthy": false
+      },
+      "errors": [],
+      "warnings": [
+        "Database not healthy according to API"
+      ]
+    },
+    "document_upload_pipeline": {
+      "status": "warning",
+      "upload_tests": {
+        "document_upload": {
+          "status_code": 405,
+          "success": false,
+          "response_time": 0
+        }
+      },
+      "errors": [],
+      "warnings": [
+        "Upload failed: 405"
+      ]
+    },
+    "worker_processing": {
+      "status": "passed",
+      "checks": {
+        "worker_accessible": true,
+        "worker_status": 404,
+        "worker_note": "404 expected for background worker"
+      },
+      "errors": [],
+      "warnings": []
+    },
+    "end_to_end_workflow": {
+      "status": "failed",
+      "workflow_steps": {
+        "upload": {
+          "success": false,
+          "error": "Upload failed: 405"
+        }
+      },
+      "errors": [
+        "Upload step failed"
+      ],
+      "warnings": []
+    }
+  },
+  "summary": {
+    "total_tests": 8,
+    "passed_tests": 4,
+    "failed_tests": 1,
+    "warning_tests": 3,
+    "error_tests": 0,
+    "overall_status": "failed"
+  },
+  "performance_metrics": {
+    "total_execution_time": 0,
+    "average_response_time": 0,
+    "slowest_test": null,
+    "fastest_test": null
+  }
+}

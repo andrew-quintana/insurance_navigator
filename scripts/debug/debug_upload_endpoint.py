@@ -101,7 +101,7 @@ Generated: {datetime.utcnow().isoformat()}
             logger.info(f"Headers: {headers}")
             
             upload_response = await client.post(
-                f"{api_url}/api/v1/upload",
+                f"{api_url}/api/upload-pipeline/upload",
                 data=upload_data,
                 files=files,
                 headers=headers,

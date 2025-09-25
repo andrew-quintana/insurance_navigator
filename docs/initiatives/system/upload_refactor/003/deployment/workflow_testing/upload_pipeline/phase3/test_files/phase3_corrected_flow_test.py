@@ -269,7 +269,7 @@ startxref
             async with httpx.AsyncClient(timeout=30) as client:
                 # Try the upload endpoint (this should exist in the upload pipeline API)
                 response = await client.post(
-                    f"{self.api_url}/api/v2/upload",  # This should be the correct endpoint
+                    f"{self.api_url}/api/upload-pipeline/upload",  # This should be the correct endpoint
                     json=upload_request,
                     headers=headers
                 )
@@ -306,7 +306,7 @@ startxref
                             "api_not_deployed": True,
                             "expected_behavior": True,
                             "next_step": "Deploy upload pipeline API service",
-                            "correct_endpoint": "/api/v2/upload",
+                            "correct_endpoint": "/api/upload-pipeline/upload",
                             "required_services": [
                                 "Upload Pipeline API (insurance-navigator-api-workflow-testing)",
                                 "Worker Service (already deployed)"
@@ -437,7 +437,7 @@ startxref
         try:
             # Step 1: API creates database records and signed URL
             logger.info("📤 STEP 1: API creates database records and signed URL")
-            logger.info("   - Client sends UploadRequest to /api/v2/upload")
+            logger.info("   - Client sends UploadRequest to /api/upload-pipeline/upload")
             logger.info("   - API validates request and checks for duplicates")
             logger.info("   - API creates document record in database")
             logger.info("   - API creates upload job record")

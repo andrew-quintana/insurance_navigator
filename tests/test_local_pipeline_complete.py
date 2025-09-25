@@ -59,7 +59,7 @@ async def test_local_pipeline():
         # 3. Test upload limits endpoint
         logger.info("3️⃣ Testing upload limits endpoint...")
         try:
-            async with session.get(f"{base_url}/api/v2/upload/limits") as response:
+            async with session.get(f"{base_url}/api/upload-pipeline/upload/limits") as response:
                 if response.status == 200:
                     limits_data = await response.json()
                     logger.info(f"✅ Upload limits: {limits_data}")
@@ -141,7 +141,7 @@ async def test_local_pipeline():
         
         # Test upload without authentication first
         try:
-            async with session.post(f"{base_url}/api/v2/upload", json=upload_data) as response:
+            async with session.post(f"{base_url}/api/upload-pipeline/upload", json=upload_data) as response:
                 if response.status == 401:
                     logger.info("✅ Upload endpoint requires authentication (expected)")
                 elif response.status == 200:

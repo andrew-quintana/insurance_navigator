@@ -99,7 +99,7 @@ class Phase3CompleteEndToEndTest:
             
             # Check for specific endpoints
             has_old_api = "/upload-document-backend" in paths
-            has_new_api = "/api/v2/upload" in paths
+            has_new_api = "/api/upload-pipeline/upload" in paths
             
             logger.info(f"✅ Old API endpoint available: {has_old_api}")
             logger.info(f"✅ New API endpoint available: {has_new_api}")
@@ -311,7 +311,7 @@ The worker service will process this document through all stages of the pipeline
         
         try:
             response = await self.client.post(
-                f"{self.api_url}/api/v2/upload",
+                f"{self.api_url}/api/upload-pipeline/upload",
                 json=upload_data,
                 headers=headers,
                 timeout=30

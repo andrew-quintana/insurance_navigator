@@ -46,7 +46,7 @@ async def upload_test_document(
             }
             
             response = await client.post(
-                f"{base_url}/api/v2/upload",
+                f"{base_url}/api/upload-pipeline/upload",
                 json=upload_payload,
                 headers=headers
             )
