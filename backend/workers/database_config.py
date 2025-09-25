@@ -63,13 +63,25 @@ def create_database_config() -> DatabaseConfig:
         import urllib.parse
         parsed = urllib.parse.urlparse(db_url)
         
+        # Determine SSL mode based on connection type
+        if any(host in db_url for host in ["127.0.0.1", "localhost", "supabase_db_insurance_navigator"]):
+            ssl_mode = "disable"
+        elif "pooler.supabase.com" in db_url or "dfgzeastcxnoqshgyotp" in db_url:
+            # Supabase pooler URLs need require SSL
+            ssl_mode = "require"
+        else:
+            ssl_mode = "require"
+        
+        logger.info(f"Database connection SSL mode: {ssl_mode}")
+        logger.info(f"Database host: {parsed.hostname}")
+        
         return DatabaseConfig(
             host=parsed.hostname or "localhost",
             port=parsed.port or 5432,
             database=parsed.path.lstrip('/') or "postgres",
             user=parsed.username or "postgres",
             password=parsed.password or "",
-            ssl_mode="disable" if any(host in db_url for host in ["127.0.0.1", "localhost", "supabase_db_insurance_navigator"]) else "require"
+            ssl_mode=ssl_mode
         )
     
     # Fallback to individual environment variables
