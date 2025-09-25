@@ -43,19 +43,14 @@ def create_database_config() -> DatabaseConfig:
     logger.info(f"DEBUG: Using worker-specific database config with pooler URL support")
     
     if is_cloud_deployment:
-        # Temporarily use direct DATABASE_URL to test authentication
-        # TODO: Re-enable pooler URL once authentication issue is resolved
+        # Use direct DATABASE_URL for cloud deployments (documented fix for SCRAM auth issues)
+        # Pooler URLs cause asyncpg SCRAM authentication failures - use direct connection
         db_url = os.getenv("DATABASE_URL")
         if db_url:
-            logger.info(f"Using direct DATABASE_URL for cloud deployment (testing): {db_url[:50]}...")
+            logger.info(f"Using direct DATABASE_URL for cloud deployment (SCRAM auth fix): {db_url[:50]}...")
         else:
-            # Fallback to pooler URL if no direct URL available
-            pooler_url = os.getenv("SUPABASE_SESSION_POOLER_URL") or os.getenv("SUPABASE_POOLER_URL")
-            if pooler_url:
-                logger.info(f"Using Supabase pooler URL for cloud deployment: {pooler_url[:50]}...")
-                db_url = pooler_url
-            else:
-                logger.warning("No database URL found")
+            # Fallback to individual environment variables if no DATABASE_URL
+            logger.warning("No DATABASE_URL found, falling back to individual environment variables")
     else:
         # Local development: use DATABASE_URL directly
         db_url = os.getenv("DATABASE_URL")
