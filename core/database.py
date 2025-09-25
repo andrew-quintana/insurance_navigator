@@ -218,6 +218,7 @@ def create_database_config() -> DatabaseConfig:
     logger.info(f"RENDER env var: {os.getenv('RENDER')}")
     logger.info(f"SUPABASE_SESSION_POOLER_URL available: {bool(os.getenv('SUPABASE_SESSION_POOLER_URL'))}")
     logger.info(f"SUPABASE_POOLER_URL available: {bool(os.getenv('SUPABASE_POOLER_URL'))}")
+    logger.info(f"DEBUG: Force redeploy to test pooler URL fix")
     
     if is_cloud_deployment:
         # Try pooler URL first for cloud deployments to avoid IPv6 connectivity issues
