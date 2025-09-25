@@ -133,21 +133,35 @@ export default function DocumentUpload({
       }
       
       // Use the working backend endpoint that handles file storage
-      let uploadUrl = `${apiBaseUrl}/api/v1/upload`
+      let uploadUrl = `${apiBaseUrl}/api/upload-pipeline/upload`
+      // Read file content for metadata calculation
+      const fileContent = await selectedFile.arrayBuffer()
+      const fileSize = fileContent.byteLength
+      const fileHash = await crypto.subtle.digest('SHA-256', fileContent)
+      const fileSha256 = Array.from(new Uint8Array(fileHash))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('')
+      
+      // Create upload request payload
+      const uploadRequest = {
+        filename: selectedFile.name,
+        bytes_len: fileSize,
+        mime: selectedFile.type || "application/octet-stream",
+        sha256: fileSha256,
+        ocr: false
+      }
+      
       let uploadResponse = await fetch(uploadUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
-        body: (() => {
-          const formData = new FormData()
-          formData.append('file', selectedFile)
-          formData.append('policy_id', selectedFile.name.replace(/\.[^/.]+$/, ""))
-          return formData
-        })(),
+        body: JSON.stringify(uploadRequest),
       })
 
-      // No fallback needed - /api/v1/upload is the correct endpoint
+      // No fallback needed - /api/upload-pipeline/upload is the correct endpoint
 
       if (!uploadResponse.ok) {
         // Enhanced error handling for common issues
@@ -179,6 +193,25 @@ export default function DocumentUpload({
       }
 
       const result = await uploadResponse.json()
+      
+      // Now upload the actual file using the signed URL
+      if (result.signed_url) {
+        console.log('📤 Uploading file to signed URL...')
+        
+        const fileUploadResponse = await fetch(result.signed_url, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': selectedFile.type || 'application/octet-stream',
+          },
+          body: selectedFile
+        })
+        
+        if (!fileUploadResponse.ok) {
+          throw new Error(`File upload failed: ${fileUploadResponse.status} ${fileUploadResponse.statusText}`)
+        }
+        
+        console.log('✅ File upload successful')
+      }
       
       // Show immediate completion on frontend
       setUploadProgress(100)

@@ -116,8 +116,8 @@ export default function DocumentUploadServerless({
   // Upload single file
   const uploadFile = async (fileStatus: FileUploadStatus): Promise<UploadResponse> => {
     const token = localStorage.getItem("token")
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://jhrespvvhbnloxrieycf.supabase.co'
-    const uploadEndpoint = `${supabaseUrl}/functions/v1/upload-handler`
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://insurance-navigator-api.onrender.com'
+    const uploadEndpoint = `${apiBaseUrl}/api/upload-pipeline/upload`
     
     console.log('🔍 Debug - Upload starting:', {
       fileName: fileStatus.file.name,
@@ -133,25 +133,25 @@ export default function DocumentUploadServerless({
       throw new Error(validation)
     }
     
-    const formData = new FormData()
-    formData.append('file', fileStatus.file)
+    // Read file content for metadata calculation
+    const fileContent = await fileStatus.file.arrayBuffer()
+    const fileSize = fileContent.byteLength
+    const fileHash = await crypto.subtle.digest('SHA-256', fileContent)
+    const fileSha256 = Array.from(new Uint8Array(fileHash))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('')
     
-    // Use a more reliable policy ID format
-    const timestamp = new Date().getTime()
-    const safeFileName = fileStatus.file.name
-      .replace(/\.[^/.]+$/, "") // Remove extension
-      .replace(/[^a-zA-Z0-9-_]/g, '_') // Replace unsafe chars
-    const policyId = `${safeFileName}_${timestamp}`
-    
-    // Add metadata as JSON string
-    const metadata = {
-      policy_id: policyId,
-      upload_started_at: new Date().toISOString()
+    // Create upload request payload
+    const uploadRequest = {
+      filename: fileStatus.file.name,
+      bytes_len: fileSize,
+      mime: fileStatus.file.type || "application/octet-stream",
+      sha256: fileSha256,
+      ocr: false
     }
-    formData.append('metadata', JSON.stringify(metadata))
     
     console.log('📤 Debug - Preparing upload:', {
-      metadata,
+      uploadRequest,
       endpoint: uploadEndpoint
     })
     
@@ -160,9 +160,10 @@ export default function DocumentUploadServerless({
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: formData,
+        body: JSON.stringify(uploadRequest),
       })
 
       console.log('📥 Debug - Response received:', {
@@ -198,7 +199,26 @@ export default function DocumentUploadServerless({
       }
 
       const result = await uploadResponse.json()
-      console.log('✅ Upload successful:', result)
+      console.log('✅ Upload request successful:', result)
+      
+      // Now upload the actual file using the signed URL
+      if (result.signed_url) {
+        console.log('📤 Uploading file to signed URL...')
+        
+        const fileUploadResponse = await fetch(result.signed_url, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': fileStatus.file.type || 'application/octet-stream',
+          },
+          body: fileStatus.file
+        })
+        
+        if (!fileUploadResponse.ok) {
+          throw new Error(`File upload failed: ${fileUploadResponse.status} ${fileUploadResponse.statusText}`)
+        }
+        
+        console.log('✅ File upload successful')
+      }
       
       return {
         success: true,
