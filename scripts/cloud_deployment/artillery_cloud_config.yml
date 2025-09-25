@@ -129,7 +129,7 @@ scenarios:
     flow:
       # Test upload endpoint accessibility (will require auth)
       - post:
-          url: "{{ $processEnvironment.API_URL }}/upload-document-backend"
+          url: "{{ $processEnvironment.API_URL }}/api/v1/upload"
           json:
             filename: "test-document.pdf"
             content_type: "application/pdf"
@@ -139,7 +139,7 @@ scenarios:
       
       # Test upload validation
       - post:
-          url: "{{ $processEnvironment.API_URL }}/upload-document-backend"
+          url: "{{ $processEnvironment.API_URL }}/api/v1/upload"
           json:
             filename: ""
             content_type: "application/pdf"

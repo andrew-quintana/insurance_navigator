@@ -215,8 +215,8 @@ class Phase3ProductionDeploymentTest:
                         print(f"   ❌ Upload endpoint not available: {response.status}")
                         return False
                 
-                # Test upload-document-backend endpoint
-                async with session.get(f"{self.api_base_url}/upload-document-backend") as response:
+                # Test upload endpoint
+                async with session.get(f"{self.api_base_url}/api/v1/upload") as response:
                     if response.status in [200, 405]:  # 405 is OK for GET on POST endpoint
                         print(f"   ✅ Upload backend endpoint available")
                     else:

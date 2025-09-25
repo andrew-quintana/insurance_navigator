@@ -308,7 +308,7 @@ class CloudIntegrationTester:
                 }
             
             # Test upload endpoint (should return method not allowed for GET)
-            async with self.session.get(f"{self.config['api_url']}/upload-document-backend", timeout=30) as response:
+            async with self.session.get(f"{self.config['api_url']}/api/v1/upload", timeout=30) as response:
                 result['endpoints']['upload'] = {
                     'status_code': response.status,
                     'accessible': response.status in [200, 405],  # 405 is expected for GET
@@ -395,7 +395,7 @@ class CloudIntegrationTester:
             data = aiohttp.FormData()
             data.add_field('file', test_doc['content'], filename=test_doc['name'], content_type=test_doc['type'])
             
-            async with self.session.post(f"{self.config['api_url']}/upload-document-backend", data=data, timeout=60) as response:
+            async with self.session.post(f"{self.config['api_url']}/api/v1/upload", data=data, timeout=60) as response:
                 upload_result = {
                     'status_code': response.status,
                     'success': response.status in [200, 201],
@@ -480,7 +480,7 @@ class CloudIntegrationTester:
             data = aiohttp.FormData()
             data.add_field('file', test_doc['content'], filename=test_doc['name'], content_type=test_doc['type'])
             
-            async with self.session.post(f"{self.config['api_url']}/upload-document-backend", data=data, timeout=60) as response:
+            async with self.session.post(f"{self.config['api_url']}/api/v1/upload", data=data, timeout=60) as response:
                 if response.status in [200, 201]:
                     upload_data = await response.json()
                     result['workflow_steps']['upload'] = {
