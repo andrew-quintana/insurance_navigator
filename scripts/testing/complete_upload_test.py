@@ -60,7 +60,7 @@ def step1_get_signed_url(metadata: Dict[str, Any]) -> Dict[str, Any]:
     start_time = time.time()
     try:
         response = requests.post(
-            f"{API_BASE_URL}/api/v2/upload",
+            f"{API_BASE_URL}/api/upload-pipeline/upload",
             headers=headers,
             json=metadata,
             timeout=(TIMEOUTS["connect"], TIMEOUTS["read"])

@@ -340,11 +340,11 @@ startxref
             }
             
             logger.info(f"📤 Upload data: {json.dumps(upload_data, indent=2)}")
-            logger.info(f"📡 Making upload request to: {self.api_url}/api/v2/upload")
+            logger.info(f"📡 Making upload request to: {self.api_url}/api/upload-pipeline/upload")
             
             async with httpx.AsyncClient(timeout=60) as client:
                 response = await client.post(
-                    f"{self.api_url}/api/v2/upload",
+                    f"{self.api_url}/api/upload-pipeline/upload",
                     json=upload_data,
                     headers=headers
                 )

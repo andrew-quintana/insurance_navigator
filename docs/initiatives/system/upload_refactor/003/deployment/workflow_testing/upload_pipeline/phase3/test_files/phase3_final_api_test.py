@@ -100,7 +100,7 @@ class Phase3FinalAPITest:
         
         # Test new upload endpoint if available
         new_upload_response = await self.client.post(
-            f"{self.api_url}/api/v2/upload",
+            f"{self.api_url}/api/upload-pipeline/upload",
             json={"test": "data"},
             timeout=30
         )
@@ -148,7 +148,7 @@ This is a comprehensive test of the upload pipeline workflow.
         
         # Test new endpoint
         new_response = await self.client.post(
-            f"{self.api_url}/api/v2/upload",
+            f"{self.api_url}/api/upload-pipeline/upload",
             json=upload_data,
             headers=headers,
             timeout=30

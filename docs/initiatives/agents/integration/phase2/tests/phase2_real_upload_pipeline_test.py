@@ -15,7 +15,7 @@ from pathlib import Path
 
 # Test configuration
 UPLOAD_PIPELINE_URL = "http://localhost:8000"
-UPLOAD_ENDPOINT = "/api/v2/upload"
+UPLOAD_ENDPOINT = "/api/upload-pipeline/upload"
 JOBS_ENDPOINT = "/api/v2/jobs"
 CHAT_ENDPOINT = "/chat"
 

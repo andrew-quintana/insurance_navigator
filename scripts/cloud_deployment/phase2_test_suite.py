@@ -399,7 +399,7 @@ class Phase2TestSuite:
                 # Test 3: Authentication failure
                 try:
                     async with session.post(
-                        f"{self.config['api_url']}/api/v1/upload",
+                        f"{self.config['api_url']}/api/upload-pipeline/upload",
                         json={"test": "data"},
                         timeout=5
                     ) as response:

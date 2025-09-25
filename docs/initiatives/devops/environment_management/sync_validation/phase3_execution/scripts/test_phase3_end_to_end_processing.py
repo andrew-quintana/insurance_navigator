@@ -179,7 +179,7 @@ For questions about this policy, contact our customer service team at 1-800-INSU
                 headers = {"Authorization": f"Bearer {self.auth_token}"}
                 
                 start_time = time.time()
-                async with session.post(f"{self.base_url}/api/v2/upload", json=upload_data, headers=headers) as response:
+                async with session.post(f"{self.base_url}/api/upload-pipeline/upload", json=upload_data, headers=headers) as response:
                     response_time = time.time() - start_time
                     
                     if response.status == 200:

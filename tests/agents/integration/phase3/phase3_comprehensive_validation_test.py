@@ -109,7 +109,7 @@ class Phase3ComprehensiveValidator:
                         print("   ❌ Health checks failing")
                 
                 # Check upload endpoint
-                async with session.get(f"{self.api_base_url}/api/v2/upload") as response:
+                async with session.get(f"{self.api_base_url}/api/upload-pipeline/upload") as response:
                     if response.status in [200, 405]:  # 405 is OK for GET on POST endpoint
                         requirements["upload_pipeline_deployment"] = True
                         print("   ✅ Upload pipeline deployed")
@@ -234,7 +234,7 @@ class Phase3ComprehensiveValidator:
         try:
             async with aiohttp.ClientSession() as session:
                 # Test upload endpoint availability
-                async with session.get(f"{self.api_base_url}/api/v2/upload") as response:
+                async with session.get(f"{self.api_base_url}/api/upload-pipeline/upload") as response:
                     if response.status in [200, 405]:
                         upload_tests["upload_endpoint"] = True
                         print("   ✅ Upload endpoint available")
@@ -559,7 +559,7 @@ class Phase3ComprehensiveValidator:
             async with aiohttp.ClientSession() as session:
                 # Test authentication
                 try:
-                    async with session.get(f"{self.api_base_url}/api/v2/upload") as response:
+                    async with session.get(f"{self.api_base_url}/api/upload-pipeline/upload") as response:
                         if response.status == 401:  # Should require authentication
                             security_tests["authentication"] = True
                             print("   ✅ Authentication required")

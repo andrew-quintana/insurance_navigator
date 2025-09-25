@@ -232,7 +232,7 @@ class Phase2Tester:
             
             # Upload via API
             response = requests.post(
-                f"{self.api_base_url}/api/v2/upload",
+                f"{self.api_base_url}/api/upload-pipeline/upload",
                 json=upload_request,
                 headers=headers,
                 timeout=30

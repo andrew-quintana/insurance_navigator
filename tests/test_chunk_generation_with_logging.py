@@ -192,7 +192,7 @@ class ChunkGenerationTest:
                 logger.info(f"Document size: {len(test_doc_content)} bytes")
                 logger.info(f"Document hash: {test_doc_hash}")
                 
-                async with session.post(f"{self.base_url}/api/v2/upload", json=upload_data, headers=headers) as response:
+                async with session.post(f"{self.base_url}/api/upload-pipeline/upload", json=upload_data, headers=headers) as response:
                     response_text = await response.text()
                     logger.info(f"Upload response status: {response.status}")
                     logger.info(f"Upload response body: {response_text}")

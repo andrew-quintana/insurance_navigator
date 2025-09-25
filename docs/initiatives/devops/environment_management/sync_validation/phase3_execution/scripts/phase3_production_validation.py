@@ -261,7 +261,7 @@ class Phase3ValidationSuite:
             }
             
             upload_response = await self.client.post(
-                f"{self.base_url}/api/v2/upload",
+                f"{self.base_url}/api/upload-pipeline/upload",
                 json=upload_data,
                 headers=headers
             )

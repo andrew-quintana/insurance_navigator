@@ -314,7 +314,7 @@ class Phase2SimpleUUIDTest:
                     "Authorization": f"Bearer {self.access_token or self.supabase_service_key}"
                 }
                 
-                upload_url = f"{self.api_base_url}/api/v2/upload"
+                upload_url = f"{self.api_base_url}/api/upload-pipeline/upload"
                 async with session.post(upload_url, data=form_data, headers=upload_headers) as response:
                     if response.status == 200:
                         upload_data = await response.json()
@@ -352,7 +352,7 @@ class Phase2SimpleUUIDTest:
             while time.time() - start_time < max_wait_time:
                 # Check processing status
                 async with aiohttp.ClientSession() as session:
-                    status_url = f"{self.api_base_url}/api/v2/upload/status/{self.uploaded_document_id}"
+                    status_url = f"{self.api_base_url}/api/upload-pipeline/upload/status/{self.uploaded_document_id}"
                     headers = {
                         "Authorization": f"Bearer {self.access_token or self.supabase_service_key}"
                     }

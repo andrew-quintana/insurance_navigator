@@ -97,7 +97,7 @@ class Phase3WorkerTester:
             
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
-                    f"{self.worker_url}/api/v2/upload",
+                    f"{self.worker_url}/api/upload-pipeline/upload",
                     json=upload_data,
                     headers=headers
                 )
@@ -178,7 +178,7 @@ class Phase3WorkerTester:
             
             endpoints = [
                 "/health",
-                "/api/v2/upload",
+                "/api/upload-pipeline/upload",
                 "/api/v2/jobs",
                 "/test/upload",
                 "/test/jobs"
@@ -189,7 +189,7 @@ class Phase3WorkerTester:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 for endpoint in endpoints:
                     try:
-                        if endpoint == "/api/v2/upload":
+                        if endpoint == "/api/upload-pipeline/upload":
                             # POST request for upload
                             response = await client.post(
                                 f"{self.worker_url}{endpoint}",

@@ -208,7 +208,7 @@ class Phase3ProductionDeploymentTest:
         try:
             async with aiohttp.ClientSession() as session:
                 # Test upload endpoint availability
-                async with session.get(f"{self.api_base_url}/api/v2/upload") as response:
+                async with session.get(f"{self.api_base_url}/api/upload-pipeline/upload") as response:
                     if response.status in [200, 405]:  # 405 is OK for GET on POST endpoint
                         print(f"   ✅ Upload endpoint available")
                     else:
@@ -216,7 +216,7 @@ class Phase3ProductionDeploymentTest:
                         return False
                 
                 # Test upload endpoint
-                async with session.get(f"{self.api_base_url}/api/v1/upload") as response:
+                async with session.get(f"{self.api_base_url}/api/upload-pipeline/upload") as response:
                     if response.status in [200, 405]:  # 405 is OK for GET on POST endpoint
                         print(f"   ✅ Upload backend endpoint available")
                     else:

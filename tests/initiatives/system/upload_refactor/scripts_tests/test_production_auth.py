@@ -69,7 +69,7 @@ def test_production_endpoints():
     
     try:
         response = requests.post(
-            "http://localhost:8000/api/v2/upload",
+            "http://localhost:8000/api/upload-pipeline/upload",
             headers=headers,
             json=test_data,
             timeout=10

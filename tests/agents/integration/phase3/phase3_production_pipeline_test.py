@@ -86,7 +86,7 @@ class Phase3ProductionPipelineTest:
                     health_data = await response.json()
                     
                     # Test upload endpoint availability
-                    async with session.get(f"{self.api_base_url}/api/v2/upload") as upload_response:
+                    async with session.get(f"{self.api_base_url}/api/upload-pipeline/upload") as upload_response:
                         upload_status = upload_response.status
                     
                     # Test jobs endpoint availability
@@ -181,7 +181,7 @@ class Phase3ProductionPipelineTest:
                     'Authorization': f'Bearer {self.auth_token}'
                 }
                 
-                async with session.post(f"{self.api_base_url}/api/v2/upload", data=data, headers=headers) as response:
+                async with session.post(f"{self.api_base_url}/api/upload-pipeline/upload", data=data, headers=headers) as response:
                     if response.status != 200:
                         response_text = await response.text()
                         raise Exception(f"Upload failed: {response.status} - {response_text}")

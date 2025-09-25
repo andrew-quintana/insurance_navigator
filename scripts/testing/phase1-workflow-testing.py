@@ -241,7 +241,7 @@ class Phase1WorkflowTester:
             }
             
             async with self.session.post(
-                f"{self.config.api_base_url}/api/v2/upload",
+                f"{self.config.api_base_url}/api/upload-pipeline/upload",
                 json=upload_data,
                 headers={"Authorization": "Bearer test-jwt-token"}
             ) as response:
@@ -349,7 +349,7 @@ class Phase1WorkflowTester:
                 }
                 
                 task = self.session.post(
-                    f"{self.config.api_base_url}/api/v2/upload",
+                    f"{self.config.api_base_url}/api/upload-pipeline/upload",
                     json=upload_data,
                     headers={"Authorization": "Bearer test-jwt-token"}
                 )
@@ -437,7 +437,7 @@ class Phase1WorkflowTester:
                 logger.info(f"Testing {error_test['name']}...")
                 
                 async with self.session.post(
-                    f"{self.config.api_base_url}/api/v2/upload",
+                    f"{self.config.api_base_url}/api/upload-pipeline/upload",
                     json=error_test["data"],
                     headers={"Authorization": "Bearer test-jwt-token"}
                 ) as response:

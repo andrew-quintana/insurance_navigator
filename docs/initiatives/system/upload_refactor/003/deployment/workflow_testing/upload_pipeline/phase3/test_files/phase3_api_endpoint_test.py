@@ -76,8 +76,8 @@ class Phase3APIEndpointTest:
         logger.info(f"✅ User logged in, token: {self.access_token[:20]}...")
     
     async def test_new_upload_endpoint(self):
-        """Test the new /api/v2/upload endpoint"""
-        logger.info("🔍 Testing new /api/v2/upload endpoint...")
+        """Test the new /api/upload-pipeline/upload endpoint"""
+        logger.info("🔍 Testing new /api/upload-pipeline/upload endpoint...")
         
         # Create test upload request
         test_content = f"Phase 3 API Test Document - {datetime.utcnow().isoformat()}".encode('utf-8')
@@ -95,7 +95,7 @@ class Phase3APIEndpointTest:
         
         try:
             response = await self.client.post(
-                f"{self.api_url}/api/v2/upload",
+                f"{self.api_url}/api/upload-pipeline/upload",
                 json=upload_data,
                 headers=headers,
                 timeout=30
@@ -162,7 +162,7 @@ class Phase3APIEndpointTest:
                 logger.info(f"  - {path}")
             
             # Check for specific endpoints
-            has_new_api = "/api/v2/upload" in paths
+            has_new_api = "/api/upload-pipeline/upload" in paths
             has_old_api = "/upload-document-backend" in paths
             
             logger.info(f"✅ New API endpoint available: {has_new_api}")
@@ -170,7 +170,7 @@ class Phase3APIEndpointTest:
             
             # Check endpoint schemas
             if has_new_api:
-                new_endpoint = openapi_data["paths"]["/api/v2/upload"]
+                new_endpoint = openapi_data["paths"]["/api/upload-pipeline/upload"]
                 logger.info(f"📋 New endpoint methods: {list(new_endpoint.keys())}")
                 if "post" in new_endpoint:
                     logger.info(f"📋 New endpoint summary: {new_endpoint['post'].get('summary', 'N/A')}")
@@ -211,13 +211,13 @@ async def main():
             if new_success:
                 logger.info("")
                 logger.info("🎉 NEW UPLOAD PIPELINE API IS WORKING!")
-                logger.info("✅ /api/v2/upload endpoint functional")
+                logger.info("✅ /api/upload-pipeline/upload endpoint functional")
                 logger.info("✅ Upload pipeline integration working")
                 logger.info("✅ Complete end-to-end workflow available")
             elif has_new_api:
                 logger.info("")
                 logger.info("⚠️ NEW API ENDPOINT AVAILABLE BUT NOT WORKING")
-                logger.info("✅ /api/v2/upload endpoint exists")
+                logger.info("✅ /api/upload-pipeline/upload endpoint exists")
                 logger.info("❌ Database connection issue")
                 logger.info("📋 API structure is correct, needs database fix")
             else:

@@ -138,7 +138,7 @@ This validates the end-to-end workflow functionality.
 """
                 
                 upload_response = await client.post(
-                    f"{self.backend_url}/api/v2/upload",
+                    f"{self.backend_url}/api/upload-pipeline/upload",
                     headers=headers,
                     json={
                         "filename": f"test_document_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
