@@ -2,18 +2,8 @@ import os
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 
-# Load environment variables from .env files
-try:
-    from dotenv import load_dotenv
-    # Load .env.development first, then .env.base as fallback
-    # Use absolute paths from project root
-    import os
-    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-    load_dotenv(os.path.join(project_root, '.env.development'))
-    load_dotenv(os.path.join(project_root, '.env.base'), override=False)
-except ImportError:
-    # dotenv not available, continue without it
-    pass
+# Environment variables should be loaded by the calling process
+# This module only reads from os.environ
 
 @dataclass
 class WorkerConfig:

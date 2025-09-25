@@ -86,7 +86,7 @@ def get_webhook_base_url() -> str:
         return "http://localhost:8000"
     else:
         # Production environment
-        return os.getenv("WEBHOOK_BASE_URL", "https://insurance-navigator.onrender.com")
+        return os.getenv("WEBHOOK_BASE_URL", "***REMOVED***")
 
 def is_ngrok_available() -> bool:
     """

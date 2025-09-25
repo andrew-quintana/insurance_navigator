@@ -401,7 +401,7 @@ def generate_storage_path(bucket: str, user_id: str, document_id: str, extension
     Pattern: storage://{bucket}/{user_id}/{document_id}.{ext}
     
     Args:
-        bucket: Storage bucket name (raw, parsed)
+        bucket: Storage bucket name (files)
         user_id: User UUID string
         document_id: Document UUID string
         extension: File extension (pdf, md)

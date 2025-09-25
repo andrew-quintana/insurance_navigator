@@ -54,8 +54,6 @@ class UploadPipelineConfig(BaseSettings):
     max_parse_timeout_seconds: int = 600  # 10 minutes
     
     # Storage configuration
-    raw_bucket: str = "raw"
-    parsed_bucket: str = "parsed"
     signed_url_ttl_seconds: int = 300  # 5 minutes
     
     # Storage URL configuration for different environments

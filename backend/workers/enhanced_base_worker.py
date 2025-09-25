@@ -537,12 +537,27 @@ class EnhancedBaseWorker:
                     import sys
                     import importlib
                     ngrok_module = importlib.import_module("backend.shared.utils.ngrok_discovery")
+                    
+                    # Check if ngrok is available
+                    if not ngrok_module.is_ngrok_available():
+                        raise RuntimeError("Ngrok is required for development but not available. Please start ngrok first.")
+                    
                     base_url = ngrok_module.get_webhook_base_url()
                     self.logger.info(f"Using ngrok URL: {base_url}")
+                    
+                    # Validate the URL is accessible
+                    try:
+                        import requests
+                        response = requests.head(f"{base_url}/health", timeout=5)
+                        if response.status_code >= 500:
+                            raise RuntimeError(f"Ngrok URL {base_url} is not accessible (status: {response.status_code})")
+                    except Exception as e:
+                        raise RuntimeError(f"Ngrok URL {base_url} validation failed: {e}")
+                        
                 except (ImportError, Exception) as e:
-                    # Fallback if ngrok discovery fails
-                    self.logger.warning(f"Ngrok discovery failed, using localhost fallback: {e}")
-                    base_url = "http://localhost:8000"
+                    # No fallback - fail fast if ngrok is not available
+                    self.logger.error(f"Ngrok discovery failed: {e}")
+                    raise RuntimeError(f"Development environment requires ngrok: {e}")
             else:
                 # For production, use default if WEBHOOK_BASE_URL not set
                 base_url = "***REMOVED***"
@@ -1310,7 +1325,7 @@ class EnhancedBaseWorker:
                 # Use development key for local development
                 environment = os.getenv("ENVIRONMENT", "development")
                 if environment == "development":
-                    service_role_key = os.getenv("SERVICE_ROLE_KEY", "")
+                    service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
                 else:
                     service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))
                 if not service_role_key:

@@ -535,7 +535,15 @@ async def get_current_user(request: Request) -> Dict[str, Any]:
             detail="Missing or invalid authorization header"
         )
     
-    access_token = auth_header.split(" ")[1]
+    # Split and validate token exists
+    auth_parts = auth_header.split(" ")
+    if len(auth_parts) != 2 or not auth_parts[1]:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authorization header format - token missing"
+        )
+    
+    access_token = auth_parts[1]
     
     try:
         # Use auth adapter for token validation
@@ -855,9 +863,17 @@ async def upload_document_backend(
                     # Use development key for local development
                     environment = os.getenv("ENVIRONMENT", "development")
                     if environment == "development":
-                        service_role_key = os.getenv("SERVICE_ROLE_KEY", "")
+                        service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
                     else:
                         service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))
+                    
+                    # Debug logging
+                    logger.info(f"Environment: {environment}")
+                    logger.info(f"Service role key length: {len(service_role_key) if service_role_key else 0}")
+                    logger.info(f"Service role key starts with: {service_role_key[:20] if service_role_key else 'None'}")
+                    
+                    if not service_role_key:
+                        raise ValueError("SUPABASE_SERVICE_ROLE_KEY environment variable is required")
                     
                     async with httpx.AsyncClient() as client:
                         response = await client.post(

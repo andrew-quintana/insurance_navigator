@@ -22,12 +22,8 @@ class StorageManager:
         
         # Validate service role key
         if not self.service_role_key or self.service_role_key.strip() == "":
-            # Load from environment variables - prioritize development key for local development
-            environment = os.getenv("ENVIRONMENT", "development")
-            if environment == "development":
-                self.service_role_key = os.getenv("SERVICE_ROLE_KEY", "")
-            else:
-                self.service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))
+            # Load from environment variables - try both SUPABASE_SERVICE_ROLE_KEY and SERVICE_ROLE_KEY
+            self.service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))
             if not self.service_role_key:
                 raise ValueError("SUPABASE_SERVICE_ROLE_KEY environment variable must be set")
             logger.info("Service role key loaded from environment variables")
@@ -163,7 +159,7 @@ class StorageManager:
     
     def _parse_storage_path(self, path: str) -> tuple[str, str]:
         """Parse storage path to extract bucket and key"""
-        # Expected format: storage://{bucket}/user/{user_id}/parsed/{document_id}.{ext}
+        # Expected format: storage://{bucket}/user/{user_id}/{document_id}.{ext}
         if not path.startswith("storage://"):
             raise ValueError(f"Invalid storage path format: {path}")
         
