@@ -214,11 +214,16 @@ def create_database_config() -> DatabaseConfig:
     # For local development, use DATABASE_URL directly
     is_cloud_deployment = any(os.getenv(var) for var in ['RENDER', 'VERCEL', 'HEROKU_APP_NAME', 'AWS_LAMBDA_FUNCTION_NAME', 'K_SERVICE'])
     
+    logger.info(f"Database config creation - Cloud deployment: {is_cloud_deployment}")
+    logger.info(f"RENDER env var: {os.getenv('RENDER')}")
+    logger.info(f"SUPABASE_SESSION_POOLER_URL available: {bool(os.getenv('SUPABASE_SESSION_POOLER_URL'))}")
+    logger.info(f"SUPABASE_POOLER_URL available: {bool(os.getenv('SUPABASE_POOLER_URL'))}")
+    
     if is_cloud_deployment:
         # Try pooler URL first for cloud deployments to avoid IPv6 connectivity issues
         pooler_url = os.getenv("SUPABASE_SESSION_POOLER_URL") or os.getenv("SUPABASE_POOLER_URL")
         if pooler_url:
-            logger.info("Using Supabase pooler URL for cloud deployment")
+            logger.info(f"Using Supabase pooler URL for cloud deployment: {pooler_url[:50]}...")
             db_url = pooler_url
         else:
             # Fallback to direct DATABASE_URL if no pooler available
@@ -228,6 +233,7 @@ def create_database_config() -> DatabaseConfig:
     else:
         # Local development: use DATABASE_URL directly
         db_url = os.getenv("DATABASE_URL")
+        logger.info("Using direct DATABASE_URL for local development")
     
     if db_url:
         # Parse DATABASE_URL if available
