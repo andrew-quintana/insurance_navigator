@@ -20,7 +20,8 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime, timedelta
 import traceback
 
-from core.database import DatabaseManager, create_database_config
+from core.database import DatabaseManager
+from .database_config import create_database_config
 from backend.shared.storage.storage_manager import StorageManager
 from backend.shared.storage.mock_storage import MockStorageManager
 from backend.shared.external import RealLlamaParseService, OpenAIClient
