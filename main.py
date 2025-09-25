@@ -16,35 +16,17 @@ import aiohttp
 import asyncio
 from dotenv import load_dotenv
 
-# Load environment variables based on ENVIRONMENT variable
-environment = os.getenv('ENVIRONMENT', 'development')
+# Load environment variables using the environment loader
+from config.environment_loader import load_environment, get_environment_info
 
-# Try to load environment variables from .env file (for local development)
-# If not found, assume we're in cloud deployment and use environment variables directly
-if environment == 'development':
-    if os.path.exists('.env.development'):
-        load_dotenv('.env.development')
-        print(f"Loaded environment variables from .env.development (local development)")
-    else:
-        print("Environment file .env.development not found, using environment variables directly (cloud deployment)")
-elif environment == 'production':
-    if os.path.exists('.env.production'):
-        load_dotenv('.env.production')
-        print(f"Loaded environment variables from .env.production (local development)")
-    else:
-        print("Environment file .env.production not found, using environment variables directly (cloud deployment)")
-elif environment == 'staging':
-    if os.path.exists('.env.staging'):
-        load_dotenv('.env.staging')
-        print(f"Loaded environment variables from .env.staging (local development)")
-    else:
-        print("Environment file .env.staging not found, using environment variables directly (cloud deployment)")
-else:
-    if os.path.exists('.env'):
-        load_dotenv('.env')
-        print(f"Loaded environment variables from .env (local development)")
-    else:
-        print("Environment file .env not found, using environment variables directly (cloud deployment)")
+# Load environment variables based on deployment context
+try:
+    env_vars = load_environment()
+    env_info = get_environment_info()
+    print(f"Environment loaded: {env_info['environment']} on {env_info['platform']} (cloud: {env_info['is_cloud_deployment']})")
+except Exception as e:
+    print(f"Failed to load environment variables: {e}")
+    raise
 
 # Import centralized configuration manager
 from config.configuration_manager import get_config_manager, initialize_config

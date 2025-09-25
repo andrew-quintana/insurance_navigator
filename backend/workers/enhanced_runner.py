@@ -34,28 +34,13 @@ class EnhancedWorkerRunner:
     async def start(self):
         """Start the enhanced worker runner"""
         try:
-            # Load environment variables based on current environment
-            from dotenv import load_dotenv
-            import os
+            # Load environment variables using the environment loader
+            from config.environment_loader import load_environment, get_environment_info
             
-            # Get current environment - fail if not set
-            environment = os.getenv("ENVIRONMENT")
-            if not environment:
-                raise ValueError("ENVIRONMENT variable not set. Please set ENVIRONMENT to 'development', 'staging', or 'production'")
-            
-            # Try to load environment variables from .env file (for local development)
-            # If not found, assume we're in cloud deployment and use environment variables directly
-            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-            env_file = f".env.{environment}"
-            env_path = os.path.join(project_root, env_file)
-            
-            if os.path.exists(env_path):
-                load_dotenv(env_path)
-                logger.info(f"Loaded environment variables from {env_file} (local development)")
-            else:
-                logger.info(f"Environment file {env_file} not found, using environment variables directly (cloud deployment)")
-                # In cloud deployment, environment variables are already available
-                # No need to load from file
+            # Load environment variables based on deployment context
+            env_vars = load_environment()
+            env_info = get_environment_info()
+            logger.info(f"Environment loaded: {env_info['environment']} on {env_info['platform']} (cloud: {env_info['is_cloud_deployment']})")
             
             # Load configuration from environment
             config = WorkerConfig.from_environment()
