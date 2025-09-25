@@ -34,6 +34,9 @@ config/credentials.json
 config/api-keys.json
 config/*.env*
 
+# Documentation
+docs/
+
 # Database files
 *.db
 *.sqlite

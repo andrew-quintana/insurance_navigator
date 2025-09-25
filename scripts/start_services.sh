@@ -62,7 +62,7 @@ show_status() {
     echo "View API logs:     tail -f logs/api_server.log"
     echo "View Worker logs:  tail -f logs/simple_worker.log"
     echo "Check health:      curl http://localhost:8000/health"
-    echo "Test upload:       curl -X POST http://localhost:8000/upload-document-backend-no-auth -F 'file=@test_upload.pdf' -F 'policy_id=test'"
+    echo "Test upload:       curl -X POST http://localhost:8000/api/v1/upload -H 'Authorization: Bearer <token>' -F 'file=@test_upload.pdf' -F 'policy_id=test'"
     echo "Stop services:     kill $API_PID $WORKER_PID"
     echo ""
     echo "🔄 Services are running in the background..."

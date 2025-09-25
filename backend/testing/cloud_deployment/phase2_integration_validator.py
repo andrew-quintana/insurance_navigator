@@ -371,7 +371,7 @@ class CloudIntegrationValidator:
             
             # Attempt upload (may require authentication)
             async with self.session.post(
-                f"{self.config['api_url']}/upload-document-backend",
+                f"{self.config['api_url']}/api/v1/upload",
                 json=test_data,
                 timeout=30
             ) as response:

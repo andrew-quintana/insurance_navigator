@@ -159,12 +159,18 @@ class StorageManager:
     
     def _parse_storage_path(self, path: str) -> tuple[str, str]:
         """Parse storage path to extract bucket and key"""
-        # Expected format: storage://{bucket}/user/{user_id}/{document_id}.{ext}
-        if not path.startswith("storage://"):
-            raise ValueError(f"Invalid storage path format: {path}")
+        # Handle both formats:
+        # 1. storage://{bucket}/user/{user_id}/{document_id}.{ext}
+        # 2. files/user/{user_id}/{document_id}.{ext} (legacy format from database)
         
-        # Remove storage:// prefix
-        path_without_prefix = path[10:]
+        if path.startswith("storage://"):
+            # Remove storage:// prefix
+            path_without_prefix = path[10:]
+        elif path.startswith("files/"):
+            # Legacy format: files/user/... -> bucket=files, key=user/...
+            path_without_prefix = path
+        else:
+            raise ValueError(f"Invalid storage path format: {path}. Expected 'storage://' or 'files/' prefix")
         
         # Split by first slash to get bucket
         parts = path_without_prefix.split("/", 1)

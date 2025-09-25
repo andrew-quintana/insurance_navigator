@@ -1341,7 +1341,10 @@ class EnhancedBaseWorker:
                 async with httpx.AsyncClient() as storage_client:
                     response = await storage_client.get(
                         f"{storage_url}/storage/v1/object/{bucket}/{key}",
-                        headers={"Authorization": f"Bearer {service_role_key}"}
+                        headers={
+                            "Authorization": f"Bearer {service_role_key}",
+                            "apikey": service_role_key
+                        }
                     )
                     response.raise_for_status()
                     file_content = response.content

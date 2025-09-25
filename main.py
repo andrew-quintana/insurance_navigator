@@ -774,14 +774,14 @@ async def create_upload_job(conn, job_id: str, document_id: str, user_id: str,
 # Upload pipeline endpoints are now handled by the router at /api/upload-pipeline/*
 # Use /api/upload-pipeline/upload directly for file uploads
 
-# Legacy endpoint for backward compatibility with existing frontend
-@app.post("/upload-document-backend")
-async def upload_document_backend(
+# Document upload endpoint
+@app.post("/api/v1/upload")
+async def upload_document(
     file: UploadFile = File(...),
     policy_id: str = Form(...),
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    """Legacy upload endpoint - handles full file upload for backward compatibility."""
+    """Document upload endpoint - handles full file upload with authentication."""
     logger.info(f"📄 Legacy upload request received - File: {file.filename}, User: {current_user.get('email', 'unknown')}")
     
     try:
@@ -885,6 +885,7 @@ async def upload_document_backend(
                             headers={
                                 "Content-Type": file.content_type or "application/octet-stream",
                                 "Authorization": f"Bearer {service_role_key}",
+                                "apikey": service_role_key,
                                 "x-upsert": "true"
                             }
                         )
@@ -911,43 +912,6 @@ async def upload_document_backend(
         logger.error(f"❌ Legacy upload failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Legacy upload failed: {str(e)}")
 
-# Alternative legacy endpoint without authentication for frontend compatibility
-@app.post("/upload-document-backend-no-auth")
-async def upload_document_backend_no_auth(
-    file: UploadFile = File(...),
-    policy_id: str = Form(...)
-):
-    """Legacy upload endpoint without authentication - for frontend compatibility."""
-    logger.info(f"📄 Legacy upload request received (no auth) - File: {file.filename}")
-    
-    try:
-        # Read file content
-        contents = await file.read()
-        file_size = len(contents)
-        file_sha256 = hashlib.sha256(contents).hexdigest()
-        
-        # Create upload request
-        upload_request = UploadRequest(
-            filename=file.filename,
-            bytes_len=file_size,
-            mime=file.content_type or "application/octet-stream",
-            sha256=file_sha256,
-            ocr=False
-        )
-        
-        # Create a mock user for the upload
-        mock_user = {
-            "id": "00000000-0000-0000-0000-000000000000",
-            "email": "anonymous@example.com"
-        }
-        
-        # Call the new upload pipeline endpoint
-        from api.upload_pipeline.endpoints.upload import upload_document
-        return await upload_document(upload_request)
-        
-    except Exception as e:
-        logger.error(f"❌ Legacy upload failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 async def notify_document_status(
     user_id: str,

@@ -113,7 +113,7 @@ class ProductionWorkerTester:
                 'Authorization': f'Bearer {self.auth_token}'
             }
             
-            async with session.post(f"{self.api_base_url}/upload-document-backend", data=data, headers=headers) as response:
+            async with session.post(f"{self.api_base_url}/api/v1/upload", data=data, headers=headers) as response:
                 if response.status != 200:
                     response_text = await response.text()
                     raise Exception(f"Document upload failed: {response.status} - {response_text}")

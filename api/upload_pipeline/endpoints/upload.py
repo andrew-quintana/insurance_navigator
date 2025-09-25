@@ -632,6 +632,7 @@ async def upload_file_proxy(
             request_headers = {
                 "Content-Type": content_type,
                 "Authorization": f"Bearer {service_role_key}",
+                "apikey": service_role_key,
                 "x-upsert": "true"
             }
             

@@ -133,7 +133,7 @@ export default function DocumentUpload({
       }
       
       // Use the working backend endpoint that handles file storage
-      let uploadUrl = `${apiBaseUrl}/upload-document-backend`
+      let uploadUrl = `${apiBaseUrl}/api/v1/upload`
       let uploadResponse = await fetch(uploadUrl, {
         method: 'POST',
         headers: {
@@ -147,7 +147,7 @@ export default function DocumentUpload({
         })(),
       })
 
-      // No fallback needed - /upload-document-backend is the correct endpoint
+      // No fallback needed - /api/v1/upload is the correct endpoint
 
       if (!uploadResponse.ok) {
         // Enhanced error handling for common issues
