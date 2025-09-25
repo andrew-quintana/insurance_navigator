@@ -605,24 +605,12 @@ async def upload_file_proxy(
         import httpx
         import os
         
-        # Load environment variables explicitly
-        from dotenv import load_dotenv
+        # Load environment variables using the environment loader
+        from config.environment_loader import load_environment
         environment = os.getenv("ENVIRONMENT", "development")
         
-        # Try to load environment variables from .env file (for local development)
-        # If not found, assume we're in cloud deployment and use environment variables directly
-        if environment == "development":
-            if os.path.exists('.env.development'):
-                load_dotenv('.env.development')
-        elif environment == "production":
-            if os.path.exists('.env.production'):
-                load_dotenv('.env.production')
-        elif environment == "staging":
-            if os.path.exists('.env.staging'):
-                load_dotenv('.env.staging')
-        else:
-            if os.path.exists('.env'):
-                load_dotenv('.env')
+        # Load environment variables based on deployment context
+        env_vars = load_environment()
         
         storage_url = os.getenv("SUPABASE_URL", "http://127.0.0.1:54321")
         # Use development key for local development
