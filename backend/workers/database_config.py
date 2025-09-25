@@ -43,16 +43,19 @@ def create_database_config() -> DatabaseConfig:
     logger.info(f"DEBUG: Using worker-specific database config with pooler URL support")
     
     if is_cloud_deployment:
-        # Try pooler URL first for cloud deployments to avoid IPv6 connectivity issues
-        pooler_url = os.getenv("SUPABASE_SESSION_POOLER_URL") or os.getenv("SUPABASE_POOLER_URL")
-        if pooler_url:
-            logger.info(f"Using Supabase pooler URL for cloud deployment: {pooler_url[:50]}...")
-            db_url = pooler_url
+        # Temporarily use direct DATABASE_URL to test authentication
+        # TODO: Re-enable pooler URL once authentication issue is resolved
+        db_url = os.getenv("DATABASE_URL")
+        if db_url:
+            logger.info(f"Using direct DATABASE_URL for cloud deployment (testing): {db_url[:50]}...")
         else:
-            # Fallback to direct DATABASE_URL if no pooler available
-            db_url = os.getenv("DATABASE_URL")
-            if db_url:
-                logger.warning("No pooler URL found, using direct DATABASE_URL (may have IPv6 connectivity issues)")
+            # Fallback to pooler URL if no direct URL available
+            pooler_url = os.getenv("SUPABASE_SESSION_POOLER_URL") or os.getenv("SUPABASE_POOLER_URL")
+            if pooler_url:
+                logger.info(f"Using Supabase pooler URL for cloud deployment: {pooler_url[:50]}...")
+                db_url = pooler_url
+            else:
+                logger.warning("No database URL found")
     else:
         # Local development: use DATABASE_URL directly
         db_url = os.getenv("DATABASE_URL")
