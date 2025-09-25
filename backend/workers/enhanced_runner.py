@@ -34,13 +34,25 @@ class EnhancedWorkerRunner:
     async def start(self):
         """Start the enhanced worker runner"""
         try:
-            # Load environment variables using the environment loader
-            from config.environment_loader import load_environment, get_environment_info
-            
             # Load environment variables based on deployment context
-            env_vars = load_environment()
-            env_info = get_environment_info()
-            logger.info(f"Environment loaded: {env_info['environment']} on {env_info['platform']} (cloud: {env_info['is_cloud_deployment']})")
+            # For worker, we use a simplified approach that works in Docker
+            environment = os.getenv("ENVIRONMENT", "development")
+            
+            # In cloud deployment, environment variables are already available
+            # In local development, try to load from .env file
+            if not self._is_cloud_deployment():
+                from dotenv import load_dotenv
+                project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+                env_file = f".env.{environment}"
+                env_path = os.path.join(project_root, env_file)
+                
+                if os.path.exists(env_path):
+                    load_dotenv(env_path)
+                    logger.info(f"Loaded environment variables from {env_file} (local development)")
+                else:
+                    logger.info(f"Environment file {env_file} not found, using environment variables directly (cloud deployment)")
+            else:
+                logger.info(f"Using environment variables directly (cloud deployment)")
             
             # Load configuration from environment
             config = WorkerConfig.from_environment()
@@ -67,6 +79,20 @@ class EnhancedWorkerRunner:
         except Exception as e:
             logger.error(f"Failed to start enhanced worker runner: {str(e)}")
             sys.exit(1)
+    
+    def _is_cloud_deployment(self) -> bool:
+        """Detect if we're running in a cloud deployment environment"""
+        # Check for common cloud deployment indicators
+        cloud_indicators = [
+            'RENDER',  # Render platform
+            'VERCEL',  # Vercel platform
+            'HEROKU',  # Heroku platform
+            'AWS_LAMBDA_FUNCTION_NAME',  # AWS Lambda
+            'K_SERVICE',  # Google Cloud Run
+            'DYNO',  # Heroku dyno
+        ]
+        
+        return any(os.getenv(indicator) for indicator in cloud_indicators)
     
     async def stop(self):
         """Stop the enhanced worker runner"""
