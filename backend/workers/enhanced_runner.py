@@ -43,17 +43,19 @@ class EnhancedWorkerRunner:
             if not environment:
                 raise ValueError("ENVIRONMENT variable not set. Please set ENVIRONMENT to 'development', 'staging', or 'production'")
             
+            # Try to load environment variables from .env file (for local development)
+            # If not found, assume we're in cloud deployment and use environment variables directly
             project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-            
-            # Load environment-specific .env file
             env_file = f".env.{environment}"
             env_path = os.path.join(project_root, env_file)
             
             if os.path.exists(env_path):
                 load_dotenv(env_path)
-                logger.info(f"Loaded environment variables from {env_file}")
+                logger.info(f"Loaded environment variables from {env_file} (local development)")
             else:
-                raise FileNotFoundError(f"Environment file {env_file} not found at {env_path}. Please ensure the environment file exists for environment '{environment}'.")
+                logger.info(f"Environment file {env_file} not found, using environment variables directly (cloud deployment)")
+                # In cloud deployment, environment variables are already available
+                # No need to load from file
             
             # Load configuration from environment
             config = WorkerConfig.from_environment()

@@ -608,12 +608,21 @@ async def upload_file_proxy(
         # Load environment variables explicitly
         from dotenv import load_dotenv
         environment = os.getenv("ENVIRONMENT", "development")
+        
+        # Try to load environment variables from .env file (for local development)
+        # If not found, assume we're in cloud deployment and use environment variables directly
         if environment == "development":
-            load_dotenv('.env.development')
+            if os.path.exists('.env.development'):
+                load_dotenv('.env.development')
         elif environment == "production":
-            load_dotenv('.env.production')
+            if os.path.exists('.env.production'):
+                load_dotenv('.env.production')
+        elif environment == "staging":
+            if os.path.exists('.env.staging'):
+                load_dotenv('.env.staging')
         else:
-            load_dotenv('.env')
+            if os.path.exists('.env'):
+                load_dotenv('.env')
         
         storage_url = os.getenv("SUPABASE_URL", "http://127.0.0.1:54321")
         # Use development key for local development
