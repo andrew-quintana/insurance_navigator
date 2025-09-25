@@ -307,7 +307,7 @@ class EnhancedBaseWorker:
                         FROM upload_pipeline.upload_jobs uj
                         JOIN upload_pipeline.documents d ON uj.document_id = d.document_id
                         WHERE uj.status IN (
-                            'uploaded', 'parsed', 'parse_validated', 
+                            'uploaded', 'parse_queued', 'parsed', 'parse_validated', 
                             'chunking', 'chunks_stored', 'embedding_queued', 'embedding_in_progress', 'embeddings_stored'
                         )
                         AND (
@@ -386,6 +386,17 @@ class EnhancedBaseWorker:
             if status == "uploaded":
                 await self._process_parsing_real(job, correlation_id)
                 # Job status will be updated to "parse_queued" by _process_parsing_real
+            elif status == "parse_queued":
+                # Job is queued for external processing (LamaParse), no action needed
+                self.logger.info(
+                    "Job is queued for external processing, waiting for webhook completion",
+                    correlation_id=correlation_id,
+                    job_id=str(job_id),
+                    status=status,
+                    user_id=job.get("user_id"),
+                    document_id=str(job.get("document_id"))
+                )
+                # No processing action - just acknowledge and continue polling
             elif status == "parsed":
                 await self._process_validation_real(job, correlation_id)
                 # Job status will be updated to "parse_validated" by _process_validation_real

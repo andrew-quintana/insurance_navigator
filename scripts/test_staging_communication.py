@@ -250,8 +250,8 @@ class StagingCommunicationTester:
             """, document_id, user_id, 'test-workflow.pdf', 'application/pdf', 
                  1024, 'test-sha256-hash', 'test/path/workflow.pdf', 'uploaded')
             
-            # Test job status progression
-            statuses = ['uploaded', 'parsing', 'parsed', 'parse_validated', 'chunking', 'chunks_stored', 'embedding_queued', 'embedding_in_progress', 'embeddings_stored', 'complete']
+            # Test job status progression (using only valid status values)
+            statuses = ['uploaded', 'parse_queued', 'parsed', 'parse_validated', 'chunking', 'chunks_stored', 'embedding_queued', 'embedding_in_progress', 'embeddings_stored', 'complete']
             
             for i, status in enumerate(statuses):
                 test_job_id = str(uuid.uuid4())  # Generate proper UUID for each test job
