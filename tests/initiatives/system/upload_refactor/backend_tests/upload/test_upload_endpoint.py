@@ -106,7 +106,7 @@ async def test_upload_validation():
         print(f"❌ Document ID generation failed: {e}")
     
     # Test storage path generation
-    bucket = "raw"
+    bucket = "files"
     extension = "pdf"
     
     try:

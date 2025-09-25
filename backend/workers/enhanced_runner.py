@@ -34,9 +34,33 @@ class EnhancedWorkerRunner:
     async def start(self):
         """Start the enhanced worker runner"""
         try:
+            # Load environment variables based on current environment
+            from dotenv import load_dotenv
+            import os
+            
+            # Get current environment - fail if not set
+            environment = os.getenv("ENVIRONMENT")
+            if not environment:
+                raise ValueError("ENVIRONMENT variable not set. Please set ENVIRONMENT to 'development', 'staging', or 'production'")
+            
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            
+            # Load environment-specific .env file
+            env_file = f".env.{environment}"
+            env_path = os.path.join(project_root, env_file)
+            
+            if os.path.exists(env_path):
+                load_dotenv(env_path)
+                logger.info(f"Loaded environment variables from {env_file}")
+            else:
+                raise FileNotFoundError(f"Environment file {env_file} not found at {env_path}. Please ensure the environment file exists for environment '{environment}'.")
+            
             # Load configuration from environment
             config = WorkerConfig.from_environment()
             config.validate()
+            
+            # Additional environment variable validation for critical variables
+            self._validate_critical_environment_variables()
             
             logger.info(f"Enhanced worker configuration loaded and validated, config_keys={list(config.to_dict().keys())}")
             
@@ -73,6 +97,26 @@ class EnhancedWorkerRunner:
         
         self.shutdown_event.set()
         logger.info("Enhanced worker runner stopped")
+    
+    def _validate_critical_environment_variables(self):
+        """Validate critical environment variables are available"""
+        critical_vars = [
+            "SUPABASE_SERVICE_ROLE_KEY",
+            "SUPABASE_URL",
+            "DATABASE_URL"
+        ]
+        
+        missing_vars = []
+        for var in critical_vars:
+            if not os.getenv(var):
+                missing_vars.append(var)
+        
+        if missing_vars:
+            error_msg = f"Missing critical environment variables: {', '.join(missing_vars)}. Please check your .env.{os.getenv('ENVIRONMENT', 'development')} file."
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        
+        logger.info("All critical environment variables validated successfully")
     
     def _setup_signal_handlers(self):
         """Set up signal handlers for graceful shutdown"""

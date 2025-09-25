@@ -136,7 +136,7 @@ async def validate_jwt_token(token: str) -> User:
             role=role
         )
         
-    except JWTError as e:
+    except InvalidTokenError as e:
         logger.warning("JWT decode failed", exc_info=True)
         raise AuthError(f"Invalid JWT token: {str(e)}")
     except Exception as e:

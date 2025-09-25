@@ -17,6 +17,16 @@ const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
 
+  // API rewrites for backend communication
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:8000/:path*',
+      },
+    ];
+  },
+
   // Add webpack configuration for path aliases
   webpack: (config) => {
     config.resolve.alias = {

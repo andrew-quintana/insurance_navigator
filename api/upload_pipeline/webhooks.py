@@ -175,7 +175,7 @@ async def llamaparse_webhook(job_id: str, request: Request):
             # Store the parsed content in blob storage using direct HTTP request
             logger.info(f"🔔 STORAGE STEP 4: Using httpx for HTTP client")
             
-            # Extract bucket and key from parsed_path
+            # Extract bucket and key from file path
             logger.info(f"🔔 STORAGE STEP 5: Extracting bucket and key from parsed_path")
             # Format: storage://files/user/{user_id}/parsed/{document_id}.md
             path_parts = parsed_path[10:].split("/", 1)  # Remove "storage://" prefix

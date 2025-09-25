@@ -237,8 +237,6 @@ class StorageConfig:
     url: str = "http://localhost:5000"
     anon_key: str = ""
     service_role_key: str = ""
-    raw_bucket: str = "raw"
-    parsed_bucket: str = "parsed"
     signed_url_ttl_seconds: int = 300  # 5 minutes
     timeout: int = 60
     
@@ -249,8 +247,6 @@ class StorageConfig:
             url=os.getenv('SUPABASE_URL', 'http://localhost:5000'),
             anon_key=os.getenv('SUPABASE_ANON_KEY', ''),
             service_role_key=os.getenv('SUPABASE_SERVICE_ROLE_KEY', ''),
-            raw_bucket=os.getenv('STORAGE_RAW_BUCKET', 'raw'),
-            parsed_bucket=os.getenv('STORAGE_PARSED_BUCKET', 'parsed'),
             signed_url_ttl_seconds=int(os.getenv('STORAGE_SIGNED_URL_TTL_SECONDS', '300')),
             timeout=int(os.getenv('STORAGE_TIMEOUT_SECONDS', '60'))
         )

@@ -127,6 +127,11 @@ export default function DocumentUpload({
       const token = localStorage.getItem("token")
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
       
+      // Validate token before making request
+      if (!token) {
+        throw new Error("Authentication required. Please log in again.")
+      }
+      
       // Use the working backend endpoint that handles file storage
       let uploadUrl = `${apiBaseUrl}/upload-document-backend`
       let uploadResponse = await fetch(uploadUrl, {
@@ -211,6 +216,13 @@ export default function DocumentUpload({
       // Detect file size issues
       if (errorMessage.includes('too large') || errorMessage.includes('413')) {
         errorMessage = `📦 File too large. Please upload a file smaller than 10MB.`
+      }
+      
+      // Detect duplicate file issues
+      if (errorMessage.includes('duplicate key value violates unique constraint') || 
+          errorMessage.includes('already exists') ||
+          errorMessage.includes('duplicate')) {
+        errorMessage = `📄 This file has already been uploaded. Please choose a different file.`
       }
       
       // Detect network issues

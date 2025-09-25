@@ -106,7 +106,7 @@ class DataResetRepopulator:
                         COUNT(*) as file_count,
                         SUM(metadata->>'size')::bigint as total_size
                     FROM storage.objects
-                    WHERE bucket_id IN ('raw', 'parsed')
+                    WHERE bucket_id IN ('files')
                     GROUP BY bucket_id
                 """)
                 summary["storage_files"] = {row['bucket_id']: {'count': row['file_count'], 'size': row['total_size']} for row in storage_info}
@@ -187,10 +187,10 @@ class DataResetRepopulator:
         try:
             # Delete storage objects
             logger.info("  🗑️ Deleting storage objects...")
-            await self.conn.execute("DELETE FROM storage.objects WHERE bucket_id IN ('raw', 'parsed')")
+            await self.conn.execute("DELETE FROM storage.objects WHERE bucket_id IN ('files')")
             
             # Clear local storage directories if they exist
-            local_storage_dirs = ['mock_storage/raw', 'mock_storage/parsed']
+            local_storage_dirs = ['mock_storage/files']
             for storage_dir in local_storage_dirs:
                 if os.path.exists(storage_dir):
                     logger.info(f"  🗑️ Clearing local storage: {storage_dir}")

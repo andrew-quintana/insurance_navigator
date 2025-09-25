@@ -193,7 +193,7 @@ class ProductionUploadTester:
                 file_content = f.read()
             
             # For local Supabase, we need to include the service role key
-            service_role_key = "${SUPABASE_JWT_TOKEN}"
+            service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
             
             response = await self.client.put(
                 signed_url,

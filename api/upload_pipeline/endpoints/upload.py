@@ -539,7 +539,7 @@ async def upload_file_to_storage(
         # Upload file to Supabase storage using service role
         supabase = await get_supabase_service_client()
         
-        # Extract bucket and key from raw_path
+        # Extract bucket and key from file path
         if raw_path.startswith("files/user/"):
             key = raw_path[6:]  # Remove "files/" prefix
             bucket = "files"
@@ -606,11 +606,19 @@ async def upload_file_proxy(
         import os
         
         # Load environment variables explicitly
-        storage_url = os.getenv("SUPABASE_URL", "http://127.0.0.1:54321")
-        # Use development key for local development
+        from dotenv import load_dotenv
         environment = os.getenv("ENVIRONMENT", "development")
         if environment == "development":
-            service_role_key = os.getenv("SERVICE_ROLE_KEY", "")
+            load_dotenv('.env.development')
+        elif environment == "production":
+            load_dotenv('.env.production')
+        else:
+            load_dotenv('.env')
+        
+        storage_url = os.getenv("SUPABASE_URL", "http://127.0.0.1:54321")
+        # Use development key for local development
+        if environment == "development":
+            service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
         else:
             service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))
         
