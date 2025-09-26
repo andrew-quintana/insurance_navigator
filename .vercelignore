@@ -8,6 +8,7 @@ agents/
 db/
 /utils/
 !ui/lib/
+!ui/lib/utils.ts
 supabase/
 *.py
 *.sql
