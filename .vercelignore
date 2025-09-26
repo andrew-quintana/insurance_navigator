@@ -6,7 +6,7 @@ backend/
 api/
 agents/
 db/
-utils/
+/utils/
 !ui/lib/
 supabase/
 *.py
