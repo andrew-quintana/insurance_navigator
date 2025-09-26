@@ -3,7 +3,7 @@
 ## Incident Summary
 **Date:** 2025-09-26  
 **Severity:** CRITICAL  
-**Status:** INVESTIGATION IN PROGRESS  
+**Status:** FIX VERIFIED - DEPLOYMENT PENDING  
 **Component:** API Service (Render)  
 **Issue:** Persistent SCRAM authentication failure preventing API service startup  
 **Last Working Commit:** 0982fb1 (2025-09-24)
@@ -46,6 +46,34 @@ This error occurs during database connection pool initialization when attempting
 - **Approach**: Use individual connection parameters instead of connection strings
 - **Implementation**: Separate host, port, database, user, password parameters
 - **Result**: No improvement in SCRAM authentication failure
+
+## Latest Investigation Results (2025-09-26 19:30 UTC)
+
+### Local Testing Verification
+**Status**: ✅ **FIX VERIFIED LOCALLY**
+
+**Test Environment**: Local development with staging environment variables
+**Test Results**:
+- ✅ Database configuration correctly uses direct URL: `db.dfgzeastcxnoqshgyotp.supabase.co:5432`
+- ✅ No pooler URL selection logic active
+- ✅ Database connection successful with SCRAM authentication
+- ✅ Connection pool initialized successfully (5-20 connections)
+
+**Key Finding**: The fix works perfectly locally, confirming that reverting to the exact working configuration from commit 0982fb1 resolves the SCRAM authentication issue.
+
+### Deployment Issue Identified
+**Problem**: The staging service has auto-deploy disabled (`"autoDeploy":"no"`)
+**Impact**: Latest commit `80b2485` (revert to working config) has not been deployed
+**Current Deployment**: Still running commit `e8ae7ef` (first fix attempt) which uses pooler URL logic
+**Solution**: Manual deployment trigger required
+
+### Environment Variable Analysis
+**Staging Environment Variables**:
+- `DATABASE_URL`: `postgresql://postgres:ERaZFjCEnuJsliSQ@db.dfgzeastcxnoqshgyotp.supabase.co:5432/postgres` ✅
+- `SUPABASE_POOLER_URL`: `postgresql://postgres.dfgzeastcxnoqshgyotp:password@aws-0-us-west-1.pooler.supabase.com:6543/postgres` ❌
+- `SUPABASE_SESSION_POOLER_URL`: `postgresql://postgres.dfgzeastcxnoqshgyotp:password@aws-0-us-west-1.pooler.supabase.com:6543/postgres` ❌
+
+**Root Cause Confirmed**: The pooler URLs are causing SCRAM authentication failures. The direct database URL works correctly.
 
 ## Code Analysis: Working vs. Broken
 
