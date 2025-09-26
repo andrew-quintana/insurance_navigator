@@ -15,7 +15,7 @@ from fastapi import HTTPException
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from db.services.user_service import get_user_service, UserService
+# User service removed - now using Supabase auth directly
 from db.services.db_pool import get_db_pool, close_db_pool, get_connection_status
 from config.database import get_supabase_client, get_db_client
 from supabase import Client
@@ -34,7 +34,8 @@ TEST_USER_NAME = "Auth Test User"
 async def user_service():
     """Get a configured user service for testing."""
     client = await get_supabase_client()
-    service = await get_user_service()
+    # User service removed - now using Supabase auth directly
+    # service = await get_user_service()
     return service
 
 @pytest.fixture

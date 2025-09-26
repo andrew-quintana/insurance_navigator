@@ -1,73 +1,58 @@
 """
-Authentication configuration for switching between different auth backends.
+Authentication configuration for Supabase authentication.
+This simplified version uses only Supabase's built-in authentication system.
 """
 
 import os
 from typing import Literal
 
-# Auth backend types
-AuthBackendType = Literal["minimal", "supabase"]
+# Auth backend types - only Supabase now
+AuthBackendType = Literal["supabase"]
 
 def get_auth_backend() -> AuthBackendType:
     """
     Get the authentication backend type from environment variables.
     
     Returns:
-        "minimal" for development (bypasses Supabase auth)
-        "supabase" for production (uses full Supabase auth)
+        "supabase" for all environments (uses full Supabase auth)
     """
-    backend = os.getenv("AUTH_BACKEND", "minimal").lower()
+    backend = os.getenv("AUTH_BACKEND", "supabase").lower()
     
-    if backend not in ["minimal", "supabase"]:
-        print(f"⚠️ Invalid AUTH_BACKEND: {backend}. Defaulting to 'minimal'")
-        return "minimal"
+    if backend not in ["supabase"]:
+        print(f"⚠️ Invalid AUTH_BACKEND: {backend}. Defaulting to 'supabase'")
+        return "supabase"
     
     return backend
 
-def is_minimal_auth() -> bool:
-    """Check if using minimal auth backend."""
-    return get_auth_backend() == "minimal"
-
 def is_supabase_auth() -> bool:
     """Check if using Supabase auth backend."""
-    return get_auth_backend() == "supabase"
+    return True  # Always true now
 
 # Environment-specific configurations
 AUTH_CONFIG = {
-    "minimal": {
-        "description": "Minimal authentication for development",
-        "features": [
-            "Input validation",
-            "JWT token generation",
-            "No database user storage",
-            "Fast development iteration"
-        ],
-        "environment": "development"
-    },
     "supabase": {
-        "description": "Full Supabase authentication for production",
+        "description": "Full Supabase authentication for all environments",
         "features": [
             "Full Supabase auth integration",
-            "Database user storage",
+            "Database user storage in auth.users",
             "Email verification",
             "Password reset",
-            "Session management"
+            "Session management",
+            "RLS integration"
         ],
-        "environment": "production"
+        "environment": "all"
     }
 }
 
 def get_auth_config() -> dict:
     """Get configuration for the current auth backend."""
-    backend = get_auth_backend()
-    return AUTH_CONFIG.get(backend, AUTH_CONFIG["minimal"])
+    return AUTH_CONFIG["supabase"]
 
 def print_auth_status():
     """Print current authentication configuration."""
-    backend = get_auth_backend()
     config = get_auth_config()
     
-    print(f"🔐 Authentication Backend: {backend.upper()}")
+    print(f"🔐 Authentication Backend: SUPABASE")
     print(f"📝 Description: {config['description']}")
     print(f"🌍 Environment: {config['environment']}")
     print(f"✨ Features:")

@@ -136,15 +136,10 @@ async def get_supabase_client() -> Client:
         raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY (or ANON_KEY) environment variables must be set")
     
     try:
-        # Create client with upload_pipeline schema
-        from supabase._sync.client import ClientOptions
-        options = ClientOptions()
-        options.schema = "upload_pipeline"
-        
+        # Create client with public schema (default)
         client = create_client(
             supabase_url,
-            supabase_key,
-            options=options
+            supabase_key
         )
         return client
     except Exception as e:
@@ -165,14 +160,9 @@ async def get_supabase_service_client() -> Client:
     
     try:
         # Create client with service role key for admin operations
-        from supabase._sync.client import ClientOptions
-        options = ClientOptions()
-        options.schema = "upload_pipeline"
-        
         client = create_client(
             supabase_url,
-            supabase_service_key,
-            options=options
+            supabase_service_key
         )
         return client
     except Exception as e:

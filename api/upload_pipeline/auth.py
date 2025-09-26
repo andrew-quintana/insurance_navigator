@@ -1,19 +1,18 @@
 """
 Authentication and authorization for the upload pipeline.
+Updated to use Supabase authentication via auth adapter.
 """
 
 import logging
-import os
 from typing import Optional
 from uuid import UUID
 
 from fastapi import Request, HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import jwt
-from jwt.exceptions import InvalidTokenError
 from pydantic import BaseModel
 
-from .config import get_config
+# Import auth adapter for Supabase authentication
+from db.services.auth_adapter import auth_adapter
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +35,7 @@ class AuthError(Exception):
 
 async def get_current_user(request: Request) -> User:
     """
-    Extract and validate user from JWT token.
+    Extract and validate user from JWT token using Supabase auth.
     
     Args:
         request: FastAPI request object
@@ -67,15 +66,29 @@ async def get_current_user(request: Request) -> User:
                 headers={"WWW-Authenticate": "Bearer"}
             )
         
-        # Validate token
-        user = await validate_jwt_token(token)
+        # Validate token using auth adapter
+        user_data = auth_adapter.validate_token(token)
+        if not user_data:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+        
+        # Convert to User model
+        user = User(
+            user_id=UUID(user_data["id"]),
+            email=user_data.get("email"),
+            role="user"  # Default role
+        )
+        
         return user
         
-    except InvalidTokenError as e:
-        logger.warning("JWT validation failed", exc_info=True)
+    except ValueError as e:
+        logger.warning("Invalid user ID format", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
+            detail="Invalid user ID format",
             headers={"WWW-Authenticate": "Bearer"}
         )
     except Exception as e:
@@ -88,7 +101,7 @@ async def get_current_user(request: Request) -> User:
 
 async def validate_jwt_token(token: str) -> User:
     """
-    Validate JWT token and extract user information.
+    Validate JWT token and extract user information using Supabase auth.
     
     Args:
         token: JWT token string
@@ -100,40 +113,20 @@ async def validate_jwt_token(token: str) -> User:
         AuthError: If token validation fails
     """
     try:
-        config = get_config()
-        
-        # Debug logging
-        logger.info(f"Attempting to decode JWT token: {token[:50]}...")
-        
-        # Get JWT secret from environment variable or config
-        # This should match the secret used by the main API server
-        jwt_secret = os.getenv("JWT_SECRET_KEY", "improved-minimal-dev-secret-key")
-        
-        # Decode JWT token from main API server
-        # Use the same JWT configuration as the main API server
-        payload = jwt.decode(
-            token,
-            jwt_secret,  # Use environment variable for JWT secret
-            algorithms=["HS256"],
-            options={"verify_aud": False, "verify_iss": False}  # Skip audience and issuer verification for development
-        )
-        
-        logger.info(f"JWT token decoded successfully: {payload}")
-        
-        # Extract user information
-        user_id = payload.get("sub")
-        if not user_id:
-            raise AuthError("Missing user ID in token")
+        # Use auth adapter for token validation
+        user_data = auth_adapter.validate_token(token)
+        if not user_data:
+            raise AuthError("Invalid token")
         
         # Convert string user ID to UUID
         try:
-            user_uuid = UUID(user_id)
+            user_uuid = UUID(user_data["id"])
         except ValueError:
             raise AuthError("Invalid user ID format in token")
         
         # Extract additional claims
-        email = payload.get("email")
-        role = payload.get("role", "user")
+        email = user_data.get("email")
+        role = "user"  # Default role
         
         return User(
             user_id=user_uuid,
@@ -141,9 +134,6 @@ async def validate_jwt_token(token: str) -> User:
             role=role
         )
         
-    except InvalidTokenError as e:
-        logger.warning("JWT decode failed", exc_info=True)
-        raise AuthError(f"Invalid JWT token: {str(e)}")
     except Exception as e:
         logger.error("Token validation error", exc_info=True)
         raise AuthError(f"Token validation failed: {str(e)}")
