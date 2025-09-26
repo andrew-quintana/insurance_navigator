@@ -9,6 +9,9 @@ db/
 /utils/
 !ui/lib/
 !ui/lib/utils.ts
+!ui/lib/api-client.ts
+!ui/lib/auth-helpers.ts
+!ui/lib/performance/
 supabase/
 *.py
 *.sql
