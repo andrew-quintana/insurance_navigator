@@ -5,6 +5,7 @@
 begin;
 
 -- Add RLS policy to allow service role to upload files to storage
+DROP POLICY IF EXISTS "Allow service role to upload files" ON storage.objects;
 CREATE POLICY "Allow service role to upload files"
 ON storage.objects
 FOR INSERT
@@ -12,6 +13,7 @@ TO service_role
 WITH CHECK (bucket_id = 'files');
 
 -- Add RLS policy to allow service role to update files in storage
+DROP POLICY IF EXISTS "Allow service role to update files" ON storage.objects;
 CREATE POLICY "Allow service role to update files"
 ON storage.objects
 FOR UPDATE
@@ -20,6 +22,7 @@ USING (bucket_id = 'files')
 WITH CHECK (bucket_id = 'files');
 
 -- Add RLS policy to allow service role to delete files from storage
+DROP POLICY IF EXISTS "Allow service role to delete files" ON storage.objects;
 CREATE POLICY "Allow service role to delete files"
 ON storage.objects
 FOR DELETE

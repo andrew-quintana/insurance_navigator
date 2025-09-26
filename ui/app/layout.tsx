@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ErrorBoundary } from "@/components/error-boundary"
+import { AuthProvider } from "@/components/auth/SessionManager"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -83,14 +84,16 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ErrorBoundary>
-          <ThemeProvider 
-            attribute="class" 
-            defaultTheme={process.env.NEXT_PUBLIC_DEFAULT_THEME || "light"} 
-            enableSystem 
-            disableTransitionOnChange
-          >
-            {children}
-          </ThemeProvider>
+          <AuthProvider>
+            <ThemeProvider 
+              attribute="class" 
+              defaultTheme={process.env.NEXT_PUBLIC_DEFAULT_THEME || "light"} 
+              enableSystem 
+              disableTransitionOnChange
+            >
+              {children}
+            </ThemeProvider>
+          </AuthProvider>
         </ErrorBoundary>
         
         {/* Google Analytics */}

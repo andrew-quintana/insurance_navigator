@@ -54,7 +54,7 @@ from core import initialize_system, close_system, get_database, get_agents
 
 # Database service imports
 from config.database import db_pool
-from db.services.user_service import get_user_service, UserService
+# User service removed - now using Supabase auth directly
 from db.services.auth_adapter import auth_adapter
 from db.services.conversation_service import get_conversation_service, ConversationService
 from db.services.storage_service import get_storage_service, StorageService
@@ -393,7 +393,6 @@ async def health_check(request: Request):
         )
 
 # Global service instances
-user_service_instance = None
 conversation_service_instance = None
 storage_service_instance = None
 
@@ -448,16 +447,7 @@ async def _register_core_services(service_manager, config_manager):
             health_check=health_check_rag
         )
         
-        # Register user service
-        async def init_user_service():
-            return await get_user_service()
-        
-        service_manager.register_service(
-            name="user_service",
-            service_type=type(None),
-            dependencies=["database"],
-            init_func=init_user_service
-        )
+        # User service removed - now using Supabase auth directly
         
         # Register conversation service
         async def init_conversation_service():
@@ -819,8 +809,7 @@ async def startup_event():
         logger.info("✅ Database pool initialized")
         
         # Initialize other services
-        user_service_instance = await get_user_service()
-        logger.info("✅ User service initialized")
+        # User service removed - now using Supabase auth directly
         
         conversation_service_instance = await get_conversation_service()
         logger.info("✅ Conversation service initialized")
@@ -919,11 +908,25 @@ async def login(request: Request, response: Response):
             )
         
         logger.info(f"✅ User logged in successfully: {email}")
-        return {
-            "access_token": auth_result["access_token"],
-            "token_type": "bearer",
-            "user": auth_result["user"]
-        }
+        
+        # Handle different response formats from auth adapter
+        if "session" in auth_result and "access_token" in auth_result["session"]:
+            # Supabase format
+            return {
+                "access_token": auth_result["session"]["access_token"],
+                "token_type": "bearer",
+                "user": auth_result["user"]
+            }
+        elif "access_token" in auth_result:
+            # Direct format
+            return {
+                "access_token": auth_result["access_token"],
+                "token_type": "bearer",
+                "user": auth_result["user"]
+            }
+        else:
+            # Fallback
+            return auth_result
         
     except json.JSONDecodeError as e:
         logger.error(f"❌ Login failed - Invalid JSON: {str(e)}")
@@ -1137,19 +1140,7 @@ async def chat_with_agent(
 async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_current_user)):
     """Get current user information."""
     try:
-        # For minimal auth, return the user data from token validation directly
-        # This avoids the database lookup that causes UUID errors
-        # Updated: 2025-09-05 - Force deployment
-        if current_user.get("id", "").startswith("minimal_"):
-            return {
-                "id": current_user["id"],
-                "email": current_user["email"],
-                "name": current_user.get("name", current_user["email"].split("@")[0]),
-                "created_at": current_user.get("iat", "2025-01-01T00:00:00Z"),
-                "auth_method": "minimal_auth"
-            }
-        
-        # For other auth methods, use auth adapter
+        # Use auth adapter to get user info from Supabase
         try:
             user_data = await auth_adapter.get_user_info(current_user["id"])
             if user_data:
@@ -1163,7 +1154,7 @@ async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_curre
             "email": current_user["email"],
             "name": current_user.get("name", current_user["email"].split("@")[0]),
             "created_at": current_user.get("iat", "2025-01-01T00:00:00Z"),
-            "auth_method": "token_fallback"
+            "auth_method": "supabase_auth"
         }
         
     except HTTPException:
@@ -1238,7 +1229,25 @@ async def register(request: Dict[str, Any]):
         )
         
         logger.info(f"✅ User registered successfully: {email}")
-        return auth_result
+        
+        # Handle different response formats from auth adapter
+        if "session" in auth_result and "access_token" in auth_result["session"]:
+            # Supabase format
+            return {
+                "access_token": auth_result["session"]["access_token"],
+                "token_type": "bearer",
+                "user": auth_result["user"]
+            }
+        elif "access_token" in auth_result:
+            # Direct format
+            return {
+                "access_token": auth_result["access_token"],
+                "token_type": "bearer",
+                "user": auth_result["user"]
+            }
+        else:
+            # Fallback
+            return auth_result
         
     except HTTPException:
         raise
@@ -1300,13 +1309,30 @@ async def signup(request: SignupRequest):
     """
     try:
         # Use auth adapter for user creation
-        user_data = await auth_adapter.create_user(
+        auth_result = await auth_adapter.create_user(
             email=request.email,
             password=request.password,
             name=request.email.split("@")[0]  # Use email prefix as name if not provided
         )
         
-        return user_data
+        # Handle different response formats from auth adapter
+        if "session" in auth_result and "access_token" in auth_result["session"]:
+            # Supabase format
+            return {
+                "access_token": auth_result["session"]["access_token"],
+                "token_type": "bearer",
+                "user": auth_result["user"]
+            }
+        elif "access_token" in auth_result:
+            # Direct format
+            return {
+                "access_token": auth_result["access_token"],
+                "token_type": "bearer",
+                "user": auth_result["user"]
+            }
+        else:
+            # Fallback
+            return auth_result
         
     except HTTPException:
         raise
@@ -1330,18 +1356,35 @@ async def login(request: LoginRequest):
     """
     try:
         # Use auth adapter for authentication
-        auth_data = await auth_adapter.authenticate_user(
+        auth_result = await auth_adapter.authenticate_user(
             email=request.email,
             password=request.password
         )
         
-        if not auth_data:
+        if not auth_result:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password"
             )
         
-        return auth_data
+        # Handle different response formats from auth adapter
+        if "session" in auth_result and "access_token" in auth_result["session"]:
+            # Supabase format
+            return {
+                "access_token": auth_result["session"]["access_token"],
+                "token_type": "bearer",
+                "user": auth_result["user"]
+            }
+        elif "access_token" in auth_result:
+            # Direct format
+            return {
+                "access_token": auth_result["access_token"],
+                "token_type": "bearer",
+                "user": auth_result["user"]
+            }
+        else:
+            # Fallback
+            return auth_result
         
     except HTTPException:
         raise

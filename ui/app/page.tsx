@@ -6,6 +6,7 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { useAuth } from "@/components/auth/SessionManager"
 import {
   CheckCircle,
   ChevronRight,
@@ -32,74 +33,25 @@ interface UserInfo {
 
 export default function Home() {
   const router = useRouter()
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
+  const { user, loading } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const checkAuthStatus = async () => {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        setIsLoading(false)
-        return
-      }
-
-      // Get API URL from environment variables (Vercel best practice)
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
-      const authMeUrl = `${apiBaseUrl}/me`
-      
-      console.log("🌐 API Base URL:", apiBaseUrl)
-      console.log("🔗 Auth Me URL:", authMeUrl)
-
-      try {
-        const response = await fetch(authMeUrl, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-            'ngrok-skip-browser-warning': 'true',
-          },
-        })
-        
-        if (response.ok) {
-          const userData: UserInfo = await response.json()
-          setIsAuthenticated(true)
-          setUserInfo(userData)
-        } else {
-          // Token is invalid, clear it
-          localStorage.removeItem("token")
-          localStorage.removeItem("tokenType")
-          setIsAuthenticated(false)
-          setUserInfo(null)
-        }
-      } catch (error) {
-        console.error("Auth check failed:", error)
-        localStorage.removeItem("token")
-        localStorage.removeItem("tokenType")
-        setIsAuthenticated(false)
-        setUserInfo(null)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    checkAuthStatus()
-  }, [])
+    // Set loading state based on auth loading
+    setIsLoading(loading)
+  }, [loading])
 
   const handleStartNow = () => {
-    if (isAuthenticated) {
+    if (user) {
       router.push("/chat")
     } else {
       router.push("/register")
     }
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem("token")
-    localStorage.removeItem("tokenType")
-    setIsAuthenticated(false)
-    setUserInfo(null)
-    router.push("/")
+  const handleLogout = async () => {
+    // This will be handled by the AuthProvider's signOut method
+    // The user will be automatically redirected when the auth state changes
   }
 
   return (
@@ -116,12 +68,12 @@ export default function Home() {
               <div className="w-20 h-10 bg-gray-200 animate-pulse rounded"></div>
               <div className="w-24 h-10 bg-gray-200 animate-pulse rounded"></div>
             </div>
-          ) : isAuthenticated && userInfo ? (
+          ) : user ? (
             // Authenticated user menu
             <>
               <div className="flex items-center space-x-4">
                 <div className="flex items-center text-teal-700">
-                  <span className="text-sm font-medium">Welcome, {userInfo.name}</span>
+                  <span className="text-sm font-medium">Welcome, {user.user_metadata?.full_name || user.email}</span>
                 </div>
                 <Button
                   variant="outline"
@@ -192,7 +144,7 @@ export default function Home() {
               className="bg-terracotta hover:bg-terracotta-600 text-white px-8 py-6 text-lg rounded-xl shadow-lg transition-all"
               disabled={isLoading}
             >
-              {isLoading ? "Loading..." : isAuthenticated ? "Continue to Chat" : "Get Started"}
+              {isLoading ? "Loading..." : user ? "Continue to Chat" : "Get Started"}
               <ChevronRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
