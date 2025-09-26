@@ -80,6 +80,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!ui/lib/
 lib64/
 parts/
 sdist/
