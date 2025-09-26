@@ -115,9 +115,27 @@ export default function DocumentUploadServerless({
 
   // Upload single file
   const uploadFile = async (fileStatus: FileUploadStatus): Promise<UploadResponse> => {
-    const token = localStorage.getItem("token")
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '***REMOVED***'
     const uploadEndpoint = `${apiBaseUrl}/api/upload-pipeline/upload`
+    
+    // Get token from Supabase session if not in localStorage
+    let token = localStorage.getItem("token")
+    if (!token) {
+      // Try to get token from Supabase session
+      const { createClient } = await import('@supabase/supabase-js')
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      
+      if (supabaseUrl && supabaseAnonKey) {
+        const supabase = createClient(supabaseUrl, supabaseAnonKey)
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (session?.access_token) {
+          token = session.access_token
+          localStorage.setItem('token', token)
+        }
+      }
+    }
     
     console.log('🔍 Debug - Upload starting:', {
       fileName: fileStatus.file.name,
