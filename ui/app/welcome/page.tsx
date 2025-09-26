@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { useAuth } from "@/components/auth/SessionManager"
 import { ArrowLeft, PlayCircle, ChevronRight, CheckCircle, User, ArrowRight } from "lucide-react"
 
 interface UserInfo {
@@ -15,55 +16,13 @@ interface UserInfo {
 
 export default function WelcomePage() {
   const router = useRouter()
-  const [user, setUser] = useState<UserInfo | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const { user, loading } = useAuth()
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        router.push("/login")
-        return
-      }
-
-      // Get API URL from environment variables (Vercel best practice)
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
-      const authMeUrl = `${apiBaseUrl}/me`
-      
-      console.log("🌐 API Base URL:", apiBaseUrl)
-      console.log("🔗 Auth Me URL:", authMeUrl)
-
-      try {
-        const response = await fetch(authMeUrl, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-            'ngrok-skip-browser-warning': 'true',
-          },
-        })
-        
-        if (response.ok) {
-          const userData: UserInfo = await response.json()
-          setUser(userData)
-        } else {
-          // Token is invalid, redirect to login
-          localStorage.removeItem("token")
-          localStorage.removeItem("tokenType")
-          router.push("/login")
-        }
-      } catch (error) {
-        console.error("Auth check failed:", error)
-        localStorage.removeItem("token")
-        localStorage.removeItem("tokenType")
-        router.push("/login")
-      } finally {
-        setIsLoading(false)
-      }
+    if (!loading && !user) {
+      router.push("/login")
     }
-
-    checkAuth()
-  }, [router])
+  }, [loading, user, router])
 
   const handleNext = () => {
     if (user) {
@@ -207,10 +166,10 @@ export default function WelcomePage() {
         <div className="text-center">
           <Button 
             onClick={handleNext}
-            disabled={isLoading}
+            disabled={loading}
             className="bg-teal-700 hover:bg-teal-800 text-white px-8 py-4 text-lg font-semibold rounded-lg transition-colors shadow-md hover:shadow-lg disabled:opacity-50"
           >
-            {isLoading 
+            {loading 
               ? "Loading..." 
               : user 
                 ? "Start Chat" 
@@ -220,7 +179,7 @@ export default function WelcomePage() {
           </Button>
           
           <p className="mt-4 text-gray-600">
-            {isLoading
+            {loading
               ? "Verifying your session..."
               : user 
                 ? "You're all set! Click to start your Medicare conversation."
