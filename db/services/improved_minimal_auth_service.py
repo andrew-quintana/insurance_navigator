@@ -107,6 +107,32 @@ class ImprovedMinimalAuthService:
             # Hash password for storage (even in minimal mode, we should hash)
             password_hash = hashlib.sha256(password.encode()).hexdigest()
             
+            # Create user record in Supabase users table for RAG system compatibility
+            try:
+                from config.database import get_supabase_service_client
+                service_client = await get_supabase_service_client()
+                
+                user_data = {
+                    "id": user_id,
+                    "email": validated_data["email"],
+                    "name": validated_data["name"],
+                    "consent_version": consent_version,
+                    "consent_timestamp": consent_timestamp,
+                    "is_active": True,
+                    "email_confirmed": True,  # Mark as confirmed for minimal auth
+                    "auth_method": "improved_minimal_auth",
+                    "created_at": datetime.now().isoformat()
+                }
+                
+                logger.info(f"Creating user record in Supabase users table: {user_data}")
+                result = service_client.table("users").insert(user_data).execute()
+                logger.info(f"User record created successfully: {result}")
+                
+            except Exception as e:
+                logger.warning(f"Failed to create user record in database: {e}")
+                # Continue with token generation even if database creation fails
+                # This ensures the auth system still works for development
+            
             # Generate token
             token = self.generate_token(user_id, validated_data["email"])
             
@@ -148,6 +174,33 @@ class ImprovedMinimalAuthService:
             # For MVP, we'll use a simple approach but still validate inputs
             # Generate a proper UUID for user ID
             user_id = str(uuid.uuid4())
+            
+            # Create user record in Supabase users table for RAG system compatibility
+            try:
+                from config.database import get_supabase_service_client
+                service_client = await get_supabase_service_client()
+                
+                user_data = {
+                    "id": user_id,
+                    "email": validated_data["email"],
+                    "name": validated_data["email"].split("@")[0],
+                    "consent_version": "1.0",
+                    "consent_timestamp": "2025-01-01T00:00:00Z",
+                    "is_active": True,
+                    "email_confirmed": True,  # Mark as confirmed for minimal auth
+                    "auth_method": "improved_minimal_auth",
+                    "created_at": datetime.now().isoformat()
+                }
+                
+                logger.info(f"Creating user record in Supabase users table for authentication: {user_data}")
+                result = service_client.table("users").insert(user_data).execute()
+                logger.info(f"User record created successfully: {result}")
+                
+            except Exception as e:
+                logger.warning(f"Failed to create user record in database: {e}")
+                # Continue with token generation even if database creation fails
+                # This ensures the auth system still works for development
+            
             token = self.generate_token(user_id, validated_data["email"])
             
             logger.info(f"✅ Improved minimal user authenticated: {validated_data['email']}")
