@@ -135,14 +135,14 @@ const buildUrl = (endpoint: string): string => {
 /**
  * Build request headers
  */
-const buildHeaders = (customHeaders: Record<string, string> = {}): HeadersInit => {
+const buildHeaders = async (customHeaders: Record<string, string> = {}): Promise<HeadersInit> => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     ...customHeaders,
   };
 
-  const token = getAuthToken();
+  const token = await getAuthToken();
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
@@ -199,7 +199,7 @@ export async function apiRequest<T = unknown>(
       
       const requestInit: RequestInit = {
         method,
-        headers: buildHeaders(headers),
+        headers: await buildHeaders(headers),
         signal: controller.signal,
         cache,
       };
