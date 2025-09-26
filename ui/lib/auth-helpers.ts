@@ -50,18 +50,46 @@ export const validateUserAccess = async (token: string, userId: string): Promise
 };
 
 /**
- * Get authentication token from localStorage
+ * Get authentication token from localStorage or Supabase session
  */
-export const getAuthToken = (): string | null => {
+export const getAuthToken = async (): Promise<string | null> => {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('token') || localStorage.getItem('supabase.auth.token');
+  
+  // First try to get token from localStorage
+  let token = localStorage.getItem('token') || localStorage.getItem('supabase.auth.token');
+  
+  if (token) {
+    return token;
+  }
+  
+  // If no token in localStorage, try to get from Supabase session
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+    if (supabaseUrl && supabaseAnonKey) {
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.access_token) {
+        // Store the token for future use
+        localStorage.setItem('token', session.access_token);
+        return session.access_token;
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to get token from Supabase session:', error);
+  }
+  
+  return null;
 };
 
 /**
  * Check if user is authenticated
  */
-export const isAuthenticated = (): boolean => {
-  const token = getAuthToken();
+export const isAuthenticated = async (): Promise<boolean> => {
+  const token = await getAuthToken();
   return !!token;
 };
 

@@ -44,6 +44,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         setSession(session)
         setUser(session?.user ?? null)
+        
+        // Store the access token for API calls
+        if (session?.access_token) {
+          localStorage.setItem('token', session.access_token)
+        }
       } catch (error) {
         console.error('Session check failed:', error)
       } finally {
@@ -61,9 +66,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (event === 'SIGNED_OUT' || !session) {
           setUser(null)
           setSession(null)
+          // Clear stored token
+          localStorage.removeItem('token')
         } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           setUser(session.user)
           setSession(session)
+          
+          // Store the access token for API calls
+          if (session.access_token) {
+            localStorage.setItem('token', session.access_token)
+          }
         }
         setLoading(false)
       }
@@ -94,6 +106,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (data.session) {
         setSession(data.session)
         setUser(data.user)
+        
+        // Store the new token in localStorage for API calls
+        if (data.session.access_token) {
+          localStorage.setItem('token', data.session.access_token)
+        }
       }
     } catch (error) {
       console.error('Session refresh failed:', error)
