@@ -3,6 +3,7 @@ Authentication and authorization for the upload pipeline.
 """
 
 import logging
+import os
 from typing import Optional
 from uuid import UUID
 
@@ -104,11 +105,15 @@ async def validate_jwt_token(token: str) -> User:
         # Debug logging
         logger.info(f"Attempting to decode JWT token: {token[:50]}...")
         
+        # Get JWT secret from environment variable or config
+        # This should match the secret used by the main API server
+        jwt_secret = os.getenv("JWT_SECRET_KEY", "improved-minimal-dev-secret-key")
+        
         # Decode JWT token from main API server
         # Use the same JWT configuration as the main API server
         payload = jwt.decode(
             token,
-            "improved-minimal-dev-secret-key",  # Use same secret as main API server
+            jwt_secret,  # Use environment variable for JWT secret
             algorithms=["HS256"],
             options={"verify_aud": False, "verify_iss": False}  # Skip audience and issuer verification for development
         )
