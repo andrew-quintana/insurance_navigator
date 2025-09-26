@@ -82,8 +82,21 @@ class DatabaseManager:
             logger.info(f"Connection string: {self.config.connection_string[:50]}...")
             logger.info(f"Host: {self.config.host}, Port: {self.config.port}")
             
+            # For cloud deployments, try to resolve hostname to IPv4 to avoid IPv6 issues
+            connection_string = self.config.connection_string
+            if self._is_cloud_deployment() and "pooler.supabase.com" in self.config.host:
+                try:
+                    import socket
+                    # Resolve hostname to IPv4 address
+                    ipv4_address = socket.gethostbyname(self.config.host)
+                    logger.info(f"Resolved {self.config.host} to IPv4: {ipv4_address}")
+                    # Replace hostname with IPv4 address in connection string
+                    connection_string = connection_string.replace(self.config.host, ipv4_address)
+                except Exception as e:
+                    logger.warning(f"Failed to resolve IPv4 for {self.config.host}: {e}, using original hostname")
+            
             self.pool = await create_pool(
-                self.config.connection_string,
+                connection_string,
                 min_size=self.config.min_connections,
                 max_size=self.config.max_connections,
                 command_timeout=self.config.command_timeout,
@@ -185,6 +198,10 @@ class DatabaseManager:
             "pooler.supabase.com" in self.config.host or
             "dfgzeastcxnoqshgyotp" in self.config.host  # Supabase project ID pattern
         )
+    
+    def _is_cloud_deployment(self) -> bool:
+        """Check if this is a cloud deployment that needs IPv4 forcing."""
+        return any(os.getenv(var) for var in ['RENDER', 'VERCEL', 'HEROKU_APP_NAME', 'AWS_LAMBDA_FUNCTION_NAME', 'K_SERVICE'])
     
     async def _setup_connection(self, conn: Connection) -> None:
         """Set up a new database connection."""
