@@ -151,7 +151,7 @@ class Phase1MigrationTester:
         
         try:
             # Create auth adapter with Supabase backend
-            auth_adapter = AuthAdapter("supabase")
+            auth_adapter = AuthAdapter()
             
             # Test user creation through adapter
             import time
