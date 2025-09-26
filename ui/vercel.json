@@ -16,7 +16,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "$NEXT_PUBLIC_API_BASE_URL/api/$1"
+      "destination": "https://insurance-navigator-staging-api.onrender.com/api/$1"
     },
     {
       "source": "/((?!api|_next|_static|favicon.ico).*)",
@@ -24,7 +24,16 @@
     }
   ],
   "env": {
-    "NEXT_PUBLIC_APP_ENV": "production"
+    "NEXT_PUBLIC_APP_ENV": "staging"
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_SUPABASE_URL": "https://dfgzeastcxnoqshgyotp.supabase.co",
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmZ3plYXN0Y3hub3FzaGd5b3RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2ODA0ODMsImV4cCI6MjA2NzI1NjQ4M30.wV0kgqo20D1EghH47bO-4MoXpksiyQ_bvANaZlzScyM",
+      "NEXT_PUBLIC_API_BASE_URL": "https://insurance-navigator-staging-api.onrender.com",
+      "NEXT_PUBLIC_API_URL": "https://insurance-navigator-staging-api.onrender.com",
+      "NODE_ENV": "staging"
+    }
   },
   "headers": [
     {
