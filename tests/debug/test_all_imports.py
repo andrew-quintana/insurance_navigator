@@ -62,7 +62,6 @@ def main():
     
     db_imports = [
         ("db.services.auth_adapter", "auth_adapter"),
-        ("db.services.improved_minimal_auth_service", "improved_minimal_auth_service"),
         ("core.database", "database"),
         ("api.upload_pipeline.database", "upload_pipeline_database"),
     ]

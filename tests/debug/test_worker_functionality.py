@@ -119,7 +119,7 @@ def test_worker_database():
         print("✅ Database configuration imports successful")
         
         # Test database services
-        from db.services.user_service import get_user_service, UserService
+        # User service removed - now using Supabase auth directly
         from db.services.auth_adapter import auth_adapter
         from db.services.conversation_service import get_conversation_service, ConversationService
         from db.services.storage_service import get_storage_service, StorageService
