@@ -123,14 +123,25 @@ class DatabaseManager:
             supabase_url = self.config.supabase_url
             service_key = self.config.supabase_service_role_key
             
-            # Extract host from Supabase URL
-            if supabase_url.startswith("https://"):
-                host = supabase_url[8:]  # Remove https://
+            # For local development, use the correct database port
+            if "localhost" in supabase_url or "127.0.0.1" in supabase_url:
+                # Local Supabase uses port 54322 for database with postgres/postgres credentials
+                host = "127.0.0.1"
+                port = "54322"
+                ssl_mode = "disable"
+                password = "postgres"  # Local Supabase uses postgres as password
             else:
-                host = supabase_url
+                # Production Supabase
+                if supabase_url.startswith("https://"):
+                    host = supabase_url[8:]  # Remove https://
+                else:
+                    host = supabase_url
+                port = "5432"
+                ssl_mode = "require"
+                password = service_key  # Production uses service key as password
             
-            # Construct PostgreSQL connection string with SSL
-            db_url = f"postgresql://postgres:{service_key}@{host}:5432/postgres?sslmode=require"
+            # Construct PostgreSQL connection string
+            db_url = f"postgresql://postgres:{password}@{host}:{port}/postgres?sslmode={ssl_mode}"
         
         return db_url
     
