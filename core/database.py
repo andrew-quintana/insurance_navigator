@@ -82,28 +82,67 @@ class DatabaseManager:
             logger.info(f"Connection string: {self.config.connection_string[:50]}...")
             logger.info(f"Host: {self.config.host}, Port: {self.config.port}")
             
-            # For cloud deployments, try to resolve hostname to IPv4 to avoid IPv6 issues
-            connection_string = self.config.connection_string
+            # For cloud deployments with Supabase pooler, try different connection approaches
             if self._is_cloud_deployment() and "pooler.supabase.com" in self.config.host:
-                try:
-                    import socket
-                    # Resolve hostname to IPv4 address
-                    ipv4_address = socket.gethostbyname(self.config.host)
-                    logger.info(f"Resolved {self.config.host} to IPv4: {ipv4_address}")
-                    # Replace hostname with IPv4 address in connection string
-                    connection_string = connection_string.replace(self.config.host, ipv4_address)
-                except Exception as e:
-                    logger.warning(f"Failed to resolve IPv4 for {self.config.host}: {e}, using original hostname")
-            
-            self.pool = await create_pool(
-                connection_string,
-                min_size=self.config.min_connections,
-                max_size=self.config.max_connections,
-                command_timeout=self.config.command_timeout,
-                statement_cache_size=0,  # Fix pgbouncer prepared statement issue
-                ssl=ssl_config,
-                setup=self._setup_connection
-            )
+                logger.info("Using Supabase pooler with SCRAM authentication workaround")
+                
+                # Try using the session pooler URL (port 6543) instead of regular pooler (port 5432)
+                # Session pooler often has better compatibility with different authentication methods
+                session_pooler_url = os.getenv("SUPABASE_SESSION_POOLER_URL")
+                if session_pooler_url and "6543" in session_pooler_url:
+                    logger.info("Using session pooler URL (port 6543) for better compatibility")
+                    try:
+                        self.pool = await create_pool(
+                            session_pooler_url,
+                            min_size=self.config.min_connections,
+                            max_size=self.config.max_connections,
+                            command_timeout=self.config.command_timeout,
+                            statement_cache_size=0,  # Fix pgbouncer prepared statement issue
+                            ssl="require",
+                            setup=self._setup_connection
+                        )
+                    except Exception as e:
+                        logger.warning(f"Session pooler failed: {e}, trying regular pooler")
+                        # Fallback to regular pooler with connection parameters
+                        self.pool = await create_pool(
+                            host=self.config.host,
+                            port=self.config.port,
+                            database=self.config.database,
+                            user=self.config.user,
+                            password=self.config.password,
+                            min_size=self.config.min_connections,
+                            max_size=self.config.max_connections,
+                            command_timeout=self.config.command_timeout,
+                            statement_cache_size=0,  # Fix pgbouncer prepared statement issue
+                            ssl="require",
+                            setup=self._setup_connection
+                        )
+                else:
+                    # Use regular pooler with connection parameters
+                    self.pool = await create_pool(
+                        host=self.config.host,
+                        port=self.config.port,
+                        database=self.config.database,
+                        user=self.config.user,
+                        password=self.config.password,
+                        min_size=self.config.min_connections,
+                        max_size=self.config.max_connections,
+                        command_timeout=self.config.command_timeout,
+                        statement_cache_size=0,  # Fix pgbouncer prepared statement issue
+                        ssl="require",
+                        setup=self._setup_connection
+                    )
+            else:
+                # For other connections, use the standard connection string approach
+                self.pool = await create_pool(
+                    self.config.connection_string,
+                    min_size=self.config.min_connections,
+                    max_size=self.config.max_connections,
+                    command_timeout=self.config.command_timeout,
+                    statement_cache_size=0,  # Fix pgbouncer prepared statement issue
+                    ssl=ssl_config,
+                    setup=self._setup_connection
+                )
             
             self._is_initialized = True
             logger.info(f"Database pool initialized with {self.config.min_connections}-{self.config.max_connections} connections")
