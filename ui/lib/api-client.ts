@@ -109,8 +109,10 @@ const getAuthToken = (): string | null => {
   if (typeof window === 'undefined') return null;
   
   try {
-    return localStorage.getItem('auth-token') || 
-           sessionStorage.getItem('auth-token') ||
+    return localStorage.getItem('token') || 
+           localStorage.getItem('supabase.auth.token') ||
+           sessionStorage.getItem('token') ||
+           sessionStorage.getItem('supabase.auth.token') ||
            document.cookie
              .split('; ')
              .find(row => row.startsWith('auth-token='))
