@@ -9,6 +9,7 @@ import { SendHorizontal, ArrowLeft, Upload, User, Bot, LogOut, X, FileText, Chec
 import DocumentUploadModal from "@/components/DocumentUploadModal"
 import { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase-client'
+import { useAuth } from "@/components/auth/SessionManager"
 
 type Message = {
   id: number
@@ -34,6 +35,7 @@ interface UserInfo {
 
 export default function ChatPage() {
   const router = useRouter()
+  const { user, loading, signOut } = useAuth()
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -50,108 +52,42 @@ export default function ChatPage() {
   const [inputValue, setInputValue] = useState("")
   const [conversationId, setConversationId] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
-  const [authError, setAuthError] = useState<string | null>(null)
-  const [sessionWarning, setSessionWarning] = useState<string | null>(null)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const sessionCheckInterval = useRef<NodeJS.Timeout | null>(null)
-  const lastActivityTime = useRef<number>(Date.now())
-  const isCheckingAuthRef = useRef(false)
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
+  const [sessionWarning, setSessionWarning] = useState("")
 
   // Channel reference to prevent multiple subscriptions
   const channelRef = useRef<RealtimeChannel | null>(null)
+  
+  // Refs for DOM elements
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const lastActivityTime = useRef<number>(Date.now())
 
-  // Check authentication on component mount
+  // Check authentication and redirect if not authenticated
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        router.push("/login")
-        return
-      }
-
-      // Get API URL from environment variables (Vercel best practice)
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
-      const authMeUrl = `${apiBaseUrl}/me`
-      
-      console.log("🌐 API Base URL:", apiBaseUrl)
-      console.log("🔗 Auth Me URL:", authMeUrl)
-
-      try {
-        const response = await fetch(authMeUrl, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-            'ngrok-skip-browser-warning': 'true',
-          },
-        })
-        
-        if (response.ok) {
-          const userData: UserInfo = await response.json()
-          setUserInfo(userData)
-          setIsAuthenticated(true)
-          setIsCheckingAuth(false)
-          setAuthError("")
-          
-          // Add initial bot message only if no messages exist
-          if (messages.length === 0) {
-            const userName = userData.name || 'there'
-            const initialMessage: Message = {
-              id: 1,
-              sender: "bot",
-              text: `Hello ${userName}! I'm your Medicare Navigator. I can help you with Medicare questions, find healthcare providers, understand your benefits, and more. What would you like to know today?`,
-            }
-            setMessages([initialMessage])
-          }
-          setIsLoading(false)
-        } else {
-          // Token is invalid, redirect to login
-          localStorage.removeItem("token")
-          localStorage.removeItem("tokenType")
-          setIsCheckingAuth(false)
-          router.push("/login")
-        }
-      } catch (error) {
-        console.error("Auth check failed:", error)
-        // Don't clear token on network errors - just log the error
-        console.log("⚠️ Auth check failed due to network error, keeping token")
-        setIsCheckingAuth(false)
-        setIsLoading(false)
-        // Set a default user for now to allow uploads
-        setUserInfo({ id: "temp", email: "user@example.com", name: "User" })
-        setIsAuthenticated(true)
-      }
+    if (!loading && !user) {
+      router.push("/login")
     }
+  }, [loading, user, router])
 
-    checkAuth()
-    
-    // Set up session monitoring (OWASP recommendation)
-    sessionCheckInterval.current = setInterval(() => {
-      const now = Date.now()
-      const timeSinceActivity = now - lastActivityTime.current
-      
-      // Check if session is approaching expiration (25 minutes = 1500000ms)
-      if (timeSinceActivity > 1500000) {
-        setSessionWarning("Your session will expire in 5 minutes due to inactivity.")
+  // Update initial message with user's name when authenticated
+  useEffect(() => {
+    if (user && messages.length === 1) {
+      const userName = user.user_metadata?.full_name || user.email || 'there'
+      const initialMessage: Message = {
+        id: 1,
+        sender: "bot",
+        text: `Hello ${userName}! I'm your Medicare Navigator. I can help you with Medicare questions, find healthcare providers, understand your benefits, and more. What would you like to know today?`,
+        options: [
+          "What's covered under Medicare Part B?",
+          "Help me understand my Medicare Supplement options",
+          "Questions about Medicare enrollment periods",
+          "I need help with a specific claim or benefit"
+        ]
       }
-      
-      // Auto-logout after 30 minutes of inactivity (1800000ms)
-      if (timeSinceActivity > 1800000) {
-        logout()
-      }
-    }, 60000) // Check every minute
-    
-    return () => {
-      if (sessionCheckInterval.current) {
-        clearInterval(sessionCheckInterval.current)
-      }
+      setMessages([initialMessage])
     }
-  }, [router])
+  }, [user, messages.length])
 
   // Track user activity for session management
   const updateActivity = () => {
@@ -171,14 +107,13 @@ export default function ChatPage() {
 
   // Focus the input field when the component mounts
   useEffect(() => {
-    if (isAuthenticated && inputRef.current) {
+    if (user && inputRef.current) {
       inputRef.current.focus()
     }
-  }, [isAuthenticated])
+  }, [user])
 
-  const logout = () => {
-    localStorage.removeItem("token")
-    localStorage.removeItem("tokenType")
+  const handleLogout = async () => {
+    await signOut()
     router.push("/")
   }
 
@@ -324,18 +259,12 @@ export default function ChatPage() {
   }
 
   // Show loading screen while checking authentication
-  if (isCheckingAuth) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-cream-50 flex items-center justify-center">
         <Card className="p-8 bg-white rounded-xl shadow-md max-w-md">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-teal-800 mb-4">Loading Medicare Navigator...</h2>
-            {authError && (
-              <p className="text-red-600 mb-4">{authError}</p>
-            )}
-            {sessionWarning && (
-              <p className="text-orange-600 mb-4">{sessionWarning}</p>
-            )}
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-700 mx-auto"></div>
             <p className="text-gray-600 mt-4 text-sm">Verifying your session...</p>
           </div>
@@ -344,16 +273,13 @@ export default function ChatPage() {
     )
   }
 
-  // Show error screen if authentication failed but not checking
-  if (!isAuthenticated && !isCheckingAuth) {
+  // Show error screen if not authenticated
+  if (!user) {
     return (
       <div className="min-h-screen bg-cream-50 flex items-center justify-center">
         <Card className="p-8 bg-white rounded-xl shadow-md max-w-md">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-teal-800 mb-4">Authentication Required</h2>
-            {authError && (
-              <p className="text-red-600 mb-4">{authError}</p>
-            )}
             <p className="text-gray-600 mb-4">Please log in to access the Medicare Navigator.</p>
             <Button 
               onClick={() => router.push("/login")}
@@ -388,10 +314,10 @@ export default function ChatPage() {
           <div className="flex items-center space-x-4">
             <div className="flex items-center text-teal-700">
               <User className="h-5 w-5 mr-2" />
-              <span className="text-sm">{userInfo?.name}</span>
+              <span className="text-sm">{user?.user_metadata?.full_name || user?.email}</span>
             </div>
             <Button
-              onClick={logout}
+              onClick={handleLogout}
               variant="outline"
               className="text-teal-700 border-teal-300 hover:bg-teal-50"
             >
