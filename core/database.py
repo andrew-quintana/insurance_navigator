@@ -82,67 +82,17 @@ class DatabaseManager:
             logger.info(f"Connection string: {self.config.connection_string[:50]}...")
             logger.info(f"Host: {self.config.host}, Port: {self.config.port}")
             
-            # For cloud deployments with Supabase pooler, try different connection approaches
-            if self._is_cloud_deployment() and "pooler.supabase.com" in self.config.host:
-                logger.info("Using Supabase pooler with SCRAM authentication workaround")
-                
-                # Try using the session pooler URL (port 6543) instead of regular pooler (port 5432)
-                # Session pooler often has better compatibility with different authentication methods
-                session_pooler_url = os.getenv("SUPABASE_SESSION_POOLER_URL")
-                if session_pooler_url and "6543" in session_pooler_url:
-                    logger.info("Using session pooler URL (port 6543) for better compatibility")
-                    try:
-                        self.pool = await create_pool(
-                            session_pooler_url,
-                            min_size=self.config.min_connections,
-                            max_size=self.config.max_connections,
-                            command_timeout=self.config.command_timeout,
-                            statement_cache_size=0,  # Fix pgbouncer prepared statement issue
-                            ssl="require",
-                            setup=self._setup_connection
-                        )
-                    except Exception as e:
-                        logger.warning(f"Session pooler failed: {e}, trying regular pooler")
-                        # Fallback to regular pooler with connection parameters
-                        self.pool = await create_pool(
-                            host=self.config.host,
-                            port=self.config.port,
-                            database=self.config.database,
-                            user=self.config.user,
-                            password=self.config.password,
-                            min_size=self.config.min_connections,
-                            max_size=self.config.max_connections,
-                            command_timeout=self.config.command_timeout,
-                            statement_cache_size=0,  # Fix pgbouncer prepared statement issue
-                            ssl="require",
-                            setup=self._setup_connection
-                        )
-                else:
-                    # Use regular pooler with connection parameters
-                    self.pool = await create_pool(
-                        host=self.config.host,
-                        port=self.config.port,
-                        database=self.config.database,
-                        user=self.config.user,
-                        password=self.config.password,
-                        min_size=self.config.min_connections,
-                        max_size=self.config.max_connections,
-                        command_timeout=self.config.command_timeout,
-                        statement_cache_size=0,  # Fix pgbouncer prepared statement issue
-                        ssl="require",
-                        setup=self._setup_connection
-                    )
-            else:
-                # For other connections, use the standard connection string approach
-                self.pool = await create_pool(
-                    self.config.connection_string,
-                    min_size=self.config.min_connections,
-                    max_size=self.config.max_connections,
-                    command_timeout=self.config.command_timeout,
-                    statement_cache_size=0,  # Fix pgbouncer prepared statement issue
-                    ssl=ssl_config,
-                    setup=self._setup_connection
-                )
+            # Use the standard connection string approach for all connections
+            # This avoids the complex pooler logic that was causing SCRAM authentication issues
+            self.pool = await create_pool(
+                self.config.connection_string,
+                min_size=self.config.min_connections,
+                max_size=self.config.max_connections,
+                command_timeout=self.config.command_timeout,
+                statement_cache_size=0,  # Fix pgbouncer prepared statement issue
+                ssl=ssl_config,
+                setup=self._setup_connection
+            )
             
             self._is_initialized = True
             logger.info(f"Database pool initialized with {self.config.min_connections}-{self.config.max_connections} connections")
@@ -238,10 +188,6 @@ class DatabaseManager:
             "dfgzeastcxnoqshgyotp" in self.config.host  # Supabase project ID pattern
         )
     
-    def _is_cloud_deployment(self) -> bool:
-        """Check if this is a cloud deployment that needs IPv4 forcing."""
-        return any(os.getenv(var) for var in ['RENDER', 'VERCEL', 'HEROKU_APP_NAME', 'AWS_LAMBDA_FUNCTION_NAME', 'K_SERVICE'])
-    
     async def _setup_connection(self, conn: Connection) -> None:
         """Set up a new database connection."""
         # Set timezone
@@ -273,18 +219,14 @@ class DatabaseManager:
 
 def create_database_config() -> DatabaseConfig:
     """Create database configuration from environment variables."""
-    # For cloud deployments (Render, Vercel, etc.), prefer pooler URL to avoid IPv6 issues
+    # For cloud deployments, try to use pooler URL to avoid IPv6 issues
     # For local development, use DATABASE_URL directly
     is_cloud_deployment = any(os.getenv(var) for var in ['RENDER', 'VERCEL', 'HEROKU_APP_NAME', 'AWS_LAMBDA_FUNCTION_NAME', 'K_SERVICE'])
     
     logger.info(f"Database config creation - Cloud deployment: {is_cloud_deployment}")
-    logger.info(f"RENDER env var: {os.getenv('RENDER')}")
-    logger.info(f"SUPABASE_SESSION_POOLER_URL available: {bool(os.getenv('SUPABASE_SESSION_POOLER_URL'))}")
-    logger.info(f"SUPABASE_POOLER_URL available: {bool(os.getenv('SUPABASE_POOLER_URL'))}")
-    logger.info(f"DEBUG: Force redeploy to test pooler URL fix")
     
     if is_cloud_deployment:
-        # Try pooler URL first for cloud deployments to avoid IPv6 connectivity issues
+        # For cloud deployments, try pooler URL first to avoid IPv6 connectivity issues
         pooler_url = os.getenv("SUPABASE_SESSION_POOLER_URL") or os.getenv("SUPABASE_POOLER_URL")
         if pooler_url:
             logger.info(f"Using Supabase pooler URL for cloud deployment: {pooler_url[:50]}...")
@@ -293,7 +235,7 @@ def create_database_config() -> DatabaseConfig:
             # Fallback to direct DATABASE_URL if no pooler available
             db_url = os.getenv("DATABASE_URL")
             if db_url:
-                logger.warning("No pooler URL found, using direct DATABASE_URL (may have IPv6 connectivity issues)")
+                logger.warning("No pooler URL found, using direct DATABASE_URL")
     else:
         # Local development: use DATABASE_URL directly
         db_url = os.getenv("DATABASE_URL")
