@@ -7,9 +7,14 @@ begin;
 -- -------------------------------
 -- BACKUP EXISTING DATA (if needed)
 -- -------------------------------
--- Create a backup table with user data before dropping
-create table if not exists public.users_backup as 
-select * from public.users;
+-- Create a backup table with user data before dropping (if table exists)
+do $$
+begin
+    if exists (select 1 from information_schema.tables where table_name = 'users' and table_schema = 'public') then
+        create table if not exists public.users_backup as 
+        select * from public.users;
+    end if;
+end $$;
 
 -- -------------------------------
 -- DROP TRIGGERS AND FUNCTIONS
@@ -20,22 +25,33 @@ drop trigger if exists on_auth_user_created on auth.users;
 -- Drop the function that handles new user creation
 drop function if exists public.handle_new_user();
 
--- Drop the updated_at trigger
-drop trigger if exists update_users_updated_at on public.users;
+-- Drop the updated_at trigger (if table exists)
+do $$
+begin
+    if exists (select 1 from information_schema.tables where table_name = 'users' and table_schema = 'public') then
+        drop trigger if exists update_users_updated_at on public.users;
+    end if;
+end $$;
 
 -- -------------------------------
 -- DROP RLS POLICIES
 -- -------------------------------
--- Drop all RLS policies on users table
-drop policy if exists "Users can view own profile" on public.users;
-drop policy if exists "Users can update own profile" on public.users;
-drop policy if exists "Service role can insert users" on public.users;
-drop policy if exists "Anon can insert users during registration" on public.users;
-drop policy if exists "Service role can select all users" on public.users;
+-- Drop all RLS policies on users table (if table exists)
+do $$
+begin
+    if exists (select 1 from information_schema.tables where table_name = 'users' and table_schema = 'public') then
+        drop policy if exists "Users can view own profile" on public.users;
+        drop policy if exists "Users can update own profile" on public.users;
+        drop policy if exists "Service role can insert users" on public.users;
+        drop policy if exists "Anon can insert users during registration" on public.users;
+        drop policy if exists "Service role can select all users" on public.users;
+    end if;
+end $$;
 
 -- -------------------------------
 -- DROP INDEXES
 -- -------------------------------
+-- Drop indexes (if they exist)
 drop index if exists idx_users_email;
 drop index if exists idx_users_active;
 drop index if exists idx_users_created_at;

@@ -387,9 +387,9 @@ async def _create_upload_job_for_duplicate(
     
     query = """
         INSERT INTO upload_pipeline.upload_jobs (
-            job_id, document_id, status, state, progress, 
+            job_id, document_id, stage, state, 
             created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, NOW(), NOW())
     """
     
     # Convert UUIDs to strings for JSON serialization
@@ -401,9 +401,8 @@ async def _create_upload_job_for_duplicate(
         query,
         job_id,
         document_id,
-        "uploaded",  # Start in uploaded state
-        "queued",
-        json.dumps(payload_dict)  # Convert to JSON string for database storage
+        "job_validated",  # stage
+        "queued"  # state
     )
 
 
@@ -428,9 +427,9 @@ async def _create_upload_job(
     
     query = """
         INSERT INTO upload_pipeline.upload_jobs (
-            job_id, document_id, status, state, progress, 
+            job_id, document_id, stage, state, 
             created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, NOW(), NOW())
     """
     
     # Convert UUIDs to strings for JSON serialization
@@ -442,9 +441,8 @@ async def _create_upload_job(
         query,
         job_id,
         document_id,
-        "uploaded",  # Start in uploaded state per updated stage progression
-        "queued",
-        json.dumps(payload_dict)  # Convert to JSON string for database storage
+        "job_validated",  # stage
+        "queued"  # state
     )
 
 
@@ -518,7 +516,7 @@ async def upload_file_to_storage(
         db = get_database()
         async with db.get_connection() as conn:
             job = await conn.fetchrow(
-                "SELECT document_id, status FROM upload_pipeline.upload_jobs WHERE job_id = $1",
+                "SELECT document_id, state FROM upload_pipeline.upload_jobs WHERE job_id = $1",
                 job_id
             )
             
@@ -565,7 +563,7 @@ async def upload_file_to_storage(
         # Update job status to indicate file is uploaded
         async with db.get_connection() as conn:
             await conn.execute(
-                "UPDATE upload_pipeline.upload_jobs SET status = 'uploaded', state = 'queued' WHERE job_id = $1",
+                "UPDATE upload_pipeline.upload_jobs SET state = 'queued' WHERE job_id = $1",
                 job_id
             )
         
