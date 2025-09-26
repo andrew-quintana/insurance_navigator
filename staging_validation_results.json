@@ -1,0 +1,37 @@
+[
+  {
+    "test": "Health Endpoint",
+    "success": true,
+    "message": "API is healthy (status: healthy)",
+    "details": "Services: ['database', 'rag', 'user_service', 'conversation_service', 'storage_service']",
+    "timestamp": "2025-09-25T12:26:24.894727"
+  },
+  {
+    "test": "Authentication",
+    "success": true,
+    "message": "Login successful",
+    "details": "Token received: eyJhbGciOiJIUzI1NiIs...",
+    "timestamp": "2025-09-25T12:26:25.051150"
+  },
+  {
+    "test": "Standardized Upload Endpoint",
+    "success": false,
+    "message": "Unexpected status: 500 - {\"detail\":\"Failed to process upload request\"}",
+    "details": "",
+    "timestamp": "2025-09-25T12:26:27.845376"
+  },
+  {
+    "test": "Legacy Endpoint Removal",
+    "success": false,
+    "message": "Legacy endpoint still accessible: 405 - {\"detail\":\"Method Not Allowed\"}",
+    "details": "",
+    "timestamp": "2025-09-25T12:26:28.049451"
+  },
+  {
+    "test": "API Version",
+    "success": true,
+    "message": "API version: Insurance Navigator API v3.0.0",
+    "details": "Full response: {'message': 'Insurance Navigator API v3.0.0'}",
+    "timestamp": "2025-09-25T12:26:28.272112"
+  }
+]
