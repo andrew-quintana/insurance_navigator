@@ -18,18 +18,7 @@ import {
   DollarSign,
   Activity,
   LogIn,
-  ArrowRight,
-  Shield,
-  Brain,
-  Users,
-  Heart,
 } from "lucide-react"
-
-interface UserInfo {
-  id: string
-  email: string
-  name: string
-}
 
 export default function Home() {
   const router = useRouter()

@@ -56,7 +56,7 @@ export const getAuthToken = async (): Promise<string | null> => {
   if (typeof window === 'undefined') return null;
   
   // First try to get token from localStorage
-  let token = localStorage.getItem('token') || localStorage.getItem('supabase.auth.token');
+  const token = localStorage.getItem('token') || localStorage.getItem('supabase.auth.token');
   
   if (token) {
     return token;

@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Search, File, AlertCircle, CheckCircle, Clock } from 'lucide-react'
+import { Search, File, AlertCircle, CheckCircle } from 'lucide-react'
 
 interface DocumentSearchResult {
   document_id: string
@@ -182,7 +182,7 @@ export default function DocumentManager({
                   <div>
                     <p className="font-medium text-gray-700">No Results Found</p>
                     <p className="text-sm text-gray-600 mt-1">
-                      No documents found matching "{searchQuery}". Try different keywords or upload some documents first.
+                      No documents found matching &quot;{searchQuery}&quot;. Try different keywords or upload some documents first.
                     </p>
                   </div>
                 </div>
@@ -195,7 +195,7 @@ export default function DocumentManager({
                   Found {searchResults.length} matches in {uniqueDocuments.length} documents
                 </h4>
                 <div className="space-y-3">
-                  {uniqueDocuments.map((doc, index) => {
+                  {uniqueDocuments.map((doc) => {
                     const relatedResults = searchResults.filter(r => r.document_id === doc.document_id)
                     const uploadDate = new Date(doc.metadata.uploaded_at).toLocaleDateString()
                     
@@ -250,7 +250,7 @@ export default function DocumentManager({
                 <p className="font-medium text-blue-800">How to Search</p>
                 <ul className="text-sm text-blue-700 mt-1 space-y-1">
                   <li>• Use natural language to search your documents</li>
-                  <li>• Try queries like "Medicare Part B coverage" or "prescription drugs"</li>
+                  <li>• Try queries like &quot;Medicare Part B coverage&quot; or &quot;prescription drugs&quot;</li>
                   <li>• Search results show the most relevant sections from your documents</li>
                   <li>• Upload documents first to enable search functionality</li>
                 </ul>
