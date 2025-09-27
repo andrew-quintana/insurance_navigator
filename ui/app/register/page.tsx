@@ -1,28 +1,10 @@
 "use client"
 
-import React, { useState } from "react"
+import React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, Check } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import RegisterForm from "@/components/auth/RegisterForm"
-
-interface RegisterResponse {
-  access_token: string
-  token_type: string
-}
-
-interface ValidationError {
-  type: string
-  loc: string[]
-  msg: string
-  input?: unknown
-}
-
-interface ErrorResponse {
-  detail: string | ValidationError[]
-}
 
 export default function RegisterPage() {
   const router = useRouter()
