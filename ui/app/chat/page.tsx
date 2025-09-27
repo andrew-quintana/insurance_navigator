@@ -5,10 +5,9 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { SendHorizontal, ArrowLeft, Upload, User, Bot, LogOut, X, FileText, CheckCircle, AlertCircle } from "lucide-react"
+import { SendHorizontal, ArrowLeft, Upload, User } from "lucide-react"
 import DocumentUploadModal from "@/components/DocumentUploadModal"
-import { RealtimeChannel } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase-client'
+// import { RealtimeChannel } from '@supabase/supabase-js'
 import { useAuth } from "@/components/auth/SessionManager"
 
 type Message = {
@@ -20,18 +19,6 @@ type Message = {
   workflow_type?: string
 }
 
-interface ChatResponse {
-  text: string
-  metadata: Record<string, unknown>
-  conversation_id: string
-  workflow_type: string
-}
-
-interface UserInfo {
-  id: string
-  email: string
-  name: string
-}
 
 export default function ChatPage() {
   const router = useRouter()
@@ -50,13 +37,12 @@ export default function ChatPage() {
     }
   ])
   const [inputValue, setInputValue] = useState("")
-  const [conversationId, setConversationId] = useState<string>("")
+  const [conversationId] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
-  const [sessionWarning, setSessionWarning] = useState("")
 
-  // Channel reference to prevent multiple subscriptions
-  const channelRef = useRef<RealtimeChannel | null>(null)
+  // Channel reference to prevent multiple subscriptions (currently unused)
+  // const channelRef = useRef<RealtimeChannel | null>(null)
   
   // Refs for DOM elements
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -92,7 +78,6 @@ export default function ChatPage() {
   // Track user activity for session management
   const updateActivity = () => {
     lastActivityTime.current = Date.now()
-    setSessionWarning("") // Clear any session warnings
   }
 
   // TODO: Document status polling temporarily disabled due to API endpoint issues
@@ -203,7 +188,7 @@ export default function ChatPage() {
     setIsUploadModalOpen(true)
   }
 
-  const handleUploadSuccess = (result: any) => {
+  const handleUploadSuccess = (result: { filename: string }) => {
     console.log('Upload successful:', result)
     
     // Add a message to the chat indicating successful upload

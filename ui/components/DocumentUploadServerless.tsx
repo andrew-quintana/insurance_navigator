@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef, useState, useCallback, useEffect } from 'react'
+import React, { useRef, useState, useCallback } from 'react'
 import { Upload, File, CheckCircle, AlertCircle, X, Clock } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 
@@ -247,14 +247,13 @@ export default function DocumentUploadServerless({
         text_length: result.text_length || 0,
         message: result.message || 'Document processed successfully!'
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
       console.error('❌ Upload error:', {
-        name: err.name,
-        message: err.message,
-        stack: err.stack,
-        cause: err.cause
+        error: err,
+        message: errorMessage
       })
-      throw new Error(`Upload failed: ${err.message}`)
+      throw new Error(`Upload failed: ${errorMessage}`)
     }
   }
 
@@ -301,21 +300,23 @@ export default function DocumentUploadServerless({
           if (onUploadSuccess) {
             onUploadSuccess(result)
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
           console.error('❌ Debug - File upload failed:', fileStatus.file.name, error)
           setSelectedFiles(prev => prev.map(f => 
             f.file.name === fileStatus.file.name 
-              ? { ...f, status: 'error', error: error.message || 'Unknown error' } 
+              ? { ...f, status: 'error', error: errorMessage } 
               : f
           ))
           if (onUploadError) {
-            onUploadError(error.message || 'Unknown error')
+            onUploadError(errorMessage)
           }
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       console.error('❌ Debug - Upload handler error:', error)
-      setError(error.message || 'Unknown error')
+      setError(errorMessage)
     } finally {
       setIsUploading(false)
       console.log('🏁 Debug - Upload handler completed')

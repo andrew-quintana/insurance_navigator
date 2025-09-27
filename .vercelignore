@@ -7,6 +7,16 @@ api/
 agents/
 db/
 /utils/
+performance/
+media/
+venv/
+node_modules/
+tests/
+docs/
+logs/
+coverage/
+test-results/
+test_data/
 !ui/lib/
 !ui/lib/utils.ts
 !ui/lib/api-client.ts

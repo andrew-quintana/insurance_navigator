@@ -1,18 +1,12 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { useAuth } from "@/components/auth/SessionManager"
-import { ArrowLeft, PlayCircle, ChevronRight, CheckCircle, User, ArrowRight } from "lucide-react"
-
-interface UserInfo {
-  id: string
-  email: string
-  name: string
-}
+import { ArrowLeft, PlayCircle, ChevronRight, CheckCircle } from "lucide-react"
 
 export default function WelcomePage() {
   const router = useRouter()

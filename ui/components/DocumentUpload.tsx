@@ -30,21 +30,21 @@ export default function DocumentUpload({
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  // const [uploadResult] = useState<UploadResponse | null>(null)
+  // const [error, setError] = useState<string | null>(null)
   const [uploadMessage, setUploadMessage] = useState<string>("")
   const [uploadSuccess, setUploadSuccess] = useState<boolean>(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Calculate file hash for deduplication
-  const calculateFileHash = async (file: File): Promise<string> => {
-    const buffer = await file.arrayBuffer()
-    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-  }
+  // Calculate file hash for deduplication (currently unused)
+  // const calculateFileHash = async (file: File): Promise<string> => {
+  //   const buffer = await file.arrayBuffer()
+  //   const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
+  //   const hashArray = Array.from(new Uint8Array(hashBuffer))
+  //   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+  // }
 
   // File validation
   const validateFile = (file: File): string | null => {
@@ -71,13 +71,13 @@ export default function DocumentUpload({
   const handleFileSelect = useCallback((file: File) => {
     const validation = validateFile(file)
     if (validation) {
-      setError(validation)
+      setUploadError(validation)
       return
     }
 
     setSelectedFile(file)
-    setError(null)
-    setUploadResult(null)
+    setUploadError(null)
+    // setUploadResult(null)
   }, [])
 
   // Handle drag events
@@ -151,7 +151,7 @@ export default function DocumentUpload({
       }
       
       // Use the working backend endpoint that handles file storage
-      let uploadUrl = `${apiBaseUrl}/api/upload-pipeline/upload`
+      const uploadUrl = `${apiBaseUrl}/api/upload-pipeline/upload`
       // Read file content for metadata calculation
       const fileContent = await selectedFile.arrayBuffer()
       const fileSize = fileContent.byteLength
@@ -169,7 +169,7 @@ export default function DocumentUpload({
         ocr: false
       }
       
-      let uploadResponse = await fetch(uploadUrl, {
+      const uploadResponse = await fetch(uploadUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -297,8 +297,8 @@ export default function DocumentUpload({
   // Reset form
   const resetUpload = () => {
     setSelectedFile(null)
-    setError(null)
-    setUploadResult(null)
+    // setError(null)
+    // setUploadResult(null)
     setUploadProgress(0)
     setUploadMessage("")
     setUploadSuccess(false)
