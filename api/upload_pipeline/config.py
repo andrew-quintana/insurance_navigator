@@ -7,6 +7,17 @@ from typing import Optional, List
 from pydantic_settings import BaseSettings
 from pydantic import field_validator, Field
 
+# Load environment variables based on environment
+from dotenv import load_dotenv
+
+environment = os.getenv('ENVIRONMENT', 'production')
+env_file = f'.env.{environment}'
+if os.path.exists(env_file):
+    load_dotenv(env_file)
+    print(f"✅ Upload Pipeline Config: Loaded environment variables from {env_file}")
+else:
+    print(f"⚠️ Upload Pipeline Config: Environment file {env_file} not found, using system environment variables")
+
 
 class UploadPipelineConfig(BaseSettings):
     """Configuration for the upload pipeline."""

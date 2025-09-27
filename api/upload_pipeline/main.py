@@ -4,10 +4,22 @@ Phase 2: Core API endpoints and job queue system.
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from typing import Dict, Any
 import time
 from datetime import datetime
+
+# Load environment variables based on environment
+from dotenv import load_dotenv
+
+environment = os.getenv('ENVIRONMENT', 'production')
+env_file = f'.env.{environment}'
+if os.path.exists(env_file):
+    load_dotenv(env_file)
+    print(f"✅ Upload Pipeline: Loaded environment variables from {env_file}")
+else:
+    print(f"⚠️ Upload Pipeline: Environment file {env_file} not found, using system environment variables")
 
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
