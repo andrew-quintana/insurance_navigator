@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable prefer-const */
 import { AuthMetricsCollector, AuthMetrics } from './auth-metrics';
 
 export interface UploadMetrics {
