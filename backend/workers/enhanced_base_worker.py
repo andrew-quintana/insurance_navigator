@@ -571,9 +571,13 @@ class EnhancedBaseWorker:
                     self.logger.error(f"Ngrok discovery failed: {e}")
                     raise RuntimeError(f"Development environment requires ngrok: {e}")
             else:
-                # For production, use default if WEBHOOK_BASE_URL not set
-                base_url = "https://insurance-navigator-api.onrender.com"
-                self.logger.info(f"Using production default webhook base URL: {base_url}")
+                # For staging/production, use environment-specific URLs
+                if environment == "staging":
+                    base_url = "https://insurance-navigator-staging-api.onrender.com"
+                    self.logger.info(f"Using staging webhook base URL: {base_url}")
+                else:
+                    base_url = "https://insurance-navigator-api.onrender.com"
+                    self.logger.info(f"Using production webhook base URL: {base_url}")
             
             webhook_url = f"{base_url}/api/upload-pipeline/webhook/llamaparse/{job_id}"
             webhook_secret = str(uuid.uuid4())  # Generate webhook secret
@@ -1353,8 +1357,10 @@ class EnhancedBaseWorker:
                     response = await storage_client.get(
                         f"{storage_url}/storage/v1/object/{bucket}/{key}",
                         headers={
+                            "apikey": service_role_key,
                             "Authorization": f"Bearer {service_role_key}",
-                            "apikey": service_role_key
+                            "Content-Type": "application/json",
+                            "User-Agent": "Insurance-Navigator/1.0"
                         }
                     )
                     response.raise_for_status()
