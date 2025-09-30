@@ -63,6 +63,12 @@ async def upload_document(
         # Check concurrent job limits
         await _check_concurrent_job_limits(current_user.user_id, db)
         
+        # Check file size limits (5MB per file)
+        await _check_file_size_limits(request.bytes_len)
+        
+        # Check daily upload limits (3 documents per day per user)
+        await _check_daily_upload_limits(current_user.user_id, db)
+        
         # Phase 3: Multi-User Data Integrity - Check for duplicates
         # First check if this user already has this document
         user_existing_document = await check_user_has_document(
@@ -279,6 +285,39 @@ async def _check_concurrent_job_limits(user_id: str, db) -> None:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=f"Maximum concurrent jobs ({config.max_concurrent_jobs_per_user}) exceeded"
+        )
+
+
+async def _check_file_size_limits(bytes_len: int) -> None:
+    """Check if file size exceeds the 5MB limit per file."""
+    max_file_size = 5 * 1024 * 1024  # 5MB in bytes
+    
+    if bytes_len > max_file_size:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File size ({bytes_len} bytes) exceeds maximum allowed size of 5MB"
+        )
+
+
+async def _check_daily_upload_limits(user_id: str, db) -> None:
+    """Check if user has exceeded daily upload limits (3 documents per day)."""
+    max_daily_uploads = 3
+    
+    # Count uploads from today
+    query = """
+        SELECT COUNT(*) as upload_count
+        FROM upload_pipeline.documents
+        WHERE user_id = $1 
+        AND DATE(created_at) = CURRENT_DATE
+    """
+    
+    result = await db.fetchrow(query, user_id)
+    daily_uploads = result["upload_count"] if result else 0
+    
+    if daily_uploads >= max_daily_uploads:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Daily upload limit ({max_daily_uploads} documents) exceeded. Please try again tomorrow."
         )
 
 
@@ -746,10 +785,16 @@ async def get_upload_limits():
     config = get_config()
     
     return {
-        "max_file_size_bytes": config.max_file_size_bytes,
+        "max_file_size_bytes": 5 * 1024 * 1024,  # 5MB hard limit
+        "max_file_size_mb": 5,
         "max_pages": config.max_pages,
         "max_concurrent_jobs_per_user": config.max_concurrent_jobs_per_user,
-        "max_uploads_per_day_per_user": config.max_uploads_per_day_per_user,
+        "max_uploads_per_day_per_user": 3,  # 3 documents per day per user
         "supported_mime_types": ["application/pdf"],
-        "signed_url_ttl_seconds": config.signed_url_ttl_seconds
+        "signed_url_ttl_seconds": config.signed_url_ttl_seconds,
+        "limits_description": {
+            "file_size": "Maximum 5MB per file",
+            "daily_uploads": "Maximum 3 documents per day per user",
+            "concurrent_jobs": f"Maximum {config.max_concurrent_jobs_per_user} concurrent processing jobs per user"
+        }
     }
