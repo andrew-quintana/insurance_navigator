@@ -59,7 +59,7 @@ class JobStatusResponse(BaseModel):
     @field_validator('status')
     @classmethod
     def validate_status(cls, v):
-        valid_statuses = {'queued', 'job_validated', 'parsing', 'parsed', 'parse_validated', 'chunking', 'chunks_buffered', 'chunked', 'embedding', 'embeddings_buffered', 'embedded'}
+        valid_statuses = {'uploaded', 'parse_queued', 'parsed', 'parse_validated', 'chunking', 'chunks_stored', 'embedding_queued', 'embedding_in_progress', 'embeddings_stored', 'complete', 'failed_parse', 'failed_chunking', 'failed_embedding', 'duplicate'}
         if v not in valid_statuses:
             raise ValueError(f'Invalid status: {v}')
         return v

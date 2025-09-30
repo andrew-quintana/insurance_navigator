@@ -239,22 +239,25 @@ def _calculate_job_progress(status: str) -> Dict[str, float]:
     Calculate progress percentages based on current status.
     
     Updated status progression:
-    queued → job_validated → parsing → parsed → parse_validated → 
-    chunking → chunks_buffered → chunked → embedding → 
-    embeddings_buffered → embedded
+    uploaded → parse_queued → parsed → parse_validated → 
+    chunking → chunks_stored → embedding_queued → 
+    embedding_in_progress → embeddings_stored → complete
     """
     status_weights = {
-        "queued": 0,
-        "job_validated": 10,
-        "parsing": 20,
+        "uploaded": 10,
+        "parse_queued": 20,
         "parsed": 30,
         "parse_validated": 35,
         "chunking": 45,
-        "chunks_buffered": 50,
-        "chunked": 55,
-        "embedding": 70,
-        "embeddings_buffered": 75,
-        "embedded": 100
+        "chunks_stored": 50,
+        "embedding_queued": 60,
+        "embedding_in_progress": 70,
+        "embeddings_stored": 80,
+        "complete": 100,
+        "failed_parse": -1,
+        "failed_chunking": -1,
+        "failed_embedding": -1,
+        "duplicate": -1
     }
     
     status_pct = status_weights.get(status, 0)

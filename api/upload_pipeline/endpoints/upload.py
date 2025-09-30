@@ -440,7 +440,7 @@ async def _create_upload_job_for_duplicate(
         query,
         job_id,
         document_id,
-        "job_validated",  # status
+        "uploaded",  # status
         "queued"  # state
     )
 
@@ -480,7 +480,7 @@ async def _create_upload_job(
         query,
         job_id,
         document_id,
-        "job_validated",  # status
+        "uploaded",  # status
         "queued"  # state
     )
 
