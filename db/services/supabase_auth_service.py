@@ -299,7 +299,7 @@ class SupabaseAuthService:
             logger.error(f"Error deleting user: {str(e)}")
             return False
     
-    def validate_token(self, token: str) -> Optional[Dict[str, Any]]:
+    async def validate_token(self, token: str) -> Optional[Dict[str, Any]]:
         """Validate a JWT token using Supabase's built-in validation.
         
         Args:
@@ -311,12 +311,8 @@ class SupabaseAuthService:
         try:
             logger.info("Validating token with Supabase built-in validation")
             
-            # Use Supabase's built-in JWT validation by setting the session
-            # This properly validates the token signature and expiration
-            import asyncio
-            
             # Get the regular Supabase client
-            client = asyncio.run(self._get_client())
+            client = await self._get_client()
             
             # Set the session with the token to validate it
             client.auth.set_session(token, token)
