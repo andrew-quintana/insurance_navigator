@@ -19,6 +19,7 @@ class Environment(Enum):
     """Supported deployment environments."""
     DEVELOPMENT = "development"
     TESTING = "testing"
+    STAGING = "staging"
     PRODUCTION = "production"
 
 @dataclass
