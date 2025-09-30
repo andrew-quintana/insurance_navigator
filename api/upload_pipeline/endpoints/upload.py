@@ -89,7 +89,7 @@ async def upload_document(
                 user_id=str(current_user.user_id),
                 document_id=user_existing_document["document_id"],
                 job_id=None,
-                stage="duplicate_detection",
+                status="duplicate_detection",
                 details={
                     "file_sha256": request.sha256,
                     "filename": request.filename,
@@ -148,7 +148,7 @@ async def upload_document(
                     user_id=str(current_user.user_id),
                     document_id=duplicated_document["document_id"],
                     job_id=None,
-                    stage="duplicate_detection",
+                    status="duplicate_detection",
                     details={
                         "file_sha256": request.sha256,
                         "filename": request.filename,
@@ -232,7 +232,7 @@ async def upload_document(
             user_id=str(current_user.user_id),
             document_id=document_id,
             job_id=job_id,
-            stage="upload_initiated",
+            status="upload_initiated",
             details={
                 "filename": request.filename,
                 "bytes_len": request.bytes_len,
@@ -336,7 +336,7 @@ async def _check_duplicate_document(user_id: str, file_sha256: str, db) -> Optio
     
     # Check if there's an active job for this document
     job_query = """
-        SELECT job_id, stage, state
+        SELECT job_id, status, state
         FROM upload_pipeline.upload_jobs
         WHERE document_id = $1 
         AND state IN ('queued', 'working', 'retryable')
@@ -426,7 +426,7 @@ async def _create_upload_job_for_duplicate(
     
     query = """
         INSERT INTO upload_pipeline.upload_jobs (
-            job_id, document_id, stage, state, 
+            job_id, document_id, status, state, 
             created_at, updated_at
         ) VALUES ($1, $2, $3, $4, NOW(), NOW())
     """
@@ -440,7 +440,7 @@ async def _create_upload_job_for_duplicate(
         query,
         job_id,
         document_id,
-        "job_validated",  # stage
+        "job_validated",  # status
         "queued"  # state
     )
 
@@ -466,7 +466,7 @@ async def _create_upload_job(
     
     query = """
         INSERT INTO upload_pipeline.upload_jobs (
-            job_id, document_id, stage, state, 
+            job_id, document_id, status, state, 
             created_at, updated_at
         ) VALUES ($1, $2, $3, $4, NOW(), NOW())
     """
@@ -480,7 +480,7 @@ async def _create_upload_job(
         query,
         job_id,
         document_id,
-        "job_validated",  # stage
+        "job_validated",  # status
         "queued"  # state
     )
 
