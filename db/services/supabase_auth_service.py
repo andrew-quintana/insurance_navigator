@@ -350,9 +350,6 @@ class SupabaseAuthService:
             logger.warning(f"Invalid token: {e}")
             return None
         except Exception as e:
-            logger.error(f"Authentication error: {e}")
-            return None
-        except Exception as e:
             logger.error(f"Token validation error: {e}")
             return None
 
