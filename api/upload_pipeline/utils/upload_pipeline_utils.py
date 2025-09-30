@@ -51,7 +51,7 @@ def log_event(
     user_id: str,
     document_id: str,
     job_id: str,
-    stage: str,
+    status: str,
     details: Optional[Dict[str, Any]] = None,
     error: Optional[str] = None
 ) -> None:
@@ -62,7 +62,7 @@ def log_event(
         "user_id": user_id,
         "document_id": document_id,
         "job_id": job_id,
-        "stage": stage,
+        "status": status,
         "timestamp": datetime.utcnow().isoformat(),
         "details": details or {},
         "error": error
