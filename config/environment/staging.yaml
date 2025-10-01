@@ -48,7 +48,7 @@ external_services:
 
 # Webhook Configuration
 webhook:
-  base_url: ${STAGING_WEBHOOK_BASE_URL:-https://insurance-navigator-api-workflow-testing.onrender.com}
+  base_url: ${STAGING_WEBHOOK_BASE_URL:-***REMOVED***}
 
   openai:
     api_url: ${OPENAI_API_URL}
