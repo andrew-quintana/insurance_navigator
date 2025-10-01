@@ -51,7 +51,7 @@ class StorageManager:
             
             # Use direct access with service role key (same pattern as webhook)
             # This avoids the signed URL generation issues in production
-            storage_endpoint = f"{self.base_url}/storage/v1/object/{bucket}/{key}"
+            storage_endpoint = f"{self.base_url}/object/{bucket}/{key}"
             
             # Read content using direct HTTP request
             response = await self.client.get(storage_endpoint)
@@ -74,7 +74,7 @@ class StorageManager:
             
             # Use direct access with service role key (same pattern as webhook)
             # This avoids the signed URL generation issues in production
-            storage_endpoint = f"{self.base_url}/storage/v1/object/{bucket}/{key}"
+            storage_endpoint = f"{self.base_url}/object/{bucket}/{key}"
             
             # Write content using direct HTTP request
             response = await self.client.put(
@@ -119,7 +119,7 @@ class StorageManager:
             
             # Use direct access with service role key (same pattern as webhook)
             # This avoids the signed URL generation issues in production
-            storage_endpoint = f"{self.base_url}/storage/v1/object/{bucket}/{key}"
+            storage_endpoint = f"{self.base_url}/object/{bucket}/{key}"
             
             # Check if exists using direct HTTP request
             response = await self.client.head(storage_endpoint)
@@ -137,7 +137,7 @@ class StorageManager:
             
             # Use direct access with service role key (same pattern as webhook)
             # This avoids the signed URL generation issues in production
-            storage_endpoint = f"{self.base_url}/storage/v1/object/{bucket}/{key}"
+            storage_endpoint = f"{self.base_url}/object/{bucket}/{key}"
             
             # Get metadata using direct HTTP request
             response = await self.client.head(storage_endpoint)
@@ -188,13 +188,13 @@ class StorageManager:
             if "localhost" in self.base_url or "127.0.0.1" in self.base_url:
                 # Local development - direct access
                 if method == "GET":
-                    return f"{self.base_url}/storage/v1/object/{bucket}/{key}"
+                    return f"{self.base_url}/object/{bucket}/{key}"
                 else:
-                    return f"{self.base_url}/storage/v1/object/{method}/{bucket}/{key}"
+                    return f"{self.base_url}/object/{method}/{bucket}/{key}"
             else:
                 # Production - get signed URL from Supabase
                 response = await self.client.post(
-                    f"{self.base_url}/storage/v1/object/sign/{bucket}/{key}",
+                    f"{self.base_url}/object/sign/{bucket}/{key}",
                     json={
                         "expiresIn": 300,  # 5 minutes
                         "method": method
