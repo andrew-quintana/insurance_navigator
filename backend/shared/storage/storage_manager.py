@@ -71,35 +71,12 @@ class StorageManager:
     async def read_blob_bytes(self, path: str) -> Optional[bytes]:
         """Read blob content from storage as bytes"""
         try:
-            logger.info(f"StorageManager.read_blob_bytes called with path: {path}")
-            
             # Extract bucket and key from path
             bucket, key = self._parse_storage_path(path)
             storage_endpoint = f"{self.base_url}/storage/v1/object/{bucket}/{key}"
             
-            logger.info(
-                "StorageManager read_blob_bytes request",
-                path=path,
-                bucket=bucket,
-                key=key,
-                storage_endpoint=storage_endpoint,
-                base_url=self.base_url,
-                service_role_key_present=bool(self.service_role_key),
-                service_role_key_length=len(self.service_role_key) if self.service_role_key else 0
-            )
-            
             # Use direct file access with service role key
             response = await self.client.get(storage_endpoint)
-            
-            logger.info(
-                "StorageManager read_blob_bytes response",
-                path=path,
-                status_code=response.status_code,
-                response_headers=dict(response.headers),
-                cf_ray=response.headers.get('cf-ray', 'N/A'),
-                content_length=len(response.content) if response.content else 0,
-                success=response.status_code == 200
-            )
             
             if response.status_code == 200:
                 content = response.content
@@ -166,41 +143,17 @@ class StorageManager:
     async def blob_exists(self, path: str) -> bool:
         """Check if blob exists in storage using direct file access"""
         try:
-            logger.info(f"StorageManager.blob_exists called with path: {path}")
-            
             # Extract bucket and key from path
             bucket, key = self._parse_storage_path(path)
             storage_endpoint = f"{self.base_url}/storage/v1/object/{bucket}/{key}"
             
-            logger.info(
-                "StorageManager blob_exists request",
-                path=path,
-                bucket=bucket,
-                key=key,
-                storage_endpoint=storage_endpoint,
-                base_url=self.base_url,
-                service_role_key_present=bool(self.service_role_key),
-                service_role_key_length=len(self.service_role_key) if self.service_role_key else 0
-            )
-            
             # Use direct file access with service role key
             response = await self.client.head(storage_endpoint)
             
-            logger.info(
-                "StorageManager blob_exists response",
-                path=path,
-                status_code=response.status_code,
-                response_headers=dict(response.headers),
-                cf_ray=response.headers.get('cf-ray', 'N/A'),
-                success=response.status_code == 200
-            )
-            
             # Check if file exists (200 = exists, 404 = doesn't exist, 400 = error)
             if response.status_code == 200:
-                logger.info(f"File exists: {path}")
                 return True
             elif response.status_code == 404:
-                logger.info(f"File not found: {path}")
                 return False
             else:
                 logger.error(f"Storage API error: {response.status_code} - {response.text[:200]}")
