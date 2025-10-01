@@ -512,20 +512,22 @@ class EnhancedBaseWorker:
                 user_id=user_id
             )
             
-            # Get document details
-            storage_path = job.get("storage_path")
-            mime_type = job.get("mime_type", "application/pdf")
-            
-            if not storage_path:
-                raise ValueError("No storage_path found in job data")
-            
-            # Get document filename from database
+            # Get document details from database (single source of truth)
             async with self.db.get_connection() as conn:
                 doc_result = await conn.fetchrow("""
-                    SELECT filename FROM upload_pipeline.documents 
+                    SELECT filename, raw_path, mime FROM upload_pipeline.documents 
                     WHERE document_id = $1
                 """, document_id)
-                document_filename = doc_result["filename"] if doc_result else "document.pdf"
+                
+                if not doc_result:
+                    raise ValueError(f"Document not found in database: {document_id}")
+                
+                storage_path = doc_result["raw_path"]
+                document_filename = doc_result["filename"]
+                mime_type = doc_result.get("mime", "application/pdf")
+            
+            if not storage_path:
+                raise ValueError("No storage_path found in document record")
             
             # Log storage path for debugging
             logger.info(f"Processing document with storage path: {storage_path}")

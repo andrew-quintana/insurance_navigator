@@ -45,6 +45,17 @@ def generate_storage_path(user_id: str, document_id: str, filename: str) -> str:
     return f"files/user/{user_id}/raw/{doc_hash}.{ext}"
 
 
+def generate_parsed_path(user_id: str, document_id: str) -> str:
+    """Generate a deterministic storage path for parsed content."""
+    import hashlib
+    
+    # Use document_id hash for deterministic path generation
+    doc_hash = hashlib.md5(document_id.encode()).hexdigest()[:8]
+    
+    # Format: files/user/{userId}/parsed/{hash}.md
+    return f"files/user/{user_id}/parsed/{doc_hash}.md"
+
+
 def log_event(
     event_type: str,
     user_id: str,
