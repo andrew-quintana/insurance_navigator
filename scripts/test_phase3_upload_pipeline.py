@@ -88,7 +88,7 @@ async def test_upload_pipeline_auth():
     print("=" * 50)
     
     try:
-        user_info = auth_adapter.validate_token(access_token)
+        user_info = await auth_adapter.validate_token(access_token)
         if user_info:
             print(f"✅ Token validated successfully")
             print(f"✅ User ID: {user_info.get('id')}")
