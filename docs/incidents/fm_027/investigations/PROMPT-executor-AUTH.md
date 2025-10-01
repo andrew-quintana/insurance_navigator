@@ -215,3 +215,4 @@ You execute high-information experiments to confirm/refute auth/env hypotheses. 
 ---
 
 **Remember**: Focus on high-information experiments that isolate the root cause. Minimize changes, maximize signal, never expose secrets. The goal is to identify why the worker gets 400 Bad Request when direct tests return 200 OK with the same configuration.
+
