@@ -89,7 +89,7 @@ async def upload_document(
                 user_id=str(current_user.user_id),
                 document_id=user_existing_document["document_id"],
                 job_id=None,
-                status="duplicate_detection",
+                status="duplicate",
                 details={
                     "file_sha256": request.sha256,
                     "filename": request.filename,
@@ -148,7 +148,7 @@ async def upload_document(
                     user_id=str(current_user.user_id),
                     document_id=duplicated_document["document_id"],
                     job_id=None,
-                    status="duplicate_detection",
+                    status="duplicate",
                     details={
                         "file_sha256": request.sha256,
                         "filename": request.filename,
