@@ -1345,18 +1345,19 @@ class EnhancedBaseWorker:
             LLAMAPARSE_API_KEY = os.getenv("LLAMAPARSE_API_KEY")
             LLAMAPARSE_BASE_URL = "https://api.cloud.llamaindex.ai"
             
-            # Read file (try storage first, fallback to local)
+            # Read file using StorageManager (consistent with API service)
             try:
-                # Try to read from storage
-                storage_url = os.getenv("SUPABASE_URL", "http://127.0.0.1:54321")
-                # Use development key for local development
-                environment = os.getenv("ENVIRONMENT", "development")
-                if environment == "development":
-                    service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
-                else:
-                    service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))
-                if not service_role_key:
-                    raise Exception("SUPABASE_SERVICE_ROLE_KEY environment variable not set")
+                # Use the same StorageManager instance that was initialized in the worker
+                if not self.storage:
+                    raise Exception("Storage manager not initialized")
+                
+                # For binary files (PDFs), we need to read as bytes, not text
+                # The StorageManager.read_blob() method reads as text, but we need bytes for PDFs
+                # So we'll use the direct HTTP approach but with the correct headers from StorageManager
+                
+                # Get storage configuration from StorageManager
+                storage_url = self.storage.base_url
+                service_role_key = self.storage.service_role_key
                 
                 if file_path.startswith('files/'):
                     bucket = 'files'
@@ -1364,21 +1365,20 @@ class EnhancedBaseWorker:
                 else:
                     raise Exception(f"Invalid file path format: {file_path}")
                 
+                # Use optimal authentication method (Authorization header only)
+                # Test results show this is the most reliable method for Supabase Storage
                 async with httpx.AsyncClient() as storage_client:
                     response = await storage_client.get(
                         f"{storage_url}/storage/v1/object/{bucket}/{key}",
                         headers={
-                            "apikey": service_role_key,
-                            "Authorization": f"Bearer {service_role_key}",
-                            "Content-Type": "application/json",
-                            "User-Agent": "Insurance-Navigator/1.0"
+                            "Authorization": f"Bearer {service_role_key}"
                         }
                     )
                     response.raise_for_status()
                     file_content = response.content
                 
                 if not file_content:
-                    raise Exception(f"Downloaded file is empty")
+                    raise Exception("Downloaded file is empty")
                     
                 self.logger.info(f"Downloaded file from storage: {len(file_content)} bytes")
                     
