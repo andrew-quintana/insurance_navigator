@@ -169,7 +169,7 @@ class StorageManager:
             return False
     
     async def blob_exists(self, path: str) -> bool:
-        """Check if blob exists in storage"""
+        """Check if blob exists in storage using GET request for better compatibility"""
         try:
             # FM-027: Simple test log to verify deployment
             logger.info(f"FM-027: StorageManager.blob_exists called with path: {path}")
@@ -195,8 +195,9 @@ class StorageManager:
                 client_headers=dict(self.client.headers) if hasattr(self.client, 'headers') else {}
             )
             
-            # Check if exists using direct HTTP request
-            response = await self.client.head(storage_endpoint)
+            # Use GET request instead of HEAD for better compatibility across environments
+            # This provides better error visibility and works more reliably on Render
+            response = await self.client.get(storage_endpoint)
             
             # FM-027: Log response details for debugging
             logger.info(
@@ -208,7 +209,19 @@ class StorageManager:
                 success=response.status_code == 200
             )
             
-            return response.status_code == 200
+            # Check if file exists (200 = exists, 404 = doesn't exist, 400 = error)
+            if response.status_code == 200:
+                return True
+            elif response.status_code == 404:
+                return False
+            else:
+                # Log the actual error response for debugging
+                try:
+                    error_body = response.text
+                    logger.error(f"FM-027: Storage API error: {response.status_code} - {error_body}")
+                except:
+                    logger.error(f"FM-027: Storage API error: {response.status_code} - No response body")
+                return False
             
         except Exception as e:
             logger.error(
