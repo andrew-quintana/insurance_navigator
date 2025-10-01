@@ -114,6 +114,9 @@ class StorageManager:
     async def blob_exists(self, path: str) -> bool:
         """Check if blob exists in storage"""
         try:
+            # FM-027: Simple test log to verify deployment
+            logger.info(f"FM-027: StorageManager.blob_exists called with path: {path}")
+            
             # Extract bucket and key from path
             bucket, key = self._parse_storage_path(path)
             
