@@ -530,6 +530,74 @@ class EnhancedBaseWorker:
             # Log storage path for debugging
             logger.info(f"Processing document with storage path: {storage_path}")
             
+            # CRITICAL FIX: Check if file exists before processing (FM-027 Race Condition Fix)
+            self.logger.info(
+                "Checking file existence before processing",
+                correlation_id=correlation_id,
+                job_id=str(job_id),
+                storage_path=storage_path
+            )
+            
+            file_exists = await self.storage.blob_exists(storage_path)
+            if not file_exists:
+                # Wait and retry with exponential backoff for race condition
+                self.logger.warning(
+                    "File not immediately accessible, retrying with backoff",
+                    correlation_id=correlation_id,
+                    job_id=str(job_id),
+                    storage_path=storage_path
+                )
+                
+                # Optimized retry strategy for race conditions:
+                # - Quick initial checks (0.5s, 1s, 1.5s) for fast resolution
+                # - Longer final attempts (2s, 3s) for edge cases
+                retry_delays = [0.5, 1.0, 1.5, 2.0, 3.0]  # Total max wait: 8s
+                
+                for attempt, wait_time in enumerate(retry_delays):
+                    self.logger.info(
+                        f"File access retry attempt {attempt + 1}/{len(retry_delays)}, waiting {wait_time}s",
+                        correlation_id=correlation_id,
+                        job_id=str(job_id),
+                        attempt=attempt + 1,
+                        wait_time=wait_time
+                    )
+                    
+                    await asyncio.sleep(wait_time)
+                    file_exists = await self.storage.blob_exists(storage_path)
+                    
+                    if file_exists:
+                        total_wait = sum(retry_delays[:attempt + 1])
+                        self.logger.info(
+                            f"File became accessible after {total_wait:.1f}s total wait",
+                            correlation_id=correlation_id,
+                            job_id=str(job_id),
+                            total_wait=total_wait,
+                            attempts=attempt + 1
+                        )
+                        break
+                
+                if not file_exists:
+                    total_wait = sum(retry_delays)
+                    self.logger.error(
+                        "File not accessible after all retry attempts",
+                        correlation_id=correlation_id,
+                        job_id=str(job_id),
+                        storage_path=storage_path,
+                        max_retries=len(retry_delays),
+                        total_wait_time=total_wait
+                    )
+                    raise UserFacingError(
+                        "Document file is not accessible for processing. Please try uploading again.",
+                        error_code="STORAGE_ACCESS_ERROR"
+                    )
+            else:
+                self.logger.info(
+                    "File exists and is accessible for processing",
+                    correlation_id=correlation_id,
+                    job_id=str(job_id),
+                    storage_path=storage_path
+                )
+            
             # Generate webhook URL for LlamaParse callback
             # Use environment-appropriate base URL
             environment = os.getenv("ENVIRONMENT", "development")
