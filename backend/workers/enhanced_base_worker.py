@@ -1433,6 +1433,72 @@ class EnhancedBaseWorker:
                 else:
                     raise Exception(f"Invalid file path format: {file_path}")
                 
+                # CRITICAL FIX: Check if file exists before reading (FM-027 Race Condition Fix)
+                self.logger.info(
+                    "Checking file existence before reading in _direct_llamaparse_call",
+                    correlation_id=correlation_id,
+                    job_id=job_id,
+                    file_path=file_path
+                )
+                
+                file_exists = await self.storage.blob_exists(file_path)
+                if not file_exists:
+                    # Wait and retry with exponential backoff for race condition
+                    self.logger.warning(
+                        "File not immediately accessible in _direct_llamaparse_call, retrying with backoff",
+                        correlation_id=correlation_id,
+                        job_id=job_id,
+                        file_path=file_path
+                    )
+                    
+                    # Optimized retry strategy for race conditions:
+                    retry_delays = [0.5, 1.0, 1.5, 2.0, 3.0]  # Total max wait: 8s
+                    
+                    for attempt, wait_time in enumerate(retry_delays):
+                        self.logger.info(
+                            f"File access retry attempt {attempt + 1}/{len(retry_delays)} in _direct_llamaparse_call, waiting {wait_time}s",
+                            correlation_id=correlation_id,
+                            job_id=job_id,
+                            attempt=attempt + 1,
+                            wait_time=wait_time
+                        )
+                        
+                        await asyncio.sleep(wait_time)
+                        file_exists = await self.storage.blob_exists(file_path)
+                        
+                        if file_exists:
+                            total_wait = sum(retry_delays[:attempt + 1])
+                            self.logger.info(
+                                f"File became accessible after {total_wait:.1f}s total wait in _direct_llamaparse_call",
+                                correlation_id=correlation_id,
+                                job_id=job_id,
+                                total_wait=total_wait,
+                                attempts=attempt + 1
+                            )
+                            break
+                    
+                    if not file_exists:
+                        total_wait = sum(retry_delays)
+                        self.logger.error(
+                            "File not accessible after all retry attempts in _direct_llamaparse_call",
+                            correlation_id=correlation_id,
+                            job_id=job_id,
+                            file_path=file_path,
+                            max_retries=len(retry_delays),
+                            total_wait_time=total_wait
+                        )
+                        raise UserFacingError(
+                            "Document file is not accessible for processing. Please try uploading again.",
+                            error_code="STORAGE_ACCESS_ERROR"
+                        )
+                else:
+                    self.logger.info(
+                        "File exists and is accessible for reading in _direct_llamaparse_call",
+                        correlation_id=correlation_id,
+                        job_id=job_id,
+                        file_path=file_path
+                    )
+                
                 # Use StorageManager to download file (consistent with API service authentication)
                 # For binary files (PDFs), we need to read as bytes, not text
                 file_content_str = await self.storage.read_blob(file_path)
