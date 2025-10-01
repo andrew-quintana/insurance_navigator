@@ -517,12 +517,15 @@ class EnhancedBaseWorker:
         )
         
         try:
+            # FM-027: Comprehensive job processing start logging
             self.logger.info(
-                "Delegating document parsing to LlamaParse service",
+                "FM-027: Delegating document parsing to LlamaParse service",
                 correlation_id=correlation_id,
                 job_id=str(job_id),
                 document_id=str(document_id),
-                user_id=user_id
+                user_id=user_id,
+                job_data=job,
+                job_keys=list(job.keys()) if job else None
             )
             
             # Get document details from database (single source of truth)
@@ -531,6 +534,16 @@ class EnhancedBaseWorker:
                     SELECT filename, raw_path, mime FROM upload_pipeline.documents 
                     WHERE document_id = $1
                 """, document_id)
+                
+                # FM-027: Log database query results
+                self.logger.info(
+                    "FM-027: Database query results for document",
+                    correlation_id=correlation_id,
+                    job_id=str(job_id),
+                    document_id=str(document_id),
+                    doc_result=dict(doc_result) if doc_result else None,
+                    doc_result_keys=list(doc_result.keys()) if doc_result else None
+                )
                 
                 if not doc_result:
                     raise ValueError(f"Document not found in database: {document_id}")
@@ -542,8 +555,18 @@ class EnhancedBaseWorker:
             if not storage_path:
                 raise ValueError("No storage_path found in document record")
             
-            # Log storage path for debugging
-            logger.info(f"Processing document with storage path: {storage_path}")
+            # FM-027: Enhanced storage path logging
+            self.logger.info(
+                "FM-027: Document storage details",
+                correlation_id=correlation_id,
+                job_id=str(job_id),
+                document_id=str(document_id),
+                storage_path=storage_path,
+                document_filename=document_filename,
+                mime_type=mime_type,
+                storage_path_type=type(storage_path).__name__,
+                storage_path_length=len(storage_path) if storage_path else 0
+            )
             
             # CRITICAL FIX: Check if file exists before processing (FM-027 Race Condition Fix)
             self.logger.info(
@@ -677,11 +700,36 @@ class EnhancedBaseWorker:
             webhook_secret = str(uuid.uuid4())  # Generate webhook secret
             
             # Debug logging for final webhook URL
+            # FM-027: Comprehensive webhook URL logging
+            self.logger.info(
+                "FM-027: Webhook URL generation",
+                correlation_id=correlation_id,
+                job_id=str(job_id),
+                document_id=str(document_id),
+                webhook_url=webhook_url,
+                base_url=base_url,
+                environment=environment,
+                webhook_secret=webhook_secret,
+                webhook_secret_length=len(webhook_secret) if webhook_secret else 0
+            )
+            
             self.logger.info(f"Generated webhook URL: {webhook_url}")
             
             # DIRECT LlamaParse call (bypassing service layers to avoid rate limiting)
             # Only update job status AFTER file processing succeeds
             try:
+                # FM-027: Log LlamaParse call parameters
+                self.logger.info(
+                    "FM-027: Calling LlamaParse API",
+                    correlation_id=correlation_id,
+                    job_id=str(job_id),
+                    document_id=str(document_id),
+                    file_path=storage_path,
+                    document_filename=document_filename,
+                    webhook_url=webhook_url,
+                    webhook_secret=webhook_secret
+                )
+                
                 parse_result = await self._direct_llamaparse_call(
                     file_path=storage_path,
                     job_id=str(job_id),
@@ -689,6 +737,16 @@ class EnhancedBaseWorker:
                     correlation_id=correlation_id,
                     document_filename=document_filename,
                     webhook_url=webhook_url
+                )
+                
+                # FM-027: Log LlamaParse call result
+                self.logger.info(
+                    "FM-027: LlamaParse API call completed",
+                    correlation_id=correlation_id,
+                    job_id=str(job_id),
+                    document_id=str(document_id),
+                    parse_result=parse_result,
+                    parse_result_keys=list(parse_result.keys()) if parse_result else None
                 )
                 
                 # Store webhook secret in job for verification - only after successful file processing
@@ -1435,6 +1493,7 @@ class EnhancedBaseWorker:
             # Get API configuration
             LLAMAPARSE_API_KEY = os.getenv("LLAMAPARSE_API_KEY")
             LLAMAPARSE_BASE_URL = "https://api.cloud.llamaindex.ai"
+            import hashlib
             
             # Use StorageManager for consistent authentication with API service
             try:
@@ -1548,6 +1607,36 @@ class EnhancedBaseWorker:
                     'Authorization': f'Bearer {LLAMAPARSE_API_KEY}'
                 }
                 
+                # FM-027: Comprehensive LlamaParse request logging
+                self.logger.info(
+                    "FM-027: LlamaParse request preparation",
+                    correlation_id=correlation_id,
+                    job_id=job_id,
+                    document_id=document_id,
+                    file_path=file_path,
+                    document_filename=document_filename,
+                    file_content_size=len(file_content),
+                    file_content_type="application/pdf",
+                    webhook_url=webhook_url,
+                    llamaparse_base_url=LLAMAPARSE_BASE_URL,
+                    llamaparse_endpoint=f'{LLAMAPARSE_BASE_URL}/api/parsing/upload',
+                    form_data=form_data,
+                    headers=headers,
+                    api_key_present=bool(LLAMAPARSE_API_KEY),
+                    api_key_length=len(LLAMAPARSE_API_KEY) if LLAMAPARSE_API_KEY else 0
+                )
+                
+                # FM-027: Log file content details for debugging
+                self.logger.info(
+                    "FM-027: File content analysis",
+                    correlation_id=correlation_id,
+                    job_id=job_id,
+                    file_content_preview=file_content[:100] if file_content else None,
+                    file_content_hex_preview=file_content[:20].hex() if file_content else None,
+                    is_pdf_header=file_content.startswith(b'%PDF-') if file_content else False,
+                    file_content_checksum=hashlib.sha256(file_content).hexdigest() if file_content else None
+                )
+                
                 self.logger.info(f"Making direct LlamaParse API call for job {job_id}")
                 self.logger.info(f"LlamaParse API form_data: {form_data}")
                 
@@ -1558,11 +1647,34 @@ class EnhancedBaseWorker:
                     headers=headers
                 )
                 
+                # FM-027: Comprehensive LlamaParse response logging
+                self.logger.info(
+                    "FM-027: LlamaParse API response received",
+                    correlation_id=correlation_id,
+                    job_id=job_id,
+                    response_status_code=response.status_code,
+                    response_headers=dict(response.headers),
+                    response_content_type=response.headers.get('content-type'),
+                    response_content_length=response.headers.get('content-length'),
+                    response_text=response.text[:500] if response.text else None,
+                    response_json=response.json() if response.headers.get('content-type', '').startswith('application/json') else None
+                )
+                
                 self.logger.info(f"LlamaParse API response: {response.status_code}")
                 
                 if response.status_code == 200:
                     result = response.json()
                     parse_job_id = result.get("id", "")
+                    
+                    # FM-027: Log successful LlamaParse submission details
+                    self.logger.info(
+                        "FM-027: LlamaParse job submitted successfully",
+                        correlation_id=correlation_id,
+                        job_id=job_id,
+                        parse_job_id=parse_job_id,
+                        llamaparse_response=result,
+                        webhook_url=webhook_url
+                    )
                     
                     self.logger.info(f"LlamaParse job submitted successfully: {parse_job_id}")
                     

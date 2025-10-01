@@ -20,12 +20,17 @@ router = APIRouter()
 async def llamaparse_webhook(job_id: str, request: Request):
     """Handle LlamaParse webhook callbacks for document parsing completion."""
     try:
-        logger.info(f"🔔 WEBHOOK START: Received webhook for job: {job_id}")
-        logger.info(f"🔔 WEBHOOK HEADERS: {dict(request.headers)}")
+        # FM-027: Enhanced webhook logging for complete flow tracking
+        logger.info(f"🔔 FM-027 WEBHOOK START: Received webhook for job: {job_id}")
+        logger.info(f"🔔 FM-027 WEBHOOK HEADERS: {dict(request.headers)}")
+        logger.info(f"🔔 FM-027 WEBHOOK URL: {request.url}")
+        logger.info(f"🔔 FM-027 WEBHOOK METHOD: {request.method}")
+        logger.info(f"🔔 FM-027 WEBHOOK CLIENT: {request.client}")
         
         # Get the raw body for signature verification
         body = await request.body()
-        logger.info(f"🔔 WEBHOOK BODY SIZE: {len(body)} bytes")
+        logger.info(f"🔔 FM-027 WEBHOOK BODY SIZE: {len(body)} bytes")
+        logger.info(f"🔔 FM-027 WEBHOOK BODY PREVIEW: {body[:200] if body else 'EMPTY'}")
         
         # Get webhook secret from database
         logger.info(f"🔔 DATABASE STEP 1: Getting database connection")
