@@ -440,7 +440,7 @@ async def _create_upload_job_for_duplicate(
         query,
         job_id,
         document_id,
-        "queued",  # status - will be updated to "uploaded" after file upload
+        "uploaded",  # status - duplicate documents are already uploaded
         "queued"  # state
     )
 
@@ -480,7 +480,7 @@ async def _create_upload_job(
         query,
         job_id,
         document_id,
-        "queued",  # status - will be updated to "uploaded" after file upload
+        "uploaded",  # status - file is uploaded when job is created
         "queued"  # state
     )
 
