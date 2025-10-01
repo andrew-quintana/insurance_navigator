@@ -1,0 +1,113 @@
+-- 20251001T133101_add_staging_storage_rls_policies.sql
+-- Add missing RLS policies for staging storage access
+-- This fixes the "Bucket not found" error when workers try to list objects
+-- Based on FM-027 investigation findings for staging environment
+
+BEGIN;
+
+-- ========================================
+-- STORAGE BUCKETS RLS POLICIES
+-- ========================================
+-- These policies are required for bucket operations like listing objects
+
+-- Allow service role to view buckets
+CREATE POLICY "Allow service role to view buckets"
+ON storage.buckets
+FOR SELECT
+TO service_role
+USING (true);
+
+-- Allow service role to manage buckets
+CREATE POLICY "Allow service role to manage buckets"
+ON storage.buckets
+FOR ALL
+TO service_role
+USING (true)
+WITH CHECK (true);
+
+-- ========================================
+-- STORAGE OBJECTS RLS POLICIES (COMPLETE)
+-- ========================================
+-- Complete the object operations that were missing
+
+-- Allow service role to update files
+CREATE POLICY "Allow service role to update files"
+ON storage.objects
+FOR UPDATE
+TO service_role
+USING (bucket_id = 'files')
+WITH CHECK (bucket_id = 'files');
+
+-- Allow service role to delete files
+CREATE POLICY "Allow service role to delete files"
+ON storage.objects
+FOR DELETE
+TO service_role
+USING (bucket_id = 'files');
+
+-- Allow service role to list files (this is what was missing!)
+-- This allows the /storage/v1/object/list/files endpoint to work
+CREATE POLICY "Allow service role to list files"
+ON storage.objects
+FOR SELECT
+TO service_role
+USING (bucket_id = 'files');
+
+-- ========================================
+-- VERIFICATION
+-- ========================================
+-- Verify all policies were created successfully
+
+DO $$
+BEGIN
+    -- Check bucket policies
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'buckets' 
+        AND schemaname = 'storage'
+        AND policyname = 'Allow service role to view buckets'
+    ) THEN
+        RAISE EXCEPTION 'Bucket view policy was not created successfully';
+    END IF;
+    
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'buckets' 
+        AND schemaname = 'storage'
+        AND policyname = 'Allow service role to manage buckets'
+    ) THEN
+        RAISE EXCEPTION 'Bucket management policy was not created successfully';
+    END IF;
+    
+    -- Check object policies
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'objects' 
+        AND schemaname = 'storage'
+        AND policyname = 'Allow service role to list files'
+    ) THEN
+        RAISE EXCEPTION 'Object listing policy was not created successfully';
+    END IF;
+    
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'objects' 
+        AND schemaname = 'storage'
+        AND policyname = 'Allow service role to update files'
+    ) THEN
+        RAISE EXCEPTION 'Object update policy was not created successfully';
+    END IF;
+    
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'objects' 
+        AND schemaname = 'storage'
+        AND policyname = 'Allow service role to delete files'
+    ) THEN
+        RAISE EXCEPTION 'Object delete policy was not created successfully';
+    END IF;
+    
+    RAISE NOTICE 'All staging storage RLS policies created successfully';
+END $$;
+
+COMMIT;
