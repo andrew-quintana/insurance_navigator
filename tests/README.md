@@ -1,71 +1,93 @@
-# Testing Environment for Insurance Navigator
+# Test Organization
 
-This directory contains tests and test utilities for the Insurance Navigator project.
+This directory contains all test files organized by category and purpose.
 
-## Setup
+## Directory Structure
 
-We've implemented an isolated test environment to ensure consistent test results across different machines and to prevent conflicts with development dependencies.
+### Core Tests (`tests/`)
+- **Unit tests**: Individual component testing
+- **Integration tests**: Cross-component testing
+- **Feature tests**: End-to-end feature testing
 
-### Quick Start
+### Debug Tests (`tests/debug/`)
+- **Incident-specific tests**: Tests for specific incidents (e.g., `fm_027/`)
+- **Debugging utilities**: Tools for investigating issues
+- **Troubleshooting scripts**: One-off diagnostic tests
 
-1. Run the setup script:
-   ```bash
-   bash scripts/setup_test_env.sh
-   ```
+### Feature-Specific Tests
+- **`tests/agents/`**: Agent-related tests
+- **`tests/initiatives/`**: Initiative-specific tests
+- **`tests/unit/`**: Unit tests by component
 
-2. Activate the test environment:
-   ```bash
-   source .venv-test/bin/activate
-   ```
+## Test Categories
 
-3. Run the tests:
-   ```bash
-   python -m pytest agents/patient_navigator/tests/unit/test_patient_navigator.py -v
-   ```
+### By Incident
+- **`tests/fm_027/`**: FM-027 Worker Storage Access tests
+- **`tests/debug/fm_027/`**: FM-027 debugging tests
 
-### Manual Setup
+### By Component
+- **`tests/unit/core/`**: Core service tests
+- **`tests/unit/backend/`**: Backend component tests
 
-If you prefer to set up the environment manually:
+### By Initiative
+- **`tests/initiatives/system/upload_refactor/`**: Upload pipeline refactor tests
 
-1. Create a virtual environment:
-   ```bash
-   python -m venv .venv-test
-   source .venv-test/bin/activate
-   ```
+## Security Guidelines
 
-2. Install dependencies:
-   ```bash
-   pip install -r requirements-dev.txt
-   pip install -e .
-   ```
+### ✅ Allowed
+- Environment variable references: `os.getenv("API_KEY")`
+- Test placeholders: `"test-key"`, `"sk-test-key"`
+- Mock values: `"mock_value"`
 
-3. Set environment variables:
-   ```bash
-   export PYTHONPATH=$(pwd)
-   export LANGCHAIN_API_KEY="your_langsmith_api_key"
-   export LANGCHAIN_PROJECT="insurance_navigator_test"
-   export LANGCHAIN_TRACING_V2="true"
-   ```
+### ❌ Prohibited
+- Hardcoded production keys
+- Real API keys in source code
+- Production database credentials
+- JWT secrets in test files
 
-## LangSmith Integration
+## Running Tests
 
-The testing environment integrates with LangSmith for tracing and evaluation:
+### All Tests
+```bash
+pytest tests/ -v
+```
 
-1. Tests with mocked LLMs will not generate traces in LangSmith
-2. Real agent executions will be traced and can be viewed in the LangSmith UI
-3. Test runs are tagged with metadata for easy filtering
+### By Category
+```bash
+# Unit tests
+pytest tests/unit/ -v
 
-To view traces:
-1. Go to [https://smith.langchain.com/](https://smith.langchain.com/)
-2. Log in with your credentials
-3. Select the "insurance_navigator_test" project
-4. Filter by metadata like agent_name, run_type, etc.
+# Debug tests
+pytest tests/debug/ -v
 
-## Environment Compatibility
+# Specific incident
+pytest tests/fm_027/ -v
+```
 
-The test environment uses pinned dependency versions to ensure compatibility:
+### By Pattern
+```bash
+# All FM-027 tests
+pytest tests/ -k "fm_027" -v
 
-- NumPy 1.24.4 (compatible with sentence-transformers and other dependencies)
-- Other dependencies as specified in requirements-dev.txt
+# Storage-related tests
+pytest tests/ -k "storage" -v
+```
 
-If you encounter dependency conflicts, please update the requirements-dev.txt file and report the issue. 
+## Test Naming Convention
+
+- **Test files**: `test_<feature>_<purpose>.py`
+- **Test functions**: `test_<scenario>_<expected_result>`
+- **Debug tests**: `test_<incident>_<debug_purpose>.py`
+
+## Environment Setup
+
+Tests use environment variables from:
+- `.env.development` (local development)
+- `.env.staging` (staging environment)
+- `.env.production` (production environment)
+
+Load with:
+```python
+from dotenv import load_dotenv
+load_dotenv('.env.staging')
+```

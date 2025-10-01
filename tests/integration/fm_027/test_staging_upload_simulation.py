@@ -14,7 +14,7 @@ from io import BytesIO
 # Staging configuration
 API_BASE_URL = "http://localhost:8000"  # Assuming local API
 SUPABASE_URL = "***REMOVED***"
-SERVICE_ROLE_KEY = "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmZ3plYXN0Y3hub3FzaGd5b3RwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTY4MDQ4MywiZXhwIjoyMDY3MjU2NDgzfQ.yYQWEJkDtvFXg-F2Xe4mh9Xj_0QCp6gnXkDI6lEhDT8"
+SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 
 async def test_staging_upload():
     """Test upload process in staging environment"""

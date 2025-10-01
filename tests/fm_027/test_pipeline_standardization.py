@@ -13,7 +13,7 @@ from io import BytesIO
 
 # Staging configuration
 SUPABASE_URL = "***REMOVED***"
-SERVICE_ROLE_KEY = "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmZ3plYXN0Y3hub3FzaGd5b3RwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTY4MDQ4MywiZXhwIjoyMDY3MjU2NDgzfQ.yYQWEJkDtvFXg-F2Xe4mh9Xj_0QCp6gnXkDI6lEhDT8"
+SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 
 async def test_pipeline_standardization():
     """Test that the entire pipeline uses standardized path generation"""
