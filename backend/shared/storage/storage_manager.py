@@ -44,7 +44,7 @@ class StorageManager:
         await self.client.aclose()
     
     async def read_blob(self, path: str) -> Optional[str]:
-        """Read blob content from storage"""
+        """Read blob content from storage as text"""
         try:
             # Extract bucket and key from path
             bucket, key = self._parse_storage_path(path)
@@ -64,6 +64,63 @@ class StorageManager:
             
         except Exception as e:
             logger.error(f"Failed to read blob: {path}, error: {str(e)}")
+            return None
+    
+    async def read_blob_bytes(self, path: str) -> Optional[bytes]:
+        """Read blob content from storage as bytes (for binary files like PDFs)"""
+        try:
+            # FM-027: Enhanced logging for binary file reads
+            logger.info(f"FM-027: StorageManager.read_blob_bytes called with path: {path}")
+            
+            # Extract bucket and key from path
+            bucket, key = self._parse_storage_path(path)
+            
+            # Use direct access with service role key (same pattern as webhook)
+            # This avoids the signed URL generation issues in production
+            storage_endpoint = f"{self.base_url}/storage/v1/object/{bucket}/{key}"
+            
+            # FM-027: Log authentication details for debugging
+            logger.info(
+                "FM-027: StorageManager read_blob_bytes request",
+                path=path,
+                bucket=bucket,
+                key=key,
+                storage_endpoint=storage_endpoint,
+                base_url=self.base_url,
+                service_role_key_present=bool(self.service_role_key),
+                service_role_key_length=len(self.service_role_key) if self.service_role_key else 0,
+                anon_key_present=bool(self.anon_key),
+                anon_key_length=len(self.anon_key) if self.anon_key else 0,
+                client_headers=dict(self.client.headers) if hasattr(self.client, 'headers') else {}
+            )
+            
+            # Read content using direct HTTP request
+            response = await self.client.get(storage_endpoint)
+            
+            # FM-027: Log response details for debugging
+            logger.info(
+                "FM-027: StorageManager read_blob_bytes response",
+                path=path,
+                status_code=response.status_code,
+                response_headers=dict(response.headers),
+                content_length=len(response.content) if response.content else 0,
+                success=response.status_code == 200
+            )
+            
+            response.raise_for_status()
+            
+            content = response.content
+            logger.info(f"Blob read successfully as bytes", path=path, size=len(content))
+            
+            return content
+            
+        except Exception as e:
+            logger.error(
+                "FM-027: StorageManager read_blob_bytes failed",
+                path=path,
+                error=str(e),
+                error_type=type(e).__name__
+            )
             return None
     
     async def write_blob(self, path: str, content: str, content_type: str = "text/plain") -> bool:

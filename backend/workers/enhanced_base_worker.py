@@ -1516,17 +1516,11 @@ class EnhancedBaseWorker:
                 
                 # Use StorageManager to download file (consistent with API service authentication)
                 # For binary files (PDFs), we need to read as bytes, not text
-                file_content_str = await self.storage.read_blob(file_path)
-                if not file_content_str:
-                    raise Exception("Downloaded file is empty")
-                
-                # Convert string content to bytes for file upload
-                file_content = file_content_str.encode('utf-8')
-                
+                file_content = await self.storage.read_blob_bytes(file_path)
                 if not file_content:
                     raise Exception("Downloaded file is empty")
                     
-                self.logger.info(f"Downloaded file from storage using StorageManager: {len(file_content)} bytes")  # Fixed import error
+                self.logger.info(f"Downloaded file from storage using StorageManager: {len(file_content)} bytes")
                     
             except Exception as e:
                 # Storage download failed - cannot proceed without file
