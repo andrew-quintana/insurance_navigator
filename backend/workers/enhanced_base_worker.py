@@ -1369,7 +1369,7 @@ class EnhancedBaseWorker:
                 if not file_content:
                     raise Exception("Downloaded file is empty")
                     
-                self.logger.info(f"Downloaded file from storage using StorageManager: {len(file_content)} bytes")
+                self.logger.info(f"Downloaded file from storage using StorageManager: {len(file_content)} bytes")  # Fixed import error
                     
             except Exception as e:
                 # Storage download failed - cannot proceed without file
