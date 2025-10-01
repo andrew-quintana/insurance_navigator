@@ -120,12 +120,43 @@ class StorageManager:
             # Use correct Supabase storage API endpoint
             storage_endpoint = f"{self.base_url}/storage/v1/object/{bucket}/{key}"
             
+            # FM-027: Log authentication details for debugging
+            logger.info(
+                "FM-027: StorageManager blob_exists request",
+                path=path,
+                bucket=bucket,
+                key=key,
+                storage_endpoint=storage_endpoint,
+                base_url=self.base_url,
+                service_role_key_present=bool(self.service_role_key),
+                service_role_key_length=len(self.service_role_key) if self.service_role_key else 0,
+                anon_key_present=bool(self.anon_key),
+                anon_key_length=len(self.anon_key) if self.anon_key else 0,
+                client_headers=dict(self.client.headers) if hasattr(self.client, 'headers') else {}
+            )
+            
             # Check if exists using direct HTTP request
             response = await self.client.head(storage_endpoint)
+            
+            # FM-027: Log response details for debugging
+            logger.info(
+                "FM-027: StorageManager blob_exists response",
+                path=path,
+                status_code=response.status_code,
+                response_headers=dict(response.headers),
+                response_text=response.text[:200] if response.text else "",
+                success=response.status_code == 200
+            )
+            
             return response.status_code == 200
             
         except Exception as e:
-            logger.error(f"Failed to check blob existence", path=path, error=str(e))
+            logger.error(
+                "FM-027: StorageManager blob_exists failed",
+                path=path,
+                error=str(e),
+                error_type=type(e).__name__
+            )
             return False
     
     async def get_blob_metadata(self, path: str) -> Optional[Dict[str, Any]]:
