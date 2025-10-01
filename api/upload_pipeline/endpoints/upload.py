@@ -440,7 +440,7 @@ async def _create_upload_job_for_duplicate(
         query,
         job_id,
         document_id,
-        "uploaded",  # status
+        "queued",  # status - will be updated to "uploaded" after file upload
         "queued"  # state
     )
 
@@ -480,7 +480,7 @@ async def _create_upload_job(
         query,
         job_id,
         document_id,
-        "uploaded",  # status
+        "queued",  # status - will be updated to "uploaded" after file upload
         "queued"  # state
     )
 
@@ -602,7 +602,7 @@ async def upload_file_to_storage(
         # Update job status to indicate file is uploaded
         async with db.get_connection() as conn:
             await conn.execute(
-                "UPDATE upload_pipeline.upload_jobs SET state = 'queued' WHERE job_id = $1",
+                "UPDATE upload_pipeline.upload_jobs SET status = 'uploaded', state = 'queued' WHERE job_id = $1",
                 job_id
             )
         
