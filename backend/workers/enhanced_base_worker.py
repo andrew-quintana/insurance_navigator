@@ -597,22 +597,30 @@ class EnhancedBaseWorker:
             self.logger.info(f"Generated webhook URL: {webhook_url}")
             
             # DIRECT LlamaParse call (bypassing service layers to avoid rate limiting)
-            parse_result = await self._direct_llamaparse_call(
-                file_path=storage_path,
-                job_id=str(job_id),
-                document_id=str(document_id),
-                correlation_id=correlation_id,
-                document_filename=document_filename,
-                webhook_url=webhook_url
-            )
-            
-            # Store webhook secret in job for verification
-            async with self.db.get_connection() as conn:
-                await conn.execute("""
-                    UPDATE upload_pipeline.upload_jobs
-                    SET webhook_secret = $1, status = 'parse_queued', updated_at = now()
-                    WHERE job_id = $2
-                """, webhook_secret, job_id)
+            # Only update job status AFTER file processing succeeds
+            try:
+                parse_result = await self._direct_llamaparse_call(
+                    file_path=storage_path,
+                    job_id=str(job_id),
+                    document_id=str(document_id),
+                    correlation_id=correlation_id,
+                    document_filename=document_filename,
+                    webhook_url=webhook_url
+                )
+                
+                # Store webhook secret in job for verification - only after successful file processing
+                async with self.db.get_connection() as conn:
+                    await conn.execute("""
+                        UPDATE upload_pipeline.upload_jobs
+                        SET webhook_secret = $1, status = 'parse_queued', updated_at = now()
+                        WHERE job_id = $2
+                    """, webhook_secret, job_id)
+                    
+            except Exception as e:
+                # If file processing fails, don't update job status
+                # Let the job remain in 'uploaded' status for retry
+                self.logger.error(f"File processing failed, keeping job in 'uploaded' status: {str(e)}")
+                raise
             
             self.logger.info(
                 "Document parsing job submitted to LlamaParse",
