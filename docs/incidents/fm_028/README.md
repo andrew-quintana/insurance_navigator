@@ -1,89 +1,68 @@
-# FM-028: Intermittent Webhook Failures in Staging Environment
+# FRACAS FM-028: Intermittent Webhook Failures Investigation
 
-## 📋 **Incident Overview**
-
-**FRACAS ID**: FM-028  
-**Date**: October 1, 2025  
-**Environment**: Staging (Render)  
-**Service**: API Service - Webhook Handler  
-**Severity**: P1 - High  
-**Status**: Open - Investigation Required
-
----
-
-## 🚨 **Failure Description**
-
-### Primary Symptom
-Intermittent webhook processing failures in the staging environment, causing document processing pipeline interruptions.
-
-### Error Context
-- **Location**: `api/upload_pipeline/webhooks.py` - LlamaParse webhook handler
-- **Trigger**: External webhook callbacks from LlamaParse service
-- **Result**: Document processing jobs fail to complete or get stuck
-- **Impact**: Users experience incomplete document processing, leading to missing parsed content
-
-### User Experience Impact
-- Documents may appear to upload successfully but fail to process
-- Parsed content may not be available for chat interactions
-- Users may need to re-upload documents multiple times
-- Processing status may show as "stuck" or "failed" intermittently
-
----
-
-## 🔍 **Investigation Scope**
-
-### Key Areas to Investigate
-1. **Webhook Reliability**: Network connectivity and delivery issues
-2. **Database Transactions**: Transaction failures during webhook processing
-3. **Error Handling**: Incomplete error recovery mechanisms
-4. **Resource Contention**: Memory/CPU issues during webhook processing
-5. **External Service Dependencies**: LlamaParse service reliability
-6. **Environment Configuration**: Staging-specific configuration issues
-
-### Files to Investigate
-- `api/upload_pipeline/webhooks.py` - Main webhook handler
-- `backend/workers/enhanced_base_worker.py` - Webhook URL generation
-- `backend/workers/base_worker.py` - Job processing logic
-- `api/upload_pipeline/database.py` - Database operations
-- `config/environment/` - Environment configuration
-
----
+## 🎯 **Problem Statement**
+Intermittent webhook processing failures in staging environment causing document processing pipeline interruptions and incomplete document processing for users.
 
 ## 📊 **Current Status**
+- **Status**: Investigation in progress
+- **Priority**: High
+- **Environment**: Staging (Render API Service)
+- **Impact**: Users experience incomplete document processing, missing parsed content
 
-**Investigation Status**: Ready for Assignment  
-**Priority**: P1 - High  
-**Estimated Time**: 4-6 hours  
-**Assigned To**: TBD  
-**Due Date**: TBD
+## 🔍 **Investigation Progress**
+
+### ✅ **Completed**
+1. **Database Constraint Violation Fixed**
+   - Issue: `duplicate_detection` status not allowed in database constraint
+   - Fix: Changed to `duplicate` status in upload endpoint
+   - Commit: `34d1592`
+
+2. **Webhook URL Mismatch Fixed**
+   - Issue: Staging using wrong webhook URL (`workflow-testing` instead of staging)
+   - Fix: Updated to proper staging URL `***REMOVED***`
+   - Commit: `f69ca4e`
+
+### ❓ **Remaining Issues**
+- **Jobs still getting stuck at `parse_queued` status despite fixes**
+- Need to verify staging deployment has latest fixes
+- Need to investigate remaining webhook processing issues
+
+## 📋 **Investigation Files**
+
+- `INVESTIGATION_SUMMARY.md` - Detailed summary of work completed
+- `INVESTIGATION_PROMPT.md` - Prompt for next agent to continue investigation
+- `README.md` - This overview file
+
+## 🎯 **Next Steps**
+
+1. **Verify Staging Deployment** - Ensure fixes are actually deployed
+2. **Check Webhook Processing** - Monitor real webhook processing in staging
+3. **Investigate Remaining Issues** - Find why jobs are still stuck
+4. **Test End-to-End** - Verify complete document processing flow
+
+## 🔧 **Key Files Modified**
+
+- `api/upload_pipeline/endpoints/upload.py` - Fixed status constraint violation
+- `backend/workers/enhanced_base_worker.py` - Fixed webhook URL generation
+- `config/environment/staging.yaml` - Added webhook configuration
+- `config/render/render.staging.yaml` - Created proper staging deployment config
+
+## 📊 **Evidence**
+
+- Database constraint violation logs
+- Webhook URL mismatch in worker code
+- Staging environment configuration issues
+- Commits with fixes applied
+
+## 🎯 **Success Criteria**
+
+- Jobs progress past `parse_queued` status
+- Webhooks successfully reach staging API
+- Document processing completes normally
+- Users see parsed content as expected
 
 ---
 
-## 🔗 **Related Incidents**
-
-- **FM-027**: Storage access issues (Resolved) - May have related webhook URL configuration
-- **FM-015**: Database constraint violations (Active) - May affect webhook processing
-
----
-
-## 📝 **Investigation Notes**
-
-### Key Questions to Answer
-1. What specific error patterns occur during webhook failures?
-2. Are failures correlated with specific times, load levels, or document types?
-3. Is the issue with webhook delivery, processing, or database updates?
-4. Are there any patterns in the webhook payload or headers?
-5. How does the staging environment differ from production in webhook handling?
-
-### Tools Available
-- Render MCP tools for log analysis
-- Supabase MCP tools for database investigation
-- Local development environment for replication
-- Webhook testing tools and scripts
-
----
-
-**Investigation Priority**: P1 - High  
-**Estimated Time**: 4-6 hours  
-**Assigned To**: TBD  
-**Due Date**: TBD
+**Investigation Status**: In progress
+**Last Updated**: 2025-01-01
+**Next Agent**: Use `INVESTIGATION_PROMPT.md` to continue investigation
