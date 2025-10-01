@@ -39,3 +39,4 @@ TO service_role
 USING (bucket_id = 'files');
 
 COMMIT;
+

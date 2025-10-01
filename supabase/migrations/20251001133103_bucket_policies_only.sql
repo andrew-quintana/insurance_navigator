@@ -18,3 +18,4 @@ USING (true)
 WITH CHECK (true);
 
 COMMIT;
+
