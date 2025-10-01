@@ -1,0 +1,16 @@
+{
+  "experiment": "E1: Path Mismatch Investigation",
+  "hypothesis": "H3: Generated paths differ from actual stored paths",
+  "status": "CONFIRMED",
+  "results": {
+    "generated_path": "files/user/74a635ac-4bfe-4b6e-87d2-c0f54a366fbe/raw/6ff1b1c1_5e4390c2.pdf",
+    "expected_path": "files/user/74a635ac-4bfe-4b6e-87d2-c0f54a366fbe/raw/b8cfa47a_5e4390c2.pdf",
+    "actual_stored_file": "files/user/74a635ac-4bfe-4b6e-87d2-c0f54a366fbe/raw/28f176cc_5e4390c2.pdf",
+    "analysis": {
+      "timestamp_hashes": ["6ff1b1c1", "b8cfa47a", "28f176cc"],
+      "document_hash": "5e4390c2",
+      "conclusion": "Timestamp-based path generation is non-deterministic - different timestamps produce different paths for same document"
+    }
+  },
+  "verdict": "SUPPORTED"
+}
