@@ -687,7 +687,7 @@ class EnhancedBaseWorker:
                 if environment == "staging":
                     base_url = os.getenv(
                         "STAGING_WEBHOOK_BASE_URL", 
-                        "***REMOVED***"
+                        "https://insurance-navigator-api-workflow-testing.onrender.com"
                     )
                     self.logger.info(f"Using staging webhook base URL: {base_url}")
                 else:
