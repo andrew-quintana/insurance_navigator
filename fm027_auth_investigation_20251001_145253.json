@@ -1,0 +1,62 @@
+{
+  "service_role_test": {
+    "jwt_payload": {
+      "iss": "supabase",
+      "ref": "znvwzkdblknkkztqyfnu",
+      "role": "service_role",
+      "iat": 1751680456,
+      "exp": 2067256456
+    },
+    "auth_api_status": 401,
+    "auth_api_response": "{\"message\":\"Invalid API key\",\"hint\":\"Double check your Supabase `anon` or `service_role` API key.\"}"
+  },
+  "storage_access": {
+    "buckets_status": 400,
+    "buckets_response": "{\"statusCode\":\"403\",\"error\":\"Unauthorized\",\"message\":\"signature verification failed\"}",
+    "objects_status": 400,
+    "objects_response": "{\"statusCode\":\"404\",\"error\":\"Bucket not found\",\"message\":\"Bucket not found\"}",
+    "file_status": 400,
+    "file_headers": {
+      "date": "Wed, 01 Oct 2025 21:52:52 GMT",
+      "content-type": "application/json; charset=utf-8",
+      "content-length": "76",
+      "connection": "keep-alive",
+      "cf-ray": "987f308729cbfc54-SJC",
+      "cf-cache-status": "MISS",
+      "access-control-allow-origin": "*",
+      "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+      "vary": "Accept-Encoding",
+      "sb-gateway-mode": "direct",
+      "sb-gateway-version": "1",
+      "sb-project-ref": "dfgzeastcxnoqshgyotp",
+      "sb-request-id": "0199a1c3-907f-7d1b-8091-67e2fae33e5f",
+      "server": "cloudflare",
+      "alt-svc": "h3=\":443\"; ma=86400"
+    },
+    "file_response": ""
+  },
+  "auth_methods": {
+    "apikey_only": {
+      "status": 400,
+      "cf_ray": "987f30889f6dfc54-SJC"
+    },
+    "auth_only": {
+      "status": 400,
+      "cf_ray": "987f3089ac31fc54-SJC"
+    },
+    "both_headers": {
+      "status": 400,
+      "cf_ray": "987f308ab80bfc54-SJC"
+    }
+  },
+  "rls_policies": {
+    "policy_query_status": 401,
+    "policy_query_response": "{\"message\":\"Invalid API key\",\"hint\":\"Double check your Supabase `anon` or `service_role` API key.\"}"
+  },
+  "file_verification": {
+    "object_query_status": 401,
+    "object_query_response": "{\"message\":\"Invalid API key\",\"hint\":\"Double check your Supabase `anon` or `service_role` API key.\"}",
+    "list_query_status": 401,
+    "list_query_response": "{\"message\":\"Invalid API key\",\"hint\":\"Double check your Supabase `anon` or `service_role` API key.\"}"
+  }
+}

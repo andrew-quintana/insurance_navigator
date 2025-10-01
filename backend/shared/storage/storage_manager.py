@@ -79,9 +79,7 @@ class StorageManager:
             response = await self.client.get(storage_endpoint)
             
             if response.status_code == 200:
-                content = response.content
-                logger.info(f"Blob read successfully as bytes", path=path, size=len(content))
-                return content
+                return response.content
             else:
                 logger.error(f"Storage API error: {response.status_code} - {response.text[:200]}")
                 return None
