@@ -37,7 +37,7 @@ def test_webhook_url_resolution():
         {
             "name": "Staging with default URL (no custom env var)",
             "env": {"ENVIRONMENT": "staging"},
-            "expected": "https://insurance-navigator-api-workflow-testing.onrender.com"
+            "expected": "https://insurance-navigator-staging-api.onrender.com"
         },
         {
             "name": "Production with default URL (no custom env var)",
@@ -66,7 +66,7 @@ def test_webhook_url_resolution():
         else:
             # For staging/production, use environment-specific URLs with fallbacks
             if environment == "staging":
-                return staging_webhook_url or "https://insurance-navigator-api-workflow-testing.onrender.com"
+                return staging_webhook_url or "https://insurance-navigator-staging-api.onrender.com"
             else:
                 return production_webhook_url or "https://insurance-navigator-api.onrender.com"
     
@@ -149,7 +149,7 @@ def test_environment_variable_documentation():
     
     print(f"\n  # Default staging URL")
     print(f"  export ENVIRONMENT=staging")
-    print(f"  # Result: Uses https://insurance-navigator-api-workflow-testing.onrender.com")
+    print(f"  # Result: Uses https://insurance-navigator-staging-api.onrender.com")
 
 def main():
     """Run all tests"""
