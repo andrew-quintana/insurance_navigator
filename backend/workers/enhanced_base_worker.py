@@ -538,7 +538,12 @@ class EnhancedBaseWorker:
             # Debug logging for environment variables
             self.logger.info(f"Environment detection: ENVIRONMENT={environment}, WEBHOOK_BASE_URL={webhook_base_url}")
             
-            # Always respect WEBHOOK_BASE_URL when explicitly set (production override)
+            # Webhook URL resolution hierarchy:
+            # 1. WEBHOOK_BASE_URL (highest priority - overrides everything)
+            # 2. Environment-specific variables (STAGING_WEBHOOK_BASE_URL, PRODUCTION_WEBHOOK_BASE_URL)
+            # 3. Default URLs based on environment (fallback)
+            
+            # Always respect WEBHOOK_BASE_URL when explicitly set (overrides all environment-specific logic)
             if webhook_base_url:
                 base_url = webhook_base_url
                 self.logger.info(f"Using explicit WEBHOOK_BASE_URL: {base_url}")
@@ -571,12 +576,18 @@ class EnhancedBaseWorker:
                     self.logger.error(f"Ngrok discovery failed: {e}")
                     raise RuntimeError(f"Development environment requires ngrok: {e}")
             else:
-                # For staging/production, use environment-specific URLs
+                # For staging/production, use environment-specific URLs with fallbacks
                 if environment == "staging":
-                    base_url = "https://insurance-navigator-staging-api.onrender.com"
+                    base_url = os.getenv(
+                        "STAGING_WEBHOOK_BASE_URL", 
+                        "https://insurance-navigator-staging-api.onrender.com"
+                    )
                     self.logger.info(f"Using staging webhook base URL: {base_url}")
                 else:
-                    base_url = "https://insurance-navigator-api.onrender.com"
+                    base_url = os.getenv(
+                        "PRODUCTION_WEBHOOK_BASE_URL", 
+                        "https://insurance-navigator-api.onrender.com"
+                    )
                     self.logger.info(f"Using production webhook base URL: {base_url}")
             
             webhook_url = f"{base_url}/api/upload-pipeline/webhook/llamaparse/{job_id}"
