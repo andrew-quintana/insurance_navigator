@@ -1345,19 +1345,11 @@ class EnhancedBaseWorker:
             LLAMAPARSE_API_KEY = os.getenv("LLAMAPARSE_API_KEY")
             LLAMAPARSE_BASE_URL = "https://api.cloud.llamaindex.ai"
             
-            # Read file using StorageManager (consistent with API service)
+            # Use Supabase client for consistent authentication with API service
             try:
-                # Use the same StorageManager instance that was initialized in the worker
-                if not self.storage:
-                    raise Exception("Storage manager not initialized")
-                
-                # For binary files (PDFs), we need to read as bytes, not text
-                # The StorageManager.read_blob() method reads as text, but we need bytes for PDFs
-                # So we'll use the direct HTTP approach but with the correct headers from StorageManager
-                
-                # Get storage configuration from StorageManager
-                storage_url = self.storage.base_url
-                service_role_key = self.storage.service_role_key
+                # Import Supabase client to match API service authentication
+                from config.database import get_supabase_service_client
+                supabase = await get_supabase_service_client()
                 
                 if file_path.startswith('files/'):
                     bucket = 'files'
@@ -1365,22 +1357,54 @@ class EnhancedBaseWorker:
                 else:
                     raise Exception(f"Invalid file path format: {file_path}")
                 
-                # Use optimal authentication method (Authorization header only)
-                # Test results show this is the most reliable method for Supabase Storage
-                async with httpx.AsyncClient() as storage_client:
-                    response = await storage_client.get(
-                        f"{storage_url}/storage/v1/object/{bucket}/{key}",
-                        headers={
-                            "Authorization": f"Bearer {service_role_key}"
-                        }
-                    )
-                    response.raise_for_status()
-                    file_content = response.content
+                # First, check if file exists to avoid processing stale jobs
+                try:
+                    # List files in the directory to check existence
+                    directory_path = '/'.join(key.split('/')[:-1])  # Get directory path
+                    files = supabase.storage.from_(bucket).list(directory_path)
+                    
+                    file_name = key.split('/')[-1]  # Get just the filename
+                    file_exists = any(f.get('name') == key for f in files)
+                    
+                    if not file_exists:
+                        self.logger.warning(
+                            f"File does not exist in storage, likely stale job",
+                            file_path=file_path,
+                            file_name=file_name,
+                            directory_path=directory_path,
+                            available_files=[f.get('name') for f in files[:5]]  # Show first 5 files
+                        )
+                        raise UserFacingError(
+                            "Document file is no longer available. This may be a stale job that was cleaned up.",
+                            error_code="FILE_NOT_FOUND"
+                        )
+                    
+                    self.logger.info(f"File exists in storage, proceeding with download", file_name=file_name)
+                    
+                except UserFacingError:
+                    # Re-raise user-facing errors as-is
+                    raise
+                except Exception as e:
+                    # Log but don't fail on existence check - proceed with download attempt
+                    self.logger.warning(f"Could not verify file existence, proceeding with download: {str(e)}")
+                
+                # Use Supabase client download method (same as API service upload)
+                # This ensures consistent authentication and access patterns
+                response = supabase.storage.from_(bucket).download(key)
+                
+                if not response:
+                    raise Exception("Downloaded file is empty")
+                
+                # Convert to bytes if needed
+                if isinstance(response, str):
+                    file_content = response.encode('utf-8')
+                else:
+                    file_content = response
                 
                 if not file_content:
                     raise Exception("Downloaded file is empty")
                     
-                self.logger.info(f"Downloaded file from storage: {len(file_content)} bytes")
+                self.logger.info(f"Downloaded file from storage using Supabase client: {len(file_content)} bytes")
                     
             except Exception as e:
                 # Storage download failed - cannot proceed without file
