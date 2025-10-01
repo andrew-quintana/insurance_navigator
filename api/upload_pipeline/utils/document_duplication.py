@@ -66,23 +66,18 @@ async def duplicate_document_for_user(
         from ..utils.upload_pipeline_utils import generate_document_id
         new_document_id = generate_document_id(str(target_user_id), source_doc['file_sha256'])
         
-        # Generate new storage paths for the target user
-        from ..utils.upload_pipeline_utils import generate_storage_path
+        # Generate new storage paths for the target user using standardized functions
+        from ..utils.upload_pipeline_utils import generate_storage_path, generate_parsed_path
         new_raw_path = generate_storage_path(
             str(target_user_id),
             str(new_document_id),
             target_filename
         )
         
-        # Generate parsed path if source has one
+        # Generate parsed path if source has one using standardized function
         new_parsed_path = None
         if source_doc['parsed_path']:
-            # Extract extension from parsed path or use .md as default
-            parsed_ext = '.md'  # Default for parsed content
-            if '.' in source_doc['parsed_path']:
-                parsed_ext = '.' + source_doc['parsed_path'].split('.')[-1]
-            
-            new_parsed_path = f"parsed/user/{target_user_id}/{new_document_id}{parsed_ext}"
+            new_parsed_path = generate_parsed_path(str(target_user_id), str(new_document_id))
         
         # Create new document record with same processing data but new user
         insert_query = """

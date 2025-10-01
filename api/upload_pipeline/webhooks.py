@@ -163,10 +163,10 @@ async def llamaparse_webhook(job_id: str, request: Request):
             else:
                 logger.info(f"🔔 CONTENT STEP 4: Parsed content received successfully - length: {len(parsed_content)}")
             
-            # Generate storage path for parsed content
+            # Generate storage path for parsed content using standardized function
             logger.info(f"🔔 STORAGE STEP 1: Generating storage path")
-            # Format: storage://files/user/{user_id}/parsed/{document_id}.md
-            parsed_path = f"storage://files/user/{job['user_id']}/parsed/{document_id}.md"
+            from api.upload_pipeline.utils.upload_pipeline_utils import generate_parsed_path
+            parsed_path = f"storage://{generate_parsed_path(job['user_id'], document_id)}"
             logger.info(f"🔔 STORAGE STEP 2: Generated parsed_path: {parsed_path}")
             
             # Store parsed content in blob storage
