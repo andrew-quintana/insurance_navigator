@@ -123,7 +123,8 @@ class EnhancedBaseWorker:
                     service_role_key_length=len(self.config.supabase_service_role_key) if self.config.supabase_service_role_key else 0,
                     anon_key_length=len(self.config.supabase_anon_key) if self.config.supabase_anon_key else 0,
                     environment_vars_count=len([k for k in os.environ.keys() if 'SUPABASE' in k.upper()]),
-                    all_supabase_env_vars=[k for k in os.environ.keys() if 'SUPABASE' in k.upper()]
+                    all_supabase_env_vars=[k for k in os.environ.keys() if 'SUPABASE' in k.upper()],
+                    service_role_key_preview=self.config.supabase_service_role_key[:20] + "..." if self.config.supabase_service_role_key else "None"
                 )
                 
                 self.storage = StorageManager(

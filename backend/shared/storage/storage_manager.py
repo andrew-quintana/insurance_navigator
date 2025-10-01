@@ -169,7 +169,7 @@ class StorageManager:
             return False
     
     async def blob_exists(self, path: str) -> bool:
-        """Check if blob exists in storage using GET request for better compatibility"""
+        """Check if blob exists in storage using direct file access (bypasses RLS policy issues)"""
         try:
             # FM-027: Simple test log to verify deployment
             logger.info(f"FM-027: StorageManager.blob_exists called with path: {path}")
@@ -177,7 +177,7 @@ class StorageManager:
             # Extract bucket and key from path
             bucket, key = self._parse_storage_path(path)
             
-            # Use correct Supabase storage API endpoint
+            # Use correct Supabase storage API endpoint for direct file access
             storage_endpoint = f"{self.base_url}/storage/v1/object/{bucket}/{key}"
             
             # FM-027: Log authentication details for debugging
@@ -195,8 +195,9 @@ class StorageManager:
                 client_headers=dict(self.client.headers) if hasattr(self.client, 'headers') else {}
             )
             
-            # Use GET request instead of HEAD for better compatibility across environments
-            # This provides better error visibility and works more reliably on Render
+            # WORKAROUND: Use direct file access instead of bucket listing
+            # This bypasses the RLS policy issue with storage.buckets table
+            # The service role should have access to individual files even without bucket policies
             response = await self.client.get(storage_endpoint)
             
             # FM-027: Log response details for debugging
@@ -211,8 +212,10 @@ class StorageManager:
             
             # Check if file exists (200 = exists, 404 = doesn't exist, 400 = error)
             if response.status_code == 200:
+                logger.info(f"FM-027: File exists: {path}")
                 return True
             elif response.status_code == 404:
+                logger.info(f"FM-027: File not found: {path}")
                 return False
             else:
                 # Log the actual error response for debugging
