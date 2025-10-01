@@ -113,6 +113,19 @@ class EnhancedBaseWorker:
                     correlation_id=correlation_id
                 )
             else:
+                # FM-027: Log environment variables and authentication method for debugging
+                self.logger.info(
+                    "FM-027: Worker environment variables audit",
+                    correlation_id=correlation_id,
+                    supabase_url=self.config.supabase_url,
+                    supabase_anon_key_present=bool(self.config.supabase_anon_key),
+                    supabase_service_role_key_present=bool(self.config.supabase_service_role_key),
+                    service_role_key_length=len(self.config.supabase_service_role_key) if self.config.supabase_service_role_key else 0,
+                    anon_key_length=len(self.config.supabase_anon_key) if self.config.supabase_anon_key else 0,
+                    environment_vars_count=len([k for k in os.environ.keys() if 'SUPABASE' in k.upper()]),
+                    all_supabase_env_vars=[k for k in os.environ.keys() if 'SUPABASE' in k.upper()]
+                )
+                
                 self.storage = StorageManager(
                     config={
                         "storage_url": self.config.supabase_url,
