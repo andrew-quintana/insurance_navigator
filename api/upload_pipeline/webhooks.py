@@ -171,11 +171,14 @@ async def llamaparse_webhook(job_id: str, request: Request):
             # Generate storage path for parsed content using standardized function
             logger.info(f"🔔 STORAGE STEP 1: Generating storage path")
             from api.upload_pipeline.utils.upload_pipeline_utils import generate_parsed_path
-            parsed_path = f"storage://{generate_parsed_path(job['user_id'], document_id)}"
+            # Convert UUID objects to strings for the function
+            user_id_str = str(job['user_id'])
+            document_id_str = str(document_id)
+            parsed_path = f"storage://{generate_parsed_path(user_id_str, document_id_str)}"
             logger.info(f"🔔 STORAGE STEP 2: Generated parsed_path: {parsed_path}")
             
             # Store parsed content in blob storage
-            logger.info(f"🔔 STORAGE STEP 3: Starting blob storage upload for document {document_id}")
+            logger.info(f"🔔 STORAGE STEP 3: Starting blob storage upload for document {document_id_str}")
             
             # Store the parsed content in blob storage using direct HTTP request
             logger.info(f"🔔 STORAGE STEP 4: Using httpx for HTTP client")
@@ -231,7 +234,7 @@ async def llamaparse_webhook(job_id: str, request: Request):
                 logger.info(f"🔔 STORAGE STEP 15: Storage upload success: {success}")
             
             if not success:
-                logger.error(f"🔔 STORAGE STEP 16: Failed to store parsed content for document {document_id}")
+                logger.error(f"🔔 STORAGE STEP 16: Failed to store parsed content for document {document_id_str}")
                 logger.info(f"🔔 STORAGE STEP 17: Updating job status to failed_parse")
                 async with db.get_connection() as conn:
                     await conn.execute("""
@@ -261,7 +264,7 @@ async def llamaparse_webhook(job_id: str, request: Request):
                     UPDATE upload_pipeline.documents
                     SET processing_status = 'parsed', parsed_path = $1, parsed_sha256 = $2, updated_at = now()
                     WHERE document_id = $3
-                """, parsed_path, parsed_sha256, document_id)
+                """, parsed_path, parsed_sha256, document_id_str)
                 logger.info(f"🔔 DATABASE STEP 6: Document record updated successfully")
                 
                 # Update job status to parsed and ready for next stage
@@ -274,7 +277,7 @@ async def llamaparse_webhook(job_id: str, request: Request):
                 logger.info(f"🔔 DATABASE STEP 8: Job status updated to parsed successfully")
             
             logger.info(
-                f"🔔 COMPLETION: Document parsing completed and stored for job {job_id}, document {document_id}, path {parsed_path}, size {len(parsed_content)}"
+                f"🔔 COMPLETION: Document parsing completed and stored for job {job_id}, document {document_id_str}, path {parsed_path}, size {len(parsed_content)}"
             )
             
         elif payload.get("status") == "failed":
@@ -294,7 +297,7 @@ async def llamaparse_webhook(job_id: str, request: Request):
             logger.info(f"🔔 ERROR STEP 4: Job status updated to failed_parse")
             
             logger.error(
-                f"🔔 ERROR STEP 5: Document parsing failed for job {job_id}, document {document_id}: {error_message}"
+                f"🔔 ERROR STEP 5: Document parsing failed for job {job_id}, document {document_id_str}: {error_message}"
             )
         else:
             logger.info(f"🔔 UNKNOWN STEP 1: Unknown webhook status: {webhook_status}")
@@ -302,6 +305,9 @@ async def llamaparse_webhook(job_id: str, request: Request):
         logger.info(f"🔔 SUCCESS: Webhook processing completed successfully")
         return {"status": "success", "message": "Webhook processed"}
         
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 404 for job not found) without modification
+        raise
     except Exception as e:
         logger.error(
             f"🔔 EXCEPTION: Webhook processing failed for job {job_id}: {str(e)}",
