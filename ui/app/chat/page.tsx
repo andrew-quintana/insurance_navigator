@@ -404,7 +404,7 @@ export default function ChatPage() {
             <p className="font-medium">Privacy & Security</p>
             <p className="mt-1">
               Your Medicare information is kept secure and private. All conversations are encrypted and we follow 
-              HIPAA compliance standards to protect your health information.
+              soon-to-be HIPAA compliance standards to protect your health information.
             </p>
           </Card>
         </div>

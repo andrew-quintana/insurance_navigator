@@ -260,7 +260,7 @@ The system includes comprehensive monitoring:
 - Follow the existing code structure
 - Add comprehensive tests
 - Update documentation
-- Ensure HIPAA compliance for any changes
+- Ensure soon-to-be HIPAA compliance for any changes
 
 ## 📚 Documentation
 
