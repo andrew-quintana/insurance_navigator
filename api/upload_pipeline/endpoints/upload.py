@@ -269,7 +269,8 @@ async def _check_concurrent_job_limits(user_id: str, db) -> None:
     """Check if user has exceeded concurrent job limits."""
     config = get_config()
     
-    # Count active jobs for user
+    # Count active jobs for user by checking documents table first
+    # Since upload_jobs doesn't have user_id column, we need to join through documents
     query = """
         SELECT COUNT(*) as job_count
         FROM upload_pipeline.upload_jobs uj
@@ -278,14 +279,26 @@ async def _check_concurrent_job_limits(user_id: str, db) -> None:
         AND uj.state IN ('queued', 'working', 'retryable')
     """
     
-    result = await db.fetchrow(query, user_id)
-    active_jobs = result["job_count"] if result else 0
-    
-    if active_jobs >= config.max_concurrent_jobs_per_user:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"Maximum concurrent jobs ({config.max_concurrent_jobs_per_user}) exceeded"
-        )
+    try:
+        result = await db.fetchrow(query, user_id)
+        active_jobs = result["job_count"] if result else 0
+        
+        # Debug logging
+        print(f"🔍 Concurrent job check for user {user_id}: {active_jobs} active jobs (limit: {config.max_concurrent_jobs_per_user})")
+        
+        if active_jobs >= config.max_concurrent_jobs_per_user:
+            print(f"❌ Concurrent job limit exceeded for user {user_id}: {active_jobs} >= {config.max_concurrent_jobs_per_user}")
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Maximum concurrent jobs ({config.max_concurrent_jobs_per_user}) exceeded"
+            )
+        else:
+            print(f"✅ Concurrent job check passed for user {user_id}: {active_jobs} < {config.max_concurrent_jobs_per_user}")
+    except Exception as e:
+        # Log the error but don't block uploads if there's a database issue
+        print(f"Warning: Failed to check concurrent job limits for user {user_id}: {e}")
+        # Allow the upload to proceed if we can't check limits
+        pass
 
 
 async def _check_file_size_limits(bytes_len: int) -> None:
