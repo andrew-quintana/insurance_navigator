@@ -1299,7 +1299,7 @@ class LoginRequest(BaseModel):
 @app.post("/auth/signup", status_code=status.HTTP_201_CREATED)
 async def signup(request: SignupRequest):
     """
-    Sign up a new user with HIPAA consent tracking.
+    Sign up a new user with soon-to-be HIPAA consent tracking.
     
     Args:
         request: SignupRequest containing user data

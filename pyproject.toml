@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "insurance_navigator"
 version = "0.1.0"
-description = "HIPAA-compliant insurance document processing system"
+description = "Soon-to-be HIPAA-compliant insurance document processing system"
 requires-python = ">=3.11"
 authors = [
     { name = "Insurance Navigator Team" }

@@ -41,6 +41,10 @@ export default function Footer() {
         <div className="text-center text-teal-200 text-sm mt-4">
           Insurance Navigator is a platform built to support better healthcare navigation.
         </div>
+        
+        <div className="text-center text-red-200 text-xs mt-3 p-3 bg-red-900/20 rounded-lg border border-red-800/30">
+          <strong>⚠️ Important Notice:</strong> This is an initial version without full anonymization of any information uploaded. Your information and account will be wiped for the full release soon.
+        </div>
       </div>
     </footer>
   )
