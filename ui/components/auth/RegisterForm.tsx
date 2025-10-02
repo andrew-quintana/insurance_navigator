@@ -82,28 +82,44 @@ export default function RegisterForm({ onSuccess, redirectTo = '/chat' }: Regist
     setError('')
 
     try {
-      const { data, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            full_name: formData.fullName
-          }
-        }
+      // Use backend API instead of direct Supabase calls
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+      const response = await fetch(`${apiBaseUrl}/auth/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          full_name: formData.fullName,
+          consent_version: "1.0",
+          consent_timestamp: new Date().toISOString()
+        })
       })
 
-      if (authError) {
-        setError(authError.message)
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.detail || 'Registration failed')
         return
       }
 
       if (data.user) {
-        // Successfully registered
-        if (onSuccess) {
-          onSuccess()
-        } else {
-          router.push(redirectTo)
+        // Store the access token for future API calls
+        if (data.access_token) {
+          localStorage.setItem('token', data.access_token)
         }
+        
+        // Add a small delay to ensure session is processed
+        setTimeout(() => {
+          // Successfully registered
+          if (onSuccess) {
+            onSuccess()
+          } else {
+            router.push(redirectTo)
+          }
+        }, 100)
       }
     } catch (error) {
       console.error('Registration error:', error)

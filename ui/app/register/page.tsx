@@ -10,7 +10,7 @@ export default function RegisterPage() {
   const router = useRouter()
 
   const handleRegisterSuccess = () => {
-    router.push("/welcome")
+    router.push("/chat")
   }
 
   return (
