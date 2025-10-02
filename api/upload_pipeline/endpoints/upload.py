@@ -63,6 +63,12 @@ async def upload_document(
         # Check concurrent job limits
         await _check_concurrent_job_limits(current_user.user_id, db)
         
+        # Check file size limits (5MB per file)
+        await _check_file_size_limits(request.bytes_len)
+        
+        # Check daily upload limits (3 documents per day per user)
+        await _check_daily_upload_limits(current_user.user_id, db)
+        
         # Phase 3: Multi-User Data Integrity - Check for duplicates
         # First check if this user already has this document
         user_existing_document = await check_user_has_document(
@@ -83,7 +89,7 @@ async def upload_document(
                 user_id=str(current_user.user_id),
                 document_id=user_existing_document["document_id"],
                 job_id=None,
-                stage="duplicate_detection",
+                status="duplicate",
                 details={
                     "file_sha256": request.sha256,
                     "filename": request.filename,
@@ -142,7 +148,7 @@ async def upload_document(
                     user_id=str(current_user.user_id),
                     document_id=duplicated_document["document_id"],
                     job_id=None,
-                    stage="duplicate_detection",
+                    status="duplicate",
                     details={
                         "file_sha256": request.sha256,
                         "filename": request.filename,
@@ -226,7 +232,7 @@ async def upload_document(
             user_id=str(current_user.user_id),
             document_id=document_id,
             job_id=job_id,
-            stage="upload_initiated",
+            status="upload_initiated",
             details={
                 "filename": request.filename,
                 "bytes_len": request.bytes_len,
@@ -263,7 +269,8 @@ async def _check_concurrent_job_limits(user_id: str, db) -> None:
     """Check if user has exceeded concurrent job limits."""
     config = get_config()
     
-    # Count active jobs for user
+    # Count active jobs for user by checking documents table first
+    # Since upload_jobs doesn't have user_id column, we need to join through documents
     query = """
         SELECT COUNT(*) as job_count
         FROM upload_pipeline.upload_jobs uj
@@ -272,13 +279,58 @@ async def _check_concurrent_job_limits(user_id: str, db) -> None:
         AND uj.state IN ('queued', 'working', 'retryable')
     """
     
-    result = await db.fetchrow(query, user_id)
-    active_jobs = result["job_count"] if result else 0
+    try:
+        result = await db.fetchrow(query, user_id)
+        active_jobs = result["job_count"] if result else 0
+        
+        # Debug logging
+        print(f"🔍 Concurrent job check for user {user_id}: {active_jobs} active jobs (limit: {config.max_concurrent_jobs_per_user})")
+        
+        if active_jobs >= config.max_concurrent_jobs_per_user:
+            print(f"❌ Concurrent job limit exceeded for user {user_id}: {active_jobs} >= {config.max_concurrent_jobs_per_user}")
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Maximum concurrent jobs ({config.max_concurrent_jobs_per_user}) exceeded"
+            )
+        else:
+            print(f"✅ Concurrent job check passed for user {user_id}: {active_jobs} < {config.max_concurrent_jobs_per_user}")
+    except Exception as e:
+        # Log the error but don't block uploads if there's a database issue
+        print(f"Warning: Failed to check concurrent job limits for user {user_id}: {e}")
+        # Allow the upload to proceed if we can't check limits
+        pass
+
+
+async def _check_file_size_limits(bytes_len: int) -> None:
+    """Check if file size exceeds the 5MB limit per file."""
+    max_file_size = 5 * 1024 * 1024  # 5MB in bytes
     
-    if active_jobs >= config.max_concurrent_jobs_per_user:
+    if bytes_len > max_file_size:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File size ({bytes_len} bytes) exceeds maximum allowed size of 5MB"
+        )
+
+
+async def _check_daily_upload_limits(user_id: str, db) -> None:
+    """Check if user has exceeded daily upload limits (3 documents per day)."""
+    max_daily_uploads = 3
+    
+    # Count uploads from today
+    query = """
+        SELECT COUNT(*) as upload_count
+        FROM upload_pipeline.documents
+        WHERE user_id = $1 
+        AND DATE(created_at) = CURRENT_DATE
+    """
+    
+    result = await db.fetchrow(query, user_id)
+    daily_uploads = result["upload_count"] if result else 0
+    
+    if daily_uploads >= max_daily_uploads:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"Maximum concurrent jobs ({config.max_concurrent_jobs_per_user}) exceeded"
+            detail=f"Daily upload limit ({max_daily_uploads} documents) exceeded. Please try again tomorrow."
         )
 
 
@@ -297,7 +349,7 @@ async def _check_duplicate_document(user_id: str, file_sha256: str, db) -> Optio
     
     # Check if there's an active job for this document
     job_query = """
-        SELECT job_id, stage, state
+        SELECT job_id, status, state
         FROM upload_pipeline.upload_jobs
         WHERE document_id = $1 
         AND state IN ('queued', 'working', 'retryable')
@@ -387,7 +439,7 @@ async def _create_upload_job_for_duplicate(
     
     query = """
         INSERT INTO upload_pipeline.upload_jobs (
-            job_id, document_id, stage, state, 
+            job_id, document_id, status, state, 
             created_at, updated_at
         ) VALUES ($1, $2, $3, $4, NOW(), NOW())
     """
@@ -401,7 +453,7 @@ async def _create_upload_job_for_duplicate(
         query,
         job_id,
         document_id,
-        "job_validated",  # stage
+        "uploaded",  # status - duplicate documents are already uploaded
         "queued"  # state
     )
 
@@ -427,7 +479,7 @@ async def _create_upload_job(
     
     query = """
         INSERT INTO upload_pipeline.upload_jobs (
-            job_id, document_id, stage, state, 
+            job_id, document_id, status, state, 
             created_at, updated_at
         ) VALUES ($1, $2, $3, $4, NOW(), NOW())
     """
@@ -441,7 +493,7 @@ async def _create_upload_job(
         query,
         job_id,
         document_id,
-        "job_validated",  # stage
+        "uploaded",  # status - file is uploaded when job is created
         "queued"  # state
     )
 
@@ -563,7 +615,7 @@ async def upload_file_to_storage(
         # Update job status to indicate file is uploaded
         async with db.get_connection() as conn:
             await conn.execute(
-                "UPDATE upload_pipeline.upload_jobs SET state = 'queued' WHERE job_id = $1",
+                "UPDATE upload_pipeline.upload_jobs SET status = 'uploaded', state = 'queued' WHERE job_id = $1",
                 job_id
             )
         
@@ -746,10 +798,16 @@ async def get_upload_limits():
     config = get_config()
     
     return {
-        "max_file_size_bytes": config.max_file_size_bytes,
+        "max_file_size_bytes": 5 * 1024 * 1024,  # 5MB hard limit
+        "max_file_size_mb": 5,
         "max_pages": config.max_pages,
         "max_concurrent_jobs_per_user": config.max_concurrent_jobs_per_user,
-        "max_uploads_per_day_per_user": config.max_uploads_per_day_per_user,
+        "max_uploads_per_day_per_user": 3,  # 3 documents per day per user
         "supported_mime_types": ["application/pdf"],
-        "signed_url_ttl_seconds": config.signed_url_ttl_seconds
+        "signed_url_ttl_seconds": config.signed_url_ttl_seconds,
+        "limits_description": {
+            "file_size": "Maximum 5MB per file",
+            "daily_uploads": "Maximum 3 documents per day per user",
+            "concurrent_jobs": f"Maximum {config.max_concurrent_jobs_per_user} concurrent processing jobs per user"
+        }
     }

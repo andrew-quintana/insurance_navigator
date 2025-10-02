@@ -113,6 +113,20 @@ class EnhancedBaseWorker:
                     correlation_id=correlation_id
                 )
             else:
+                # FM-027: Log environment variables and authentication method for debugging
+                self.logger.info(
+                    "FM-027: Worker environment variables audit",
+                    correlation_id=correlation_id,
+                    supabase_url=self.config.supabase_url,
+                    supabase_anon_key_present=bool(self.config.supabase_anon_key),
+                    supabase_service_role_key_present=bool(self.config.supabase_service_role_key),
+                    service_role_key_length=len(self.config.supabase_service_role_key) if self.config.supabase_service_role_key else 0,
+                    anon_key_length=len(self.config.supabase_anon_key) if self.config.supabase_anon_key else 0,
+                    environment_vars_count=len([k for k in os.environ.keys() if 'SUPABASE' in k.upper()]),
+                    all_supabase_env_vars=[k for k in os.environ.keys() if 'SUPABASE' in k.upper()],
+                    service_role_key_preview=self.config.supabase_service_role_key[:20] + "..." if self.config.supabase_service_role_key else "None"
+                )
+                
                 self.storage = StorageManager(
                     config={
                         "storage_url": self.config.supabase_url,
@@ -504,31 +518,124 @@ class EnhancedBaseWorker:
         )
         
         try:
+            # FM-027: Comprehensive job processing start logging
             self.logger.info(
-                "Delegating document parsing to LlamaParse service",
+                "FM-027: Delegating document parsing to LlamaParse service",
                 correlation_id=correlation_id,
                 job_id=str(job_id),
                 document_id=str(document_id),
-                user_id=user_id
+                user_id=user_id,
+                job_data=job,
+                job_keys=list(job.keys()) if job else None
             )
             
-            # Get document details
-            storage_path = job.get("storage_path")
-            mime_type = job.get("mime_type", "application/pdf")
-            
-            if not storage_path:
-                raise ValueError("No storage_path found in job data")
-            
-            # Get document filename from database
+            # Get document details from database (single source of truth)
             async with self.db.get_connection() as conn:
                 doc_result = await conn.fetchrow("""
-                    SELECT filename FROM upload_pipeline.documents 
+                    SELECT filename, raw_path, mime FROM upload_pipeline.documents 
                     WHERE document_id = $1
                 """, document_id)
-                document_filename = doc_result["filename"] if doc_result else "document.pdf"
+                
+                # FM-027: Log database query results
+                self.logger.info(
+                    "FM-027: Database query results for document",
+                    correlation_id=correlation_id,
+                    job_id=str(job_id),
+                    document_id=str(document_id),
+                    doc_result=dict(doc_result) if doc_result else None,
+                    doc_result_keys=list(doc_result.keys()) if doc_result else None
+                )
+                
+                if not doc_result:
+                    raise ValueError(f"Document not found in database: {document_id}")
+                
+                storage_path = doc_result["raw_path"]
+                document_filename = doc_result["filename"]
+                mime_type = doc_result.get("mime", "application/pdf")
             
-            # Log storage path for debugging
-            logger.info(f"Processing document with storage path: {storage_path}")
+            if not storage_path:
+                raise ValueError("No storage_path found in document record")
+            
+            # FM-027: Enhanced storage path logging
+            self.logger.info(
+                "FM-027: Document storage details",
+                correlation_id=correlation_id,
+                job_id=str(job_id),
+                document_id=str(document_id),
+                storage_path=storage_path,
+                document_filename=document_filename,
+                mime_type=mime_type,
+                storage_path_type=type(storage_path).__name__,
+                storage_path_length=len(storage_path) if storage_path else 0
+            )
+            
+            # CRITICAL FIX: Check if file exists before processing (FM-027 Race Condition Fix)
+            self.logger.info(
+                "Checking file existence before processing",
+                correlation_id=correlation_id,
+                job_id=str(job_id),
+                storage_path=storage_path
+            )
+            
+            file_exists = await self.storage.blob_exists(storage_path)
+            if not file_exists:
+                # Wait and retry with exponential backoff for race condition
+                self.logger.warning(
+                    "File not immediately accessible, retrying with backoff",
+                    correlation_id=correlation_id,
+                    job_id=str(job_id),
+                    storage_path=storage_path
+                )
+                
+                # Optimized retry strategy for race conditions:
+                # - Quick initial checks (0.5s, 1s, 1.5s) for fast resolution
+                # - Longer final attempts (2s, 3s) for edge cases
+                retry_delays = [0.5, 1.0, 1.5, 2.0, 3.0]  # Total max wait: 8s
+                
+                for attempt, wait_time in enumerate(retry_delays):
+                    self.logger.info(
+                        f"File access retry attempt {attempt + 1}/{len(retry_delays)}, waiting {wait_time}s",
+                        correlation_id=correlation_id,
+                        job_id=str(job_id),
+                        attempt=attempt + 1,
+                        wait_time=wait_time
+                    )
+                    
+                    await asyncio.sleep(wait_time)
+                    file_exists = await self.storage.blob_exists(storage_path)
+                    
+                    if file_exists:
+                        total_wait = sum(retry_delays[:attempt + 1])
+                        self.logger.info(
+                            f"File became accessible after {total_wait:.1f}s total wait",
+                            correlation_id=correlation_id,
+                            job_id=str(job_id),
+                            total_wait=total_wait,
+                            attempts=attempt + 1
+                        )
+                        break
+                
+                if not file_exists:
+                    total_wait = sum(retry_delays)
+                    self.logger.error(
+                        "File not accessible after all retry attempts",
+                        correlation_id=correlation_id,
+                        job_id=str(job_id),
+                        storage_path=storage_path,
+                        max_retries=len(retry_delays),
+                        total_wait_time=total_wait
+                    )
+                    raise UserFacingError(
+                        "Document file is not accessible for processing. Please try uploading again.",
+                        error_code="STORAGE_ACCESS_ERROR"
+                    )
+            else:
+                self.logger.info(
+                    "File exists and is accessible for processing",
+                    correlation_id=correlation_id,
+                    job_id=str(job_id),
+                    storage_path=storage_path
+                )
             
             # Generate webhook URL for LlamaParse callback
             # Use environment-appropriate base URL
@@ -538,7 +645,12 @@ class EnhancedBaseWorker:
             # Debug logging for environment variables
             self.logger.info(f"Environment detection: ENVIRONMENT={environment}, WEBHOOK_BASE_URL={webhook_base_url}")
             
-            # Always respect WEBHOOK_BASE_URL when explicitly set (production override)
+            # Webhook URL resolution hierarchy:
+            # 1. WEBHOOK_BASE_URL (highest priority - overrides everything)
+            # 2. Environment-specific variables (STAGING_WEBHOOK_BASE_URL, PRODUCTION_WEBHOOK_BASE_URL)
+            # 3. Default URLs based on environment (fallback)
+            
+            # Always respect WEBHOOK_BASE_URL when explicitly set (overrides all environment-specific logic)
             if webhook_base_url:
                 base_url = webhook_base_url
                 self.logger.info(f"Using explicit WEBHOOK_BASE_URL: {base_url}")
@@ -571,33 +683,86 @@ class EnhancedBaseWorker:
                     self.logger.error(f"Ngrok discovery failed: {e}")
                     raise RuntimeError(f"Development environment requires ngrok: {e}")
             else:
-                # For production, use default if WEBHOOK_BASE_URL not set
-                base_url = "https://insurance-navigator-api.onrender.com"
-                self.logger.info(f"Using production default webhook base URL: {base_url}")
+                # For staging/production, use environment-specific URLs with fallbacks
+                if environment == "staging":
+                    base_url = os.getenv(
+                        "STAGING_WEBHOOK_BASE_URL", 
+                        "https://insurance-navigator-staging-api.onrender.com"
+                    )
+                    self.logger.info(f"Using staging webhook base URL: {base_url}")
+                else:
+                    base_url = os.getenv(
+                        "PRODUCTION_WEBHOOK_BASE_URL", 
+                        "https://insurance-navigator-api.onrender.com"
+                    )
+                    self.logger.info(f"Using production webhook base URL: {base_url}")
             
             webhook_url = f"{base_url}/api/upload-pipeline/webhook/llamaparse/{job_id}"
             webhook_secret = str(uuid.uuid4())  # Generate webhook secret
             
             # Debug logging for final webhook URL
+            # FM-027: Comprehensive webhook URL logging
+            self.logger.info(
+                "FM-027: Webhook URL generation",
+                correlation_id=correlation_id,
+                job_id=str(job_id),
+                document_id=str(document_id),
+                webhook_url=webhook_url,
+                base_url=base_url,
+                environment=environment,
+                webhook_secret=webhook_secret,
+                webhook_secret_length=len(webhook_secret) if webhook_secret else 0
+            )
+            
             self.logger.info(f"Generated webhook URL: {webhook_url}")
             
             # DIRECT LlamaParse call (bypassing service layers to avoid rate limiting)
-            parse_result = await self._direct_llamaparse_call(
-                file_path=storage_path,
-                job_id=str(job_id),
-                document_id=str(document_id),
-                correlation_id=correlation_id,
-                document_filename=document_filename,
-                webhook_url=webhook_url
-            )
-            
-            # Store webhook secret in job for verification
-            async with self.db.get_connection() as conn:
-                await conn.execute("""
-                    UPDATE upload_pipeline.upload_jobs
-                    SET webhook_secret = $1, status = 'parse_queued', updated_at = now()
-                    WHERE job_id = $2
-                """, webhook_secret, job_id)
+            # Only update job status AFTER file processing succeeds
+            try:
+                # FM-027: Log LlamaParse call parameters
+                self.logger.info(
+                    "FM-027: Calling LlamaParse API",
+                    correlation_id=correlation_id,
+                    job_id=str(job_id),
+                    document_id=str(document_id),
+                    file_path=storage_path,
+                    document_filename=document_filename,
+                    webhook_url=webhook_url,
+                    webhook_secret=webhook_secret
+                )
+                
+                parse_result = await self._direct_llamaparse_call(
+                    file_path=storage_path,
+                    job_id=str(job_id),
+                    document_id=str(document_id),
+                    correlation_id=correlation_id,
+                    document_filename=document_filename,
+                    webhook_url=webhook_url
+                )
+                
+                # FM-027: Log LlamaParse call result
+                self.logger.info(
+                    "FM-027: LlamaParse API call completed",
+                    correlation_id=correlation_id,
+                    job_id=str(job_id),
+                    document_id=str(document_id),
+                    parse_result=parse_result,
+                    parse_result_keys=list(parse_result.keys()) if parse_result else None
+                )
+                
+                # Store webhook secret in job for verification - only after successful file processing
+                async with self.db.get_connection() as conn:
+                    await conn.execute("""
+                        UPDATE upload_pipeline.upload_jobs
+                        SET webhook_secret = $1, status = 'parse_queued', updated_at = now()
+                        WHERE job_id = $2
+                    """, webhook_secret, job_id)
+                    
+            except Exception as e:
+                # If file processing fails, don't update job status
+                # Let the job remain in 'uploaded' status for retry
+                self.logger.error(f"File processing failed, keeping job in 'uploaded' status: {str(e)}")
+                raise
             
             self.logger.info(
                 "Document parsing job submitted to LlamaParse",
@@ -1329,19 +1494,13 @@ class EnhancedBaseWorker:
             # Get API configuration
             LLAMAPARSE_API_KEY = os.getenv("LLAMAPARSE_API_KEY")
             LLAMAPARSE_BASE_URL = "https://api.cloud.llamaindex.ai"
+            import hashlib
             
-            # Read file (try storage first, fallback to local)
+            # Use StorageManager for consistent authentication with API service
             try:
-                # Try to read from storage
-                storage_url = os.getenv("SUPABASE_URL", "http://127.0.0.1:54321")
-                # Use development key for local development
-                environment = os.getenv("ENVIRONMENT", "development")
-                if environment == "development":
-                    service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
-                else:
-                    service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SERVICE_ROLE_KEY", ""))
-                if not service_role_key:
-                    raise Exception("SUPABASE_SERVICE_ROLE_KEY environment variable not set")
+                # Use the same StorageManager instance that was initialized in the worker
+                if not self.storage:
+                    raise Exception("Storage manager not initialized")
                 
                 if file_path.startswith('files/'):
                     bucket = 'files'
@@ -1349,21 +1508,79 @@ class EnhancedBaseWorker:
                 else:
                     raise Exception(f"Invalid file path format: {file_path}")
                 
-                async with httpx.AsyncClient() as storage_client:
-                    response = await storage_client.get(
-                        f"{storage_url}/storage/v1/object/{bucket}/{key}",
-                        headers={
-                            "Authorization": f"Bearer {service_role_key}",
-                            "apikey": service_role_key
-                        }
-                    )
-                    response.raise_for_status()
-                    file_content = response.content
+                # CRITICAL FIX: Check if file exists before reading (FM-027 Race Condition Fix)
+                self.logger.info(
+                    "Checking file existence before reading in _direct_llamaparse_call",
+                    correlation_id=correlation_id,
+                    job_id=job_id,
+                    file_path=file_path
+                )
                 
-                if not file_content:
-                    raise Exception(f"Downloaded file is empty")
+                file_exists = await self.storage.blob_exists(file_path)
+                if not file_exists:
+                    # Wait and retry with exponential backoff for race condition
+                    self.logger.warning(
+                        "File not immediately accessible in _direct_llamaparse_call, retrying with backoff",
+                        correlation_id=correlation_id,
+                        job_id=job_id,
+                        file_path=file_path
+                    )
                     
-                self.logger.info(f"Downloaded file from storage: {len(file_content)} bytes")
+                    # Optimized retry strategy for race conditions:
+                    retry_delays = [0.5, 1.0, 1.5, 2.0, 3.0]  # Total max wait: 8s
+                    
+                    for attempt, wait_time in enumerate(retry_delays):
+                        self.logger.info(
+                            f"File access retry attempt {attempt + 1}/{len(retry_delays)} in _direct_llamaparse_call, waiting {wait_time}s",
+                            correlation_id=correlation_id,
+                            job_id=job_id,
+                            attempt=attempt + 1,
+                            wait_time=wait_time
+                        )
+                        
+                        await asyncio.sleep(wait_time)
+                        file_exists = await self.storage.blob_exists(file_path)
+                        
+                        if file_exists:
+                            total_wait = sum(retry_delays[:attempt + 1])
+                            self.logger.info(
+                                f"File became accessible after {total_wait:.1f}s total wait in _direct_llamaparse_call",
+                                correlation_id=correlation_id,
+                                job_id=job_id,
+                                total_wait=total_wait,
+                                attempts=attempt + 1
+                            )
+                            break
+                    
+                    if not file_exists:
+                        total_wait = sum(retry_delays)
+                        self.logger.error(
+                            "File not accessible after all retry attempts in _direct_llamaparse_call",
+                            correlation_id=correlation_id,
+                            job_id=job_id,
+                            file_path=file_path,
+                            max_retries=len(retry_delays),
+                            total_wait_time=total_wait
+                        )
+                        raise UserFacingError(
+                            "Document file is not accessible for processing. Please try uploading again.",
+                            error_code="STORAGE_ACCESS_ERROR"
+                        )
+                else:
+                    self.logger.info(
+                        "File exists and is accessible for reading in _direct_llamaparse_call",
+                        correlation_id=correlation_id,
+                        job_id=job_id,
+                        file_path=file_path
+                    )
+                
+                # Use StorageManager to download file (consistent with API service authentication)
+                # For binary files (PDFs), we need to read as bytes, not text
+                file_content = await self.storage.read_blob_bytes(file_path)
+                if not file_content:
+                    raise Exception("Downloaded file is empty")
+                    
+                self.logger.info(f"Downloaded file from storage using StorageManager: {len(file_content)} bytes")
                     
             except Exception as e:
                 # Storage download failed - cannot proceed without file
@@ -1391,6 +1608,36 @@ class EnhancedBaseWorker:
                     'Authorization': f'Bearer {LLAMAPARSE_API_KEY}'
                 }
                 
+                # FM-027: Comprehensive LlamaParse request logging
+                self.logger.info(
+                    "FM-027: LlamaParse request preparation",
+                    correlation_id=correlation_id,
+                    job_id=job_id,
+                    document_id=document_id,
+                    file_path=file_path,
+                    document_filename=document_filename,
+                    file_content_size=len(file_content),
+                    file_content_type="application/pdf",
+                    webhook_url=webhook_url,
+                    llamaparse_base_url=LLAMAPARSE_BASE_URL,
+                    llamaparse_endpoint=f'{LLAMAPARSE_BASE_URL}/api/parsing/upload',
+                    form_data=form_data,
+                    headers=headers,
+                    api_key_present=bool(LLAMAPARSE_API_KEY),
+                    api_key_length=len(LLAMAPARSE_API_KEY) if LLAMAPARSE_API_KEY else 0
+                )
+                
+                # FM-027: Log file content details for debugging
+                self.logger.info(
+                    "FM-027: File content analysis",
+                    correlation_id=correlation_id,
+                    job_id=job_id,
+                    file_content_preview=file_content[:100] if file_content else None,
+                    file_content_hex_preview=file_content[:20].hex() if file_content else None,
+                    is_pdf_header=file_content.startswith(b'%PDF-') if file_content else False,
+                    file_content_checksum=hashlib.sha256(file_content).hexdigest() if file_content else None
+                )
+                
                 self.logger.info(f"Making direct LlamaParse API call for job {job_id}")
                 self.logger.info(f"LlamaParse API form_data: {form_data}")
                 
@@ -1401,11 +1648,34 @@ class EnhancedBaseWorker:
                     headers=headers
                 )
                 
+                # FM-027: Comprehensive LlamaParse response logging
+                self.logger.info(
+                    "FM-027: LlamaParse API response received",
+                    correlation_id=correlation_id,
+                    job_id=job_id,
+                    response_status_code=response.status_code,
+                    response_headers=dict(response.headers),
+                    response_content_type=response.headers.get('content-type'),
+                    response_content_length=response.headers.get('content-length'),
+                    response_text=response.text[:500] if response.text else None,
+                    response_json=response.json() if response.headers.get('content-type', '').startswith('application/json') else None
+                )
+                
                 self.logger.info(f"LlamaParse API response: {response.status_code}")
                 
                 if response.status_code == 200:
                     result = response.json()
                     parse_job_id = result.get("id", "")
+                    
+                    # FM-027: Log successful LlamaParse submission details
+                    self.logger.info(
+                        "FM-027: LlamaParse job submitted successfully",
+                        correlation_id=correlation_id,
+                        job_id=job_id,
+                        parse_job_id=parse_job_id,
+                        llamaparse_response=result,
+                        webhook_url=webhook_url
+                    )
                     
                     self.logger.info(f"LlamaParse job submitted successfully: {parse_job_id}")
                     

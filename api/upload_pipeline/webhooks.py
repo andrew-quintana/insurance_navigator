@@ -20,12 +20,17 @@ router = APIRouter()
 async def llamaparse_webhook(job_id: str, request: Request):
     """Handle LlamaParse webhook callbacks for document parsing completion."""
     try:
-        logger.info(f"🔔 WEBHOOK START: Received webhook for job: {job_id}")
-        logger.info(f"🔔 WEBHOOK HEADERS: {dict(request.headers)}")
+        # FM-027: Enhanced webhook logging for complete flow tracking
+        logger.info(f"🔔 FM-027 WEBHOOK START: Received webhook for job: {job_id}")
+        logger.info(f"🔔 FM-027 WEBHOOK HEADERS: {dict(request.headers)}")
+        logger.info(f"🔔 FM-027 WEBHOOK URL: {request.url}")
+        logger.info(f"🔔 FM-027 WEBHOOK METHOD: {request.method}")
+        logger.info(f"🔔 FM-027 WEBHOOK CLIENT: {request.client}")
         
         # Get the raw body for signature verification
         body = await request.body()
-        logger.info(f"🔔 WEBHOOK BODY SIZE: {len(body)} bytes")
+        logger.info(f"🔔 FM-027 WEBHOOK BODY SIZE: {len(body)} bytes")
+        logger.info(f"🔔 FM-027 WEBHOOK BODY PREVIEW: {body[:200] if body else 'EMPTY'}")
         
         # Get webhook secret from database
         logger.info(f"🔔 DATABASE STEP 1: Getting database connection")
@@ -163,14 +168,17 @@ async def llamaparse_webhook(job_id: str, request: Request):
             else:
                 logger.info(f"🔔 CONTENT STEP 4: Parsed content received successfully - length: {len(parsed_content)}")
             
-            # Generate storage path for parsed content
+            # Generate storage path for parsed content using standardized function
             logger.info(f"🔔 STORAGE STEP 1: Generating storage path")
-            # Format: storage://files/user/{user_id}/parsed/{document_id}.md
-            parsed_path = f"storage://files/user/{job['user_id']}/parsed/{document_id}.md"
+            from api.upload_pipeline.utils.upload_pipeline_utils import generate_parsed_path
+            # Convert UUID objects to strings for the function
+            user_id_str = str(job['user_id'])
+            document_id_str = str(document_id)
+            parsed_path = f"storage://{generate_parsed_path(user_id_str, document_id_str)}"
             logger.info(f"🔔 STORAGE STEP 2: Generated parsed_path: {parsed_path}")
             
             # Store parsed content in blob storage
-            logger.info(f"🔔 STORAGE STEP 3: Starting blob storage upload for document {document_id}")
+            logger.info(f"🔔 STORAGE STEP 3: Starting blob storage upload for document {document_id_str}")
             
             # Store the parsed content in blob storage using direct HTTP request
             logger.info(f"🔔 STORAGE STEP 4: Using httpx for HTTP client")
@@ -226,7 +234,7 @@ async def llamaparse_webhook(job_id: str, request: Request):
                 logger.info(f"🔔 STORAGE STEP 15: Storage upload success: {success}")
             
             if not success:
-                logger.error(f"🔔 STORAGE STEP 16: Failed to store parsed content for document {document_id}")
+                logger.error(f"🔔 STORAGE STEP 16: Failed to store parsed content for document {document_id_str}")
                 logger.info(f"🔔 STORAGE STEP 17: Updating job status to failed_parse")
                 async with db.get_connection() as conn:
                     await conn.execute("""
@@ -256,7 +264,7 @@ async def llamaparse_webhook(job_id: str, request: Request):
                     UPDATE upload_pipeline.documents
                     SET processing_status = 'parsed', parsed_path = $1, parsed_sha256 = $2, updated_at = now()
                     WHERE document_id = $3
-                """, parsed_path, parsed_sha256, document_id)
+                """, parsed_path, parsed_sha256, document_id_str)
                 logger.info(f"🔔 DATABASE STEP 6: Document record updated successfully")
                 
                 # Update job status to parsed and ready for next stage
@@ -269,7 +277,7 @@ async def llamaparse_webhook(job_id: str, request: Request):
                 logger.info(f"🔔 DATABASE STEP 8: Job status updated to parsed successfully")
             
             logger.info(
-                f"🔔 COMPLETION: Document parsing completed and stored for job {job_id}, document {document_id}, path {parsed_path}, size {len(parsed_content)}"
+                f"🔔 COMPLETION: Document parsing completed and stored for job {job_id}, document {document_id_str}, path {parsed_path}, size {len(parsed_content)}"
             )
             
         elif payload.get("status") == "failed":
@@ -289,7 +297,7 @@ async def llamaparse_webhook(job_id: str, request: Request):
             logger.info(f"🔔 ERROR STEP 4: Job status updated to failed_parse")
             
             logger.error(
-                f"🔔 ERROR STEP 5: Document parsing failed for job {job_id}, document {document_id}: {error_message}"
+                f"🔔 ERROR STEP 5: Document parsing failed for job {job_id}, document {document_id_str}: {error_message}"
             )
         else:
             logger.info(f"🔔 UNKNOWN STEP 1: Unknown webhook status: {webhook_status}")
@@ -297,6 +305,9 @@ async def llamaparse_webhook(job_id: str, request: Request):
         logger.info(f"🔔 SUCCESS: Webhook processing completed successfully")
         return {"status": "success", "message": "Webhook processed"}
         
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 404 for job not found) without modification
+        raise
     except Exception as e:
         logger.error(
             f"🔔 EXCEPTION: Webhook processing failed for job {job_id}: {str(e)}",

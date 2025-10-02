@@ -299,8 +299,8 @@ class SupabaseAuthService:
             logger.error(f"Error deleting user: {str(e)}")
             return False
     
-    def validate_token(self, token: str) -> Optional[Dict[str, Any]]:
-        """Validate a JWT token using Supabase.
+    async def validate_token(self, token: str) -> Optional[Dict[str, Any]]:
+        """Validate a JWT token using Supabase's built-in validation.
         
         Args:
             token: JWT access token
@@ -309,48 +309,39 @@ class SupabaseAuthService:
             Dict containing user data, or None if token is invalid
         """
         try:
-            logger.info("Validating token with Supabase")
+            logger.info("Validating token with Supabase built-in validation")
             
-            # For Supabase JWT validation, we need to decode and verify the token
-            # This is a simplified implementation - in production, you'd want to
-            # verify the JWT signature using Supabase's public key
-            import jwt
-            import json
-            from datetime import datetime
+            # Get the regular Supabase client
+            client = await self._get_client()
             
-            # Decode the JWT token without verification for now
-            # In production, you should verify the signature
-            payload = jwt.decode(token, options={"verify_signature": False})
+            # Set the session with the token to validate it
+            client.auth.set_session(token, token)
             
-            # Check if token is expired
-            exp = payload.get("exp")
-            if exp and datetime.now().timestamp() > exp:
-                logger.warning("Token has expired")
+            # Get user from the session - this validates the token
+            auth_response = client.auth.get_user()
+            
+            if not auth_response or not auth_response.user:
+                logger.warning("Invalid token - Supabase validation failed")
                 return None
             
-            # Extract user data
-            user_id = payload.get("sub")
-            email = payload.get("email")
+            # Extract user data from Supabase response
+            user_metadata = auth_response.user.user_metadata or {}
             
-            if not user_id or not email:
-                logger.warning("Invalid token payload")
-                return None
+            logger.info(f"✅ Token validated successfully for user: {auth_response.user.email}")
             
             return {
-                "id": user_id,
-                "email": email,
-                "exp": exp,
-                "iat": payload.get("iat")
+                "id": auth_response.user.id,
+                "email": auth_response.user.email,
+                "name": user_metadata.get("name", auth_response.user.email.split("@")[0]),
+                "email_confirmed": auth_response.user.email_confirmed_at is not None,
+                "created_at": auth_response.user.created_at,
+                "updated_at": auth_response.user.updated_at,
+                "last_sign_in_at": auth_response.user.last_sign_in_at,
+                "user_metadata": user_metadata
             }
             
-        except jwt.ExpiredSignatureError:
-            logger.warning("Token has expired")
-            return None
-        except jwt.InvalidTokenError as e:
-            logger.warning(f"Invalid token: {e}")
-            return None
         except Exception as e:
-            logger.error(f"Token validation error: {e}")
+            logger.error(f"Supabase token validation error: {e}")
             return None
 
 # Global instance

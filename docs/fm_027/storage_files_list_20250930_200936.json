@@ -1,0 +1,23 @@
+{
+  "bucket": "files",
+  "timestamp": "2025-09-30T20:09:36.469243",
+  "file_count": 2,
+  "files": [
+    {
+      "name": "examples",
+      "id": null,
+      "updated_at": null,
+      "created_at": null,
+      "last_accessed_at": null,
+      "metadata": null
+    },
+    {
+      "name": "user",
+      "id": null,
+      "updated_at": null,
+      "created_at": null,
+      "last_accessed_at": null,
+      "metadata": null
+    }
+  ]
+}

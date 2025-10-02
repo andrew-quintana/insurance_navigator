@@ -1,0 +1,19 @@
+{
+  "experiment": "E2: File Upload Process Analysis",
+  "hypothesis": "H2: Upload process uses different path generation than job creation",
+  "status": "REFUTED",
+  "results": {
+    "path_generation_function": "generate_storage_path()",
+    "usage_locations": [
+      "api/upload_pipeline/endpoints/upload.py (upload process)",
+      "api/upload_pipeline/utils/document_duplication.py (job creation)"
+    ],
+    "non_deterministic_behavior": {
+      "call_1": "files/user/74a635ac-4bfe-4b6e-87d2-c0f54a366fbe/raw/6a9914c4_5e4390c2.pdf",
+      "call_2": "files/user/74a635ac-4bfe-4b6e-87d2-c0f54a366fbe/raw/eafef813_5e4390c2.pdf",
+      "call_3": "files/user/74a635ac-4bfe-4b6e-87d2-c0f54a366fbe/raw/a43173f8_5e4390c2.pdf"
+    },
+    "conclusion": "Both upload process and job creation use the same generate_storage_path() function, which is non-deterministic due to timestamp-based hashing"
+  },
+  "verdict": "REFUTED"
+}

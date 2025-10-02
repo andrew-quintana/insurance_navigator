@@ -540,7 +540,7 @@ async def get_current_user(request: Request) -> Dict[str, Any]:
     
     try:
         # Use auth adapter for token validation
-        user_data = auth_adapter.validate_token(access_token)
+        user_data = await auth_adapter.validate_token(access_token)
         if not user_data:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -1420,7 +1420,7 @@ async def get_auth_user(request: Request):
         token = authorization.split(" ")[1]
         
         # Use auth adapter for token validation
-        user_data = auth_adapter.validate_token(token)
+        user_data = await auth_adapter.validate_token(token)
         
         if not user_data:
             raise HTTPException(

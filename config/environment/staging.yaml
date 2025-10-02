@@ -45,7 +45,11 @@ external_services:
     timeout: 120
     max_retries: 3
     retry_delay: 5
-  
+
+# Webhook Configuration
+webhook:
+  base_url: ${STAGING_WEBHOOK_BASE_URL:-https://insurance-navigator-staging-api.onrender.com}
+
   openai:
     api_url: ${OPENAI_API_URL}
     api_key: ${OPENAI_API_KEY}

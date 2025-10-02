@@ -31,7 +31,7 @@ async def get_job_status(
     This endpoint:
     1. Validates the job ID
     2. Checks user authorization for the job
-    3. Returns current stage, state, and progress information
+    3. Returns current status, state, and progress information
     4. Includes error details if the job has failed
     
     Args:
@@ -70,13 +70,13 @@ async def get_job_status(
             "Job status retrieved",
             user_id=current_user.user_id,
             job_id=job_id,
-            stage=job_info["status"],
+            status=job_info["status"],
             state=job_info["state"]
         )
         
         return JobStatusResponse(
             job_id=job_id,
-            stage=job_info["status"],
+            status=job_info["status"],
             state=job_info["state"],
             retry_count=job_info["retry_count"],
             progress=progress,
@@ -165,7 +165,7 @@ async def list_user_jobs(
         for row in results:
             jobs.append({
                 "job_id": str(row["job_id"]),
-                "stage": row["status"],
+                "status": row["status"],
                 "state": row["state"],
                 "retry_count": row["retry_count"],
                 "document_id": str(row["document_id"]),
@@ -234,34 +234,37 @@ async def _get_job_with_authorization(job_id: str, user_id: str, db) -> Optional
     return dict(result) if result else None
 
 
-def _calculate_job_progress(stage: str) -> Dict[str, float]:
+def _calculate_job_progress(status: str) -> Dict[str, float]:
     """
-    Calculate progress percentages based on current stage.
+    Calculate progress percentages based on current status.
     
-    Updated stage progression:
-    queued → job_validated → parsing → parsed → parse_validated → 
-    chunking → chunks_buffered → chunked → embedding → 
-    embeddings_buffered → embedded
+    Updated status progression:
+    uploaded → parse_queued → parsed → parse_validated → 
+    chunking → chunks_stored → embedding_queued → 
+    embedding_in_progress → embeddings_stored → complete
     """
-    stage_weights = {
-        "queued": 0,
-        "job_validated": 10,
-        "parsing": 20,
+    status_weights = {
+        "uploaded": 10,
+        "parse_queued": 20,
         "parsed": 30,
         "parse_validated": 35,
         "chunking": 45,
-        "chunks_buffered": 50,
-        "chunked": 55,
-        "embedding": 70,
-        "embeddings_buffered": 75,
-        "embedded": 100
+        "chunks_stored": 50,
+        "embedding_queued": 60,
+        "embedding_in_progress": 70,
+        "embeddings_stored": 80,
+        "complete": 100,
+        "failed_parse": -1,
+        "failed_chunking": -1,
+        "failed_embedding": -1,
+        "duplicate": -1
     }
     
-    stage_pct = stage_weights.get(stage, 0)
-    total_pct = stage_pct  # For now, total progress equals stage progress
+    status_pct = status_weights.get(status, 0)
+    total_pct = status_pct  # For now, total progress equals status progress
     
     return {
-        "stage_pct": stage_pct,
+        "status_pct": status_pct,
         "total_pct": total_pct
     }
 
