@@ -140,22 +140,34 @@ create index if not exists idx_events_doc_ts
 -- STORAGE BUCKETS (private buckets)
 -- -------------------------------
 -- Raw documents bucket
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'raw') THEN
-        INSERT INTO storage.buckets (id, name)
-        VALUES ('raw', 'raw');
-    END IF;
-END $$;
+insert into storage.buckets (
+    id,
+    name,
+    public,
+    file_size_limit,
+    allowed_mime_types
+) values (
+    'raw',
+    'raw',
+    false,
+    26214400, -- 25MB limit per CONTEXT.md
+    ARRAY['application/pdf']
+) on conflict (id) do nothing;
 
 -- Parsed documents bucket
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'parsed') THEN
-        INSERT INTO storage.buckets (id, name)
-        VALUES ('parsed', 'parsed');
-    END IF;
-END $$;
+insert into storage.buckets (
+    id,
+    name,
+    public,
+    file_size_limit,
+    allowed_mime_types
+) values (
+    'parsed',
+    'parsed',
+    false,
+    10485760, -- 10MB limit for parsed markdown
+    ARRAY['text/markdown', 'text/plain']
+) on conflict (id) do nothing;
 
 -- -------------------------------
 -- GRANT permissions

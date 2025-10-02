@@ -45,9 +45,36 @@ BEGIN
             ]
         ) ON CONFLICT (id) DO NOTHING;
     ELSE
-        -- If public column doesn't exist, use the basic compatible insert
-        INSERT INTO storage.buckets (id, name)
-        VALUES ('files', 'files')
-        ON CONFLICT (id) DO NOTHING;
+        -- If public column doesn't exist, use the compatible insert
+        INSERT INTO storage.buckets (
+            id,
+            name,
+            file_size_limit,
+            allowed_mime_types
+        )
+        VALUES (
+            'files',
+            'files',
+            52428800,
+            ARRAY[
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'text/plain',
+                'text/csv',
+                'text/markdown',
+                'application/json',
+                'application/xml',
+                'text/xml',
+                'image/jpeg',
+                'image/png',
+                'image/gif',
+                'image/webp',
+                'application/x-www-form-urlencoded',
+                'multipart/form-data'
+            ]
+        ) ON CONFLICT (id) DO NOTHING;
     END IF;
 END $$;
