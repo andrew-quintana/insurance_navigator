@@ -29,23 +29,23 @@ services:
     envVars:
       # Production Supabase Configuration (from Phase 1)
       - key: SUPABASE_URL
-        value: https://znvwzkdblknkkztqyfnu.supabase.co
+        sync: false
       - key: SUPABASE_ANON_KEY
-        value: ${SUPABASE_JWT_TOKEN}
+        sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
-        value: ${SUPABASE_JWT_TOKEN}
+        sync: false
       
       # Database Configuration - Use pooler for better cloud connectivity
       - key: DATABASE_URL
-        value: ${DATABASE_URL}//postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres?sslmode=require
+        sync: false
       
       # Upload Pipeline Configuration
       - key: UPLOAD_PIPELINE_SUPABASE_URL
-        value: https://znvwzkdblknkkztqyfnu.supabase.co
+        sync: false
       - key: UPLOAD_PIPELINE_SUPABASE_ANON_KEY
-        value: ${SUPABASE_JWT_TOKEN}
+        sync: false
       - key: UPLOAD_PIPELINE_SUPABASE_SERVICE_ROLE_KEY
-        value: ${SUPABASE_JWT_TOKEN}
+        sync: false
       
       # External API Configuration
       - key: OPENAI_API_KEY
@@ -61,7 +61,7 @@ services:
       - key: UPLOAD_PIPELINE_STORAGE_ENVIRONMENT
         value: workflow_testing
       - key: UPLOAD_PIPELINE_STORAGE_URL
-        value: https://znvwzkdblknkkztqyfnu.supabase.co
+        sync: false
       - key: SERVICE_MODE
         value: HYBRID
       - key: SECURITY_BYPASS_ENABLED
@@ -159,15 +159,15 @@ services:
     envVars:
       # Production Supabase Configuration (from Phase 1)
       - key: SUPABASE_URL
-        value: https://znvwzkdblknkkztqyfnu.supabase.co
+        sync: false
       - key: SUPABASE_ANON_KEY
-        value: ${SUPABASE_JWT_TOKEN}
+        sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
-        value: ${SUPABASE_JWT_TOKEN}
+        sync: false
       
       # Database Configuration - Use pooler for better cloud connectivity
       - key: DATABASE_URL
-        value: ${DATABASE_URL}//postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres?sslmode=require
+        sync: false
       
       # External API Configuration
       - key: OPENAI_API_KEY
@@ -183,7 +183,7 @@ services:
       - key: UPLOAD_PIPELINE_STORAGE_ENVIRONMENT
         value: workflow_testing
       - key: UPLOAD_PIPELINE_STORAGE_URL
-        value: https://znvwzkdblknkkztqyfnu.supabase.co
+        sync: false
       - key: SERVICE_MODE
         value: HYBRID
       - key: SECURITY_BYPASS_ENABLED
