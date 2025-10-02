@@ -287,27 +287,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-teal-800 text-white py-12 px-4">
-        <div className="container mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-            <div className="text-xl font-semibold mb-4 md:mb-0">
-              <span className="text-terracotta-300">Insurance Navigator</span>
-            </div>
-            <div className="flex space-x-6">
-              <Link href="/terms" target="_blank" className="text-cream-200 hover:text-white transition-colors">
-                Terms
-              </Link>
-              <Link href="/privacy" target="_blank" className="text-cream-200 hover:text-white transition-colors">
-                Privacy
-              </Link>
-            </div>
-          </div>
-          <div className="text-center text-teal-200 text-sm">
-            Insurance Navigator is a platform built to support better healthcare navigation.
-          </div>
-        </div>
-      </footer>
     </div>
   )
 }

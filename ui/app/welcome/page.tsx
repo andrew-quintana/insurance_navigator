@@ -27,7 +27,7 @@ export default function WelcomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-cream-50">
+    <div className="flex-1 bg-cream-50">
       {/* Header */}
       <header className="bg-white shadow-sm p-4">
         <div className="container mx-auto flex items-center">

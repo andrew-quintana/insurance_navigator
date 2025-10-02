@@ -54,7 +54,7 @@ export default function ForgotPasswordPage() {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-cream-50 flex flex-col">
+      <div className="flex-1 bg-cream-50 flex flex-col">
         {/* Header */}
         <header className="bg-white shadow-sm p-4">
           <div className="container mx-auto flex items-center">
@@ -109,7 +109,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-cream-50 flex flex-col">
+    <div className="flex-1 bg-cream-50 flex flex-col">
       {/* Header */}
       <header className="bg-white shadow-sm p-4">
         <div className="container mx-auto flex items-center">

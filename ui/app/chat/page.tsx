@@ -279,7 +279,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="min-h-screen bg-cream-50 flex flex-col">
+    <div className="flex-1 bg-cream-50 flex flex-col">
       {/* Upload Modal */}
       <DocumentUploadModal
         isOpen={isUploadModalOpen}
