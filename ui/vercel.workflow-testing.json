@@ -9,10 +9,14 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://insurance-navigator-api.onrender.com/api/$1"
+      "destination": "$NEXT_PUBLIC_API_BASE_URL/api/$1"
     },
     {
-      "source": "/((?!api|_next|_static|favicon.ico).*)",
+      "source": "/auth/(.*)",
+      "destination": "$NEXT_PUBLIC_API_BASE_URL/auth/$1"
+    },
+    {
+      "source": "/((?!api|auth|_next|_static|favicon.ico).*)",
       "destination": "/$1"
     }
   ],
@@ -20,15 +24,6 @@
     "NEXT_PUBLIC_APP_ENV": "workflow_testing",
     "NEXT_PUBLIC_ENVIRONMENT": "workflow_testing",
     "NODE_ENV": "test"
-  },
-  "build": {
-    "env": {
-      "NEXT_PUBLIC_SUPABASE_URL": "https://znvwzkdblknkkztqyfnu.supabase.co",
-      "NEXT_PUBLIC_SUPABASE_ANON_KEY": "${SUPABASE_JWT_TOKEN}",
-      "NEXT_PUBLIC_API_URL": "https://insurance-navigator-api.onrender.com",
-      "NEXT_PUBLIC_API_BASE_URL": "https://insurance-navigator-api.onrender.com",
-      "FRONTEND_HEALTH_CHECK_ENABLED": "true"
-    }
   },
   "headers": [
     {
@@ -58,6 +53,27 @@
     },
     {
       "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://insurance-navigator-frontend-workflow-testing.vercel.app"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization, X-Requested-With"
+        },
+        {
+          "key": "Access-Control-Allow-Credentials",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "source": "/auth/(.*)",
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",

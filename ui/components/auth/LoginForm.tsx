@@ -41,17 +41,32 @@ export default function LoginForm({ onSuccess, redirectTo = '/chat' }: LoginForm
     setError('')
 
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password
+      // Use backend API instead of direct Supabase calls
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+      const response = await fetch(`${apiBaseUrl}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        })
       })
 
-      if (authError) {
-        setError(authError.message)
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.detail || 'Login failed')
         return
       }
 
-      if (data.user && data.session) {
+      if (data.user) {
+        // Store the access token for future API calls
+        if (data.access_token) {
+          localStorage.setItem('token', data.access_token)
+        }
+        
         // Successfully logged in
         if (onSuccess) {
           onSuccess()
