@@ -47,7 +47,7 @@ class JobStatusResponse(BaseModel):
     """Response model for job status."""
     
     job_id: uuid.UUID = Field(..., description="Unique job identifier")
-    stage: str = Field(..., description="Current processing stage")
+    status: str = Field(..., description="Current processing status")
     state: str = Field(..., description="Current job state")
     retry_count: int = Field(..., ge=0, description="Number of retry attempts")
     progress: Dict[str, float] = Field(..., description="Processing progress")
@@ -56,12 +56,12 @@ class JobStatusResponse(BaseModel):
     last_error: Optional[Dict[str, Any]] = Field(None, description="Last error details")
     updated_at: datetime = Field(..., description="Last update timestamp")
     
-    @field_validator('stage')
+    @field_validator('status')
     @classmethod
-    def validate_stage(cls, v):
-        valid_stages = {'queued', 'job_validated', 'parsing', 'parsed', 'parse_validated', 'chunking', 'chunks_buffered', 'chunked', 'embedding', 'embeddings_buffered', 'embedded'}
-        if v not in valid_stages:
-            raise ValueError(f'Invalid stage: {v}')
+    def validate_status(cls, v):
+        valid_statuses = {'uploaded', 'parse_queued', 'parsed', 'parse_validated', 'chunking', 'chunks_stored', 'embedding_queued', 'embedding_in_progress', 'embeddings_stored', 'complete', 'failed_parse', 'failed_chunking', 'failed_embedding', 'duplicate'}
+        if v not in valid_statuses:
+            raise ValueError(f'Invalid status: {v}')
         return v
     
     @field_validator('state')
@@ -74,7 +74,7 @@ class JobStatusResponse(BaseModel):
 
 
 class JobPayloadJobValidated(BaseModel):
-    """Job payload for job_validated stage."""
+    """Job payload for job_validated status."""
     
     user_id: uuid.UUID = Field(..., description="User ID")
     document_id: uuid.UUID = Field(..., description="Document ID")
@@ -85,7 +85,7 @@ class JobPayloadJobValidated(BaseModel):
 
 
 class JobPayloadParsing(BaseModel):
-    """Job payload for parsing stage."""
+    """Job payload for parsing status."""
     
     parser_name: str = Field(..., description="Parser name")
     parser_version: str = Field(..., description="Parser version")
@@ -95,7 +95,7 @@ class JobPayloadParsing(BaseModel):
 
 
 class JobPayloadChunking(BaseModel):
-    """Job payload for chunking stage."""
+    """Job payload for chunking status."""
     
     chunker_name: str = Field(..., description="Chunker name")
     chunker_version: str = Field(..., description="Chunker version")
@@ -103,7 +103,7 @@ class JobPayloadChunking(BaseModel):
 
 
 class JobPayloadEmbedding(BaseModel):
-    """Job payload for embedding stage."""
+    """Job payload for embedding status."""
     
     embed_model: str = Field(..., description="Embedding model name")
     embed_version: str = Field(..., description="Embedding model version")
@@ -112,7 +112,7 @@ class JobPayloadEmbedding(BaseModel):
 
 
 class JobPayload(BaseModel):
-    """Union type for job payloads by stage."""
+    """Union type for job payloads by status."""
     
     job_validated: Optional[JobPayloadJobValidated] = None
     parsing: Optional[JobPayloadParsing] = None

@@ -28,6 +28,7 @@ class StorageManager:
                 raise ValueError("SUPABASE_SERVICE_ROLE_KEY environment variable must be set")
             logger.info("Service role key loaded from environment variables")
         
+        
         # HTTP client configuration
         self.client = httpx.AsyncClient(
             timeout=httpx.Timeout(self.timeout),
@@ -43,8 +44,9 @@ class StorageManager:
         """Close the HTTP client"""
         await self.client.aclose()
     
+    
     async def read_blob(self, path: str) -> Optional[str]:
-        """Read blob content from storage"""
+        """Read blob content from storage as text"""
         try:
             # Extract bucket and key from path
             bucket, key = self._parse_storage_path(path)
@@ -64,6 +66,31 @@ class StorageManager:
             
         except Exception as e:
             logger.error(f"Failed to read blob: {path}, error: {str(e)}")
+            return None
+    
+    async def read_blob_bytes(self, path: str) -> Optional[bytes]:
+        """Read blob content from storage as bytes"""
+        try:
+            # Extract bucket and key from path
+            bucket, key = self._parse_storage_path(path)
+            storage_endpoint = f"{self.base_url}/storage/v1/object/{bucket}/{key}"
+            
+            # Use direct file access with service role key
+            response = await self.client.get(storage_endpoint)
+            
+            if response.status_code == 200:
+                return response.content
+            else:
+                logger.error(f"Storage API error: {response.status_code} - {response.text[:200]}")
+                return None
+            
+        except Exception as e:
+            logger.error(
+                "StorageManager read_blob_bytes failed",
+                path=path,
+                error=str(e),
+                error_type=type(e).__name__
+            )
             return None
     
     async def write_blob(self, path: str, content: str, content_type: str = "text/plain") -> bool:
@@ -112,21 +139,31 @@ class StorageManager:
             return False
     
     async def blob_exists(self, path: str) -> bool:
-        """Check if blob exists in storage"""
+        """Check if blob exists in storage using direct file access"""
         try:
             # Extract bucket and key from path
             bucket, key = self._parse_storage_path(path)
-            
-            # Use direct access with service role key (same pattern as webhook)
-            # This avoids the signed URL generation issues in production
             storage_endpoint = f"{self.base_url}/storage/v1/object/{bucket}/{key}"
             
-            # Check if exists using direct HTTP request
+            # Use direct file access with service role key
             response = await self.client.head(storage_endpoint)
-            return response.status_code == 200
+            
+            # Check if file exists (200 = exists, 404 = doesn't exist, 400 = error)
+            if response.status_code == 200:
+                return True
+            elif response.status_code == 404:
+                return False
+            else:
+                logger.error(f"Storage API error: {response.status_code} - {response.text[:200]}")
+                return False
             
         except Exception as e:
-            logger.error(f"Failed to check blob existence", path=path, error=str(e))
+            logger.error(
+                "StorageManager blob_exists failed",
+                path=path,
+                error=str(e),
+                error_type=type(e).__name__
+            )
             return False
     
     async def get_blob_metadata(self, path: str) -> Optional[Dict[str, Any]]:

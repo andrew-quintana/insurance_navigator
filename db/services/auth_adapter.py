@@ -53,9 +53,9 @@ class SupabaseAuthBackend(AuthBackend):
         """Authenticate user using Supabase auth directly."""
         return await self.auth_service.authenticate_user(email, password)
     
-    def validate_token(self, token: str) -> Optional[Dict[str, Any]]:
+    async def validate_token(self, token: str) -> Optional[Dict[str, Any]]:
         """Validate token using Supabase auth."""
-        return self.auth_service.validate_token(token)
+        return await self.auth_service.validate_token(token)
     
     async def get_user_info(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Get user info from auth.users directly."""
@@ -78,9 +78,9 @@ class AuthAdapter:
         """Authenticate a user using Supabase authentication."""
         return await self.backend.authenticate_user(email, password)
     
-    def validate_token(self, token: str) -> Optional[Dict[str, Any]]:
+    async def validate_token(self, token: str) -> Optional[Dict[str, Any]]:
         """Validate a JWT token using Supabase authentication."""
-        return self.backend.validate_token(token)
+        return await self.backend.validate_token(token)
     
     async def get_user_info(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Get user information using Supabase authentication."""

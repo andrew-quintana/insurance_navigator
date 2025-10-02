@@ -1,0 +1,128 @@
+# Staging Environment Configuration
+# Proper staging deployment with correct naming convention
+
+services:
+  # API Service - Staging Environment
+  - type: web
+    name: insurance-navigator-staging-api
+    env: docker
+    plan: starter
+    dockerfilePath: ./api/upload_pipeline/Dockerfile
+    dockerContext: .
+    region: oregon
+    branch: staging
+    port: 8000
+    healthCheckPath: /health
+    healthCheckTimeout: 180
+    numReplicas: 1
+    autoscaling:
+      enabled: true
+      minInstances: 1
+      maxInstances: 3
+      targetCPUPercent: 70
+    envVars:
+      # Staging Supabase Configuration
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: LLAMAPARSE_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ASYNCPG_DISABLE_PREPARED_STATEMENTS
+        value: "1"
+      - key: ENVIRONMENT
+        value: staging
+      - key: LOG_LEVEL
+        value: INFO
+      - key: SECURITY_BYPASS_ENABLED
+        value: false
+      - key: API_BASE_URL
+        value: ***REMOVED***
+      - key: CORS_ORIGINS
+        value: https://staging.accessa.ai,https://staging-app.accessa.ai
+      - key: TRUSTED_HOSTS
+        value: staging.accessa.ai,staging-app.accessa.ai,*.render.com
+      # Render startup optimizations
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
+      - key: UVICORN_WORKERS
+        value: "1"
+      - key: STARTUP_TIMEOUT
+        value: "180"
+      - key: KEEP_ALIVE
+        value: "75"
+      - key: MAX_REQUESTS
+        value: "1000"
+      - key: MAX_REQUESTS_JITTER
+        value: "100"
+
+  # Worker Service - Staging Environment
+  - type: worker
+    name: insurance-navigator-staging-worker
+    env: docker
+    plan: starter
+    dockerfilePath: ./backend/workers/Dockerfile
+    dockerContext: .
+    region: oregon
+    branch: staging
+    numReplicas: 1
+    autoscaling:
+      enabled: true
+      minInstances: 1
+      maxInstances: 2
+      targetCPUPercent: 80
+    envVars:
+      # Staging Supabase Configuration
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: LLAMAPARSE_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ASYNCPG_DISABLE_PREPARED_STATEMENTS
+        value: "1"
+      - key: ENVIRONMENT
+        value: staging
+      - key: LOG_LEVEL
+        value: INFO
+      - key: SECURITY_BYPASS_ENABLED
+        value: false
+      - key: API_BASE_URL
+        value: ***REMOVED***
+      - key: WEBHOOK_BASE_URL
+        value: ***REMOVED***
+      # Worker optimizations
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
+      - key: WORKER_POLL_INTERVAL
+        value: "5"
+      - key: WORKER_MAX_JOBS
+        value: "10"
+      - key: WORKER_MAX_RETRIES
+        value: "3"
+      - key: SERVICE_MODE
+        value: "real"
+      - key: LLAMAPARSE_API_URL
+        value: "https://api.cloud.llamaindex.ai"
+      - key: OPENAI_API_URL
+        value: "https://api.openai.com"
