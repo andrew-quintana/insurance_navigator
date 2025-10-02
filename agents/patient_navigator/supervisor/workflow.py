@@ -56,7 +56,10 @@ class SupervisorWorkflow:
         # Initialize workflow execution components if available
         if WORKFLOW_COMPONENTS_AVAILABLE and not use_mock:
             self.information_retrieval_agent = InformationRetrievalAgent(use_mock=use_mock)
-            self.strategy_orchestrator = StrategyWorkflowOrchestrator(use_mock=use_mock)
+            # Import WorkflowConfig for StrategyWorkflowOrchestrator
+            from agents.patient_navigator.strategy.types import WorkflowConfig
+            strategy_config = WorkflowConfig(use_mock=use_mock)
+            self.strategy_orchestrator = StrategyWorkflowOrchestrator(strategy_config)
         else:
             self.information_retrieval_agent = None
             self.strategy_orchestrator = None
