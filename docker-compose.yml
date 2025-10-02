@@ -8,10 +8,10 @@ services:
       - "8000:8000"
     environment:
       - ENVIRONMENT=${ENVIRONMENT}
-      - DATABASE_URL=postgresql://postgres:postgres@supabase_db_insurance_navigator:5432/postgres
-      - SUPABASE_URL=http://supabase_kong_insurance_navigator:8000
-      - SUPABASE_ANON_KEY=${SUPABASE_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
+      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:54322/postgres
+      - SUPABASE_URL=http://host.docker.internal:54321
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - JWT_SECRET=${JWT_SECRET}
       - DOCUMENT_ENCRYPTION_KEY=${DOCUMENT_ENCRYPTION_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -36,10 +36,10 @@ services:
       dockerfile: backend/workers/Dockerfile
     environment:
       - ENVIRONMENT=${ENVIRONMENT}
-      - DATABASE_URL=postgresql://postgres:postgres@supabase_db_insurance_navigator:5432/postgres
-      - SUPABASE_URL=http://supabase_kong_insurance_navigator:8000
-      - SUPABASE_ANON_KEY=${SUPABASE_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
+      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:54322/postgres
+      - SUPABASE_URL=http://host.docker.internal:54321
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - JWT_SECRET=${JWT_SECRET}
       - DOCUMENT_ENCRYPTION_KEY=${DOCUMENT_ENCRYPTION_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}

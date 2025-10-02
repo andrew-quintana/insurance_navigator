@@ -91,9 +91,16 @@ docs/incidents/
 ### **FM-028: Intermittent Webhook Failures in Staging** (`fm_028/`)
 - **Category**: Webhook Processing
 - **Priority**: P1 - High
+- **Status**: Resolved
+- **Environment**: Staging
+- **Issue**: Intermittent webhook processing failures causing document processing pipeline interruptions (RESOLVED)
+
+### **FM-029: Chat Endpoint and Agentic Workflow/RAG Issues** (`fm_029/`)
+- **Category**: RAG System / Agentic Workflow
+- **Priority**: P1 - High
 - **Status**: Open
 - **Environment**: Staging
-- **Issue**: Intermittent webhook processing failures causing document processing pipeline interruptions
+- **Issue**: RAG system returning 0 chunks, InformationRetrievalAgent unavailable, users receiving generic responses
 
 ## 🔍 **Investigation Prompts**
 
@@ -145,6 +152,12 @@ Each FRACAS failure mode has a corresponding investigation prompt in `fm_XXX/pro
 - **File**: `fm_028/prompts/FRACAS_FM_028_INVESTIGATION_PROMPT.md`
 - **Category**: Webhook Processing
 - **Priority**: P1 - High
+- **Status**: Resolved
+
+### **FM-029: Chat Endpoint and Agentic Workflow/RAG Issues**
+- **File**: `fm_029/prompts/FRACAS_FM_029_INVESTIGATION_PROMPT.md`
+- **Category**: RAG System / Agentic Workflow
+- **Priority**: P1 - High
 - **Status**: Ready for Assignment
 
 ## 📋 **How to Use Investigation Prompts**
@@ -181,7 +194,8 @@ Each investigation prompt follows this structure:
 | FM-013 | Configuration | P1 | Open | ✅ Ready |
 | FM-014 | Authentication | P2 | Resolved | ✅ Ready |
 | FM-015 | Database Constraint Violation | P2 | Active Investigation | ✅ Ready |
-| FM-028 | Webhook Processing | P1 | Open | ✅ Ready |
+| FM-028 | Webhook Processing | P1 | Resolved | ✅ Ready |
+| FM-029 | RAG System / Agentic Workflow | P1 | Open | ✅ Ready |
 
 ## 🚀 **Next Steps**
 
