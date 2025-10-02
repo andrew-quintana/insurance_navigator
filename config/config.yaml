@@ -140,6 +140,10 @@ security:
   - ignore previous instructions
   - disregard all instructions
   - system prompt
+upload_pipeline:
+  duplicate_chunk_check:
+    enabled: false
+    description: "Toggle for duplicate chunk checking during document processing"
 authentication:
   jwt:
     algorithm: HS256

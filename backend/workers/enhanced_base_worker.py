@@ -38,6 +38,7 @@ from backend.shared.external.error_handler import (
     create_error_context
 )
 from backend.shared.external.enhanced_service_client import EnhancedServiceClient
+from config.configuration_manager import get_config_manager
 
 logger = logging.getLogger(__name__)
 
@@ -1044,23 +1045,61 @@ class EnhancedBaseWorker:
             # Store chunks in database
             import hashlib
             async with self.db.get_connection() as conn:
-                # Check if chunks already exist for this document
-                existing_chunks = await conn.fetchval("""
-                    SELECT COUNT(*) FROM upload_pipeline.document_chunks 
-                    WHERE document_id = $1 AND chunker_name = $2
-                """, document_id, chunks[0]["chunker_name"] if chunks else "markdown-simple")
+                # Get configuration for duplicate chunk check
+                config_manager = get_config_manager()
+                duplicate_check_enabled = config_manager.get_duplicate_chunk_check_enabled()
                 
-                if existing_chunks > 0:
+                if duplicate_check_enabled:
+                    # Check if chunks already exist for this document
+                    existing_chunks = await conn.fetchval("""
+                        SELECT COUNT(*) FROM upload_pipeline.document_chunks 
+                        WHERE document_id = $1 AND chunker_name = $2
+                    """, document_id, chunks[0]["chunker_name"] if chunks else "markdown-simple")
+                    
+                    if existing_chunks > 0:
+                        self.logger.info(
+                            f"Chunks already exist for document {document_id}, skipping chunking and continuing pipeline",
+                            correlation_id=correlation_id,
+                            job_id=str(job_id),
+                            document_id=str(document_id),
+                            existing_chunks=existing_chunks
+                        )
+                        # Chunks already exist, continue to next stage without error
+                    else:
+                        # Insert chunks only if they don't exist
+                        for i, chunk in enumerate(chunks):
+                            chunk_id = str(uuid.uuid4())
+                            chunk_sha = hashlib.sha256(chunk["text"].encode('utf-8')).hexdigest()
+                            try:
+                                await conn.execute("""
+                                    INSERT INTO upload_pipeline.document_chunks 
+                                    (chunk_id, document_id, chunker_name, chunker_version, chunk_ord, text, chunk_sha, 
+                                     embed_model, embed_version, vector_dim, embedding, created_at, updated_at)
+                                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), now())
+                                """, chunk_id, document_id, chunk["chunker_name"], chunk["chunker_version"], 
+                                    i, chunk["text"], chunk_sha, "text-embedding-3-small", "1", 1536, 
+                                    "[" + ",".join(["0.0"] * 1536) + "]")  # Placeholder embedding vector as string
+                            except Exception as e:
+                                if "duplicate key value violates unique constraint" in str(e):
+                                    self.logger.info(
+                                        f"Chunk {i} already exists for document {document_id}, skipping",
+                                        correlation_id=correlation_id,
+                                        job_id=str(job_id),
+                                        document_id=str(document_id),
+                                        chunk_ord=i
+                                    )
+                                    continue  # Skip this chunk and continue with the next one
+                                else:
+                                    raise  # Re-raise if it's a different error
+                else:
+                    # Duplicate check disabled - insert chunks without checking
                     self.logger.info(
-                        f"Chunks already exist for document {document_id}, skipping chunking and continuing pipeline",
+                        f"Duplicate chunk check disabled - inserting chunks for document {document_id}",
                         correlation_id=correlation_id,
                         job_id=str(job_id),
-                        document_id=str(document_id),
-                        existing_chunks=existing_chunks
+                        document_id=str(document_id)
                     )
-                    # Chunks already exist, continue to next stage without error
-                else:
-                    # Insert chunks only if they don't exist
+                    
                     for i, chunk in enumerate(chunks):
                         chunk_id = str(uuid.uuid4())
                         chunk_sha = hashlib.sha256(chunk["text"].encode('utf-8')).hexdigest()
@@ -1074,15 +1113,18 @@ class EnhancedBaseWorker:
                                 i, chunk["text"], chunk_sha, "text-embedding-3-small", "1", 1536, 
                                 "[" + ",".join(["0.0"] * 1536) + "]")  # Placeholder embedding vector as string
                         except Exception as e:
+                            # When duplicate check is disabled, we still need to handle constraint violations
+                            # but we'll log them as warnings instead of skipping
                             if "duplicate key value violates unique constraint" in str(e):
-                                self.logger.info(
-                                    f"Chunk {i} already exists for document {document_id}, skipping",
+                                self.logger.warning(
+                                    f"Duplicate chunk constraint violation for document {document_id}, chunk {i} - this should not happen with duplicate check disabled",
                                     correlation_id=correlation_id,
                                     job_id=str(job_id),
                                     document_id=str(document_id),
                                     chunk_ord=i
                                 )
-                                continue  # Skip this chunk and continue with the next one
+                                # Still continue to avoid pipeline failure
+                                continue
                             else:
                                 raise  # Re-raise if it's a different error
                 

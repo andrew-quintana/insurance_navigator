@@ -48,6 +48,7 @@ class RAGConfig:
     token_budget: int = 4000
     embedding_model: str = "text-embedding-3-small"
     vector_dimension: int = 1536
+    enable_duplicate_chunk_check: bool = False
     
     def validate(self) -> bool:
         """Validate RAG configuration."""
@@ -235,7 +236,8 @@ class ConfigurationManager:
             max_chunks=int(os.getenv("RAG_MAX_CHUNKS", default_max_chunks)),
             token_budget=int(os.getenv("RAG_TOKEN_BUDGET", default_token_budget)),
             embedding_model=os.getenv("RAG_EMBEDDING_MODEL", "text-embedding-3-small"),
-            vector_dimension=int(os.getenv("RAG_VECTOR_DIMENSION", "1536"))
+            vector_dimension=int(os.getenv("RAG_VECTOR_DIMENSION", "1536")),
+            enable_duplicate_chunk_check=os.getenv("RAG_ENABLE_DUPLICATE_CHUNK_CHECK", "false").lower() == "true"
         )
     
     def _load_api_config(self) -> APIConfig:
@@ -393,6 +395,16 @@ class ConfigurationManager:
         self.set_config("rag.similarity_threshold", threshold)
         logger.info(f"RAG similarity threshold updated to {threshold}")
     
+    def get_duplicate_chunk_check_enabled(self) -> bool:
+        """Get whether duplicate chunk checking is enabled."""
+        return self.rag.enable_duplicate_chunk_check
+    
+    def set_duplicate_chunk_check_enabled(self, enabled: bool) -> None:
+        """Set whether duplicate chunk checking is enabled."""
+        self.rag.enable_duplicate_chunk_check = enabled
+        self.set_config("rag.enable_duplicate_chunk_check", enabled)
+        logger.info(f"Duplicate chunk check {'enabled' if enabled else 'disabled'}")
+    
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
         return {
@@ -410,7 +422,8 @@ class ConfigurationManager:
                 "max_chunks": self.rag.max_chunks,
                 "token_budget": self.rag.token_budget,
                 "embedding_model": self.rag.embedding_model,
-                "vector_dimension": self.rag.vector_dimension
+                "vector_dimension": self.rag.vector_dimension,
+                "enable_duplicate_chunk_check": self.rag.enable_duplicate_chunk_check
             },
             "api": {
                 "openai_configured": bool(self.api.openai_api_key),
