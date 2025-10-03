@@ -11,6 +11,7 @@ performance/
 media/
 venv/
 node_modules/
+!ui/node_modules/
 tests/
 docs/
 logs/
@@ -59,7 +60,6 @@ supabase/
 !ui/components/
 !ui/app/
 !ui/public/
-!ui/node_modules/
 !ui/.next/
 !ui/tsconfig.tsbuildinfo
 !ui/tailwind.config.*
@@ -84,11 +84,3 @@ supabase/
 !ui/__tests__/
 !ui/e2e/
 !ui/docs/
-!ui/types/
-!ui/lib/
-!ui/components/
-!ui/app/
-!ui/public/
-!ui/node_modules/
-!ui/.next/
-!ui/tsconfig.tsbuildinfo
