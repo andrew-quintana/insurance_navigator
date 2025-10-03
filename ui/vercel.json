@@ -17,11 +17,9 @@
   },
   "build": {
     "env": {
-      "NEXT_PUBLIC_SUPABASE_URL": "***REMOVED***",
-      "NEXT_PUBLIC_SUPABASE_ANON_KEY": "***REMOVED***.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmZ3plYXN0Y3hub3FzaGd5b3RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2ODA0ODMsImV4cCI6MjA2NzI1NjQ4M30.wV0kgqo20D1EghH47bO-4MoXpksiyQ_bvANaZlzScyM",
       "NEXT_PUBLIC_API_BASE_URL": "***REMOVED***",
       "NEXT_PUBLIC_API_URL": "***REMOVED***",
-      "NODE_ENV": "staging"
+      "NODE_ENV": "production"
     }
   },
   "headers": [
