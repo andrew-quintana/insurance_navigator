@@ -1,0 +1,17 @@
+# UI-specific .vercelignore
+# Since we're building from ui/ directory, we only need to exclude UI-specific files
+
+# Exclude test and development files
+coverage/
+playwright-report/
+__tests__/
+e2e/
+docs/
+
+# Exclude build artifacts
+.next/
+tsconfig.tsbuildinfo
+
+# Exclude development configs (keep production ones)
+*.local.*
+.env.local
