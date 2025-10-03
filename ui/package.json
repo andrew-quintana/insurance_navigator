@@ -19,7 +19,10 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:integration": "jest --config jest.integration.config.js",
-    "test:e2e": "cd e2e && playwright test"
+    "test:e2e": "cd e2e && playwright test",
+    "validate:deps": "node scripts/validate-dependencies.js",
+    "prebuild": "npm run validate:deps",
+    "predeploy": "npm run validate:deps"
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.1.7",
@@ -42,7 +45,7 @@
     "@next/bundle-analyzer": "^15.3.2",
     "@playwright/test": "^1.40.0",
     "@testing-library/jest-dom": "^6.1.0",
-    "@testing-library/react": "^14.1.0",
+    "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.5.0",
     "@types/jest": "^29.5.0",
     "@types/next": "^8.0.7",
