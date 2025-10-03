@@ -325,7 +325,7 @@ max_uploads_per_day_per_user: 30
 - **Production Storage**: Supabase or equivalent
 - **Monitoring Tools**: Health check and alerting tools
 
-###***REMOVED*** and Services
+#### API Keys and Services
 - **OpenAI API**: Production API key and quota
 - **LlamaParse API**: Production API key and quota
 - **Supabase**: Production project and keys

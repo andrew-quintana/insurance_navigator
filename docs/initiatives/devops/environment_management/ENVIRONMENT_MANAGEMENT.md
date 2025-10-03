@@ -108,7 +108,7 @@ config/environments/
    SUPABASE_ANON_KEY=your_dev_anon_key
    SUPABASE_SERVICE_ROLE_KEY=your_dev_service_role_key
    
-   ***REMOVED***
+   # API Keys
    OPENAI_API_KEY=sk-dev-...
    ANTHROPIC_API_KEY=sk-ant-<REDACTED>...
    LLAMAPARSE_API_KEY=llx-<REDACTED>...
@@ -131,15 +131,15 @@ config/environments/
    Edit `.env.production` with production values:
    ```bash
    # Database
-   DATABASE_URL=***REMOVED***
+   DATABASE_URL=postgresql://postgres:password@prod-db.example.com:5432/insurance_navigator_prod
    
    # Supabase
    SUPABASE_URL=https://your-prod-project.supabase.co
    SUPABASE_ANON_KEY=your_prod_anon_key
    SUPABASE_SERVICE_ROLE_KEY=your_prod_service_role_key
    
-   ***REMOVED*** (Production)
-   OPENAI_API_KEY=***REMOVED***...
+   # API Keys (Production)
+   OPENAI_API_KEY=sk-prod-...
    ANTHROPIC_API_KEY=sk-ant-<REDACTED>...
    LLAMAPARSE_API_KEY=llx-<REDACTED>...
    RESEND_API_KEY=re_prod-...

@@ -1,9 +1,9 @@
 🔍 Debugging StorageManager blob_exists method
 ============================================================
 Testing file: files/user/74a635ac-4bfe-4b6e-87d2-c0f54a366fbe/raw/b8cfa47a_5e4390c2.pdf
-2025-10-01 09:43:57,323 - shared.storage.storage_manager - INFO - {"timestamp": "2025-10-01T16:43:57.323795", "logger": "shared.storage.storage_manager", "level": "INFO", "message": "Storage manager initialized for ***REMOVED***/storage/v1"}
+2025-10-01 09:43:57,323 - shared.storage.storage_manager - INFO - {"timestamp": "2025-10-01T16:43:57.323795", "logger": "shared.storage.storage_manager", "level": "INFO", "message": "Storage manager initialized for https://dfgzeastcxnoqshgyotp.supabase.co/storage/v1"}
 StorageManager initialized
-Base URL: ***REMOVED***/storage/v1
+Base URL: https://dfgzeastcxnoqshgyotp.supabase.co/storage/v1
 Service role key: eyJhbGciOiJIUzI1NiIs...
 
 1️⃣ TESTING PATH PARSING
@@ -13,7 +13,7 @@ Parsed key: user/74a635ac-4bfe-4b6e-87d2-c0f54a366fbe/raw/b8cfa47a_5e4390c2.pdf
 
 2️⃣ TESTING URL CONSTRUCTION
 ----------------------------------------
-Storage endpoint: ***REMOVED***/storage/v1/storage/v1/object/files/user/74a635ac-4bfe-4b6e-87d2-c0f54a366fbe/raw/b8cfa47a_5e4390c2.pdf
+Storage endpoint: https://dfgzeastcxnoqshgyotp.supabase.co/storage/v1/storage/v1/object/files/user/74a635ac-4bfe-4b6e-87d2-c0f54a366fbe/raw/b8cfa47a_5e4390c2.pdf
 
 3️⃣ TESTING DIRECT HTTP WITH STORAGE MANAGER CLIENT
 ----------------------------------------

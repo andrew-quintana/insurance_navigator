@@ -4,7 +4,7 @@
 **Date**: September 6, 2025  
 **Phase**: Phase 3 - Cloud Deployment  
 **Status**: ✅ **PARTIALLY COMPLETE** - Cloud Infrastructure Validated  
-**API URL**: `***REMOVED***`  
+**API URL**: `https://insurance-navigator-api.onrender.com`  
 **API Version**: 3.0.0  
 
 ---
@@ -28,7 +28,7 @@ Phase 3 cloud deployment testing has been **partially completed** with successfu
 
 | Service | Name | URL | Status | Version |
 |---------|------|-----|--------|---------|
-| **API Service** | `insurance-navigator-api` | `***REMOVED***` | ✅ Healthy | 3.0.0 |
+| **API Service** | `insurance-navigator-api` | `https://insurance-navigator-api.onrender.com` | ✅ Healthy | 3.0.0 |
 | **Worker Service** | `insurance-navigator-worker` | Background Worker | ✅ Running | Latest |
 
 ### **Service Health Validation**

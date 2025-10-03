@@ -27,7 +27,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Cloud service URLs
-API_BASE_URL = "***REMOVED***"
+API_BASE_URL = "https://insurance-navigator-api.onrender.com"
 
 class Phase3UpdatedTester:
     """Updated Phase 3 pipeline tester using correct API endpoints."""
@@ -115,7 +115,7 @@ startxref
             "iat": int(time.time()),
             "exp": int(time.time()) + 3600,
             "aud": "authenticated",
-            "iss": "***REMOVED***"
+            "iss": "https://znvwzkdblknkkztqyfnu.supabase.co"
         }
         
         secret = "test-secret-key-for-phase3"

@@ -21,7 +21,7 @@ class CloudTester:
     
     def __init__(self):
         # Cloud service URLs (these would be the actual deployed URLs)
-        self.cloud_api_url = "***REMOVED***"  # Update with actual URL
+        self.cloud_api_url = "https://insurance-navigator-api.onrender.com"  # Update with actual URL
         self.local_api_url = "http://localhost:8000"
         
         # Phase 1 baselines from our testing

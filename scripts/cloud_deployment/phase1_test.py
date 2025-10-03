@@ -84,12 +84,12 @@ class Phase1TestRunner:
         """Load configuration from environment variables"""
         config = {
             'vercel_url': os.getenv('VERCEL_URL', 'https://insurance-navigator.vercel.app'),
-            'render_url': os.getenv('RENDER_URL', '***REMOVED***'),
+            'render_url': os.getenv('RENDER_URL', 'https://insurance-navigator-api.onrender.com'),
             'render_worker_url': os.getenv('RENDER_WORKER_URL', 'https://insurance-navigator-worker.onrender.com'),
             'supabase_url': os.getenv('SUPABASE_URL'),
             'supabase_anon_key': os.getenv('SUPABASE_KEY'),
             'supabase_service_key': os.getenv('SERVICE_ROLE_KEY'),
-            'api_base_url': os.getenv('API_BASE_URL', '***REMOVED***'),
+            'api_base_url': os.getenv('API_BASE_URL', 'https://insurance-navigator-api.onrender.com'),
         }
         
         print(f"Configuration loaded:")

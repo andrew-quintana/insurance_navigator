@@ -423,9 +423,9 @@ class ProductionMonitoringSetup:
     def __init__(self, config: Dict[str, str]):
         self.config = config
         self.vercel_url = config.get('vercel_url', 'https://insurance-navigator.vercel.app')
-        self.api_url = config.get('api_url', '***REMOVED***')
+        self.api_url = config.get('api_url', 'https://insurance-navigator-api.onrender.com')
         self.worker_url = config.get('worker_url', 'https://insurance-navigator-worker.onrender.com')
-        self.supabase_url = config.get('supabase_url', '***REMOVED***')
+        self.supabase_url = config.get('supabase_url', 'https://znvwzkdblknkkztqyfnu.supabase.co')
         self.supabase_key = config.get('supabase_key', '')
     
     async def setup_unified_dashboard(self) -> MonitoringResult:
@@ -533,9 +533,9 @@ async def main():
     """Example usage of production monitoring setup"""
     config = {
         'vercel_url': 'https://insurance-navigator.vercel.app',
-        'api_url': '***REMOVED***',
+        'api_url': 'https://insurance-navigator-api.onrender.com',
         'worker_url': 'https://insurance-navigator-worker.onrender.com',
-        'supabase_url': '***REMOVED***',
+        'supabase_url': 'https://znvwzkdblknkkztqyfnu.supabase.co',
         'supabase_key': os.getenv('SUPABASE_ANON_KEY', '')
     }
     

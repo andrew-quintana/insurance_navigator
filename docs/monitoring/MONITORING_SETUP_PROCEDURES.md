@@ -173,7 +173,7 @@ async def health_check():
 
 #### Test Health Endpoint
 ```bash
-curl ***REMOVED***/health
+curl https://insurance-navigator-api.onrender.com/health
 ```
 
 ### 2.4 Configure Auto-scaling
@@ -225,7 +225,7 @@ curl ***REMOVED***/health
 
 1. **Test Health Endpoints**:
    ```bash
-   curl ***REMOVED***/health
+   curl https://insurance-navigator-api.onrender.com/health
    ```
 
 2. **Verify Metrics**:
@@ -319,7 +319,7 @@ curl ***REMOVED***/health
 1. **Test Database Connectivity**:
    ```bash
    curl -H "apikey: YOUR_SUPABASE_ANON_KEY" \
-        ***REMOVED***/rest/v1/
+        https://znvwzkdblknkkztqyfnu.supabase.co/rest/v1/
    ```
 
 2. **Verify Analytics**:

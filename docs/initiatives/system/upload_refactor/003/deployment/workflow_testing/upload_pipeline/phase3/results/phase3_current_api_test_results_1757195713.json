@@ -1,7 +1,7 @@
 {
   "phase": "Phase 3 Current API Test",
   "timestamp": "2025-09-06T21:55:13.190759",
-  "api_url": "***REMOVED***",
+  "api_url": "https://insurance-navigator-api.onrender.com",
   "api_version": "3.0.0",
   "total_duration": 3.01495099067688,
   "summary": {

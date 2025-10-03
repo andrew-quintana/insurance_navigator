@@ -112,8 +112,8 @@ def show_llamaparse_api_example():
     print("=" * 60)
     
     example_request = {
-        "file_url": "***REMOVED***/storage/v1/object/files/files/user/123/raw/doc_20250906_150202.pdf",
-        "parsed_file_url": "***REMOVED***/storage/v1/object/files/files/user/123/parsed/doc_20250906_150202.md?token=...",
+        "file_url": "https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/files/files/user/123/raw/doc_20250906_150202.pdf",
+        "parsed_file_url": "https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/files/files/user/123/parsed/doc_20250906_150202.md?token=...",
         "webhook_url": "https://your-api.com/webhook/llamaparse/job_123",
         "result_type": "markdown",
         "api_key": "${LLAMAPARSE_API_KEY}"

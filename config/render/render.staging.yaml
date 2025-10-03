@@ -45,7 +45,7 @@ services:
       - key: SECURITY_BYPASS_ENABLED
         value: false
       - key: API_BASE_URL
-        value: ***REMOVED***
+        value: https://insurance-navigator-staging-api.onrender.com
       - key: CORS_ORIGINS
         value: https://staging.accessa.ai,https://staging-app.accessa.ai
       - key: TRUSTED_HOSTS
@@ -106,9 +106,9 @@ services:
       - key: SECURITY_BYPASS_ENABLED
         value: false
       - key: API_BASE_URL
-        value: ***REMOVED***
+        value: https://insurance-navigator-staging-api.onrender.com
       - key: WEBHOOK_BASE_URL
-        value: ***REMOVED***
+        value: https://insurance-navigator-staging-api.onrender.com
       # Worker optimizations
       - key: PYTHONUNBUFFERED
         value: "1"

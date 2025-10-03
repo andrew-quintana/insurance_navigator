@@ -12,7 +12,7 @@ import time
 from datetime import datetime
 
 # Test configuration
-API_BASE_URL = "***REMOVED***"
+API_BASE_URL = "https://insurance-navigator-api.onrender.com"
 TEST_DOCUMENT_PATH = "test_data/simulated_insurance_document.pdf"
 
 async def test_fm012_fix():
@@ -91,7 +91,7 @@ async def test_fm012_fix():
                 await asyncio.sleep(5)
                 
                 print(f"\n📊 Step 6: Checking worker logs for webhook URL generation...")
-                print("   Expected: ***REMOVED***")
+                print("   Expected: https://insurance-navigator-api.onrender.com")
                 print("   NOT: http://localhost:8000")
                 
                 # Note: In a real test, we would check worker logs here

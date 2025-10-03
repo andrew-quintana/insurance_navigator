@@ -170,9 +170,9 @@ scenarios:
             - statusCode: [400, 401, 403]  # 400 for validation, 401/403 for auth
 
 # Environment variables (set these in your environment)
-# SUPABASE_URL=***REMOVED***
+# SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
 # SUPABASE_ANON_KEY=your_supabase_anon_key
-# API_URL=***REMOVED***
+# API_URL=https://insurance-navigator-api.onrender.com
 
 # Custom functions for dynamic data
 functions:

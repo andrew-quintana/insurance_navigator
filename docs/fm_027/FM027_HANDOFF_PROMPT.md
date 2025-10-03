@@ -67,7 +67,7 @@ mcp_render_list_logs resource=srv-d37dlmvfte5s73b6uq0g startTime=2025-10-01T00:0
 ### 3. **Test Storage Access Directly**
 ```bash
 # Test the specific file that's failing
-curl -H "apikey: [SERVICE_ROLE_KEY]" -H "Authorization: Bearer [SERVICE_ROLE_KEY]" "***REMOVED***/storage/v1/object/files/user/74a635ac-4bfe-4b6e-87d2-c0f54a366fbe/raw/5796784a_5e4390c2.pdf" -v
+curl -H "apikey: [SERVICE_ROLE_KEY]" -H "Authorization: Bearer [SERVICE_ROLE_KEY]" "https://dfgzeastcxnoqshgyotp.supabase.co/storage/v1/object/files/user/74a635ac-4bfe-4b6e-87d2-c0f54a366fbe/raw/5796784a_5e4390c2.pdf" -v
 ```
 
 ### 4. **Check Environment Variables**
@@ -123,12 +123,12 @@ headers={
 if environment == "staging":
     base_url = os.getenv(
         "STAGING_WEBHOOK_BASE_URL", 
-        "***REMOVED***"
+        "https://insurance-navigator-staging-api.onrender.com"
     )
 else:
     base_url = os.getenv(
         "PRODUCTION_WEBHOOK_BASE_URL", 
-        "***REMOVED***"
+        "https://insurance-navigator-api.onrender.com"
     )
 ```
 
@@ -174,8 +174,8 @@ else:
 ### **Staging Services**
 - **Upload Worker**: `srv-d37dlmvfte5s73b6uq0g`
 - **API Service**: `srv-d3740ijuibrs738mus1g` 
-- **API URL**: `***REMOVED***`
-- **Supabase URL**: `***REMOVED***`
+- **API URL**: `https://insurance-navigator-staging-api.onrender.com`
+- **Supabase URL**: `https://dfgzeastcxnoqshgyotp.supabase.co`
 
 ### **Recent Commits**
 - `ea783fd`: Make webhook URLs configurable via environment variables

@@ -55,7 +55,7 @@ is_healthy = bool(self.api_key and len(self.api_key) > 10)
 **Change**: Corrected environment variable mapping for local development
 ```python
 # Before: Hardcoded cloud Supabase URL
-supabase_url=os.getenv("SUPABASE_URL", "***REMOVED***")
+supabase_url=os.getenv("SUPABASE_URL", "https://znvwzkdblknkkztqyfnu.supabase.co")
 
 # After: Local Supabase as default
 supabase_url=os.getenv("SUPABASE_URL", "http://127.0.0.1:54321")

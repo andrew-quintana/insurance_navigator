@@ -23,11 +23,11 @@ The worker experienced a cascading failure involving storage download issues, fa
 
 #### **1. Storage Download Failure (Primary Issue)**
 ```
-Storage download failed, using local fallback: Client error '400 Bad Request' for url '***REMOVED***/storage/v1/object/files/user/899b78b1-3c14-400b-aa8e-91457759be1e/raw/3fe7d00c_6b144eee.pdf'
+Storage download failed, using local fallback: Client error '400 Bad Request' for url 'https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/files/user/899b78b1-3c14-400b-aa8e-91457759be1e/raw/3fe7d00c_6b144eee.pdf'
 ```
 
 **Root Cause**: Supabase storage returning 400 Bad Request
-- **Storage URL**: `***REMOVED***/storage/v1/object/files/user/899b78b1-3c14-400b-aa8e-91457759be1e/raw/3fe7d00c_6b144eee.pdf`
+- **Storage URL**: `https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/files/user/899b78b1-3c14-400b-aa8e-91457759be1e/raw/3fe7d00c_6b144eee.pdf`
 - **Error**: 400 Bad Request from Supabase storage
 - **Impact**: Worker falls back to local file handling
 
@@ -47,7 +47,7 @@ webhook_url: "http://localhost:8000/api/upload-pipeline/webhook/llamaparse/dc63b
 ```
 
 **Root Cause**: Environment variable still not applied
-- **Expected**: `***REMOVED***`
+- **Expected**: `https://insurance-navigator-api.onrender.com`
 - **Actual**: `http://localhost:8000`
 - **Impact**: LlamaParse would reject this URL (but job failed before reaching LlamaParse)
 
@@ -149,7 +149,7 @@ ORDER BY created_at DESC LIMIT 5;
 ```bash
 # Test storage URL manually
 curl -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-  "***REMOVED***/storage/v1/object/files/user/899b78b1-3c14-400b-aa8e-91457759be1e/raw/3fe7d00c_6b144eee.pdf"
+  "https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/files/user/899b78b1-3c14-400b-aa8e-91457759be1e/raw/3fe7d00c_6b144eee.pdf"
 ```
 
 ### **3. Check Worker Environment**

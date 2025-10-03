@@ -24,7 +24,7 @@ if not SUPABASE_URL:
     raise ValueError("SUPABASE_URL environment variable not set")
 
 # Configuration
-API_BASE = "***REMOVED***"
+API_BASE = "https://insurance-navigator-api.onrender.com"
 
 def check_backend_health():
     """Check if backend is healthy"""

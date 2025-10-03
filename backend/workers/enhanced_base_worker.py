@@ -688,13 +688,13 @@ class EnhancedBaseWorker:
                 if environment == "staging":
                     base_url = os.getenv(
                         "STAGING_WEBHOOK_BASE_URL", 
-                        "***REMOVED***"
+                        "https://insurance-navigator-staging-api.onrender.com"
                     )
                     self.logger.info(f"Using staging webhook base URL: {base_url}")
                 else:
                     base_url = os.getenv(
                         "PRODUCTION_WEBHOOK_BASE_URL", 
-                        "***REMOVED***"
+                        "https://insurance-navigator-api.onrender.com"
                     )
                     self.logger.info(f"Using production webhook base URL: {base_url}")
             

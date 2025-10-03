@@ -12,12 +12,12 @@ This package provides comprehensive testing guidelines and access information fo
 
 ### Production Environment
 - **Frontend:** https://insurancenavigator.vercel.app
-- **Backend API:** ***REMOVED***
-- **Health Check:** ***REMOVED***/health
+- **Backend API:** https://insurance-navigator-api.onrender.com
+- **Health Check:** https://insurance-navigator-api.onrender.com/health
 
 ### Staging Environment
-- **Backend API:** ***REMOVED***
-- **Health Check:** ***REMOVED***/health
+- **Backend API:** https://insurance-navigator-staging-api.onrender.com
+- **Health Check:** https://insurance-navigator-staging-api.onrender.com/health
 
 ### Development Environment
 - **Local Development:** Use `vercel dev` in the `ui/` directory
@@ -41,13 +41,13 @@ This package provides comprehensive testing guidelines and access information fo
 
 #### 1.2 API Health and Connectivity
 - [ ] **Test:** Backend health check
-  - **URL:** ***REMOVED***/health
+  - **URL:** https://insurance-navigator-api.onrender.com/health
   - **Expected:** Returns JSON with status "healthy"
   - **Expected:** All services report healthy status
   - **Expected:** Response time < 1 second
 
 - [ ] **Test:** Staging backend health check
-  - **URL:** ***REMOVED***/health
+  - **URL:** https://insurance-navigator-staging-api.onrender.com/health
   - **Expected:** Returns JSON with status "healthy"
   - **Expected:** All services report healthy status
 

@@ -18,7 +18,7 @@ from supabase import create_client, Client
 import jwt
 
 # Configuration
-SUPABASE_URL = "***REMOVED***"
+SUPABASE_URL = "https://znvwzkdblknkkztqyfnu.supabase.co"
 SUPABASE_SERVICE_KEY = "${SUPABASE_JWT_TOKEN}"
 LLAMAPARSE_API_KEY = os.getenv("LLAMA_CLOUD_API_KEY", "${LLAMAPARSE_API_KEY}")
 

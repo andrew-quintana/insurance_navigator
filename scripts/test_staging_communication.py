@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 class StagingCommunicationTester:
     def __init__(self):
-        self.api_url = "***REMOVED***"
+        self.api_url = "https://insurance-navigator-staging-api.onrender.com"
         self.database_url = "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres"
         self.test_results = {
             "timestamp": datetime.utcnow().isoformat(),

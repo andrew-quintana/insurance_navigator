@@ -24,7 +24,7 @@ if not SUPABASE_URL:
     raise ValueError("SUPABASE_URL environment variable not set")
 
 # Configuration
-API_BASE = "***REMOVED***"
+API_BASE = "https://insurance-navigator-api.onrender.com"
 
 # Test credentials (from your logs)
 TEST_EMAIL = "deploymenttest@example.com"

@@ -19,7 +19,7 @@
    - ✅ Local database connection test: **100% SUCCESS**
 
 2. **Cloud Infrastructure Deployed**
-   - ✅ API Service: `***REMOVED***`
+   - ✅ API Service: `https://insurance-navigator-api.onrender.com`
    - ✅ Worker Service: `srv-d2h5mr8dl3ps73fvvlog`
    - ✅ Both services built and deployed successfully
    - ✅ Optimized Dockerfile created for faster builds
@@ -117,7 +117,7 @@ COPY config/ ./config/
 ```
 
 ### **Deployment Configuration**
-- **API URL**: `***REMOVED***`
+- **API URL**: `https://insurance-navigator-api.onrender.com`
 - **Database**: Production Supabase with pooler URL
 - **SSL**: Required and working
 - **Authentication**: JWT-based, working

@@ -113,9 +113,9 @@ python scripts/cloud_deployment/cloud_integration_tester.py
   "test_id": "3dc86740-ec4b-487c-ae5d-7e80481f1a96",
   "config": {
     "vercel_url": "https://insurance-navigator.vercel.app",
-    "api_url": "***REMOVED***",
+    "api_url": "https://insurance-navigator-api.onrender.com",
     "worker_url": "https://insurance-navigator-worker.onrender.com",
-    "supabase_url": "***REMOVED***"
+    "supabase_url": "https://znvwzkdblknkkztqyfnu.supabase.co"
   },
   "tests": {
     "environment_validation": {
@@ -316,7 +316,7 @@ asyncio.run(run_tests())
 ### **Debugging Tools**
 ```bash
 # Check service status
-curl -s "***REMOVED***/health" | jq .
+curl -s "https://insurance-navigator-api.onrender.com/health" | jq .
 
 # Check worker accessibility
 curl -s "https://insurance-navigator-worker.onrender.com" -w "HTTP Status: %{http_code}\n"

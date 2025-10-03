@@ -61,7 +61,7 @@ class CloudEnvironmentSetup:
             
             # Set environment variables
             env_vars = {
-                'NEXT_PUBLIC_API_BASE_URL': '***REMOVED***',
+                'NEXT_PUBLIC_API_BASE_URL': 'https://insurance-navigator-api.onrender.com',
                 'NEXT_PUBLIC_APP_ENV': 'production',
                 'NEXT_PUBLIC_APP_VERSION': '1.0.0'
             }

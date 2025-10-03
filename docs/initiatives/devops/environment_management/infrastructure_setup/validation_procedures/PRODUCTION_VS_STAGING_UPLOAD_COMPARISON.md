@@ -17,7 +17,7 @@
 
 #### **Production Environment**
 ```bash
-curl -X POST "***REMOVED***/upload-metadata" \
+curl -X POST "https://insurance-navigator-api.onrender.com/upload-metadata" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"filename": "test-production.pdf", "mime": "application/pdf", "bytes_len": 1024, "sha256": "test_hash_production_123"}'
@@ -32,7 +32,7 @@ curl -X POST "***REMOVED***/upload-metadata" \
 
 #### **Staging Environment**
 ```bash
-curl -X POST "***REMOVED***/upload-metadata" \
+curl -X POST "https://insurance-navigator-staging-api.onrender.com/upload-metadata" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"filename": "test-staging.pdf", "mime": "application/pdf", "bytes_len": 1024, "sha256": "test_hash_staging_123"}'
@@ -51,7 +51,7 @@ curl -X POST "***REMOVED***/upload-metadata" \
 
 #### **Production Environment**
 ```bash
-curl -X POST "***REMOVED***/api/upload-pipeline/upload" \
+curl -X POST "https://insurance-navigator-api.onrender.com/api/upload-pipeline/upload" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"filename": "test-production-direct.pdf", "mime": "application/pdf", "bytes_len": 1024, "sha256": "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456"}'
@@ -62,14 +62,14 @@ curl -X POST "***REMOVED***/api/upload-pipeline/upload" \
 {
   "job_id": "7495924e-f1d9-42f2-bdab-878748a5053e",
   "document_id": "710fabd6-a31c-5de8-9672-b3f8096a3c07",
-  "signed_url": "***REMOVED***/storage/v1/object/upload/sign/files/user/9909ac90-cd36-4d19-9781-ca1c96e0fdb3/raw/40a56992_327c5925.pdf?token=...",
+  "signed_url": "https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/upload/sign/files/user/9909ac90-cd36-4d19-9781-ca1c96e0fdb3/raw/40a56992_327c5925.pdf?token=...",
   "upload_expires_at": "2025-09-21T01:48:10.876185"
 }
 ```
 
 #### **Staging Environment**
 ```bash
-curl -X POST "***REMOVED***/api/upload-pipeline/upload" \
+curl -X POST "https://insurance-navigator-staging-api.onrender.com/api/upload-pipeline/upload" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"filename": "test-staging-direct.pdf", "mime": "application/pdf", "bytes_len": 1024, "sha256": "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456"}'
@@ -80,7 +80,7 @@ curl -X POST "***REMOVED***/api/upload-pipeline/upload" \
 {
   "job_id": "43a51833-6196-452f-aaed-c846ba26af4d",
   "document_id": "90cbb48f-32ad-5fba-876b-875df2b3ea59",
-  "signed_url": "***REMOVED***/storage/v1/object/upload/sign/files/user/bf1b38ba-0770-4e42-a83d-aa32fb65b946/raw/1aa23560_5f456ee0.pdf?token=...",
+  "signed_url": "https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/upload/sign/files/user/bf1b38ba-0770-4e42-a83d-aa32fb65b946/raw/1aa23560_5f456ee0.pdf?token=...",
   "upload_expires_at": "2025-09-21T01:48:16.711020"
 }
 ```

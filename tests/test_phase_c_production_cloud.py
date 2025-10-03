@@ -48,7 +48,7 @@ class ProductionCloudTester:
         }
         
         # Production cloud backend endpoints
-        self.api_base_url = "***REMOVED***"
+        self.api_base_url = "https://insurance-navigator-api.onrender.com"
         self.upload_endpoint = f"{self.api_base_url}/api/upload-pipeline/upload"
         self.chat_endpoint = f"{self.api_base_url}/chat"
         self.health_endpoint = f"{self.api_base_url}/health"
@@ -56,7 +56,7 @@ class ProductionCloudTester:
         self.auth_login_endpoint = f"{self.api_base_url}/auth/login"
         
         # Production Supabase configuration
-        self.supabase_url = "***REMOVED***"
+        self.supabase_url = "https://znvwzkdblknkkztqyfnu.supabase.co"
         self.database_url = "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres"
         
         # Set up environment variables

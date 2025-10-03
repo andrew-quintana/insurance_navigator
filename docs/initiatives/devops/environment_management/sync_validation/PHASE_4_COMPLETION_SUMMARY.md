@@ -30,8 +30,8 @@ Phase 4 environment validation has been successfully completed for the Insurance
 ### 1. Platform Status ✅
 
 #### Render Services
-- **Production API:** ***REMOVED*** (Healthy)
-- **Staging API:** ***REMOVED*** (Healthy)
+- **Production API:** https://insurance-navigator-api.onrender.com (Healthy)
+- **Staging API:** https://insurance-navigator-staging-api.onrender.com (Healthy)
 - **Production Worker:** upload-worker-production (Active)
 - **Staging Worker:** upload-worker-staging (Active)
 
@@ -82,7 +82,7 @@ Phase 4 environment validation has been successfully completed for the Insurance
 ### 5. Database Validation ✅
 
 #### Supabase Production
-- **URL:** ***REMOVED***
+- **URL:** https://znvwzkdblknkkztqyfnu.supabase.co
 - **Database:** PostgreSQL 17.4
 - **Connection:** Successful
 - **Schema:** Validated (users table present)
@@ -140,8 +140,8 @@ All critical systems are operational and performing within expected parameters.
 
 ### Test Environment Access
 - **Production Frontend:** https://insurancenavigator.vercel.app
-- **Production API:** ***REMOVED***
-- **Staging API:** ***REMOVED***
+- **Production API:** https://insurance-navigator-api.onrender.com
+- **Staging API:** https://insurance-navigator-staging-api.onrender.com
 - **Vercel CLI:** Ready for local development
 
 ## Recommendations

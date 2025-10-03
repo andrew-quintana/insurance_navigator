@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 class Phase3CompleteDemo:
-    def __init__(self, api_url="***REMOVED***"):
+    def __init__(self, api_url="https://insurance-navigator-api.onrender.com"):
         self.api_url = api_url
         self.client = None
         self.user_id = None

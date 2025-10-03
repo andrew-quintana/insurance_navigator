@@ -34,7 +34,7 @@
 {
   "error": "Bucket not found",
   "statusCode": "404",
-  "url": "***REMOVED***/storage/v1/object/files/user/be18f14d-4815-422f-8ebd-bfa044c33953/raw/a61afcc6_36d295c4.pdf"
+  "url": "https://dfgzeastcxnoqshgyotp.supabase.co/storage/v1/object/files/user/be18f14d-4815-422f-8ebd-bfa044c33953/raw/a61afcc6_36d295c4.pdf"
 }
 ```
 
@@ -214,7 +214,7 @@ auth_methods = [
 # Test production storage access (if accessible)
 curl -H "apikey: $PROD_SUPABASE_ANON_KEY" \
      -H "Authorization: Bearer $PROD_SUPABASE_SERVICE_ROLE_KEY" \
-     "***REMOVED***/storage/v1/object/files/user/be18f14d-4815-422f-8ebd-bfa044c33953/raw/a61afcc6_36d295c4.pdf" \
+     "https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/files/user/be18f14d-4815-422f-8ebd-bfa044c33953/raw/a61afcc6_36d295c4.pdf" \
      -I
 ```
 

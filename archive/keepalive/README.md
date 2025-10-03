@@ -40,7 +40,7 @@ tail -f api_keepalive.log
 
 You can customize the behavior using environment variables:
 
-- `API_URL` - API service URL (default: ***REMOVED***)
+- `API_URL` - API service URL (default: https://insurance-navigator-api.onrender.com)
 - `INTERVAL` - Keep-alive interval in seconds (default: 300 = 5 minutes)
 - `LOG_FILE` - Log file path (default: api_keepalive.log)
 - `PID_FILE` - PID file path (default: api_keepalive.pid)
@@ -59,7 +59,7 @@ API_URL=https://my-api.onrender.com ./start_keepalive.sh
 
 ### Run directly with Python
 ```bash
-python3 keep_api_warm_simple.py ***REMOVED*** 300
+python3 keep_api_warm_simple.py https://insurance-navigator-api.onrender.com 300
 ```
 
 ## How it works

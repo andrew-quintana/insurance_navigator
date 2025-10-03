@@ -31,7 +31,7 @@ class Phase3ProductionFullWorkflowTest:
     
     def __init__(self):
         # Use production API service
-        self.api_base_url = "***REMOVED***"
+        self.api_base_url = "https://insurance-navigator-api.onrender.com"
         self.test_user_id = str(uuid.uuid4())
         self.test_email = f"full_workflow_test_{int(time.time())}@example.com"
         self.test_password = "full_workflow_test_123"

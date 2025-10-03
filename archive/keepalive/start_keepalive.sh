@@ -6,7 +6,7 @@
 set -e
 
 # Configuration
-API_URL="${API_URL:-***REMOVED***}"
+API_URL="${API_URL:-https://insurance-navigator-api.onrender.com}"
 INTERVAL="${INTERVAL:-300}"  # 5 minutes
 LOG_FILE="${LOG_FILE:-api_keepalive.log}"
 PID_FILE="${PID_FILE:-api_keepalive.pid}"

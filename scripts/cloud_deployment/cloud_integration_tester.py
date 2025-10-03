@@ -36,7 +36,7 @@ class CloudIntegrationTester:
         self.session = None
         self.config = {
             'vercel_url': os.getenv('VERCEL_URL', 'https://insurance-navigator.vercel.app'),
-            'api_url': os.getenv('API_BASE_URL', '***REMOVED***'),
+            'api_url': os.getenv('API_BASE_URL', 'https://insurance-navigator-api.onrender.com'),
             'worker_url': os.getenv('RENDER_WORKER_URL', 'https://insurance-navigator-worker.onrender.com'),
             'supabase_url': os.getenv('SUPABASE_URL'),
             'supabase_key': os.getenv('SUPABASE_KEY'),

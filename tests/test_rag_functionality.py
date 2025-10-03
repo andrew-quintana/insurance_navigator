@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 async def test_rag_functionality():
     """Test RAG functionality with existing data."""
     
-    base_url = "***REMOVED***"
+    base_url = "https://insurance-navigator-api.onrender.com"
     
     # Create test user
     test_user_email = f"rag_test_{uuid.uuid4().hex[:8]}@example.com"

@@ -15,7 +15,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 # Production API configuration
-PRODUCTION_API_URL = "***REMOVED***"
+PRODUCTION_API_URL = "https://insurance-navigator-api.onrender.com"
 WEBHOOK_ENDPOINT = f"{PRODUCTION_API_URL}/api/upload-pipeline/webhook/llamaparse"
 
 # Production database configuration (from user's environment)

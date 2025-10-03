@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 async def debug_signed_url():
     """Debug the signed URL generation."""
     
-    base_url = "***REMOVED***"
+    base_url = "https://insurance-navigator-api.onrender.com"
     
     # Create test user
     test_user_email = f"debug_url_{uuid.uuid4().hex[:8]}@example.com"

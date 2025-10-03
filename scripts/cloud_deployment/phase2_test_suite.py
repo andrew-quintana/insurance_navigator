@@ -70,9 +70,9 @@ class Phase2TestSuite:
         """Load default configuration for cloud services"""
         return {
             "vercel_url": "https://insurance-navigator.vercel.app",
-            "api_url": "***REMOVED***",
+            "api_url": "https://insurance-navigator-api.onrender.com",
             "worker_url": "https://insurance-navigator-worker.onrender.com",
-            "supabase_url": "***REMOVED***"
+            "supabase_url": "https://znvwzkdblknkkztqyfnu.supabase.co"
         }
     
     async def run_complete_test_suite(self) -> Dict[str, Any]:

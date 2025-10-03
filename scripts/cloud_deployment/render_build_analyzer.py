@@ -38,7 +38,7 @@ class RenderBuildAnalyzer:
         self.services = {
             'api': {
                 'name': 'insurance-navigator-api',
-                'url': '***REMOVED***',
+                'url': 'https://insurance-navigator-api.onrender.com',
                 'type': 'web'
             },
             'worker': {

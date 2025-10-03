@@ -50,7 +50,7 @@ SUPABASE_STORAGE_URL=http://127.0.0.1:54321
 # Database
 DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
 
-***REMOVED*** (use your actual keys)
+# API Keys (use your actual keys)
 OPENAI_API_KEY=your_openai_key_here
 ANTHROPIC_API_KEY=your_anthropic_key_here
 LLAMAPARSE_API_KEY=your_llamaparse_key_here

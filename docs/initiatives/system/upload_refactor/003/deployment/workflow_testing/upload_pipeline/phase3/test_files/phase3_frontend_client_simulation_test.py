@@ -27,7 +27,7 @@ class FrontendClientSimulator:
     """Simulates a frontend client interacting with the upload pipeline"""
     
     def __init__(self):
-        self.api_url = "***REMOVED***"
+        self.api_url = "https://insurance-navigator-api.onrender.com"
         self.database_url = os.getenv('POOLER_URL', '${DATABASE_URL}/register", 
                     json=registration_data, 
                     timeout=30

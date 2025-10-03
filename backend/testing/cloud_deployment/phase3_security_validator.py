@@ -572,8 +572,8 @@ async def main():
     """Example usage of the security validator"""
     config = {
         "vercel_url": "https://insurance-navigator.vercel.app",
-        "api_url": "***REMOVED***",
-        "supabase_url": "***REMOVED***",
+        "api_url": "https://insurance-navigator-api.onrender.com",
+        "supabase_url": "https://znvwzkdblknkkztqyfnu.supabase.co",
         "DOCUMENT_ENCRYPTION_KEY": "test_key"
     }
     

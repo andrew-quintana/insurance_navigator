@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class RCAValidationTester:
     def __init__(self):
-        self.base_url = "***REMOVED***"
+        self.base_url = "https://insurance-navigator-api.onrender.com"
         self.results = {
             "test_timestamp": datetime.utcnow().isoformat(),
             "test_name": "RCA Validation Quick Test",

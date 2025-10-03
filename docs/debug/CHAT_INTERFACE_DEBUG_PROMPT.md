@@ -9,7 +9,7 @@ INFO:     10.220.19.150:47518 - "POST /chat HTTP/1.1" 500 Internal Server Error
 ```
 
 ### **Context**
-- **Environment:** Production (***REMOVED***)
+- **Environment:** Production (https://insurance-navigator-api.onrender.com)
 - **Recent Changes:** Requirements separation (commit 7099c4a) may have removed dependencies
 - **Impact:** Chat functionality completely broken - HTTP 500 errors
 - **Priority:** HIGH - Core application feature non-functional

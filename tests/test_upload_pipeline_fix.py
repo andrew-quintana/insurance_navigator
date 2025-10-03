@@ -14,7 +14,7 @@ class UploadPipelineTester:
     """Test the fixed upload pipeline."""
     
     def __init__(self):
-        self.external_api_url = "***REMOVED***"
+        self.external_api_url = "https://insurance-navigator-api.onrender.com"
         self.test_user_email = f"upload_test_{int(time.time())}@example.com"
         self.test_password = "TestPassword123!"
         

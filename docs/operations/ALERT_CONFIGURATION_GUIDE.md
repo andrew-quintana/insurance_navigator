@@ -396,7 +396,7 @@ Time: 2025-09-03 16:30:00 UTC
 2. **Backend Performance Testing**:
    ```bash
    # Simulate slow API response
-   curl -w "@curl-format.txt" -o /dev/null -s "***REMOVED***/health"
+   curl -w "@curl-format.txt" -o /dev/null -s "https://insurance-navigator-api.onrender.com/health"
    
    # Check alert trigger
    # Verify notification delivery
@@ -407,7 +407,7 @@ Time: 2025-09-03 16:30:00 UTC
 1. **Simulate Error Conditions**:
    ```bash
    # Generate 4xx errors
-   curl -X POST "***REMOVED***/invalid-endpoint"
+   curl -X POST "https://insurance-navigator-api.onrender.com/invalid-endpoint"
    
    # Generate 5xx errors (if possible)
    # Check alert trigger

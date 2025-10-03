@@ -13,7 +13,7 @@ from datetime import datetime
 
 # Configuration
 WORKER_BASE_URL = "https://insurance-navigator-worker.onrender.com"  # This will be the worker URL
-API_BASE_URL = "***REMOVED***"  # Main API for auth
+API_BASE_URL = "https://insurance-navigator-api.onrender.com"  # Main API for auth
 
 class Phase3WorkerTester:
     def __init__(self):
@@ -35,7 +35,7 @@ class Phase3WorkerTester:
             "iat": int(time.time()),
             "exp": int(time.time()) + 3600,
             "aud": "authenticated",
-            "iss": "***REMOVED***"
+            "iss": "https://znvwzkdblknkkztqyfnu.supabase.co"
         }
         
         # Use a test secret key

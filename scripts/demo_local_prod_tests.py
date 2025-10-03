@@ -30,7 +30,7 @@ async def demo_local_prod_tests():
     # Configuration details
     print("\n🔧 Configuration:")
     print("  Backend: Local (http://localhost:8000)")
-    print("  Database: Production Supabase (***REMOVED***)")
+    print("  Database: Production Supabase (https://znvwzkdblknkkztqyfnu.supabase.co)")
     print("  Environment: Hybrid Testing")
     
     # Prerequisites check

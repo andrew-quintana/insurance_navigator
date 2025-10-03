@@ -14,7 +14,7 @@ test.describe('Setup Verification', () => {
   test('API service is accessible', async ({ page }) => {
     console.log('🔍 Checking if API service is accessible...');
     
-    const response = await page.goto('***REMOVED***/health');
+    const response = await page.goto('https://insurance-navigator-api.onrender.com/health');
     expect(response?.status()).toBe(200);
     
     const content = await page.textContent('body');

@@ -24,7 +24,7 @@ class BulkRefactorComprehensiveValidator:
     def __init__(self):
         # Development backend configuration
         self.dev_backend_url = "http://localhost:8000"
-        self.external_api_url = "***REMOVED***"
+        self.external_api_url = "https://insurance-navigator-api.onrender.com"
         
         # Test configuration
         self.test_user_email = f"bulk_refactor_test_{int(time.time())}@example.com"

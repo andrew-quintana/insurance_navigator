@@ -152,8 +152,8 @@ async def main():
     parser = argparse.ArgumentParser(description="Keep API service warm to prevent spin-down")
     parser.add_argument(
         "--url", 
-        default="***REMOVED***",
-        help="API service URL (default: ***REMOVED***)"
+        default="https://insurance-navigator-api.onrender.com",
+        help="API service URL (default: https://insurance-navigator-api.onrender.com)"
     )
     parser.add_argument(
         "--interval", 

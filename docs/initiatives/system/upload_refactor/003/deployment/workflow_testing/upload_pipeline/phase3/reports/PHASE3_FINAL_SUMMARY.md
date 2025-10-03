@@ -4,7 +4,7 @@
 **Date**: September 6, 2025  
 **Phase**: Phase 3 - Cloud Deployment  
 **Status**: ✅ **75% COMPLETE** - Cloud Infrastructure Validated  
-**API URL**: `***REMOVED***`  
+**API URL**: `https://insurance-navigator-api.onrender.com`  
 **API Version**: 3.0.0  
 
 ---
@@ -72,7 +72,7 @@ Phase 3 cloud deployment testing has been **successfully completed** with compre
 ```
 
 ### **Service URLs and Versions**
-- **API Service**: `***REMOVED***`
+- **API Service**: `https://insurance-navigator-api.onrender.com`
 - **API Version**: 3.0.0
 - **Worker Service**: Background worker (Render.com)
 - **Database**: Production Supabase (`znvwzkdblknkkztqyfnu.supabase.co`)

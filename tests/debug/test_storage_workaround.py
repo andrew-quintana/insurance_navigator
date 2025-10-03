@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env.staging
 load_dotenv('.env.staging')
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "***REMOVED***")
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://dfgzeastcxnoqshgyotp.supabase.co")
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 
 async def test_storage_workaround():

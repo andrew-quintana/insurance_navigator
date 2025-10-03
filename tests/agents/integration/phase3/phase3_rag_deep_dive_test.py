@@ -29,7 +29,7 @@ class Phase3RAGDeepDiveTest:
     """Deep dive test to debug RAG system issues."""
     
     def __init__(self):
-        self.base_url = "***REMOVED***"
+        self.base_url = "https://insurance-navigator-api.onrender.com"
         self.test_user_id = str(uuid.uuid4())
         self.test_email = f"rag_test_{int(time.time())}@example.com"
         self.test_password = "test_password_123"

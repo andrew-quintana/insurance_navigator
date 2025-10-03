@@ -45,22 +45,22 @@ curl -X POST "http://localhost:8000/api/upload-pipeline/upload"
 ### **Staging Environment**
 ```bash
 # Health Check
-curl "***REMOVED***/health"
+curl "https://insurance-navigator-staging-api.onrender.com/health"
 # Response: {"status": "healthy", "version": "3.0.0"}
 
 # Upload Test
-curl -X POST "***REMOVED***/api/upload-pipeline/upload"
+curl -X POST "https://insurance-navigator-staging-api.onrender.com/api/upload-pipeline/upload"
 # Response: {"job_id": "...", "document_id": "...", "signed_url": "..."}
 ```
 
 ### **Production Environment**
 ```bash
 # Health Check
-curl "***REMOVED***/health"
+curl "https://insurance-navigator-api.onrender.com/health"
 # Response: {"status": "healthy", "version": "3.0.0"}
 
 # Upload Test
-curl -X POST "***REMOVED***/api/upload-pipeline/upload"
+curl -X POST "https://insurance-navigator-api.onrender.com/api/upload-pipeline/upload"
 # Response: {"job_id": "...", "document_id": "...", "signed_url": "..."}
 ```
 

@@ -34,7 +34,7 @@ This document serves as a comprehensive failure tracking system for the MVP Prod
 - **Last Updated**: 2025-01-18
 
 **Symptoms:**
-- API service at ***REMOVED*** is not responding
+- API service at https://insurance-navigator-api.onrender.com is not responding
 - Service crashes immediately on startup
 - Health check endpoint returns empty response or times out
 
@@ -265,12 +265,12 @@ Removed the invalid `--limit-max-requests-jitter` option from the Dockerfile CMD
 **Symptoms:**
 - Frontend registration fails with CORS preflight error
 - Error: `Preflight response is not successful. Status code: 503`
-- Error: `Fetch API cannot load ***REMOVED***/register due to access control checks`
+- Error: `Fetch API cannot load https://insurance-navigator-api.onrender.com/register due to access control checks`
 - Network error: `TypeError: Load failed`
 
 **Observations:**
 - API service is running (deployment successful)
-- Frontend can reach API base URL: `***REMOVED***`
+- Frontend can reach API base URL: `https://insurance-navigator-api.onrender.com`
 - Registration endpoint `/register` returns 503 status code
 - CORS preflight request fails before actual request
 

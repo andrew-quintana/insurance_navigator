@@ -1,7 +1,7 @@
 {
   "phase": "Phase 3 Cloud Deployment Test",
   "timestamp": "2025-09-06T21:54:08.712486",
-  "api_url": "***REMOVED***",
+  "api_url": "https://insurance-navigator-api.onrender.com",
   "total_duration": 1.2314739227294922,
   "summary": {
     "total_tests": 4,

@@ -1,7 +1,7 @@
 {
   "test_name": "Phase 3 Production Real User Test",
   "timestamp": 1757376367.98281,
-  "api_base_url": "***REMOVED***",
+  "api_base_url": "https://insurance-navigator-api.onrender.com",
   "tests": {
     "Production Database Users": {
       "status": "PASSED",

@@ -114,9 +114,9 @@ class CloudPerformanceMonitor:
         """Load default configuration for cloud services"""
         return {
             "vercel_url": "https://insurance-navigator.vercel.app",
-            "api_url": "***REMOVED***",
+            "api_url": "https://insurance-navigator-api.onrender.com",
             "worker_url": "https://insurance-navigator-worker.onrender.com",
-            "supabase_url": "***REMOVED***"
+            "supabase_url": "https://znvwzkdblknkkztqyfnu.supabase.co"
         }
     
     async def __aenter__(self):

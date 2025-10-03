@@ -9,7 +9,7 @@
 The staging Supabase instance is **accessible but empty**. It needs to be manually configured with the database schema.
 
 ### **Staging Supabase Details**
-- **URL**: `***REMOVED***`
+- **URL**: `https://dfgzeastcxnoqshgyotp.supabase.co`
 - **Status**: ✅ Accessible
 - **Database Schema**: ❌ Empty (no tables)
 - **API Endpoints**: ❌ No tables available
@@ -64,11 +64,11 @@ After applying all migrations, test the setup:
 
 ```bash
 # Test users table
-curl -s "***REMOVED***/rest/v1/users" \
+curl -s "https://dfgzeastcxnoqshgyotp.supabase.co/rest/v1/users" \
   -H "apikey: ${SUPABASE_ANON_KEY}"
 
 # Test documents table
-curl -s "***REMOVED***/rest/v1/upload_pipeline.documents" \
+curl -s "https://dfgzeastcxnoqshgyotp.supabase.co/rest/v1/upload_pipeline.documents" \
   -H "apikey: ${SUPABASE_ANON_KEY}"
 ```
 

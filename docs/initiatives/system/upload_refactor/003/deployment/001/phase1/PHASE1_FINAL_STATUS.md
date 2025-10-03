@@ -14,7 +14,7 @@
 
 ### 2. Render Backend Deployment
 - **Status**: ✅ DEPLOYED AND RESPONDING
-- **URL**: ***REMOVED***
+- **URL**: https://insurance-navigator-api.onrender.com
 - **Health Check**: PASSING
 - **Services Status**:
   - Database: ✅ healthy
@@ -25,7 +25,7 @@
 
 ### 3. Supabase Database Configuration
 - **Status**: ✅ WORKING AND ACCESSIBLE
-- **URL**: ***REMOVED***
+- **URL**: https://znvwzkdblknkkztqyfnu.supabase.co
 - **Services Working**:
   - Database: ✅ 200 OK
   - Authentication: ✅ 200 OK
@@ -36,7 +36,7 @@
 ### 4. Environment Configuration
 - **Status**: ✅ PROPERLY CONFIGURED
 - **Variables Loaded**:
-  - SUPABASE_URL: ✅ ***REMOVED***
+  - SUPABASE_URL: ✅ https://znvwzkdblknkkztqyfnu.supabase.co
   - SUPABASE_KEY: ✅ Loaded
   - SERVICE_ROLE_KEY: ✅ Loaded
   - All NEXT_PUBLIC variables: ✅ Configured

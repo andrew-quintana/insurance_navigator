@@ -43,7 +43,7 @@ class Phase3RenderDeploymentTest:
         load_dotenv('.env.production')
         
         # Test configuration - Render URLs
-        self.api_url = "***REMOVED***"
+        self.api_url = "https://insurance-navigator-api.onrender.com"
         self.worker_url = "https://insurance-navigator-worker.onrender.com"
         self.test_user_email = f"phase3_render_test_{int(time.time())}@example.com"
         self.test_user_password = "TestPassword123!"

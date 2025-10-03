@@ -44,7 +44,7 @@ We tested the development environment pipeline to verify user creation, document
 
 ## Root Cause Analysis
 
-The main issue preventing the full pipeline from working is the **incorrect Supabase storage URL**. The API is generating signed URLs using `storage.supabase.co` which cannot be resolved, instead of the correct URL `***REMOVED***`.
+The main issue preventing the full pipeline from working is the **incorrect Supabase storage URL**. The API is generating signed URLs using `storage.supabase.co` which cannot be resolved, instead of the correct URL `https://znvwzkdblknkkztqyfnu.supabase.co`.
 
 ### Fixes Applied
 1. ✅ Updated `main.py` to use `SUPABASE_STORAGE_URL` environment variable
@@ -62,7 +62,7 @@ The main issue preventing the full pipeline from working is the **incorrect Supa
 
 1. **Immediate Actions**:
    - Wait for production deployment to complete
-   - Set `SUPABASE_STORAGE_URL=***REMOVED***` in production environment
+   - Set `SUPABASE_STORAGE_URL=https://znvwzkdblknkkztqyfnu.supabase.co` in production environment
    - Test document upload pipeline again
 
 2. **Secondary Issues**:

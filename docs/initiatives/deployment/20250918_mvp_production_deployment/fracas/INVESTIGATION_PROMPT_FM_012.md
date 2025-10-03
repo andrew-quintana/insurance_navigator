@@ -48,7 +48,7 @@ LlamaParse API rejects webhook URLs containing localhost for security reasons:
 
 ### **Evidence**
 - **Generated Webhook URL**: `http://localhost:8000/api/upload-pipeline/webhook/llamaparse/21ec4e2b-4498-402a-848a-53779ed10088`
-- **Environment Detection**: `ENVIRONMENT=development, WEBHOOK_BASE_URL=***REMOVED***`
+- **Environment Detection**: `ENVIRONMENT=development, WEBHOOK_BASE_URL=https://insurance-navigator-api.onrender.com`
 - **LlamaParse Error**: 400 Bad Request with security validation failure
 
 ## 🔧 **Implemented Fixes**
@@ -93,13 +93,13 @@ LlamaParse API rejects webhook URLs containing localhost for security reasons:
 
 ### **Worker Logs Should Show**
 ```
-Environment detection: ENVIRONMENT=production, WEBHOOK_BASE_URL=***REMOVED***
-Using explicit WEBHOOK_BASE_URL: ***REMOVED***
-Generated webhook URL: ***REMOVED***/api/upload-pipeline/webhook/llamaparse/{job_id}
+Environment detection: ENVIRONMENT=production, WEBHOOK_BASE_URL=https://insurance-navigator-api.onrender.com
+Using explicit WEBHOOK_BASE_URL: https://insurance-navigator-api.onrender.com
+Generated webhook URL: https://insurance-navigator-api.onrender.com/api/upload-pipeline/webhook/llamaparse/{job_id}
 ```
 
 ### **LlamaParse Should Accept**
-- Webhook URL: `***REMOVED***/api/upload-pipeline/webhook/llamaparse/{job_id}`
+- Webhook URL: `https://insurance-navigator-api.onrender.com/api/upload-pipeline/webhook/llamaparse/{job_id}`
 - No 400 Bad Request errors
 - Successful document processing
 
@@ -131,14 +131,14 @@ Generated webhook URL: ***REMOVED***/api/upload-pipeline/webhook/llamaparse/{job
 
 ### **Final Status**
 - ✅ **Worker Running**: Successfully deployed and processing jobs
-- ✅ **Webhook URLs**: Generating production URLs (`***REMOVED***`)
+- ✅ **Webhook URLs**: Generating production URLs (`https://insurance-navigator-api.onrender.com`)
 - ✅ **LlamaParse Integration**: API accepting webhook URLs (200 OK responses)
 - ✅ **End-to-End Pipeline**: Complete document processing working
 - ✅ **No Localhost URLs**: All webhook URLs use production domain
 
 ### **Evidence of Success**
 ```
-Generated webhook URL: ***REMOVED***/api/upload-pipeline/webhook/llamaparse/d5e84dec-d559-4070-97bc-3083d9b93ae3
+Generated webhook URL: https://insurance-navigator-api.onrender.com/api/upload-pipeline/webhook/llamaparse/d5e84dec-d559-4070-97bc-3083d9b93ae3
 LlamaParse API response: 200
 LlamaParse job submitted successfully: 4dbf79ac-6c78-4c83-921f-0e8cf37aa04d
 Job processed successfully

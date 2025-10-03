@@ -239,10 +239,10 @@ python scripts/testing/test_specific_url.py
 python scripts/testing/test_cors.py --comprehensive-scan
 
 # 3. Check server health
-curl -i ***REMOVED***/health
+curl -i https://insurance-navigator-api.onrender.com/health
 
 # 4. Test CORS preflight
-curl -i -X OPTIONS ***REMOVED***/upload-policy \
+curl -i -X OPTIONS https://insurance-navigator-api.onrender.com/upload-policy \
   -H "Origin: https://insurance-navigator-1x3xrmwl5-andrew-quintanas-projects.vercel.app" \
   -H "Access-Control-Request-Method: POST"
 ```
@@ -406,7 +406,7 @@ SECURITY_KEYWORDS = [
 ### Self-Service
 1. Run diagnostics: `python scripts/testing/test_cors.py --comprehensive-scan`
 2. Check monitoring reports: `scripts/monitoring/reports/`
-3. Review server health: `curl ***REMOVED***/health`
+3. Review server health: `curl https://insurance-navigator-api.onrender.com/health`
 
 ### Escalation
 1. **CORS Issues**: Check latest prevention report

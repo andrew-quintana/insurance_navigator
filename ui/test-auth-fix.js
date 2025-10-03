@@ -43,7 +43,7 @@ async function testAuthTokenHandling() {
   
   // Test 3: Test API call with token
   console.log('\n3. Testing API call:');
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '***REMOVED***';
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://insurance-navigator-api.onrender.com';
   const testUrl = `${apiBaseUrl}/health`;
   
   try {

@@ -46,7 +46,7 @@ class DatabaseOnlyTester:
         }
         
         # Production Supabase configuration
-        self.supabase_url = "***REMOVED***"
+        self.supabase_url = "https://znvwzkdblknkkztqyfnu.supabase.co"
         self.database_url = "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres"
         
         # Set up environment variables

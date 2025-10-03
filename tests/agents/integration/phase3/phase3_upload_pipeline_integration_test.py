@@ -20,7 +20,7 @@ class Phase3UploadPipelineIntegrationTest:
     """Test upload pipeline integration with RAG system in cloud deployment."""
     
     def __init__(self):
-        self.base_url = "***REMOVED***"
+        self.base_url = "https://insurance-navigator-api.onrender.com"
         self.test_user_id = str(uuid.uuid4())
         self.test_email = f"test_user_{int(time.time())}@example.com"
         self.test_password = "test_password_123"

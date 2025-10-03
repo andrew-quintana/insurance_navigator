@@ -51,7 +51,7 @@ class LocalProdTestExecutor:
             },
             "database": {
                 "type": "production_supabase",
-                "url": "***REMOVED***",
+                "url": "https://znvwzkdblknkkztqyfnu.supabase.co",
                 "database_url": "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres",
                 "pooler_url": "${DATABASE_URL}/summary['total_tests']*100):.1f}%" if summary['total_tests'] > 0 else "N/A")
         

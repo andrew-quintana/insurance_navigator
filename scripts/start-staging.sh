@@ -23,8 +23,8 @@ echo "==============================="
 
 # Get actual URLs from environment variables
 FRONTEND_URL="${NEXT_PUBLIC_APP_URL:-https://insurance-navigator.vercel.app}"
-API_URL="${NEXT_PUBLIC_API_BASE_URL:-***REMOVED***}"
-DB_URL="${SUPABASE_URL:-***REMOVED***}"
+API_URL="${NEXT_PUBLIC_API_BASE_URL:-https://insurance-navigator-staging-api.onrender.com}"
+DB_URL="${SUPABASE_URL:-https://dfgzeastcxnoqshgyotp.supabase.co}"
 
 echo "📊 Environment: Staging"
 echo "🏠 Frontend: $FRONTEND_URL"

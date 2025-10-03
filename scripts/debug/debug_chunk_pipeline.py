@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 async def debug_chunk_pipeline():
     """Debug the entire chunk generation pipeline step by step."""
     
-    base_url = "***REMOVED***"
+    base_url = "https://insurance-navigator-api.onrender.com"
     
     # Create test user
     test_user_email = f"debug_chunk_{uuid.uuid4().hex[:8]}@example.com"

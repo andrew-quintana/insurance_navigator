@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 
 class SimpleWorkerTester:
     def __init__(self):
-        self.api_base_url = "***REMOVED***"
+        self.api_base_url = "https://insurance-navigator-api.onrender.com"
         # Use existing user from previous tests
         self.auth_token = "${SUPABASE_JWT_TOKEN}"
         self.test_document_id = None

@@ -40,7 +40,7 @@ class ServiceHealthAnalyzer:
             'api': {
                 'name': 'insurance-navigator-api',
                 'id': 'srv-d0v2nqvdiees73cejf0g',
-                'url': '***REMOVED***',
+                'url': 'https://insurance-navigator-api.onrender.com',
                 'type': 'web_service'
             },
             'worker': {

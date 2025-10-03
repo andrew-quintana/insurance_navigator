@@ -41,13 +41,13 @@ The comprehensive environment validation for the Insurance Navigator application
 ### 2. Render Backend Environment Validation ✅
 
 **Production API Service:**
-- **URL:** ***REMOVED***
+- **URL:** https://insurance-navigator-api.onrender.com
 - **Status:** Healthy
 - **Response Time:** 0.18s
 - **Services:** All operational (database, rag, user_service, conversation_service, storage_service)
 
 **Staging API Service:**
-- **URL:** ***REMOVED***
+- **URL:** https://insurance-navigator-staging-api.onrender.com
 - **Status:** Healthy
 - **Response Time:** 0.18s
 - **Services:** All operational
@@ -59,7 +59,7 @@ The comprehensive environment validation for the Insurance Navigator application
 ### 3. Database Connectivity and Permissions ✅
 
 **Supabase Production Database:**
-- **URL:** ***REMOVED***
+- **URL:** https://znvwzkdblknkkztqyfnu.supabase.co
 - **Database:** PostgreSQL 17.4
 - **Connection:** Successful
 - **Schema:** Validated (users table present with proper structure)
@@ -83,7 +83,7 @@ The comprehensive environment validation for the Insurance Navigator application
 
 **Production Instance:**
 - **Project ID:** znvwzkdblknkkztqyfnu
-- **API URL:** ***REMOVED***
+- **API URL:** https://znvwzkdblknkkztqyfnu.supabase.co
 - **Anon Key:** Validated and functional
 - **Service Role Key:** Available and configured
 
@@ -215,8 +215,8 @@ All critical systems are operational and performing within expected parameters.
 
 ### Test Environment Access:
 - **Production Frontend:** https://insurancenavigator.vercel.app
-- **Production API:** ***REMOVED***
-- **Staging API:** ***REMOVED***
+- **Production API:** https://insurance-navigator-api.onrender.com
+- **Staging API:** https://insurance-navigator-staging-api.onrender.com
 - **Vercel CLI:** Ready for local development
 
 ## Conclusion

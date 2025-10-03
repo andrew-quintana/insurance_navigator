@@ -28,9 +28,9 @@ Phase 2 of the cloud deployment testing initiative has been **successfully compl
 | Service | Platform | URL | Status | Performance |
 |---------|----------|-----|--------|-------------|
 | Frontend | Vercel | https://insurance-navigator.vercel.app | ✅ Live | < 2s load time |
-| API Service | Render | ***REMOVED*** | ✅ Healthy | 190ms avg response |
+| API Service | Render | https://insurance-navigator-api.onrender.com | ✅ Healthy | 190ms avg response |
 | Worker Service | Render | Background Worker | ✅ Running | < 10s startup |
-| Database | Supabase | ***REMOVED*** | ✅ Connected | < 100ms queries |
+| Database | Supabase | https://znvwzkdblknkkztqyfnu.supabase.co | ✅ Connected | < 100ms queries |
 
 ### **Service Health Status**
 ```json

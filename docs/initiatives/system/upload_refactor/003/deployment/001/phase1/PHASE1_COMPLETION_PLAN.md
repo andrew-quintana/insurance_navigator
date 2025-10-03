@@ -19,7 +19,7 @@
    JWT_SECRET_KEY=your_jwt_secret_here
    ANTHROPIC_API_KEY=your_anthropic_key_here
    ENVIRONMENT=production
-   API_BASE_URL=***REMOVED***
+   API_BASE_URL=https://insurance-navigator-api.onrender.com
    ```
 
 3. **Trigger Deployment**
@@ -70,7 +70,7 @@
 #### Vercel Environment Variables
 1. **Set Vercel Secrets**
    ```bash
-   vercel env add NEXT_PUBLIC_API_BASE_URL production ***REMOVED***
+   vercel env add NEXT_PUBLIC_API_BASE_URL production https://insurance-navigator-api.onrender.com
    vercel env add NEXT_PUBLIC_SUPABASE_URL production http://127.0.0.1:54321
    vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production ${SUPABASE_JWT_TOKEN}
    ```
@@ -136,7 +136,7 @@ python scripts/cloud_deployment/phase1_test.py
 
 ```bash
 # 1. Set Vercel environment variables
-vercel env add NEXT_PUBLIC_API_BASE_URL production ***REMOVED***
+vercel env add NEXT_PUBLIC_API_BASE_URL production https://insurance-navigator-api.onrender.com
 vercel env add NEXT_PUBLIC_SUPABASE_URL production http://127.0.0.1:54321
 vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production ${SUPABASE_JWT_TOKEN}
 

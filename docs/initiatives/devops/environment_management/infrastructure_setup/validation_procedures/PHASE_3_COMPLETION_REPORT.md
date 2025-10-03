@@ -20,7 +20,7 @@ Phase 3 has been successfully completed with the creation and full configuration
 - **Plan**: Starter
 - **Status**: ✅ LIVE (not suspended)
 
-##***REMOVED***
+### Service URLs
 - **Primary URL**: `https://api-service-staging.onrender.com`
 - **Health Check**: `https://api-service-staging.onrender.com/health`
 - **API Documentation**: `https://api-service-staging.onrender.com/docs`

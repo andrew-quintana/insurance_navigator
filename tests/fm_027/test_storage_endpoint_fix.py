@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime
 
 # Staging configuration
-SUPABASE_URL = "***REMOVED***"
+SUPABASE_URL = "https://dfgzeastcxnoqshgyotp.supabase.co"
 SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 
 async def test_storage_endpoint_fix():

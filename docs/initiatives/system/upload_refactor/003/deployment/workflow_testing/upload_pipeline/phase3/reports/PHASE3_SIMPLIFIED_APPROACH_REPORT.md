@@ -10,7 +10,7 @@
 
 ### **Deployed Infrastructure**
 - **Frontend**: ✅ `https://insurancenavigator.vercel.app` - Working
-- **Main API**: ✅ `***REMOVED***` (v3.0.0) - Working
+- **Main API**: ✅ `https://insurance-navigator-api.onrender.com` (v3.0.0) - Working
 - **Database**: ✅ Production Supabase - Connected
 - **Storage**: ✅ Supabase Storage - Available
 

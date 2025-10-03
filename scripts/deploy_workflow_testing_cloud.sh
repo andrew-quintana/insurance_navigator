@@ -20,7 +20,7 @@ RENDER_CONFIG="$PROJECT_ROOT/config/render/render.workflow-testing.yaml"
 VERCEL_CONFIG="$PROJECT_ROOT/ui/vercel.workflow-testing.json"
 ENV_FILE="$PROJECT_ROOT/env.workflow-testing-cloud"
 
-***REMOVED*** (will be updated after deployment)
+# Service URLs (will be updated after deployment)
 API_URL=""
 WORKER_URL=""
 FRONTEND_URL=""

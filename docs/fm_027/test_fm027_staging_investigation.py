@@ -430,7 +430,7 @@ class FM027StagingInvestigator:
             "start_time": self.test_results[0]["start_time"] if self.test_results else datetime.utcnow().isoformat(),
             "end_time": datetime.utcnow().isoformat(),
             "environment": {
-                "supabase_url": "***REMOVED***",
+                "supabase_url": "https://dfgzeastcxnoqshgyotp.supabase.co",
                 "investigation_type": "staging_analysis"
             },
             "analysis_results": self.test_results,

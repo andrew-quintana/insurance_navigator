@@ -59,7 +59,7 @@ Staging API Service ──┐
 ## Configuration Details
 
 ### Staging API Service (srv-d3740ijuibrs738mus1g)
-- **URL**: `***REMOVED***`
+- **URL**: `https://insurance-navigator-staging-api.onrender.com`
 - **Port**: 10000
 - **Database**: Staging Supabase instance
 - **Health Check**: `/health` endpoint

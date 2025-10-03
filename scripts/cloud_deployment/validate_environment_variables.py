@@ -71,7 +71,7 @@ class EnvironmentVariableValidator:
             'api': {
                 'name': 'insurance-navigator-api',
                 'id': 'srv-d0v2nqvdiees73cejf0g',
-                'url': '***REMOVED***'
+                'url': 'https://insurance-navigator-api.onrender.com'
             },
             'worker': {
                 'name': 'insurance_navigator',

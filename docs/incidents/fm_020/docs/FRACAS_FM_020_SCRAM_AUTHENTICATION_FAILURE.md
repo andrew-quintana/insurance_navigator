@@ -89,7 +89,7 @@ This error occurs during database connection pool initialization when attempting
 ```
 ✅ Database pool initialized with 5-20 connections
 ✅ System initialization completed successfully
-✅ Service is live at ***REMOVED***
+✅ Service is live at https://insurance-navigator-staging-api.onrender.com
 ```
 
 ### **Key Learning**:

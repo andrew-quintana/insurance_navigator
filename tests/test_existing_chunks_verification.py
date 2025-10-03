@@ -247,6 +247,6 @@ class ExistingChunksTest:
 
 if __name__ == "__main__":
     # Use production API
-    api_base_url = "***REMOVED***"
+    api_base_url = "https://insurance-navigator-api.onrender.com"
     test_runner = ExistingChunksTest(api_base_url)
     asyncio.run(test_runner.run_all_tests())

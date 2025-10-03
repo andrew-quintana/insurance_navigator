@@ -32,9 +32,9 @@ class Phase3TestSuite:
         """Load configuration from environment variables"""
         config = {
             "vercel_url": os.getenv("VERCEL_URL", "https://insurance-navigator.vercel.app"),
-            "api_url": os.getenv("API_URL", "***REMOVED***"),
+            "api_url": os.getenv("API_URL", "https://insurance-navigator-api.onrender.com"),
             "worker_url": os.getenv("WORKER_URL", "https://insurance-navigator-worker.onrender.com"),
-            "supabase_url": os.getenv("SUPABASE_URL", "***REMOVED***"),
+            "supabase_url": os.getenv("SUPABASE_URL", "https://znvwzkdblknkkztqyfnu.supabase.co"),
             "DOCUMENT_ENCRYPTION_KEY": os.getenv("DOCUMENT_ENCRYPTION_KEY", "test_key")
         }
         

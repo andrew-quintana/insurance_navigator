@@ -3,9 +3,9 @@
   "test_id": "22524b79-12c1-4595-bf27-2784423ed3a8",
   "config": {
     "vercel_url": "https://insurance-navigator.vercel.app",
-    "api_url": "***REMOVED***",
+    "api_url": "https://insurance-navigator-api.onrender.com",
     "worker_url": "https://insurance-navigator-worker.onrender.com",
-    "supabase_url": "***REMOVED***",
+    "supabase_url": "https://znvwzkdblknkkztqyfnu.supabase.co",
     "supabase_key": "${SUPABASE_JWT_TOKEN}",
     "supabase_service_key": "${SUPABASE_JWT_TOKEN}"
   },

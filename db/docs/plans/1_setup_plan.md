@@ -20,7 +20,7 @@ Your task is to set up the local development environment for the Insurance Navig
    SUPABASE_SERVICE_ROLE_KEY=your-local-service-role-key
    SUPABASE_ANON_KEY=your-local-anon-key
 
-   ***REMOVED*** for Development
+   # API Keys for Development
    OPENAI_API_KEY=your-openai-key
    LLAMAPARSE_API_KEY=your-llamaparse-key
 

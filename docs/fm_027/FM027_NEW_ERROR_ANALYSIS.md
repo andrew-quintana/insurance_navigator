@@ -16,7 +16,7 @@
 ### **Evidence from Logs**
 ```
 01:12:42.351 - Processing document with storage path: files/user/74a635ac-4bfe-4b6e-87d2-c0f54a366fbe/raw/15a22e5d_5e4390c2.pdf
-01:12:42.747 - HTTP Request: GET ***REMOVED***/storage/v1/object/files/user/74a635ac-4bfe-4b6e-87d2-c0f54a366fbe/raw/15a22e5d_5e4390c2.pdf "HTTP/1.1 400 Bad Request"
+01:12:42.747 - HTTP Request: GET https://dfgzeastcxnoqshgyotp.supabase.co/storage/v1/object/files/user/74a635ac-4bfe-4b6e-87d2-c0f54a366fbe/raw/15a22e5d_5e4390c2.pdf "HTTP/1.1 400 Bad Request"
 01:12:42.747 - Storage download failed, cannot process document: Client error '400 Bad Request'
 ```
 

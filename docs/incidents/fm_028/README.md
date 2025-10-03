@@ -19,7 +19,7 @@ Intermittent webhook processing failures in staging environment causing document
 
 2. **Webhook URL Mismatch Fixed**
    - Issue: Staging using wrong webhook URL (`workflow-testing` instead of staging)
-   - Fix: Updated to proper staging URL `***REMOVED***`
+   - Fix: Updated to proper staging URL `https://insurance-navigator-staging-api.onrender.com`
    - Commit: `f69ca4e`
 
 ### ❓ **Remaining Issues**

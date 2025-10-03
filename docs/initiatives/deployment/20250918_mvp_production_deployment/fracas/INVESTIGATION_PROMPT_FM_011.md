@@ -50,7 +50,7 @@ You are tasked with investigating and resolving the remaining issues from **FM-0
 
 **Solution Implemented**:
 - Updated worker service environment variables via Render API
-- Set `WEBHOOK_BASE_URL=***REMOVED***`
+- Set `WEBHOOK_BASE_URL=https://insurance-navigator-api.onrender.com`
 - Triggered new deployment (ID: dep-d36ck7gdl3ps7387be50)
 - **Status**: Deployment in progress, environment variable will be available after deployment completes
 
@@ -60,7 +60,7 @@ You are tasked with investigating and resolving the remaining issues from **FM-0
 
 **Problem**: Storage downloads are failing with 400 Bad Request
 ```
-Storage download failed, using local fallback: Client error '400 Bad Request' for url '***REMOVED***/storage/v1/object/files/user/899b78b1-3c14-400b-aa8e-91457759be1e/raw/3fe7d00c_6b144eee.pdf'
+Storage download failed, using local fallback: Client error '400 Bad Request' for url 'https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/files/user/899b78b1-3c14-400b-aa8e-91457759be1e/raw/3fe7d00c_6b144eee.pdf'
 ```
 
 **Investigation Steps**:
@@ -75,7 +75,7 @@ Storage download failed, using local fallback: Client error '400 Bad Request' fo
    ```bash
    # Get the service role key from environment
    curl -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-     "***REMOVED***/storage/v1/object/files/user/899b78b1-3c14-400b-aa8e-91457759be1e/raw/3fe7d00c_6b144eee.pdf"
+     "https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/files/user/899b78b1-3c14-400b-aa8e-91457759be1e/raw/3fe7d00c_6b144eee.pdf"
    ```
 
 3. **Check storage permissions**:

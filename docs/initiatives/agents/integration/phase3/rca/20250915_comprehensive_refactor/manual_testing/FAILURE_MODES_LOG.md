@@ -296,7 +296,7 @@ Implemented content deduplication that copies processed data from existing docum
 - Chat functionality may not have access to processed documents
 
 **Observations:**
-- API server was connected to cloud Supabase (`***REMOVED***`)
+- API server was connected to cloud Supabase (`https://znvwzkdblknkkztqyfnu.supabase.co`)
 - Worker service was connected to local Supabase (`127.0.0.1:54322`)
 - API server logs showed successful upload processing:
 ```bash

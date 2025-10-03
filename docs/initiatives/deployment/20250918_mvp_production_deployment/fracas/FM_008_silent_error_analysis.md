@@ -119,7 +119,7 @@ webhook_url: "http://localhost:8000/api/upload-pipeline/webhook/llamaparse/3ee03
 ### **Immediate Actions (CRITICAL):**
 1. **🚨 Fix Webhook URL Configuration** ✅ **COMPLETED**
    - **URGENT**: Add `WEBHOOK_BASE_URL` environment variable to Render configuration
-   - Set value to `***REMOVED***`
+   - Set value to `https://insurance-navigator-api.onrender.com`
    - **Action**: Updated `config/render/render.yaml` with missing environment variable
 
 2. **🚨 Deploy Configuration Fix**
@@ -218,7 +218,7 @@ The production worker was using `localhost:8000` as the webhook URL because the 
 ```yaml
 # Added to config/render/render.yaml
 - key: WEBHOOK_BASE_URL
-  value: ***REMOVED***
+  value: https://insurance-navigator-api.onrender.com
 ```
 
 ### **Expected Results:**

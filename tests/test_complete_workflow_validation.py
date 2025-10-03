@@ -25,7 +25,7 @@ load_dotenv('.env.production')
 class WorkflowValidator:
     def __init__(self):
         self.frontend_url = "http://localhost:3000"
-        self.backend_url = "***REMOVED***"
+        self.backend_url = "https://insurance-navigator-api.onrender.com"
         self.results = {}
         
     async def test_frontend_status(self):

@@ -15,13 +15,13 @@ This directory contains Render.com deployment configurations for different envir
 
 ### `render.staging.yaml`
 - **Purpose**: Proper staging environment deployment
-- **URL**: `***REMOVED***`
+- **URL**: `https://insurance-navigator-staging-api.onrender.com`
 - **Branch**: `staging`
 - **Environment**: `staging`
 
 ### `render.yaml`
 - **Purpose**: Production environment deployment
-- **URL**: `***REMOVED***`
+- **URL**: `https://insurance-navigator-api.onrender.com`
 - **Branch**: `main`
 - **Environment**: `production`
 
@@ -44,11 +44,11 @@ The webhook URLs are configured in the worker environment variables:
 ```yaml
 # Staging
 - key: WEBHOOK_BASE_URL
-  value: ***REMOVED***
+  value: https://insurance-navigator-staging-api.onrender.com
 
 # Production  
 - key: WEBHOOK_BASE_URL
-  value: ***REMOVED***
+  value: https://insurance-navigator-api.onrender.com
 ```
 
 ## Environment Variables

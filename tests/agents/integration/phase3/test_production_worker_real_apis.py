@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 
 class ProductionWorkerTester:
     def __init__(self):
-        self.api_base_url = "***REMOVED***"
+        self.api_base_url = "https://insurance-navigator-api.onrender.com"
         self.test_user_email = f"test_production_{int(time.time())}@example.com"
         self.test_user_password = "TestPassword123!"
         self.auth_token = None

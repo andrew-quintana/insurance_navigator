@@ -11,7 +11,7 @@ import os
 from datetime import datetime
 
 # Configuration
-API_BASE_URL = "***REMOVED***"
+API_BASE_URL = "https://insurance-navigator-api.onrender.com"
 FRONTEND_URL = "https://insurancenavigator.vercel.app"
 
 async def test_upload_pipeline():

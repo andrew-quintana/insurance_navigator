@@ -49,7 +49,7 @@ class PhaseCExecutor:
                 "log_level": "DEBUG" if self.verbose else "INFO"
             },
             "cloud": {
-                "api_base_url": os.getenv("API_BASE_URL", "***REMOVED***"),
+                "api_base_url": os.getenv("API_BASE_URL", "https://insurance-navigator-api.onrender.com"),
                 "rag_service_url": os.getenv("RAG_SERVICE_URL", "https://rag-service.onrender.com"),
                 "chat_service_url": os.getenv("CHAT_SERVICE_URL", "https://chat-service.onrender.com"),
                 "database_url": os.getenv("DATABASE_URL"),

@@ -13,7 +13,7 @@ from io import BytesIO
 
 # Staging configuration
 API_BASE_URL = "http://localhost:8000"  # Assuming local API
-SUPABASE_URL = "***REMOVED***"
+SUPABASE_URL = "https://dfgzeastcxnoqshgyotp.supabase.co"
 SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 
 async def test_staging_upload():

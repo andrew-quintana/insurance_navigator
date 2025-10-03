@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 async def test_corrected_frontend_workflow():
     """Test the corrected frontend workflow with proper API endpoints"""
     
-    api_url = "***REMOVED***"
+    api_url = "https://insurance-navigator-api.onrender.com"
     
     try:
         async with httpx.AsyncClient() as client:

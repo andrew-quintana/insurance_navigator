@@ -3,7 +3,7 @@
   "timestamp": 1757376484.3291662,
   "test_user_id": "4e94aaf5-36c9-46a2-8ee0-0b3801d1f62b",
   "test_email": "full_workflow_test_1757376484@example.com",
-  "api_base_url": "***REMOVED***",
+  "api_base_url": "https://insurance-navigator-api.onrender.com",
   "tests": {
     "Production API Health": {
       "status": "PASSED",
@@ -22,7 +22,7 @@
         },
         "upload_endpoint_status": 405,
         "jobs_endpoint_status": 405,
-        "api_base_url": "***REMOVED***"
+        "api_base_url": "https://insurance-navigator-api.onrender.com"
       }
     },
     "Create New User": {

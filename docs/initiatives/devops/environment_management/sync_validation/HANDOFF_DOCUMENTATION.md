@@ -45,12 +45,12 @@ The Insurance Navigator application has been successfully deployed and validated
 
 ### Production Environment
 - **Frontend:** https://insurancenavigator.vercel.app
-- **Backend API:** ***REMOVED***
+- **Backend API:** https://insurance-navigator-api.onrender.com
 - **Database:** Supabase Production (znvwzkdblknkkztqyfnu)
 - **Status:** Fully operational
 
 ### Staging Environment
-- **Backend API:** ***REMOVED***
+- **Backend API:** https://insurance-navigator-staging-api.onrender.com
 - **Database:** Supabase Staging (dfgzeastcxnoqshgyotp)
 - **Status:** Fully operational
 
@@ -114,7 +114,7 @@ The Insurance Navigator application has been successfully deployed and validated
 
 ### Supabase Production
 - **Project ID:** znvwzkdblknkkztqyfnu
-- **URL:** ***REMOVED***
+- **URL:** https://znvwzkdblknkkztqyfnu.supabase.co
 - **Database:** PostgreSQL 17.4
 - **Status:** Connected and operational
 
@@ -140,24 +140,24 @@ CREATE TABLE users (
 ### Production Environment Variables
 ```bash
 # Supabase Configuration
-SUPABASE_URL=***REMOVED***
-SUPABASE_ANON_KEY=***REMOVED***...
-SUPABASE_SERVICE_ROLE_KEY=***REMOVED***...
+SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 # Database Configuration
 DATABASE_URL=postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres
 
 # API Configuration
-API_BASE_URL=***REMOVED***
+API_BASE_URL=https://insurance-navigator-api.onrender.com
 ENVIRONMENT=production
 ```
 
 ### Vercel Environment Variables
 ```bash
 # Frontend Configuration
-NEXT_PUBLIC_API_BASE_URL=***REMOVED***
-NEXT_PUBLIC_SUPABASE_URL=***REMOVED***
-NEXT_PUBLIC_SUPABASE_ANON_KEY=***REMOVED***...
+NEXT_PUBLIC_API_BASE_URL=https://insurance-navigator-api.onrender.com
+NEXT_PUBLIC_SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 ## Performance Metrics
@@ -247,7 +247,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=***REMOVED***...
 ### Debug Commands
 ```bash
 # Check Render service status
-curl ***REMOVED***/health
+curl https://insurance-navigator-api.onrender.com/health
 
 # Check Vercel deployment
 vercel ls

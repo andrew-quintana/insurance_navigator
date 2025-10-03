@@ -11,7 +11,7 @@ The staging Supabase environment has been **configured and prepared** for use. T
 ### **✅ Completed Tasks**
 
 1. **Staging Supabase Instance Identified**
-   - URL: `***REMOVED***`
+   - URL: `https://dfgzeastcxnoqshgyotp.supabase.co`
    - Status: Accessible and ready for configuration
    - API Keys: Configured and validated
 
@@ -34,13 +34,13 @@ The staging Supabase environment has been **configured and prepared** for use. T
 ## 🔧 **Current Status**
 
 ### **Staging API Service**
-- **URL**: `***REMOVED***`
+- **URL**: `https://insurance-navigator-staging-api.onrender.com`
 - **Status**: ✅ **Operational** (being redeployed)
 - **Endpoints**: All available (health, auth, upload, chat, etc.)
 - **Supabase**: Configured to use staging instance
 
 ### **Staging Supabase Instance**
-- **URL**: `***REMOVED***`
+- **URL**: `https://dfgzeastcxnoqshgyotp.supabase.co`
 - **Status**: ✅ **Accessible**
 - **API Access**: ✅ **Working**
 - **Database Schema**: ⚠️ **Requires Manual Setup**
@@ -67,15 +67,15 @@ Once the database schema is applied, test the complete staging environment:
 
 ```bash
 # Test API health
-curl "***REMOVED***/health"
+curl "https://insurance-navigator-staging-api.onrender.com/health"
 
 # Test authentication
-curl -X POST "***REMOVED***/login" \
+curl -X POST "https://insurance-navigator-staging-api.onrender.com/login" \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"testpass123"}'
 
 # Test file upload
-curl -X POST "***REMOVED***/upload-metadata" \
+curl -X POST "https://insurance-navigator-staging-api.onrender.com/upload-metadata" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -d '{"filename":"test.pdf","mime":"application/pdf","bytes_len":1024,"file_sha256":"test_hash"}'
@@ -110,11 +110,11 @@ curl -X POST "***REMOVED***/upload-metadata" \
 
 ### **Staging API Service Environment Variables**
 ```bash
-SUPABASE_URL=***REMOVED***
+SUPABASE_URL=https://dfgzeastcxnoqshgyotp.supabase.co
 SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}...
 SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_ANON_KEY}...
 DATABASE_URL=postgresql://postgres.dfgzeastcxnoqshgyotp:...@aws-0-us-west-1.pooler.supabase.com:6543/postgres
-WEBHOOK_URL=***REMOVED***/functions/v1/processing-webhook
+WEBHOOK_URL=https://dfgzeastcxnoqshgyotp.supabase.co/functions/v1/processing-webhook
 ```
 
 ### **Staging Supabase Configuration**

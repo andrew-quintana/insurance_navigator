@@ -1,7 +1,7 @@
 {
   "test_type": "Frontend Client Simulation",
   "timestamp": "2025-09-07T15:12:09.831195",
-  "api_url": "***REMOVED***",
+  "api_url": "https://insurance-navigator-api.onrender.com",
   "total_duration": 30.095049142837524,
   "overall_success": false,
   "summary": {

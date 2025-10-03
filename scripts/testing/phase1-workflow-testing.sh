@@ -20,7 +20,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 DOCKER_COMPOSE_FILE="$PROJECT_ROOT/docker-compose.phase1-workflow-testing.yml"
 ENV_FILE="$PROJECT_ROOT/.env.production"
 
-***REMOVED***
+# Service URLs
 API_BASE_URL="http://localhost:8000"
 WORKER_BASE_URL="http://localhost:8002"
 FRONTEND_URL="http://localhost:3000"

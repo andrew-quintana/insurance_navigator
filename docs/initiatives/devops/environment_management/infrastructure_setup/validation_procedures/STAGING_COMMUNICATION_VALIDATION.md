@@ -29,7 +29,7 @@ This document outlines the comprehensive validation procedures for staging servi
 #### API Service Health Check
 ```bash
 # Test API service health endpoint
-curl -f ***REMOVED***/health
+curl -f https://insurance-navigator-staging-api.onrender.com/health
 
 # Expected Response: 200 OK
 # {
@@ -135,7 +135,7 @@ ORDER BY count DESC;
 #### API Endpoint Testing
 ```bash
 # Test document upload endpoint
-curl -X POST ***REMOVED***/api/upload-pipeline/upload \
+curl -X POST https://insurance-navigator-staging-api.onrender.com/api/upload-pipeline/upload \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <test-token>" \
   -d '{
@@ -262,7 +262,7 @@ curl -X POST ***REMOVED***/api/upload-pipeline/upload \
 ### Debug Commands
 ```bash
 # Check service logs
-curl ***REMOVED***/health
+curl https://insurance-navigator-staging-api.onrender.com/health
 
 # Check database connectivity
 psql $DATABASE_URL -c "SELECT 1;"

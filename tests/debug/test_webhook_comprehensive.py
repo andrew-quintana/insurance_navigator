@@ -21,7 +21,7 @@ ENVIRONMENTS = {
         "webhook_endpoint": "/api/upload-pipeline/webhook/llamaparse"
     },
     "production": {
-        "api_url": "***REMOVED***",
+        "api_url": "https://insurance-navigator-api.onrender.com",
         "health_endpoint": "/health",
         "webhook_endpoint": "/api/upload-pipeline/webhook/llamaparse"
     }

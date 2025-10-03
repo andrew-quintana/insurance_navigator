@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 
 class PsutilFixTest:
     def __init__(self):
-        self.api_base_url = "***REMOVED***"
+        self.api_base_url = "https://insurance-navigator-api.onrender.com"
         self.access_token = None
         
         # Load environment variables

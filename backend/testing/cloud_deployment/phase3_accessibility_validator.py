@@ -536,8 +536,8 @@ async def main():
     """Example usage of the accessibility validator"""
     config = {
         "vercel_url": "https://insurance-navigator.vercel.app",
-        "api_url": "***REMOVED***",
-        "supabase_url": "***REMOVED***"
+        "api_url": "https://insurance-navigator-api.onrender.com",
+        "supabase_url": "https://znvwzkdblknkkztqyfnu.supabase.co"
     }
     
     async with CloudAccessibilityValidator(config) as validator:

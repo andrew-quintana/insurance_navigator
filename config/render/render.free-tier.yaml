@@ -39,7 +39,7 @@ services:
       - key: SECURITY_BYPASS_ENABLED
         value: false
       - key: API_BASE_URL
-        value: ***REMOVED***
+        value: https://insurance-navigator-api.onrender.com
       # Render startup optimizations
       - key: PYTHONUNBUFFERED
         value: "1"

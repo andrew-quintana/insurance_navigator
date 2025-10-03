@@ -49,7 +49,7 @@ performance_monitoring:
 # External Service Monitoring
 external_services:
   supabase:
-    health_endpoint: "***REMOVED***/rest/v1/"
+    health_endpoint: "https://znvwzkdblknkkztqyfnu.supabase.co/rest/v1/"
     timeout: 10
     alert_on_failure: true
     

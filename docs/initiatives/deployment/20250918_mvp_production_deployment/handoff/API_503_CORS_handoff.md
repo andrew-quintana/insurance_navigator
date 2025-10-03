@@ -31,14 +31,14 @@ The API service deployment is successful, but the `/register` endpoint is return
 **Frontend Error (Safari Console):**
 ```
 [Error] Preflight response is not successful. Status code: 503
-[Error] Fetch API cannot load ***REMOVED***/register due to access control checks.
+[Error] Fetch API cannot load https://insurance-navigator-api.onrender.com/register due to access control checks.
 [Error] Failed to load resource: Preflight response is not successful. Status code: 503 (register, line 0)
 [Error] 🔥 Network/Connection error: – TypeError: Load failed
 ```
 
 **Key Observations:**
-- API Base URL is reachable: `***REMOVED***`
-- Registration URL: `***REMOVED***/register`
+- API Base URL is reachable: `https://insurance-navigator-api.onrender.com`
+- Registration URL: `https://insurance-navigator-api.onrender.com/register`
 - 503 status code indicates service unavailable
 - CORS preflight fails before actual request
 
@@ -47,8 +47,8 @@ The API service deployment is successful, but the `/register` endpoint is return
 ### **Immediate Actions:**
 1. **Test API Endpoint Directly**
    ```bash
-   curl -X OPTIONS ***REMOVED***/register
-   curl -X POST ***REMOVED***/register
+   curl -X OPTIONS https://insurance-navigator-api.onrender.com/register
+   curl -X POST https://insurance-navigator-api.onrender.com/register
    ```
 
 2. **Check API Service Logs**

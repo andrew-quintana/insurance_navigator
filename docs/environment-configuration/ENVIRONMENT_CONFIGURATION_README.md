@@ -143,12 +143,12 @@ DEBUG=false
 LOG_LEVEL=WARNING
 
 # Production Database with Test Schema
-DATABASE_URL=***REMOVED***
+DATABASE_URL=postgresql://postgres:password@prod-db.example.com:5432/insurance_navigator_prod
 TEST_DATABASE_SCHEMA=upload_pipeline_test
 
 # Production API Keys (same as production)
-OPENAI_API_KEY=***REMOVED***...
-SUPABASE_URL=***REMOVED***
+OPENAI_API_KEY=sk-prod-...
+SUPABASE_URL=https://prod-project.supabase.co
 
 # Service Configuration
 SERVICE_PORT=8001
@@ -167,12 +167,12 @@ DEBUG=false
 LOG_LEVEL=ERROR
 
 # Production Database
-DATABASE_URL=***REMOVED***
+DATABASE_URL=postgresql://postgres:password@prod-db.example.com:5432/insurance_navigator_prod
 DATABASE_SCHEMA=upload_pipeline
 
 # Production API Keys
-OPENAI_API_KEY=***REMOVED***...
-SUPABASE_URL=***REMOVED***
+OPENAI_API_KEY=sk-prod-...
+SUPABASE_URL=https://prod-project.supabase.co
 
 # Service Configuration
 SERVICE_PORT=8000

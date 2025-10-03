@@ -66,7 +66,7 @@ All 24 database migrations have been successfully applied to the staging Supabas
 ## 🔧 **API Service Status**
 
 ### **✅ Staging API Service**
-- **URL**: `***REMOVED***`
+- **URL**: `https://insurance-navigator-staging-api.onrender.com`
 - **Status**: ✅ Healthy
 - **Version**: 3.0.0
 - **Database**: ✅ Connected and healthy
@@ -85,7 +85,7 @@ All 24 database migrations have been successfully applied to the staging Supabas
 - All microservices: ✅ Healthy
 
 ### **✅ Environment Configuration**
-- Staging Supabase URL: ✅ `***REMOVED***`
+- Staging Supabase URL: ✅ `https://dfgzeastcxnoqshgyotp.supabase.co`
 - Database password: ✅ Updated and working
 - API service: ✅ Connected to staging Supabase
 

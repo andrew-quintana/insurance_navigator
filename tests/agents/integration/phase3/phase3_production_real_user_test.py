@@ -29,7 +29,7 @@ class Phase3ProductionRealUserTest:
     """Test RAG system with real users from production database."""
     
     def __init__(self):
-        self.api_base_url = "***REMOVED***"
+        self.api_base_url = "https://insurance-navigator-api.onrender.com"
         self.results = {
             "test_name": "Phase 3 Production Real User Test",
             "timestamp": time.time(),

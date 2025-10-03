@@ -7,7 +7,7 @@
 ## 🎯 **Key Finding**
 
 The staging service was working perfectly all along! The issue was using the **wrong URL**. The staging service is accessible at:
-- **Correct URL**: `***REMOVED***`
+- **Correct URL**: `https://insurance-navigator-staging-api.onrender.com`
 - **Wrong URL**: `https://api-service-staging.onrender.com`
 
 ## 📊 **Test Results Summary**
@@ -25,7 +25,7 @@ The staging service was working perfectly all along! The issue was using the **w
 
 ### **1. API Health Check**
 ```bash
-GET ***REMOVED***/
+GET https://insurance-navigator-staging-api.onrender.com/
 ```
 **Result**: ✅ **PASS**
 ```json
@@ -36,7 +36,7 @@ GET ***REMOVED***/
 
 ### **2. Health Endpoint**
 ```bash
-GET ***REMOVED***/health
+GET https://insurance-navigator-staging-api.onrender.com/health
 ```
 **Result**: ✅ **PASS**
 ```json
@@ -56,8 +56,8 @@ GET ***REMOVED***/health
 
 ### **3. API Documentation**
 ```bash
-GET ***REMOVED***/docs
-GET ***REMOVED***/redoc
+GET https://insurance-navigator-staging-api.onrender.com/docs
+GET https://insurance-navigator-staging-api.onrender.com/redoc
 ```
 **Result**: ✅ **PASS**
 - Swagger UI available and functional
@@ -66,7 +66,7 @@ GET ***REMOVED***/redoc
 
 ### **4. Authentication System**
 ```bash
-POST ***REMOVED***/login
+POST https://insurance-navigator-staging-api.onrender.com/login
 ```
 **Result**: ✅ **PASS**
 ```json
@@ -83,7 +83,7 @@ POST ***REMOVED***/login
 
 ### **5. User Management**
 ```bash
-GET ***REMOVED***/me
+GET https://insurance-navigator-staging-api.onrender.com/me
 ```
 **Result**: ✅ **PASS**
 ```json
@@ -98,7 +98,7 @@ GET ***REMOVED***/me
 
 ### **6. File Upload System**
 ```bash
-POST ***REMOVED***/upload-metadata
+POST https://insurance-navigator-staging-api.onrender.com/upload-metadata
 ```
 **Result**: ⚠️ **PARTIAL PASS**
 - Endpoint is available and responding
@@ -108,7 +108,7 @@ POST ***REMOVED***/upload-metadata
 
 ### **7. AI Chat System**
 ```bash
-POST ***REMOVED***/chat
+POST https://insurance-navigator-staging-api.onrender.com/chat
 ```
 **Result**: ⚠️ **PARTIAL PASS**
 - Endpoint responding correctly
@@ -121,7 +121,7 @@ POST ***REMOVED***/chat
 ### **✅ Issue 1: File Upload Authentication**
 - **Status**: **RESOLVED**
 - **Root Cause**: Wrong URL was being used for testing
-- **Solution**: Using correct staging URL `***REMOVED***`
+- **Solution**: Using correct staging URL `https://insurance-navigator-staging-api.onrender.com`
 - **Result**: Authentication working perfectly
 
 ### **✅ Issue 2: API Endpoints Availability**

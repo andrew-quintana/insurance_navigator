@@ -15,7 +15,7 @@ This audit provides comprehensive documentation of the current Render services f
 - **Service ID**: `srv-d0v2nqvdiees73cejf0g`
 - **Type**: Web Service
 - **Status**: Active (Live)
-- **URL**: ***REMOVED***
+- **URL**: https://insurance-navigator-api.onrender.com
 - **Created**: June 2, 2025
 - **Last Updated**: September 20, 2025
 

@@ -9,7 +9,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "***REMOVED***/api/$1"
+      "destination": "https://insurance-navigator-api.onrender.com/api/$1"
     },
     {
       "source": "/((?!api|_next|_static|favicon.ico).*)",
@@ -23,10 +23,10 @@
   },
   "build": {
     "env": {
-      "NEXT_PUBLIC_SUPABASE_URL": "***REMOVED***",
+      "NEXT_PUBLIC_SUPABASE_URL": "https://znvwzkdblknkkztqyfnu.supabase.co",
       "NEXT_PUBLIC_SUPABASE_ANON_KEY": "${SUPABASE_JWT_TOKEN}",
-      "NEXT_PUBLIC_API_URL": "***REMOVED***",
-      "NEXT_PUBLIC_API_BASE_URL": "***REMOVED***",
+      "NEXT_PUBLIC_API_URL": "https://insurance-navigator-api.onrender.com",
+      "NEXT_PUBLIC_API_BASE_URL": "https://insurance-navigator-api.onrender.com",
       "FRONTEND_HEALTH_CHECK_ENABLED": "true"
     }
   },

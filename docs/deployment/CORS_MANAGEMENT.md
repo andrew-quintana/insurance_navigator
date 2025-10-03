@@ -23,7 +23,7 @@ add_cors_headers(response, origin)
 
 ```bash
 # .env configuration
-CORS_ALLOWED_ORIGINS="https://insurance-navigator.vercel.app,***REMOVED***,http://localhost:3000,http://localhost:3001"
+CORS_ALLOWED_ORIGINS="https://insurance-navigator.vercel.app,https://insurance-navigator-api.onrender.com,http://localhost:3000,http://localhost:3001"
 CORS_VERCEL_PREVIEW_PATTERN="insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app"
 ```
 
@@ -147,7 +147,7 @@ CORS_ALLOWED_ORIGINS="http://localhost:3000,http://localhost:3001"
 ### **Production Environment**
 ```bash
 # Production .env
-CORS_ALLOWED_ORIGINS="https://insurance-navigator.vercel.app,***REMOVED***"
+CORS_ALLOWED_ORIGINS="https://insurance-navigator.vercel.app,https://insurance-navigator-api.onrender.com"
 CORS_VERCEL_PREVIEW_PATTERN="insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app"
 ```
 
@@ -177,14 +177,14 @@ CORS_ALLOWED_ORIGINS="https://staging-app.vercel.app,https://staging-api.render.
 ### **Manual Testing**
 ```bash
 # Test preflight request
-curl -X OPTIONS ***REMOVED***/chat \
+curl -X OPTIONS https://insurance-navigator-api.onrender.com/chat \
   -H "Origin: https://insurance-navigator.vercel.app" \
   -H "Access-Control-Request-Method: POST" \
   -H "Access-Control-Request-Headers: authorization,content-type" \
   -v
 
 # Test actual request
-curl -X POST ***REMOVED***/chat \
+curl -X POST https://insurance-navigator-api.onrender.com/chat \
   -H "Origin: https://insurance-navigator.vercel.app" \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \

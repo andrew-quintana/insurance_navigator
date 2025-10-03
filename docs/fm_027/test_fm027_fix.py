@@ -105,10 +105,10 @@ def test_webhook_url_generation():
     else:
         # For staging/production, use environment-specific URLs
         if environment == "staging":
-            base_url = "***REMOVED***"
+            base_url = "https://insurance-navigator-staging-api.onrender.com"
             print(f"  Using staging webhook base URL: {base_url}")
         else:
-            base_url = "***REMOVED***"
+            base_url = "https://insurance-navigator-api.onrender.com"
             print(f"  Using production webhook base URL: {base_url}")
     
     # Test with sample job ID
@@ -119,7 +119,7 @@ def test_webhook_url_generation():
     
     # Validate staging URL
     if environment == "staging":
-        expected_url = "***REMOVED***/api/upload-pipeline/webhook/llamaparse/test-job-123"
+        expected_url = "https://insurance-navigator-staging-api.onrender.com/api/upload-pipeline/webhook/llamaparse/test-job-123"
         if webhook_url == expected_url:
             print("  ✅ Staging webhook URL correctly generated")
             return True

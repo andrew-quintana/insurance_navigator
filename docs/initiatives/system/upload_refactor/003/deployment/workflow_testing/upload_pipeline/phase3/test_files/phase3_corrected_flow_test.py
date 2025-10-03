@@ -29,7 +29,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Cloud service URLs
-API_BASE_URL = "***REMOVED***"
+API_BASE_URL = "https://insurance-navigator-api.onrender.com"
 WORKER_SERVICE_ID = "srv-d2h5mr8dl3ps73fvvlog"
 
 class Phase3CorrectedFlowTester:
@@ -464,7 +464,7 @@ startxref
             simulated_response = {
                 "job_id": str(uuid.uuid4()),
                 "document_id": str(uuid.uuid4()),
-                "signed_url": "***REMOVED***/storage/v1/object/upload/files/user/test-user/raw/2025-09-07_abc123.pdf",
+                "signed_url": "https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/upload/files/user/test-user/raw/2025-09-07_abc123.pdf",
                 "upload_expires_at": "2025-09-07T01:00:00Z"
             }
             

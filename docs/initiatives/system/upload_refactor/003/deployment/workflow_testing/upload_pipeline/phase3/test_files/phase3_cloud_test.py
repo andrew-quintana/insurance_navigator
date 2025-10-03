@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Dict, Any
 
 # Cloud service URLs
-API_BASE_URL = "***REMOVED***"
+API_BASE_URL = "https://insurance-navigator-api.onrender.com"
 
 class Phase3CloudTester:
     """Test the cloud-deployed API service."""
@@ -31,7 +31,7 @@ class Phase3CloudTester:
             "iat": int(time.time()),
             "exp": int(time.time()) + 3600,
             "aud": "authenticated",
-            "iss": "***REMOVED***"
+            "iss": "https://znvwzkdblknkkztqyfnu.supabase.co"
         }
         
         # Use a test secret key

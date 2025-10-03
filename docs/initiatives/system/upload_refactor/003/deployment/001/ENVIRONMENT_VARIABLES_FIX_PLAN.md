@@ -15,13 +15,13 @@ Both the API and Worker services are failing due to missing critical environment
 ### **For API Service (insurance-navigator-api)**
 ```bash
 # Core Database & Supabase
-SUPABASE_URL=***REMOVED***
+SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
 SUPABASE_KEY=[your_supabase_anon_key]
 SERVICE_ROLE_KEY=[your_supabase_service_role_key]
 DATABASE_URL=[your_postgresql_connection_string]
 
 # API Configuration
-API_BASE_URL=***REMOVED***
+API_BASE_URL=https://insurance-navigator-api.onrender.com
 JWT_SECRET_KEY=[your_jwt_secret]
 ENVIRONMENT=production
 LOG_LEVEL=INFO
@@ -36,13 +36,13 @@ ANTHROPIC_API_KEY=[your_anthropic_key]
 ### **For Worker Service (insurance_navigator)**
 ```bash
 # Core Database & Supabase (SAME AS API)
-SUPABASE_URL=***REMOVED***
+SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
 SUPABASE_KEY=[your_supabase_anon_key]
 SERVICE_ROLE_KEY=[your_supabase_service_role_key]
 DATABASE_URL=[your_postgresql_connection_string]
 
 # API Configuration
-API_BASE_URL=***REMOVED***
+API_BASE_URL=https://insurance-navigator-api.onrender.com
 JWT_SECRET_KEY=[your_jwt_secret]
 ENVIRONMENT=production
 LOG_LEVEL=INFO
@@ -72,11 +72,11 @@ ANTHROPIC_API_KEY=[your_anthropic_key]
 3. Add the following environment variables:
 
 ```bash
-SUPABASE_URL=***REMOVED***
+SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
 SUPABASE_KEY=[get_from_your_env_production_file]
 SERVICE_ROLE_KEY=[get_from_your_env_production_file]
 DATABASE_URL=[get_from_your_env_production_file]
-API_BASE_URL=***REMOVED***
+API_BASE_URL=https://insurance-navigator-api.onrender.com
 JWT_SECRET_KEY=[get_from_your_env_production_file]
 ENVIRONMENT=production
 LOG_LEVEL=INFO
@@ -92,11 +92,11 @@ ANTHROPIC_API_KEY=[get_from_your_env_production_file]
 3. Add the following environment variables:
 
 ```bash
-SUPABASE_URL=***REMOVED***
+SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
 SUPABASE_KEY=[get_from_your_env_production_file]
 SERVICE_ROLE_KEY=[get_from_your_env_production_file]
 DATABASE_URL=[get_from_your_env_production_file]
-API_BASE_URL=***REMOVED***
+API_BASE_URL=https://insurance-navigator-api.onrender.com
 JWT_SECRET_KEY=[get_from_your_env_production_file]
 ENVIRONMENT=production
 LOG_LEVEL=INFO
@@ -136,7 +136,7 @@ render logs --resources srv-d2h5mr8dl3ps73fvvlog --limit 20
 
 ### **2. Check API Health**
 ```bash
-curl ***REMOVED***/health
+curl https://insurance-navigator-api.onrender.com/health
 ```
 
 ### **3. Run Integration Tests**

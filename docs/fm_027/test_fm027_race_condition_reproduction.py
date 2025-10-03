@@ -29,7 +29,7 @@ class FM027RaceConditionTest:
     """Test for reproducing FM-027 race conditions"""
     
     def __init__(self):
-        self.supabase_url = "***REMOVED***"
+        self.supabase_url = "https://dfgzeastcxnoqshgyotp.supabase.co"
         self.service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
         
         if not self.service_role_key:

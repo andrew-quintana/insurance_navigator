@@ -4,7 +4,7 @@
 
 **Date**: September 5, 2025  
 **Testing Scope**: Comprehensive authentication edge cases and system capacity characterization  
-**API Service**: `***REMOVED***`  
+**API Service**: `https://insurance-navigator-api.onrender.com`  
 **Overall Assessment**: ✅ **GOOD SYSTEM CAPACITY** - Minor improvements needed
 
 ## 📊 **Test Results Overview**

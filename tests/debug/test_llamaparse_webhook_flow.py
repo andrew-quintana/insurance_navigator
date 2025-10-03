@@ -24,7 +24,7 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 # Production API configuration
-PRODUCTION_API_URL = "***REMOVED***"
+PRODUCTION_API_URL = "https://insurance-navigator-api.onrender.com"
 WEBHOOK_ENDPOINT = f"{PRODUCTION_API_URL}/api/upload-pipeline/webhook/llamaparse"
 
 async def create_test_job_in_database() -> Optional[str]:

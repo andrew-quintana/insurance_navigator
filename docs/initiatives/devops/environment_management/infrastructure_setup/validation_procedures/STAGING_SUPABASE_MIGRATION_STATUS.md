@@ -9,7 +9,7 @@
 The staging Supabase instance has been identified and configured, but requires manual database schema setup through the Supabase Dashboard.
 
 ### **Staging Supabase Details**
-- **URL**: `***REMOVED***`
+- **URL**: `https://dfgzeastcxnoqshgyotp.supabase.co`
 - **Dashboard**: https://supabase.com/dashboard/project/dfgzeastcxnoqshgyotp
 - **Status**: ✅ Accessible
 - **Database Schema**: ❌ Empty (no tables)
@@ -50,11 +50,11 @@ Test the API endpoints after migration:
 
 ```bash
 # Test users table
-curl -s "***REMOVED***/rest/v1/users" \
+curl -s "https://dfgzeastcxnoqshgyotp.supabase.co/rest/v1/users" \
   -H "apikey: [ANON_KEY]"
 
 # Test documents table
-curl -s "***REMOVED***/rest/v1/upload_pipeline.documents" \
+curl -s "https://dfgzeastcxnoqshgyotp.supabase.co/rest/v1/upload_pipeline.documents" \
   -H "apikey: [ANON_KEY]"
 ```
 

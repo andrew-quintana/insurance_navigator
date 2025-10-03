@@ -172,7 +172,7 @@ CORS origins are now managed through environment variables for better flexibilit
 **Backend Environment Variables:**
 ```bash
 # .env and .env.template
-CORS_ALLOWED_ORIGINS="https://insurance-navigator.vercel.app,***REMOVED***,http://localhost:3000,http://localhost:3001"
+CORS_ALLOWED_ORIGINS="https://insurance-navigator.vercel.app,https://insurance-navigator-api.onrender.com,http://localhost:3000,http://localhost:3001"
 CORS_VERCEL_PREVIEW_PATTERN="insurance-navigator-[a-z0-9]+-andrew-quintanas-projects\.vercel\.app"
 ```
 

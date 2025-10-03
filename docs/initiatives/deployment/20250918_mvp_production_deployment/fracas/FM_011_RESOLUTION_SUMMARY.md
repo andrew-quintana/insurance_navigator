@@ -35,7 +35,7 @@
 
 **Solution Implemented**:
 - Updated worker service environment variables via Render API
-- Set `WEBHOOK_BASE_URL=***REMOVED***`
+- Set `WEBHOOK_BASE_URL=https://insurance-navigator-api.onrender.com`
 - Triggered new deployment (ID: dep-d36ck7gdl3ps7387be50)
 - **Status**: Deployment in progress
 

@@ -61,7 +61,7 @@ Phase C testing has been enhanced to support **local backend with production Sup
 - **Health Endpoint**: `http://localhost:8000/health`
 
 ### Database: Production Supabase
-- **Supabase URL**: `***REMOVED***`
+- **Supabase URL**: `https://znvwzkdblknkkztqyfnu.supabase.co`
 - **Database URL**: `postgresql://postgres:<REDACTED>@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres`
 - **Pooler URL**: `${DATABASE_URL}//localhost:8000/health
 
@@ -101,7 +101,7 @@ python run_phase_c_local_prod_tests.py --test-specific uuid_generation
 ================================================================================
 Configuration:
   Backend: local (http://localhost:8000)
-  Database: production_supabase (***REMOVED***)
+  Database: production_supabase (https://znvwzkdblknkkztqyfnu.supabase.co)
   Environment: hybrid_testing
 ================================================================================
 

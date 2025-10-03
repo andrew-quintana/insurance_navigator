@@ -50,8 +50,8 @@ async def test_worker_storage_config():
             # Test with different URL patterns
             print("\nTesting alternative URL patterns:")
             
-            # Test with ***REMOVED*** directly
-            direct_url = "***REMOVED***"
+            # Test with https://dfgzeastcxnoqshgyotp.supabase.co directly
+            direct_url = "https://dfgzeastcxnoqshgyotp.supabase.co"
             response2 = await client.head(
                 f"{direct_url}/storage/v1/object/files/{file_path}",
                 headers={

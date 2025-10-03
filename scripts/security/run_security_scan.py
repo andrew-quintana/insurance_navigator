@@ -264,7 +264,7 @@ def main():
     parser = argparse.ArgumentParser(description="Run security scan using OWASP ZAP")
     parser.add_argument(
         "--target",
-        default="***REMOVED***",
+        default="https://insurance-navigator-api.onrender.com",
         help="Target URL to scan"
     )
     parser.add_argument(

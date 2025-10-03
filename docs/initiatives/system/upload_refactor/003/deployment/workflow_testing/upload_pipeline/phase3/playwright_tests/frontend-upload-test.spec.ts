@@ -5,7 +5,7 @@ import path from 'path';
 // Test configuration
 const TEST_CONFIG = {
   frontendUrl: 'https://insurancenavigator.vercel.app',
-  apiBaseUrl: '***REMOVED***',
+  apiBaseUrl: 'https://insurance-navigator-api.onrender.com',
   testUser: {
     email: `frontend_test_${Date.now()}@example.com`,
     password: 'test_password_123',

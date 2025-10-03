@@ -8,7 +8,7 @@ RAGTool - ERROR - OpenAI embedding generation failed: Fields must not use names 
 ```
 
 ### **Context**
-- **Environment:** Production (***REMOVED***)
+- **Environment:** Production (https://insurance-navigator-api.onrender.com)
 - **Component:** RAG System / OpenAI Embeddings
 - **Impact:** RAG functionality completely broken - no document retrieval possible
 - **Priority:** HIGH - Core AI functionality unavailable

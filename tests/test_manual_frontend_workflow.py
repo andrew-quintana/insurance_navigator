@@ -57,7 +57,7 @@ class ManualFrontendWorkflowTester:
         }
         
         # Production cloud backend endpoints
-        self.api_base_url = "***REMOVED***"
+        self.api_base_url = "https://insurance-navigator-api.onrender.com"
         self.upload_endpoint = f"{self.api_base_url}/api/upload-pipeline/upload"
         self.chat_endpoint = f"{self.api_base_url}/chat"
         self.health_endpoint = f"{self.api_base_url}/health"
@@ -79,7 +79,7 @@ class ManualFrontendWorkflowTester:
     def _setup_environment(self):
         """Set up environment variables for production cloud backend."""
         # Production Supabase configuration
-        os.environ["SUPABASE_URL"] = "***REMOVED***"
+        os.environ["SUPABASE_URL"] = "https://znvwzkdblknkkztqyfnu.supabase.co"
         os.environ["SUPABASE_ANON_KEY"] = "${SUPABASE_JWT_TOKEN}"
         os.environ["SUPABASE_SERVICE_ROLE_KEY"] = "${SUPABASE_JWT_TOKEN}"
         os.environ["DATABASE_URL"] = "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres"

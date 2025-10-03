@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 async def test_simple_upload_and_chunks():
     """Test simple upload and check for chunks."""
     
-    base_url = "***REMOVED***"
+    base_url = "https://insurance-navigator-api.onrender.com"
     
     # Create test user
     test_user_email = f"chunk_test_{uuid.uuid4().hex[:8]}@example.com"

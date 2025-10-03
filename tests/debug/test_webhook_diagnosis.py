@@ -44,7 +44,7 @@ async def test_webhook_url_configuration():
         base_url = "http://localhost:8000"
         print(f"✅ Using development localhost: {base_url}")
     else:
-        base_url = "***REMOVED***"
+        base_url = "https://insurance-navigator-api.onrender.com"
         print(f"✅ Using production default: {base_url}")
     
     webhook_url = f"{base_url}/api/upload-pipeline/webhook/llamaparse/test-job-123"
@@ -255,7 +255,7 @@ async def test_production_webhook_url():
     print("\n🔍 TESTING PRODUCTION WEBHOOK URL")
     print("=" * 50)
     
-    production_url = "***REMOVED***/api/upload-pipeline/webhook/llamaparse/test-job-123"
+    production_url = "https://insurance-navigator-api.onrender.com/api/upload-pipeline/webhook/llamaparse/test-job-123"
     
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:

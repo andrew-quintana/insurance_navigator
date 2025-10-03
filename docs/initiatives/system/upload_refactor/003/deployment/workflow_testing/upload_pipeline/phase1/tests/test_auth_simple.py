@@ -23,7 +23,7 @@ def test_jwt_token_generation():
     payload = {
         "sub": test_user_id,
         "aud": "authenticated",
-        "iss": "***REMOVED***",
+        "iss": "https://znvwzkdblknkkztqyfnu.supabase.co",
         "email": test_email,
         "role": test_role,
         "iat": datetime.utcnow(),

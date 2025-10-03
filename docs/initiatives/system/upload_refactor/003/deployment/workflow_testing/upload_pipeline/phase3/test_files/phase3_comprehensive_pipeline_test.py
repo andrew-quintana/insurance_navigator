@@ -27,7 +27,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Cloud service URLs
-API_BASE_URL = "***REMOVED***"
+API_BASE_URL = "https://insurance-navigator-api.onrender.com"
 WORKER_SERVICE_ID = "srv-d2h5mr8dl3ps73fvvlog"  # From previous output
 
 class Phase3ComprehensiveTester:
@@ -135,7 +135,7 @@ startxref
             "iat": int(time.time()),
             "exp": int(time.time()) + 3600,
             "aud": "authenticated",
-            "iss": "***REMOVED***"
+            "iss": "https://znvwzkdblknkkztqyfnu.supabase.co"
         }
         
         # Use a test secret key

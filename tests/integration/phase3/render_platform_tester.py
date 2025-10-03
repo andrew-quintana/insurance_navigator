@@ -28,7 +28,7 @@ class RenderWebServiceTester:
     def _get_render_url(self) -> str:
         """Get Render URL based on environment."""
         if self.environment == "production":
-            return "***REMOVED***"
+            return "https://insurance-navigator-api.onrender.com"
         elif self.environment == "staging":
             return "https://insurance-navigator-api-staging.onrender.com"
         else:  # development

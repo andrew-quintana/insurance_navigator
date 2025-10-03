@@ -20,7 +20,7 @@ async def test_development_full_pipeline():
     """Test the complete development pipeline end-to-end."""
     
     # Use production API for testing (local backend requires local Supabase)
-    base_url = "***REMOVED***"
+    base_url = "https://insurance-navigator-api.onrender.com"
     
     # Create test user
     test_user_email = f"dev_test_{uuid.uuid4().hex[:8]}@example.com"

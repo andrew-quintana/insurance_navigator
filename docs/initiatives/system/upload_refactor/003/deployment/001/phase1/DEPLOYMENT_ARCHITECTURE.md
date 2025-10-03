@@ -41,7 +41,7 @@
 
 ### **Backend API Service (Render)**
 - **Platform**: Render (Web Service)
-- **URL**: ***REMOVED***
+- **URL**: https://insurance-navigator-api.onrender.com
 - **Technology**: FastAPI, Python 3.11, Uvicorn
 - **Configuration**:
   - Docker-based deployment
@@ -72,7 +72,7 @@
 
 ### **Database Service (Supabase)**
 - **Platform**: Supabase (PostgreSQL)
-- **URL**: ***REMOVED***
+- **URL**: https://znvwzkdblknkkztqyfnu.supabase.co
 - **Technology**: PostgreSQL with extensions
 - **Features**:
   - Vector similarity search (pgvector)
@@ -89,14 +89,14 @@
 
 #### **Frontend (Vercel)**
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=***REMOVED***
+NEXT_PUBLIC_SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
-NEXT_PUBLIC_API_BASE_URL=***REMOVED***
+NEXT_PUBLIC_API_BASE_URL=https://insurance-navigator-api.onrender.com
 ```
 
 #### **Backend API (Render)**
 ```bash
-SUPABASE_URL=***REMOVED***
+SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
 SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
 SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_JWT_TOKEN}
 DATABASE_URL=postgresql://postgres:<REDACTED>@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres
@@ -108,7 +108,7 @@ LLAMAPARSE_API_KEY=llx-<REDACTED>
 
 #### **Worker Service (Render)**
 ```bash
-SUPABASE_URL=***REMOVED***
+SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
 SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
 SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_JWT_TOKEN}
 DATABASE_URL=postgresql://postgres:<REDACTED>@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres

@@ -23,7 +23,7 @@ async def test_supabase_sandbox():
         
         try:
             response = requests.post(
-                "***REMOVED***/register",
+                "https://insurance-navigator-api.onrender.com/register",
                 headers={"Content-Type": "application/json"},
                 json={
                     "email": email,

@@ -12,7 +12,7 @@ Key Areas of Investigation:
 4. Stale Job Processing - Worker processing jobs that no longer exist
 
 Test Environment: Staging Supabase
-- URL: ***REMOVED***
+- URL: https://dfgzeastcxnoqshgyotp.supabase.co
 - Worker Service: srv-d37dlmvfte5s73b6uq0g
 - API Service: srv-d3740ijuibrs738mus1g
 """
@@ -40,8 +40,8 @@ class FM027TimingInvestigator:
     """Investigator for FM-027 timing issues and race conditions"""
     
     def __init__(self):
-        self.staging_url = "***REMOVED***"
-        self.api_url = "***REMOVED***"
+        self.staging_url = "https://dfgzeastcxnoqshgyotp.supabase.co"
+        self.api_url = "https://insurance-navigator-staging-api.onrender.com"
         self.worker_url = "https://insurance-navigator-staging-worker.onrender.com"
         
         # Load staging environment variables

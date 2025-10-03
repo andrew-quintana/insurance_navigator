@@ -4,7 +4,7 @@
     "api": {
       "service_name": "insurance-navigator-api",
       "service_type": "web",
-      "service_url": "***REMOVED***",
+      "service_url": "https://insurance-navigator-api.onrender.com",
       "build_status": "unknown",
       "deployment_status": "failed",
       "health_status": "error",

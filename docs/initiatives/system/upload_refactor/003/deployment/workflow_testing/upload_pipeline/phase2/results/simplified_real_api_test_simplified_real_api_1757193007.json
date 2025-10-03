@@ -11,7 +11,7 @@
           "storage_path": "files/766e8693-7fd5-465e-9ee4-4a9b3a696480/raw/20250906_141007_73628ca6.pdf",
           "file_hash": "73628ca67ed46d1ac78dbe1c690b87eb78d6cd8594c606e6c8e3beb3ad816286",
           "file_size": 63,
-          "storage_url": "***REMOVED***/storage/v1/object/files/files/766e8693-7fd5-465e-9ee4-4a9b3a696480/raw/20250906_141007_73628ca6.pdf"
+          "storage_url": "https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/files/files/766e8693-7fd5-465e-9ee4-4a9b3a696480/raw/20250906_141007_73628ca6.pdf"
         },
         "llamaparse_parsing": {
           "success": true,

@@ -59,12 +59,12 @@ class CloudEnvironmentValidator:
         """Load configuration from environment variables"""
         config = {
             'vercel_url': os.getenv('VERCEL_URL', 'https://insurance-navigator.vercel.app'),
-            'render_url': os.getenv('RENDER_URL', '***REMOVED***'),
+            'render_url': os.getenv('RENDER_URL', 'https://insurance-navigator-api.onrender.com'),
             'render_worker_url': os.getenv('RENDER_WORKER_URL', 'https://insurance-navigator-worker.onrender.com'),
             'supabase_url': os.getenv('SUPABASE_URL'),
             'supabase_anon_key': os.getenv('SUPABASE_KEY'),
             'supabase_service_key': os.getenv('SERVICE_ROLE_KEY'),
-            'api_base_url': os.getenv('API_BASE_URL', '***REMOVED***'),
+            'api_base_url': os.getenv('API_BASE_URL', 'https://insurance-navigator-api.onrender.com'),
         }
         
 
@@ -749,7 +749,7 @@ class CloudEnvironmentValidator:
         
         try:
             # Check if API service is accessible (indicates successful build)
-            api_url = self.config.get('render_url', '***REMOVED***')
+            api_url = self.config.get('render_url', 'https://insurance-navigator-api.onrender.com')
             
             async with self.session.get(f"{api_url}/health", timeout=30) as response:
                 metrics['api_build_status_code'] = response.status
@@ -810,7 +810,7 @@ class CloudEnvironmentValidator:
             # This would typically involve accessing Render's API or log endpoints
             # For now, we'll simulate log analysis based on service responses
             
-            api_url = self.config.get('render_url', '***REMOVED***')
+            api_url = self.config.get('render_url', 'https://insurance-navigator-api.onrender.com')
             worker_url = self.config.get('render_worker_url', 'https://insurance-navigator-worker.onrender.com')
             
             # Check API service logs (simulated)
@@ -864,7 +864,7 @@ class CloudEnvironmentValidator:
         
         try:
             # Measure response times as a proxy for build performance
-            api_url = self.config.get('render_url', '***REMOVED***')
+            api_url = self.config.get('render_url', 'https://insurance-navigator-api.onrender.com')
             
             start_time = time.time()
             async with self.session.get(f"{api_url}/health", timeout=30) as response:
@@ -903,7 +903,7 @@ async def main():
     """Main function for testing the validator"""
     config = {
         'vercel_url': 'https://insurance-navigator.vercel.app',
-        'render_url': '***REMOVED***',
+        'render_url': 'https://insurance-navigator-api.onrender.com',
         'supabase_url': 'https://your-project.supabase.co',
         'supabase_anon_key': 'your_anon_key',
         'supabase_service_key': 'your_service_key',

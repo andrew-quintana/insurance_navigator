@@ -30,7 +30,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Cloud service URLs
-API_BASE_URL = "***REMOVED***"
+API_BASE_URL = "https://insurance-navigator-api.onrender.com"
 DATABASE_URL = "${DATABASE_URL}/Type /Catalog
 /Pages 2 0 R
 >>

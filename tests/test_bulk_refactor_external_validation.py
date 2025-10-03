@@ -23,7 +23,7 @@ class BulkRefactorExternalValidator:
     
     def __init__(self):
         # External API configuration
-        self.external_api_url = "***REMOVED***"
+        self.external_api_url = "https://insurance-navigator-api.onrender.com"
         
         # Test configuration
         self.test_user_email = f"bulk_refactor_test_{int(time.time())}@example.com"

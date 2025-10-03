@@ -44,7 +44,7 @@ This directory contains comprehensive documentation for Phase 1 of the cloud dep
 
 ### **Successfully Deployed Services**
 - **Frontend**: https://insurance-navigator.vercel.app ✅
-- **API Service**: ***REMOVED*** ✅
+- **API Service**: https://insurance-navigator-api.onrender.com ✅
 - **Worker Service**: Background worker on Render ✅
 - **Database**: Supabase production instance ✅
 
@@ -147,7 +147,7 @@ python scripts/cloud_deployment/service_health_analyzer.py
 ### **Checking Service Status**
 ```bash
 # API service health
-curl -s "***REMOVED***/health" | jq .
+curl -s "https://insurance-navigator-api.onrender.com/health" | jq .
 
 # Frontend accessibility
 curl -s "https://insurance-navigator.vercel.app" -w "HTTP Status: %{http_code}\n"

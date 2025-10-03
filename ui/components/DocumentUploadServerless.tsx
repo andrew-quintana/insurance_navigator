@@ -115,7 +115,7 @@ export default function DocumentUploadServerless({
 
   // Upload single file
   const uploadFile = async (fileStatus: FileUploadStatus): Promise<UploadResponse> => {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '***REMOVED***'
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://insurance-navigator-api.onrender.com'
     const uploadEndpoint = `${apiBaseUrl}/api/upload-pipeline/upload`
     
     // Get token from Supabase session if not in localStorage

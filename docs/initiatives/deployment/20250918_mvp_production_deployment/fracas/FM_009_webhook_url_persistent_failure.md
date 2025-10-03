@@ -85,7 +85,7 @@ grep -i "base_url" worker_logs.txt
 
 Once the configuration is properly deployed:
 1. Worker will read `WEBHOOK_BASE_URL` environment variable
-2. Webhook URL will be generated as `***REMOVED***`
+2. Webhook URL will be generated as `https://insurance-navigator-api.onrender.com`
 3. LlamaParse API will accept the public webhook URL
 4. Document processing will complete successfully
 

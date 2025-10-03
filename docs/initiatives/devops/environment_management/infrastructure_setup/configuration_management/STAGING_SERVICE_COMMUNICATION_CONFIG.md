@@ -28,7 +28,7 @@ API Service ──┐
 ### Staging API Service Configuration
 - **Service ID**: `srv-d3740ijuibrs738mus1g`
 - **Name**: `api-service-staging`
-- **URL**: `***REMOVED***`
+- **URL**: `https://insurance-navigator-staging-api.onrender.com`
 - **Port**: 10000 (configured for staging)
 - **Type**: Web Service
 
@@ -45,7 +45,7 @@ API Service ──┐
 #### Database Configuration
 ```bash
 # Supabase Database Connection
-SUPABASE_URL=***REMOVED***
+SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
 SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
 SUPABASE_SERVICE_ROLE_KEY=<staging_service_role_key>
 DATABASE_URL=postgresql://postgres:<password>@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres
@@ -68,7 +68,7 @@ LOG_LEVEL=INFO
 ```bash
 SERVICE_HOST=0.0.0.0
 SERVICE_PORT=10000
-CORS_ORIGINS=***REMOVED***,http://localhost:3000
+CORS_ORIGINS=https://insurance-navigator-staging-api.onrender.com,http://localhost:3000
 ```
 
 #### RAG Configuration
@@ -80,7 +80,7 @@ RAG_EMBEDDING_MODEL=text-embedding-3-small
 RAG_VECTOR_DIMENSION=1536
 ```
 
-###***REMOVED*** (Staging/Test Keys)
+#### API Keys (Staging/Test Keys)
 ```bash
 OPENAI_API_KEY=sk-staging-...
 ANTHROPIC_API_KEY=sk-ant-staging-...
@@ -151,7 +151,7 @@ The worker updates job status through the database:
 - No direct HTTP communication between services
 - CORS configured for staging domains only
 
-##***REMOVED***
+### API Keys
 - Staging-specific API keys for external services
 - Separate from production keys
 - Test/development rate limits

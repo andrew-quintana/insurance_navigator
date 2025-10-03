@@ -29,7 +29,7 @@
 - [x] **Performance Monitoring**: Artillery configuration ready for load testing
 
 ### ✅ **PRODUCTION CREDENTIALS VALIDATED**
-- [x] **Supabase URL**: `***REMOVED***` - Verified accessible
+- [x] **Supabase URL**: `https://znvwzkdblknkkztqyfnu.supabase.co` - Verified accessible
 - [x] **Database Connection**: `postgresql://postgres:<REDACTED>@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres` - Tested and working
 - [x] **API Keys**: OpenAI and LlamaParse keys configured for production testing
 - [x] **Service Role Key**: Supabase service role key configured for admin operations

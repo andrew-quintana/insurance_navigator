@@ -41,7 +41,7 @@
 - **Performance**: Optimized build process with legacy peer deps support
 
 ### **Backend API (Render)**
-- **URL**: ***REMOVED***
+- **URL**: https://insurance-navigator-api.onrender.com
 - **Status**: ✅ Live and healthy
 - **Services**: All core services operational
   - Database: ✅ Healthy
@@ -57,7 +57,7 @@
 - **Processing**: Ready for document processing workflows
 
 ### **Database (Supabase)**
-- **URL**: ***REMOVED***
+- **URL**: https://znvwzkdblknkkztqyfnu.supabase.co
 - **Status**: ✅ Connected and operational
 - **Features**: Vector extensions, authentication, real-time capabilities
 

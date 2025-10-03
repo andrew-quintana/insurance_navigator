@@ -5,7 +5,7 @@
       "service_name": "insurance-navigator-api",
       "service_id": "srv-d0v2nqvdiees73cejf0g",
       "service_type": "web_service",
-      "service_url": "***REMOVED***",
+      "service_url": "https://insurance-navigator-api.onrender.com",
       "health_status": "healthy",
       "stability_analysis": {
         "stability_analysis_available": true,

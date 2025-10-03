@@ -19,7 +19,7 @@ z_prompt_sops/
 .env.staging
 .env.development
 
-***REMOVED*** and Secrets
+# API Keys and Secrets
 *secret*
 *key*
 *credential*

@@ -47,7 +47,7 @@ def check_environment_variables():
         'ENVIRONMENT': 'production',
         'LLAMAPARSE_API_URL': 'https://api.cloud.llamaindex.ai',
         'OPENAI_API_URL': 'https://api.openai.com',
-        'SUPABASE_URL': '***REMOVED***'
+        'SUPABASE_URL': 'https://znvwzkdblknkkztqyfnu.supabase.co'
     }
     
     # API keys that should be set (but we won't show the values)

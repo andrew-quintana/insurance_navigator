@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 async def debug_upload_endpoint():
     """Debug the upload endpoint with detailed error analysis"""
     
-    api_url = "***REMOVED***"
+    api_url = "https://insurance-navigator-api.onrender.com"
     
     try:
         async with httpx.AsyncClient() as client:

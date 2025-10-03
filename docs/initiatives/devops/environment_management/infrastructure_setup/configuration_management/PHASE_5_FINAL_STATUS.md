@@ -84,7 +84,7 @@ Failed: 3 (API Health, End-to-End Workflow, Error Handling)
 ## Service Configuration
 
 ### Staging API Service (srv-d3740ijuibrs738mus1g)
-- **URL**: `***REMOVED***`
+- **URL**: `https://insurance-navigator-staging-api.onrender.com`
 - **Port**: 10000
 - **Database**: Production Supabase (temporary)
 - **Status**: ⏳ Deploying
@@ -98,7 +98,7 @@ Failed: 3 (API Health, End-to-End Workflow, Error Handling)
 
 ### Environment Variables
 - **Database**: `postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres`
-- **Supabase URL**: `***REMOVED***`
+- **Supabase URL**: `https://znvwzkdblknkkztqyfnu.supabase.co`
 - **Service Role Key**: Configured for production environment
 - **API Keys**: Staging-specific keys for external services
 

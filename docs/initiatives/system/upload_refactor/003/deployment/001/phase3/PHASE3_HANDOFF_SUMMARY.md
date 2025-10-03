@@ -131,7 +131,7 @@
 
 ### **Infrastructure Ready**
 - ✅ **Frontend**: Vercel deployment operational (https://insurance-navigator.vercel.app)
-- ✅ **Backend**: Render API service healthy (***REMOVED***)
+- ✅ **Backend**: Render API service healthy (https://insurance-navigator-api.onrender.com)
 - ✅ **Database**: Supabase production instance connected
 - ✅ **Worker**: Background processing service operational
 - ✅ **Monitoring**: Health checks and performance monitoring active

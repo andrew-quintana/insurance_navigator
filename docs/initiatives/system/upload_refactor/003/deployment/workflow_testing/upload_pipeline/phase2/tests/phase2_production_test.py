@@ -30,7 +30,7 @@ TEST_USER_ID = "766e8693-7fd5-465e-9ee4-4a9b3a696480"  # Same as Phase 1
 
 # Production Supabase configuration
 PRODUCTION_CONFIG = {
-    "SUPABASE_URL": "***REMOVED***",
+    "SUPABASE_URL": "https://znvwzkdblknkkztqyfnu.supabase.co",
     "SUPABASE_ANON_KEY": "${SUPABASE_JWT_TOKEN}",
     "SUPABASE_SERVICE_ROLE_KEY": "${SUPABASE_JWT_TOKEN}",
     "DATABASE_URL": "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres"

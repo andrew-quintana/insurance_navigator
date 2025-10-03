@@ -58,7 +58,7 @@ def keep_alive(api_url: str, interval: int = 300):
 if __name__ == "__main__":
     import sys
     
-    api_url = "***REMOVED***"
+    api_url = "https://insurance-navigator-api.onrender.com"
     interval = 300  # 5 minutes
     
     if len(sys.argv) > 1:

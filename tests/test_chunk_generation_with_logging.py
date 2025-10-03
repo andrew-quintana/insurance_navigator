@@ -399,6 +399,6 @@ class ChunkGenerationTest:
 
 if __name__ == "__main__":
     # Use production API since local backend has environment issues
-    api_base_url = "***REMOVED***"
+    api_base_url = "https://insurance-navigator-api.onrender.com"
     test_runner = ChunkGenerationTest(api_base_url)
     asyncio.run(test_runner.run_all_tests())

@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 async def check_production_status():
     """Check various production endpoints to identify issues."""
     
-    base_url = "***REMOVED***"
+    base_url = "https://insurance-navigator-api.onrender.com"
     
     async with aiohttp.ClientSession() as session:
         logger.info("🔍 Checking production system status...")

@@ -99,7 +99,7 @@ def get_health(self) -> Dict[str, Any]
 
 **Configuration Changes**:
 ```yaml
-***REMOVED*** updated to real endpoints
+# Service URLs updated to real endpoints
 LLAMAPARSE_API_URL: https://api.cloud.llamaindex.ai
 OPENAI_API_URL: https://api.openai.com
 

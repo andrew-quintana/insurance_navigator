@@ -86,7 +86,7 @@ ANTHROPIC_API_KEY=staging_anthropic_key
 # Service Configuration
 SERVICE_HOST=0.0.0.0
 SERVICE_PORT=8000
-API_BASE_URL=***REMOVED***
+API_BASE_URL=https://insurance-navigator-staging-api.onrender.com
 CORS_ORIGINS=https://staging.accessa.ai,https://staging-app.accessa.ai,https://staging-admin.accessa.ai
 ```
 
@@ -252,7 +252,7 @@ ANTHROPIC_API_KEY=staging_anthropic_key
 # Service Configuration
 SERVICE_HOST=0.0.0.0
 SERVICE_PORT=8000
-API_BASE_URL=***REMOVED***
+API_BASE_URL=https://insurance-navigator-staging-api.onrender.com
 CORS_ORIGINS=https://staging.accessa.ai,https://staging-app.accessa.ai,https://staging-admin.accessa.ai
 
 # RAG Configuration

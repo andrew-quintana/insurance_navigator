@@ -319,7 +319,7 @@ DEPLOYMENT_PHASE=phase1
 
 # Platform-specific configuration
 VERCEL_URL=https://insurance-navigator.vercel.app
-RENDER_URL=***REMOVED***
+RENDER_URL=https://insurance-navigator-api.onrender.com
 SUPABASE_URL=https://your-project.supabase.co
 ```
 

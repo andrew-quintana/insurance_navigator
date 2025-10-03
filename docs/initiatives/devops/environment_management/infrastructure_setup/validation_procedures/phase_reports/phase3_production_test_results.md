@@ -13,7 +13,7 @@
 ## 🔍 **Test Results**
 
 ### 1. **Health Endpoint** ✅
-- **URL**: `***REMOVED***/health`
+- **URL**: `https://insurance-navigator-api.onrender.com/health`
 - **Status**: 200 OK
 - **Response**: All services healthy
 - **Services**: Database ✅, Supabase Auth ✅, LlamaParse ✅, OpenAI ✅
@@ -25,7 +25,7 @@
 - **Token Validation**: Working
 
 ### 3. **Chat Endpoint** ✅
-- **URL**: `POST ***REMOVED***/chat`
+- **URL**: `POST https://insurance-navigator-api.onrender.com/chat`
 - **Status**: 200 OK
 - **Authentication**: Bearer token required and validated
 - **Response Format**: Proper JSON with conversation_id, timestamp, metadata
@@ -33,7 +33,7 @@
 - **Processing Time**: ~3.4 seconds (acceptable for production)
 
 ### 4. **Upload Pipeline** ✅
-- **URL**: `POST ***REMOVED***/api/v2/upload`
+- **URL**: `POST https://insurance-navigator-api.onrender.com/api/v2/upload`
 - **Status**: 422 (Expected - requires file upload)
 - **Authentication**: Bearer token required and validated
 - **Validation**: Properly validates required fields

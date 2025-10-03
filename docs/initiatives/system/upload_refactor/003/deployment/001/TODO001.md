@@ -49,7 +49,7 @@ This TODO provides detailed implementation tasks for cloud deployment testing of
 
 #### **Successfully Deployed Services**
 - ✅ **Frontend**: https://insurance-navigator.vercel.app (Vercel)
-- ✅ **API Service**: ***REMOVED*** (Render)
+- ✅ **API Service**: https://insurance-navigator-api.onrender.com (Render)
 - ✅ **Worker Service**: Background worker on Render
 - ✅ **Database**: Supabase production instance
 

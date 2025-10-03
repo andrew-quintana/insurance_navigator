@@ -13,7 +13,7 @@ This guide explains how to run Phase C UUID standardization tests using your loc
 - **Health Endpoint**: `http://localhost:8000/health`
 
 ### Database: Production Supabase
-- **Supabase URL**: `***REMOVED***`
+- **Supabase URL**: `https://znvwzkdblknkkztqyfnu.supabase.co`
 - **Database URL**: `postgresql://postgres:<REDACTED>@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres`
 - **Pooler URL**: `${DATABASE_URL}//localhost:8000/health
 ```
@@ -106,7 +106,7 @@ The local backend + production Supabase tests cover:
 ================================================================================
 Configuration:
   Backend: local (http://localhost:8000)
-  Database: production_supabase (***REMOVED***)
+  Database: production_supabase (https://znvwzkdblknkkztqyfnu.supabase.co)
   Environment: hybrid_testing
 ================================================================================
 

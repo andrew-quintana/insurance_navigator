@@ -31,7 +31,7 @@ class Phase3ProductionPipelineTest:
     
     def __init__(self):
         # Use production API service
-        self.api_base_url = "***REMOVED***"
+        self.api_base_url = "https://insurance-navigator-api.onrender.com"
         self.test_user_id = str(uuid.uuid4())
         self.test_email = f"production_test_{int(time.time())}@example.com"
         self.test_password = "production_test_123"

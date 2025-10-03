@@ -31,8 +31,8 @@ The Insurance Navigator follows a strict **environment separation strategy** whe
 | Component | URL | Configuration |
 |-----------|-----|---------------|
 | Frontend | https://insurance-navigator-git-staging-andrew-quintanas-projects.vercel.app | `ui/.env.staging` |
-| Backend | ***REMOVED*** | `.env.staging` |
-| Database | ***REMOVED*** | Supabase staging |
+| Backend | https://insurance-navigator-staging-api.onrender.com | `.env.staging` |
+| Database | https://dfgzeastcxnoqshgyotp.supabase.co | Supabase staging |
 
 **Start Command:**
 ```bash
@@ -45,8 +45,8 @@ The Insurance Navigator follows a strict **environment separation strategy** whe
 | Component | URL | Configuration |
 |-----------|-----|---------------|
 | Frontend | https://insurancenavigator.vercel.app | `ui/.env.production` |
-| Backend | ***REMOVED*** | `.env.production` |
-| Database | ***REMOVED*** | Supabase production |
+| Backend | https://insurance-navigator-api.onrender.com | `.env.production` |
+| Database | https://znvwzkdblknkkztqyfnu.supabase.co | Supabase production |
 
 **Start Command:**
 ```bash
@@ -126,13 +126,13 @@ API_BASE_URL=http://localhost:8000
 DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
 
 # Staging (.env.staging)
-SUPABASE_URL=***REMOVED***
-API_BASE_URL=***REMOVED***
+SUPABASE_URL=https://dfgzeastcxnoqshgyotp.supabase.co
+API_BASE_URL=https://insurance-navigator-staging-api.onrender.com
 DATABASE_URL=postgresql://postgres:ERaZFjCEnuJsliSQ@db.dfgzeastcxnoqshgyotp.supabase.co:5432/postgres
 
 # Production (.env.production)
-SUPABASE_URL=***REMOVED***
-API_BASE_URL=***REMOVED***
+SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
+API_BASE_URL=https://insurance-navigator-api.onrender.com
 DATABASE_URL=postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres
 ```
 
@@ -146,12 +146,12 @@ NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 NEXT_PUBLIC_API_URL=http://localhost:8000
 
 # Staging (ui/.env.staging)
-NEXT_PUBLIC_SUPABASE_URL=***REMOVED***
-NEXT_PUBLIC_API_URL=***REMOVED***
+NEXT_PUBLIC_SUPABASE_URL=https://dfgzeastcxnoqshgyotp.supabase.co
+NEXT_PUBLIC_API_URL=https://insurance-navigator-staging-api.onrender.com
 
 # Production (ui/.env.production)
-NEXT_PUBLIC_SUPABASE_URL=***REMOVED***
-NEXT_PUBLIC_API_URL=***REMOVED***
+NEXT_PUBLIC_SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
+NEXT_PUBLIC_API_URL=https://insurance-navigator-api.onrender.com
 ```
 
 ## Cursor Agent Instructions
@@ -196,11 +196,11 @@ curl http://localhost:8000/health
 curl http://localhost:3000
 
 # Check staging
-curl ***REMOVED***/health
+curl https://insurance-navigator-staging-api.onrender.com/health
 curl https://insurance-navigator-git-staging-andrew-quintanas-projects.vercel.app
 
 # Check production
-curl ***REMOVED***/health
+curl https://insurance-navigator-api.onrender.com/health
 curl https://insurancenavigator.vercel.app
 ```
 

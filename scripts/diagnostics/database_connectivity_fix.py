@@ -27,7 +27,7 @@ def create_environment_configurations():
     configs = {
         'production': {
             'name': 'Production',
-            'supabase_url': '***REMOVED***',
+            'supabase_url': 'https://znvwzkdblknkkztqyfnu.supabase.co',
             'database_host': 'db.znvwzkdblknkkztqyfnu.supabase.co',
             'database_port': 5432,
             'database_name': 'postgres',
@@ -41,7 +41,7 @@ def create_environment_configurations():
         },
         'staging': {
             'name': 'Staging',
-            'supabase_url': '***REMOVED***',
+            'supabase_url': 'https://dfgzeastcxnoqshgyotp.supabase.co',
             'database_host': 'db.dfgzeastcxnoqshgyotp.supabase.co',
             'database_port': 5432,
             'database_name': 'postgres',

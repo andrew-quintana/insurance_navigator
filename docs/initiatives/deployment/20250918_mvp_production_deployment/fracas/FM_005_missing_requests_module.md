@@ -182,7 +182,7 @@ if environment == "development":
     except (ImportError, Exception) as e:
         base_url = "http://localhost:8000"
 else:
-    base_url = os.getenv("WEBHOOK_BASE_URL", "***REMOVED***")
+    base_url = os.getenv("WEBHOOK_BASE_URL", "https://insurance-navigator-api.onrender.com")
 ```
 
 ### **Benefits:**

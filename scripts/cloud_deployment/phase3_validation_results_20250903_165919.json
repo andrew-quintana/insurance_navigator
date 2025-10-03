@@ -4,9 +4,9 @@
   "phase": "Phase 3: Security & Accessibility Validation",
   "config": {
     "vercel_url": "https://insurance-navigator.vercel.app",
-    "api_url": "***REMOVED***",
+    "api_url": "https://insurance-navigator-api.onrender.com",
     "worker_url": "https://insurance-navigator-worker.onrender.com",
-    "supabase_url": "***REMOVED***",
+    "supabase_url": "https://znvwzkdblknkkztqyfnu.supabase.co",
     "DOCUMENT_ENCRYPTION_KEY": "test_key"
   },
   "security_validation": {
@@ -14,9 +14,9 @@
     "test_id": "phase3_security_1756943959",
     "config": {
       "vercel_url": "https://insurance-navigator.vercel.app",
-      "api_url": "***REMOVED***",
+      "api_url": "https://insurance-navigator-api.onrender.com",
       "worker_url": "https://insurance-navigator-worker.onrender.com",
-      "supabase_url": "***REMOVED***",
+      "supabase_url": "https://znvwzkdblknkkztqyfnu.supabase.co",
       "DOCUMENT_ENCRYPTION_KEY": "test_key"
     },
     "security_validation": {
@@ -97,9 +97,9 @@
     "test_id": "phase3_accessibility_1756943959",
     "config": {
       "vercel_url": "https://insurance-navigator.vercel.app",
-      "api_url": "***REMOVED***",
+      "api_url": "https://insurance-navigator-api.onrender.com",
       "worker_url": "https://insurance-navigator-worker.onrender.com",
-      "supabase_url": "***REMOVED***",
+      "supabase_url": "https://znvwzkdblknkkztqyfnu.supabase.co",
       "DOCUMENT_ENCRYPTION_KEY": "test_key"
     },
     "accessibility_validation": {
