@@ -399,14 +399,6 @@ export default function ChatPage() {
             </div>
           </Card>
 
-          {/* Info Card */}
-          <Card className="p-4 bg-sky-50 text-teal-800 text-sm rounded-xl">
-            <p className="font-medium">Privacy & Security</p>
-            <p className="mt-1">
-              Your Medicare information is kept secure and private. All conversations are encrypted and we follow 
-              soon-to-be HIPAA compliance standards to protect your health information.
-            </p>
-          </Card>
         </div>
       </div>
     </div>
