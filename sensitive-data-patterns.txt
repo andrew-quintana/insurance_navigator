@@ -1,0 +1,28 @@
+# Sensitive Data Patterns for BFG Cleanup
+# This file contains patterns to remove from git history
+
+# Supabase URLs
+https://znvwzkdblknkkztqyfnu.supabase.co
+https://dfgzeastcxnoqshgyotp.supabase.co
+https://prod-project.supabase.co
+
+# JWT Tokens
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+
+# Database URLs
+postgresql://postgres:password@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres
+postgresql://postgres:password@prod-db.example.com:5432/insurance_navigator_prod
+
+# API Keys
+sk-prod-
+sk-ant-prod-
+llx-prod-
+
+# Service URLs
+https://insurance-navigator-api.onrender.com
+https://insurance-navigator-staging-api.onrender.com
+
+# Email Service Keys
+your_prod_resend_api_key_here
+your_sendgrid_api_key_here
+your_postmark_api_key_here

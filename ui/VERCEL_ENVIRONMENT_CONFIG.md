@@ -62,18 +62,18 @@ Set these variables in **Project Settings > Environment Variables**:
 
 #### **Production Environment**
 ```
-NEXT_PUBLIC_API_BASE_URL=https://insurance-navigator-api.onrender.com
-NEXT_PUBLIC_SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+NEXT_PUBLIC_API_BASE_URL=https://your-production-api.onrender.com
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_production_anon_key_here
 NEXT_PUBLIC_APP_ENV=production
 NODE_ENV=production
 ```
 
 #### **Staging Environment**
 ```
-NEXT_PUBLIC_API_BASE_URL=https://insurance-navigator-staging-api.onrender.com
-NEXT_PUBLIC_SUPABASE_URL=https://dfgzeastcxnoqshgyotp.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+NEXT_PUBLIC_API_BASE_URL=https://your-staging-api.onrender.com
+NEXT_PUBLIC_SUPABASE_URL=https://your-staging-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_staging_anon_key_here
 NEXT_PUBLIC_APP_ENV=staging
 NODE_ENV=staging
 ```
@@ -82,7 +82,7 @@ NODE_ENV=staging
 ```
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_development_anon_key_here
 NEXT_PUBLIC_APP_ENV=development
 NODE_ENV=development
 ```
@@ -145,8 +145,8 @@ NEXT_PUBLIC_API_BASE_URL=https://api.example.com
 NEXT_PUBLIC_API_VERSION=v1
 
 # Authentication
-NEXT_PUBLIC_SUPABASE_URL=https://project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 
 # Feature Flags
 NEXT_PUBLIC_DEBUG_MODE=false
@@ -194,13 +194,13 @@ console.log('API Base URL:', process.env.NEXT_PUBLIC_API_BASE_URL);
 ## 📋 **Environment-Specific Configurations**
 
 ### **Production**
-- **API**: `https://insurance-navigator-api.onrender.com`
+- **API**: `https://your-production-api.onrender.com`
 - **Supabase**: Production project
 - **Debug**: Disabled
 - **Analytics**: Enabled
 
 ### **Staging**  
-- **API**: `https://insurance-navigator-staging-api.onrender.com`
+- **API**: `https://your-staging-api.onrender.com`
 - **Supabase**: Staging project
 - **Debug**: Enabled
 - **Analytics**: Disabled

@@ -40,8 +40,8 @@ DATABASE_URL=postgresql://postgres:password@localhost:5432/insurance_navigator_d
 DATABASE_SCHEMA=upload_pipeline
 
 # Development API Keys
-OPENAI_API_KEY=sk-dev-...
-SUPABASE_URL=https://dev-project.supabase.co
+OPENAI_API_KEY=your_dev_openai_api_key_here
+SUPABASE_URL=https://your-dev-project.supabase.co
 
 # Service Configuration
 SERVICE_PORT=8000
@@ -66,12 +66,12 @@ DEBUG=false
 LOG_LEVEL=WARNING
 
 # Production Database with Test Schema
-DATABASE_URL=postgresql://postgres:password@prod-db.example.com:5432/insurance_navigator_prod
+DATABASE_URL=postgresql://user:password@your-prod-db.example.com:5432/insurance_navigator_prod
 TEST_DATABASE_SCHEMA=upload_pipeline_test
 
 # Production API Keys (same as production)
-OPENAI_API_KEY=sk-prod-...
-SUPABASE_URL=https://prod-project.supabase.co
+OPENAI_API_KEY=your_prod_openai_api_key_here
+SUPABASE_URL=https://your-prod-project.supabase.co
 
 # Service Configuration
 SERVICE_PORT=8001
@@ -99,12 +99,12 @@ DEBUG=false
 LOG_LEVEL=ERROR
 
 # Production Database
-DATABASE_URL=postgresql://postgres:password@prod-db.example.com:5432/insurance_navigator_prod
+DATABASE_URL=postgresql://user:password@your-prod-db.example.com:5432/insurance_navigator_prod
 DATABASE_SCHEMA=upload_pipeline
 
 # Production API Keys
-OPENAI_API_KEY=sk-prod-...
-SUPABASE_URL=https://prod-project.supabase.co
+OPENAI_API_KEY=your_prod_openai_api_key_here
+SUPABASE_URL=https://your-prod-project.supabase.co
 
 # Service Configuration
 SERVICE_PORT=8000
