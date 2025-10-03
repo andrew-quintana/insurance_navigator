@@ -19,12 +19,12 @@ Create a `.env.production` file in the project root with:
 
 ```bash
 # Supabase Configuration
-SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
+SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your_anon_key_here
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 
 # Database Configuration  
-DATABASE_URL=postgresql://postgres:password@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres
+DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/postgres
 
 # API Configuration
 NEXT_PUBLIC_API_BASE_URL=https://insurance-navigator-api.onrender.com

@@ -54,8 +54,8 @@ class LocalBackendProductionSupabaseTester:
         self.health_endpoint = f"{self.api_base_url}/health"
         
         # Production Supabase configuration
-        self.supabase_url = "https://znvwzkdblknkkztqyfnu.supabase.co"
-        self.database_url = "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres"
+        self.supabase_url = "https://your-project.supabase.co"
+        self.database_url = "postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres"
         self.pooler_url = "${DATABASE_URL}/pdf", 1024, test_content_hash, "/test/path/test_document.pdf", "test")
                 
                 # Retrieve and validate

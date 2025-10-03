@@ -11,6 +11,7 @@ import json
 import time
 import hashlib
 import secrets
+import os
 from dataclasses import dataclass, asdict
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
@@ -571,9 +572,9 @@ class CloudSecurityValidator:
 async def main():
     """Example usage of the security validator"""
     config = {
-        "vercel_url": "https://insurance-navigator.vercel.app",
-        "api_url": "https://insurance-navigator-api.onrender.com",
-        "supabase_url": "https://znvwzkdblknkkztqyfnu.supabase.co",
+        "vercel_url": os.getenv("VERCEL_URL", "https://insurance-navigator.vercel.app"),
+        "api_url": os.getenv("API_URL", "https://insurance-navigator-api.onrender.com"),
+        "supabase_url": os.getenv("SUPABASE_URL", "https://your-project.supabase.co"),
         "DOCUMENT_ENCRYPTION_KEY": "test_key"
     }
     

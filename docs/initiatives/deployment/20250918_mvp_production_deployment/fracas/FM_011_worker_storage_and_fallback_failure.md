@@ -23,11 +23,11 @@ The worker experienced a cascading failure involving storage download issues, fa
 
 #### **1. Storage Download Failure (Primary Issue)**
 ```
-Storage download failed, using local fallback: Client error '400 Bad Request' for url 'https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/files/user/899b78b1-3c14-400b-aa8e-91457759be1e/raw/3fe7d00c_6b144eee.pdf'
+Storage download failed, using local fallback: Client error '400 Bad Request' for url 'https://your-project.supabase.co/storage/v1/object/files/user/899b78b1-3c14-400b-aa8e-91457759be1e/raw/3fe7d00c_6b144eee.pdf'
 ```
 
 **Root Cause**: Supabase storage returning 400 Bad Request
-- **Storage URL**: `https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/files/user/899b78b1-3c14-400b-aa8e-91457759be1e/raw/3fe7d00c_6b144eee.pdf`
+- **Storage URL**: `https://your-project.supabase.co/storage/v1/object/files/user/899b78b1-3c14-400b-aa8e-91457759be1e/raw/3fe7d00c_6b144eee.pdf`
 - **Error**: 400 Bad Request from Supabase storage
 - **Impact**: Worker falls back to local file handling
 
@@ -149,7 +149,7 @@ ORDER BY created_at DESC LIMIT 5;
 ```bash
 # Test storage URL manually
 curl -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-  "https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/files/user/899b78b1-3c14-400b-aa8e-91457759be1e/raw/3fe7d00c_6b144eee.pdf"
+  "https://your-project.supabase.co/storage/v1/object/files/user/899b78b1-3c14-400b-aa8e-91457759be1e/raw/3fe7d00c_6b144eee.pdf"
 ```
 
 ### **3. Check Worker Environment**

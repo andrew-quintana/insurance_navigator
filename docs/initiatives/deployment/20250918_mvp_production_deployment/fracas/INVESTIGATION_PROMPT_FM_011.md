@@ -60,7 +60,7 @@ You are tasked with investigating and resolving the remaining issues from **FM-0
 
 **Problem**: Storage downloads are failing with 400 Bad Request
 ```
-Storage download failed, using local fallback: Client error '400 Bad Request' for url 'https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/files/user/899b78b1-3c14-400b-aa8e-91457759be1e/raw/3fe7d00c_6b144eee.pdf'
+Storage download failed, using local fallback: Client error '400 Bad Request' for url 'https://your-project.supabase.co/storage/v1/object/files/user/899b78b1-3c14-400b-aa8e-91457759be1e/raw/3fe7d00c_6b144eee.pdf'
 ```
 
 **Investigation Steps**:
@@ -75,7 +75,7 @@ Storage download failed, using local fallback: Client error '400 Bad Request' fo
    ```bash
    # Get the service role key from environment
    curl -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-     "https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/files/user/899b78b1-3c14-400b-aa8e-91457759be1e/raw/3fe7d00c_6b144eee.pdf"
+     "https://your-project.supabase.co/storage/v1/object/files/user/899b78b1-3c14-400b-aa8e-91457759be1e/raw/3fe7d00c_6b144eee.pdf"
    ```
 
 3. **Check storage permissions**:

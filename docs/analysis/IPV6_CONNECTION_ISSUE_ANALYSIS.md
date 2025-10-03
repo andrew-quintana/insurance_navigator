@@ -33,7 +33,7 @@ My previous analysis incorrectly focused on:
 1. **DNS Resolution**: System resolves Supabase hostname to IPv6 address only
 2. **IPv4 Failure**: IPv4 resolution fails with "nodename nor servname provided, or not known"
 3. **Render Limitation**: Render's network environment has IPv6 connectivity issues
-4. **Direct Connection**: `db.znvwzkdblknkkztqyfnu.supabase.co:5432` uses IPv6
+4. **Direct Connection**: `db.your-project.supabase.co:5432` uses IPv6
 
 #### **Supabase IPv6 Transition**
 According to web research, Supabase has transitioned to IPv6 addresses for direct database connections. This causes compatibility issues with:
@@ -53,19 +53,19 @@ According to web research, Supabase has transitioned to IPv6 addresses for direc
 #### **Production Environment**
 ```bash
 # OLD (IPv6 - Failing)
-DATABASE_URL=postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres
+DATABASE_URL=postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres
 
 # NEW (IPv4 - Working)
-DATABASE_URL=postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres
+DATABASE_URL=postgresql://postgres.your-project:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres
 ```
 
 #### **Staging Environment**
 ```bash
 # OLD (IPv6 - Failing)
-DATABASE_URL=postgresql://postgres:ERaZFjCEnuJsliSQ@db.dfgzeastcxnoqshgyotp.supabase.co:5432/postgres
+DATABASE_URL=postgresql://postgres:your_database_password_here@db.your-staging-project.supabase.co:5432/postgres
 
 # NEW (IPv4 - Working)
-DATABASE_URL=postgresql://postgres.dfgzeastcxnoqshgyotp:ERaZFjCEnuJsliSQ@aws-0-us-west-1.pooler.supabase.com:6543/postgres
+DATABASE_URL=postgresql://postgres.your-staging-project:your_database_password_here@aws-0-us-west-1.pooler.supabase.com:6543/postgres
 ```
 
 ### **Key Configuration Changes**

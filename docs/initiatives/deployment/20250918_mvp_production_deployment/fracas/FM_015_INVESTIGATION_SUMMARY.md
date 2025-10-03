@@ -111,9 +111,9 @@ When webhook processing works correctly, you should see logs like:
 🔔 STORAGE STEP 8: Uploading parsed content to bucket: files, key: user/{user_id}/parsed/{document_id}.md
 🔔 STORAGE STEP 9: Getting environment variables
 🔔 STORAGE STEP 10: SUPABASE_SERVICE_ROLE_KEY found
-🔔 STORAGE STEP 11: SUPABASE_URL found: https://znvwzkdblknkkztqyfnu.supabase.co
+🔔 STORAGE STEP 11: SUPABASE_URL found: https://your-project.supabase.co
 🔔 STORAGE STEP 12: Creating HTTP client and making storage request
-🔔 STORAGE STEP 13: Storage endpoint: https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/files/user/{user_id}/parsed/{document_id}.md
+🔔 STORAGE STEP 13: Storage endpoint: https://your-project.supabase.co/storage/v1/object/files/user/{user_id}/parsed/{document_id}.md
 🔔 STORAGE STEP 14: Storage upload response: 200 - OK
 🔔 STORAGE STEP 15: Storage upload success: True
 🔔 STORAGE STEP 16: Storage upload successful

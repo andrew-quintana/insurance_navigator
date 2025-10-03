@@ -319,7 +319,7 @@ curl https://insurance-navigator-api.onrender.com/health
 1. **Test Database Connectivity**:
    ```bash
    curl -H "apikey: YOUR_SUPABASE_ANON_KEY" \
-        https://znvwzkdblknkkztqyfnu.supabase.co/rest/v1/
+        https://your-project.supabase.co/rest/v1/
    ```
 
 2. **Verify Analytics**:

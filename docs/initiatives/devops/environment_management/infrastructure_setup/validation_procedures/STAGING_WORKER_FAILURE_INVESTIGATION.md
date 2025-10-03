@@ -171,7 +171,7 @@ The staging worker service is experiencing persistent network connectivity issue
 
 ### Evidence
 1. **Local Connectivity**: ✅ Database connection works from local machine
-2. **Direct URL**: ❌ `postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres`
+2. **Direct URL**: ❌ `postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres`
 3. **Pooler URL**: ❌ `${DATABASE_URL}/Proxy**: Set up network tunneling if allowed by Render
 
 ## Expected Resolution

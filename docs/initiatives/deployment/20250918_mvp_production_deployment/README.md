@@ -91,7 +91,7 @@ This initiative establishes a production-ready deployment pipeline for the Insur
 
 **Frontend:** Vercel (insurance-navigator.vercel.app)  
 **Backend API:** Render (insurance-navigator-api.onrender.com)  
-**Database:** Supabase (znvwzkdblknkkztqyfnu.supabase.co)  
+**Database:** Supabase (your-project.supabase.co)  
 **Cost:** $0/month (free tier maintained)
 
 ## Success Metrics

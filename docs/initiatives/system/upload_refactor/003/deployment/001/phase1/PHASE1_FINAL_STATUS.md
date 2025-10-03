@@ -25,7 +25,7 @@
 
 ### 3. Supabase Database Configuration
 - **Status**: ✅ WORKING AND ACCESSIBLE
-- **URL**: https://znvwzkdblknkkztqyfnu.supabase.co
+- **URL**: https://your-project.supabase.co
 - **Services Working**:
   - Database: ✅ 200 OK
   - Authentication: ✅ 200 OK
@@ -36,7 +36,7 @@
 ### 4. Environment Configuration
 - **Status**: ✅ PROPERLY CONFIGURED
 - **Variables Loaded**:
-  - SUPABASE_URL: ✅ https://znvwzkdblknkkztqyfnu.supabase.co
+  - SUPABASE_URL: ✅ https://your-project.supabase.co
   - SUPABASE_KEY: ✅ Loaded
   - SERVICE_ROLE_KEY: ✅ Loaded
   - All NEXT_PUBLIC variables: ✅ Configured

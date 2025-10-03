@@ -29,7 +29,7 @@ Phase 1 of the cloud deployment initiative has been **successfully completed** w
 | Frontend | Vercel | https://insurance-navigator.vercel.app | ✅ Live |
 | API Service | Render | https://insurance-navigator-api.onrender.com | ✅ Healthy |
 | Worker Service | Render | Background Worker | ✅ Running |
-| Database | Supabase | https://znvwzkdblknkkztqyfnu.supabase.co | ✅ Connected |
+| Database | Supabase | https://your-project.supabase.co | ✅ Connected |
 
 ### **Service Health Status**
 ```json

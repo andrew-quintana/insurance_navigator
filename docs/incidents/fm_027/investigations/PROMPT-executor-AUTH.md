@@ -27,7 +27,7 @@ You execute high-information experiments to confirm/refute auth/env hypotheses. 
 - **Investigation Doc**: `docs/incidents/fm_027/investigations/INV-AUTH-20251001.md`
 - **Repro Script**: `test_auth_matrix.py` (create if needed)
 - **Worker Logs**: Render service `srv-d37dlmvfte5s73b6uq0g`
-- **Storage Dashboard**: Supabase project `dfgzeastcxnoqshgyotp`
+- **Storage Dashboard**: Supabase project `your-staging-project`
 - **Environment Config**: `config/environment_loader.py`
 
 ## Ordered Tasks

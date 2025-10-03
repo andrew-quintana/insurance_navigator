@@ -62,7 +62,7 @@ curl -X POST "https://insurance-navigator-api.onrender.com/api/upload-pipeline/u
 {
   "job_id": "7495924e-f1d9-42f2-bdab-878748a5053e",
   "document_id": "710fabd6-a31c-5de8-9672-b3f8096a3c07",
-  "signed_url": "https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/upload/sign/files/user/9909ac90-cd36-4d19-9781-ca1c96e0fdb3/raw/40a56992_327c5925.pdf?token=...",
+  "signed_url": "https://your-project.supabase.co/storage/v1/object/upload/sign/files/user/9909ac90-cd36-4d19-9781-ca1c96e0fdb3/raw/40a56992_327c5925.pdf?token=...",
   "upload_expires_at": "2025-09-21T01:48:10.876185"
 }
 ```
@@ -80,7 +80,7 @@ curl -X POST "https://insurance-navigator-staging-api.onrender.com/api/upload-pi
 {
   "job_id": "43a51833-6196-452f-aaed-c846ba26af4d",
   "document_id": "90cbb48f-32ad-5fba-876b-875df2b3ea59",
-  "signed_url": "https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/upload/sign/files/user/bf1b38ba-0770-4e42-a83d-aa32fb65b946/raw/1aa23560_5f456ee0.pdf?token=...",
+  "signed_url": "https://your-project.supabase.co/storage/v1/object/upload/sign/files/user/bf1b38ba-0770-4e42-a83d-aa32fb65b946/raw/1aa23560_5f456ee0.pdf?token=...",
   "upload_expires_at": "2025-09-21T01:48:16.711020"
 }
 ```

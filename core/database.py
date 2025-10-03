@@ -182,10 +182,10 @@ class DatabaseManager:
         return (
             "supabase.com" in self.config.host or 
             "supabase.co" in self.config.host or
-            "znvwzkdblknkkztqyfnu" in self.config.host or
+            "your-project" in self.config.host or
             "supabase_db_insurance_navigator" in self.config.host or
             "pooler.supabase.com" in self.config.host or
-            "dfgzeastcxnoqshgyotp" in self.config.host  # Supabase project ID pattern
+            "your-staging-project" in self.config.host  # Supabase project ID pattern
         )
     
     async def _setup_connection(self, conn: Connection) -> None:

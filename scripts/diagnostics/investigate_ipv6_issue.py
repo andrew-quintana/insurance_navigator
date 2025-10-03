@@ -30,7 +30,7 @@ def test_ipv6_support():
         ipv6_supported = False
     
     # Test DNS resolution for both IPv4 and IPv6
-    host = "db.znvwzkdblknkkztqyfnu.supabase.co"
+    host = "db.your-project.supabase.co"
     
     try:
         # Test IPv4 resolution
@@ -60,19 +60,19 @@ def test_connection_strings():
     # Test different connection string formats
     connection_strings = [
         # Direct connection (IPv6)
-        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres",
+        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres",
         
         # With IPv4 preference
-        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres?prefer_socket_families=ipv4",
+        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres?prefer_socket_families=ipv4",
         
         # With SSL mode
-        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres?sslmode=require",
+        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres?sslmode=require",
         
         # With IPv4 preference and SSL
-        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres?sslmode=require&prefer_socket_families=ipv4",
+        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres?sslmode=require&prefer_socket_families=ipv4",
         
         # With connection timeout
-        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres?sslmode=require&connect_timeout=30&prefer_socket_families=ipv4",
+        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres?sslmode=require&connect_timeout=30&prefer_socket_families=ipv4",
     ]
     
     results = []
@@ -102,7 +102,7 @@ def test_supavisor_connection():
     print("-" * 40)
     
     # Supavisor connection string (IPv4 compatible)
-    supavisor_conn = "postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
+    supavisor_conn = "postgresql://postgres.your-project:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
     
     print(f"Testing Supavisor connection:")
     print(f"   {supavisor_conn[:80]}...")
@@ -128,7 +128,7 @@ def test_manual_connection():
     try:
         print("Testing with IPv4 preference...")
         conn = asyncio.run(asyncpg.connect(
-            host="db.znvwzkdblknkkztqyfnu.supabase.co",
+            host="db.your-project.supabase.co",
             port=5432,
             database="postgres",
             user="postgres",

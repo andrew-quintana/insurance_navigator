@@ -83,7 +83,7 @@ class TestDatabaseManager(unittest.TestCase):
     
     def test_is_supabase_connection_true(self):
         """Test Supabase connection detection."""
-        self.db_manager.config.host = "znvwzkdblknkkztqyfnu.supabase.com"
+        self.db_manager.config.host = "your-project.supabase.com"
         self.assertTrue(self.db_manager._is_supabase_connection())
         
         self.db_manager.config.host = "project.supabase.co"

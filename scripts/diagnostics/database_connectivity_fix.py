@@ -27,8 +27,8 @@ def create_environment_configurations():
     configs = {
         'production': {
             'name': 'Production',
-            'supabase_url': 'https://znvwzkdblknkkztqyfnu.supabase.co',
-            'database_host': 'db.znvwzkdblknkkztqyfnu.supabase.co',
+            'supabase_url': 'https://your-project.supabase.co',
+            'database_host': 'db.your-project.supabase.co',
             'database_port': 5432,
             'database_name': 'postgres',
             'database_user': 'postgres',
@@ -133,7 +133,7 @@ class DatabaseConfigFix:
         # Get environment-specific configuration
         if self.environment == "production":
             return {
-                'host': os.getenv('DB_HOST', 'db.znvwzkdblknkkztqyfnu.supabase.co'),
+                'host': os.getenv('DB_HOST', 'db.your-project.supabase.co'),
                 'port': int(os.getenv('DB_PORT', '5432')),
                 'database': os.getenv('DB_NAME', 'postgres'),
                 'user': os.getenv('DB_USER', 'postgres'),

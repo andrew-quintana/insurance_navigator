@@ -14,7 +14,7 @@ async def test_database_connection():
     
     # Test both direct and pooler URLs
     test_urls = [
-        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres?sslmode=require",
+        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres?sslmode=require",
         "${DATABASE_URL}/TLS configuration issues")
                 print("   💡 Make sure sslmode=require is set in the connection string")
             elif "authentication" in str(e).lower():

@@ -35,7 +35,7 @@ INFO:     Uvicorn running on http://0.0.0.0:10000 (Press CTRL+C to quit)
 asyncpg.exceptions._base.InternalClientError: unexpected error while performing authentication: 'NoneType' object has no attribute 'group'
 ```
 - **Problem**: Supabase pooler URL authentication failing
-- **URL**: `postgresql://postgres.dfgzeastcxnoqshgyotp:tukwof-...@aws-0-us-west-1.pooler.supabase.com:6543/postgres`
+- **URL**: `postgresql://postgres.your-staging-project:tukwof-...@aws-0-us-west-1.pooler.supabase.com:6543/postgres`
 - **Error**: SCRAM authentication protocol failure
 - **Impact**: Complete system initialization failure
 

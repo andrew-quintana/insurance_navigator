@@ -11,7 +11,7 @@ The staging Supabase environment has been **configured and prepared** for use. T
 ### **✅ Completed Tasks**
 
 1. **Staging Supabase Instance Identified**
-   - URL: `https://dfgzeastcxnoqshgyotp.supabase.co`
+   - URL: `https://your-staging-project.supabase.co`
    - Status: Accessible and ready for configuration
    - API Keys: Configured and validated
 
@@ -40,7 +40,7 @@ The staging Supabase environment has been **configured and prepared** for use. T
 - **Supabase**: Configured to use staging instance
 
 ### **Staging Supabase Instance**
-- **URL**: `https://dfgzeastcxnoqshgyotp.supabase.co`
+- **URL**: `https://your-staging-project.supabase.co`
 - **Status**: ✅ **Accessible**
 - **API Access**: ✅ **Working**
 - **Database Schema**: ⚠️ **Requires Manual Setup**
@@ -51,7 +51,7 @@ The staging Supabase environment has been **configured and prepared** for use. T
 The staging Supabase instance needs the database schema applied manually:
 
 1. **Access Supabase Dashboard**: https://supabase.com/dashboard
-2. **Select Project**: `dfgzeastcxnoqshgyotp`
+2. **Select Project**: `your-staging-project`
 3. **Go to SQL Editor**
 4. **Apply Migrations**: Run the migration files from `supabase/migrations/` in order
 
@@ -92,7 +92,7 @@ curl -X POST "https://insurance-navigator-staging-api.onrender.com/upload-metada
 ### **Staging vs Production**
 | Feature | Staging | Production |
 |---------|---------|------------|
-| **Supabase Instance** | `dfgzeastcxnoqshgyotp` | `znvwzkdblknkkztqyfnu` |
+| **Supabase Instance** | `your-staging-project` | `your-project` |
 | **API Service** | `insurance-navigator-staging-api` | `insurance-navigator-api` |
 | **Database** | Empty (after setup) | Full production data |
 | **Purpose** | Development/Testing | Live production |
@@ -110,15 +110,15 @@ curl -X POST "https://insurance-navigator-staging-api.onrender.com/upload-metada
 
 ### **Staging API Service Environment Variables**
 ```bash
-SUPABASE_URL=https://dfgzeastcxnoqshgyotp.supabase.co
+SUPABASE_URL=https://your-staging-project.supabase.co
 SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}...
 SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_ANON_KEY}...
-DATABASE_URL=postgresql://postgres.dfgzeastcxnoqshgyotp:...@aws-0-us-west-1.pooler.supabase.com:6543/postgres
-WEBHOOK_URL=https://dfgzeastcxnoqshgyotp.supabase.co/functions/v1/processing-webhook
+DATABASE_URL=postgresql://postgres.your-staging-project:...@aws-0-us-west-1.pooler.supabase.com:6543/postgres
+WEBHOOK_URL=https://your-staging-project.supabase.co/functions/v1/processing-webhook
 ```
 
 ### **Staging Supabase Configuration**
-- **Project ID**: `dfgzeastcxnoqshgyotp`
+- **Project ID**: `your-staging-project`
 - **Region**: `us-west-1`
 - **Database**: PostgreSQL with vector extension
 - **Storage**: Private buckets for documents

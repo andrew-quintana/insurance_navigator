@@ -94,7 +94,7 @@ async def debug_signed_url():
             # Parse the URL to see what domain it's using
             if "storage.supabase.co" in signed_url:
                 logger.error("❌ Still using incorrect storage.supabase.co domain!")
-            elif "znvwzkdblknkkztqyfnu.supabase.co" in signed_url:
+            elif "your-project.supabase.co" in signed_url:
                 logger.info("✅ Using correct Supabase domain!")
             else:
                 logger.warning(f"⚠️ Unknown domain in signed URL: {signed_url}")

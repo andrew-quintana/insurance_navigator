@@ -20,7 +20,7 @@ class DatabaseManager:
         """Initialize the connection pool"""
         try:
             # Add SSL configuration for Supabase
-            ssl_config = "require" if ("supabase.com" in self.database_url or "znvwzkdblknkkztqyfnu" in self.database_url) else None
+            ssl_config = "require" if ("supabase.com" in self.database_url or "your-project" in self.database_url) else None
             logger.info(f"Initializing database pool with URL: {self.database_url[:50]}...")
             logger.info(f"SSL configuration: {ssl_config}")
             logger.info(f"Pool size: {self.min_size}-{self.max_size}")

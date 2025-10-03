@@ -44,7 +44,7 @@ The ServiceRouter was not reading the `SERVICE_MODE` environment variable and wa
 ### **Evidence**
 - **Warning**: `"Fallback to mock services is enabled in production. This may mask real API failures and should be disabled."`
 - **Database Error**: `"relation \"upload_pipeline.upload_jobs\" does not exist"`
-- **Storage Error**: `"Client error '400 Bad Request' for url 'https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/files/...'"`
+- **Storage Error**: `"Client error '400 Bad Request' for url 'https://your-project.supabase.co/storage/v1/object/files/...'"`
 - **Configuration**: `SERVICE_MODE=real` in render.yaml but ServiceRouter not reading it
 
 ## 🔧 **Implemented Fixes**

@@ -51,8 +51,8 @@ class LocalProdTestExecutor:
             },
             "database": {
                 "type": "production_supabase",
-                "url": "https://znvwzkdblknkkztqyfnu.supabase.co",
-                "database_url": "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres",
+                "url": "https://your-project.supabase.co",
+                "database_url": "postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres",
                 "pooler_url": "${DATABASE_URL}/summary['total_tests']*100):.1f}%" if summary['total_tests'] > 0 else "N/A")
         
         if summary["critical_failures"] > 0:
@@ -98,7 +98,7 @@ class LocalProdTestExecutor:
         print()
         
         print("6. Test production Supabase connection:")
-        print("   python -c \"import asyncpg; import asyncio; asyncio.run(asyncpg.connect('postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres'))\"")
+        print("   python -c \"import asyncpg; import asyncio; asyncio.run(asyncpg.connect('postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres'))\"")
         print()
         
         print("=" * 60)

@@ -9,7 +9,7 @@
 
 ### ✅ **CRITICAL SUCCESS: Production Supabase Integration**
 - **API Server**: Successfully connected to production Supabase database
-- **Database Connection**: `postgresql://postgres:<REDACTED>@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres`
+- **Database Connection**: `postgresql://postgres:<REDACTED>@db.your-project.supabase.co:5432/postgres`
 - **Environment Variables**: Properly loaded from `.env.production`
 - **Service Health**: API server reports "Healthy" status
 

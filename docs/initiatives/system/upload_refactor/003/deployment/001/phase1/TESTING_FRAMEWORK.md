@@ -115,7 +115,7 @@ python scripts/cloud_deployment/cloud_integration_tester.py
     "vercel_url": "https://insurance-navigator.vercel.app",
     "api_url": "https://insurance-navigator-api.onrender.com",
     "worker_url": "https://insurance-navigator-worker.onrender.com",
-    "supabase_url": "https://znvwzkdblknkkztqyfnu.supabase.co"
+    "supabase_url": "https://your-project.supabase.co"
   },
   "tests": {
     "environment_validation": {

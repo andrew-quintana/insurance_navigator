@@ -57,7 +57,7 @@
 - **Processing**: Ready for document processing workflows
 
 ### **Database (Supabase)**
-- **URL**: https://znvwzkdblknkkztqyfnu.supabase.co
+- **URL**: https://your-project.supabase.co
 - **Status**: ✅ Connected and operational
 - **Features**: Vector extensions, authentication, real-time capabilities
 

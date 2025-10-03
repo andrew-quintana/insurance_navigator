@@ -9,7 +9,7 @@ You are an execution-focused coding agent. Your job is to run discriminating exp
 - **Error**: "Document file is not accessible for processing. Please try uploading again."
 - **Service**: Upload Pipeline Worker (staging)
 - **Status**: Critical StorageManager bug fixed (commit 33c0384), path mismatch investigation ongoing
-- **Environment**: Staging Supabase (dfgzeastcxnoqshgyotp.supabase.co)
+- **Environment**: Staging Supabase (your-staging-project.supabase.co)
 
 ### Minimal Repro
 - **Script**: `test_storage_manager_debug.py`
@@ -41,7 +41,7 @@ Not applicable - No spelling mode functionality found in codebase.
 **Procedure**:
 ```bash
 cd /Users/aq_home/1Projects/accessa/insurance_navigator
-export SUPABASE_URL="https://dfgzeastcxnoqshgyotp.supabase.co"
+export SUPABASE_URL="https://your-staging-project.supabase.co"
 export ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmZ3plYXN0Y3hub3FzaGd5b3RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2ODA0ODMsImV4cCI6MjA2NzI1NjQ4M30.wV0kgqo20D1EghH47bO-4MoXpksiyQ_bvANaZlzScyM"
 export SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmZ3plYXN0Y3hub3FzaGd5b3RwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTY4MDQ4MywiZXhwIjoyMDY3MjU2NDgzfQ.yYQWEJkDtvFXg-F2Xe4mh9Xj_0QCp6gnXkDI6lEhDT8"
 python test_storage_manager_debug.py

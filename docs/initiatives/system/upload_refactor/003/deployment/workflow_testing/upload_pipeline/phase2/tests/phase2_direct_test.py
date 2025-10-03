@@ -25,7 +25,7 @@ TEST_USER_ID = "766e8693-7fd5-465e-9ee4-4a9b3a696480"  # Same as Phase 1
 
 # Production Supabase configuration
 PRODUCTION_CONFIG = {
-    "DATABASE_URL": "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres"
+    "DATABASE_URL": "postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres"
 }
 
 # Test documents

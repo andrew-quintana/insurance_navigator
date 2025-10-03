@@ -73,8 +73,8 @@ class UploadPipelineRAGTester:
         self.auth_login_endpoint = f"{self.api_base_url}/auth/login"
         
         # Production Supabase configuration
-        self.supabase_url = "https://znvwzkdblknkkztqyfnu.supabase.co"
-        self.database_url = "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres"
+        self.supabase_url = "https://your-project.supabase.co"
+        self.database_url = "postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres"
         
         # Set up environment variables
         self._setup_environment()

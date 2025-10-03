@@ -45,11 +45,11 @@ API Service ──┐
 #### Database Configuration
 ```bash
 # Supabase Database Connection
-SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
+SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=${SUPABASE_JWT_TOKEN}
 SUPABASE_SERVICE_ROLE_KEY=<staging_service_role_key>
-DATABASE_URL=postgresql://postgres:<password>@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres
-SUPABASE_DB_HOST=db.znvwzkdblknkkztqyfnu.supabase.co
+DATABASE_URL=postgresql://postgres:<password>@db.your-project.supabase.co:5432/postgres
+SUPABASE_DB_HOST=db.your-project.supabase.co
 SUPABASE_DB_PORT=5432
 SUPABASE_DB_USER=postgres
 SUPABASE_DB_PASSWORD=<staging_db_password>

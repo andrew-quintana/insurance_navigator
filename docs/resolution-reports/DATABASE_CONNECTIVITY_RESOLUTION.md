@@ -34,8 +34,8 @@ The issue was caused by:
 
 #### **Production Environment**
 ```bash
-DATABASE_URL=postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres?sslmode=require&connect_timeout=30&command_timeout=30
-DB_HOST=db.znvwzkdblknkkztqyfnu.supabase.co
+DATABASE_URL=postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres?sslmode=require&connect_timeout=30&command_timeout=30
+DB_HOST=db.your-project.supabase.co
 DB_PORT=5432
 DB_NAME=postgres
 DB_SSL_MODE=require
@@ -47,8 +47,8 @@ DB_POOL_MAX_SIZE=20
 
 #### **Staging Environment**
 ```bash
-DATABASE_URL=postgresql://postgres:ERaZFjCEnuJsliSQ@db.dfgzeastcxnoqshgyotp.supabase.co:5432/postgres?sslmode=require&connect_timeout=30&command_timeout=30
-DB_HOST=db.dfgzeastcxnoqshgyotp.supabase.co
+DATABASE_URL=postgresql://postgres:your_database_password_here@db.your-staging-project.supabase.co:5432/postgres?sslmode=require&connect_timeout=30&command_timeout=30
+DB_HOST=db.your-staging-project.supabase.co
 DB_PORT=5432
 DB_NAME=postgres
 DB_SSL_MODE=require
@@ -88,7 +88,7 @@ DB_POOL_MAX_SIZE=10
 ```
 🚨 PRODUCTION DATABASE CONNECTIVITY TEST
 ============================================================
-🔍 Testing connectivity to db.znvwzkdblknkkztqyfnu.supabase.co:5432
+🔍 Testing connectivity to db.your-project.supabase.co:5432
 1. Testing basic socket connection...
    ❌ Socket connection failed: [Errno 8] nodename nor servname provided, or not known
 

@@ -19,9 +19,9 @@ PRODUCTION_API_URL = "https://insurance-navigator-api.onrender.com"
 WEBHOOK_ENDPOINT = f"{PRODUCTION_API_URL}/api/upload-pipeline/webhook/llamaparse"
 
 # Production database configuration (from user's environment)
-PRODUCTION_DATABASE_URL = "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres"
-PRODUCTION_POOLER_URL = "postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
-PRODUCTION_SESSION_POOLER_URL = "postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:5432/postgres"
+PRODUCTION_DATABASE_URL = "postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres"
+PRODUCTION_POOLER_URL = "postgresql://postgres.your-project:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
+PRODUCTION_SESSION_POOLER_URL = "postgresql://postgres.your-project:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:5432/postgres"
 
 async def test_database_connection():
     """Test database connection with production URLs."""

@@ -72,7 +72,7 @@ class Phase2TestSuite:
             "vercel_url": "https://insurance-navigator.vercel.app",
             "api_url": "https://insurance-navigator-api.onrender.com",
             "worker_url": "https://insurance-navigator-worker.onrender.com",
-            "supabase_url": "https://znvwzkdblknkkztqyfnu.supabase.co"
+            "supabase_url": "https://your-project.supabase.co"
         }
     
     async def run_complete_test_suite(self) -> Dict[str, Any]:

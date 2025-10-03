@@ -135,7 +135,7 @@ startxref
             "iat": int(time.time()),
             "exp": int(time.time()) + 3600,
             "aud": "authenticated",
-            "iss": "https://znvwzkdblknkkztqyfnu.supabase.co"
+            "iss": "https://your-project.supabase.co"
         }
         
         # Use a test secret key

@@ -85,11 +85,12 @@ class CloudIntegrationValidator:
         
     def _load_default_config(self) -> Dict[str, str]:
         """Load default configuration for cloud services"""
+        import os
         return {
-            "vercel_url": "https://insurance-navigator.vercel.app",
-            "api_url": "https://insurance-navigator-api.onrender.com",
-            "worker_url": "https://insurance-navigator-worker.onrender.com",
-            "supabase_url": "https://znvwzkdblknkkztqyfnu.supabase.co"
+            "vercel_url": os.getenv('VERCEL_URL', os.getenv("VERCEL_URL", "https://insurance-navigator.vercel.app")),
+            "api_url": os.getenv('API_URL', os.getenv("API_URL", "https://insurance-navigator-api.onrender.com")),
+            "worker_url": os.getenv('WORKER_URL', os.getenv("WORKER_URL", "https://insurance-navigator-worker.onrender.com")),
+            "supabase_url": os.getenv('SUPABASE_URL', os.getenv("SUPABASE_URL", "https://your-project.supabase.co"))
         }
     
     async def __aenter__(self):

@@ -79,10 +79,10 @@ class ManualFrontendWorkflowTester:
     def _setup_environment(self):
         """Set up environment variables for production cloud backend."""
         # Production Supabase configuration
-        os.environ["SUPABASE_URL"] = "https://znvwzkdblknkkztqyfnu.supabase.co"
+        os.environ["SUPABASE_URL"] = "https://your-project.supabase.co"
         os.environ["SUPABASE_ANON_KEY"] = "${SUPABASE_JWT_TOKEN}"
         os.environ["SUPABASE_SERVICE_ROLE_KEY"] = "${SUPABASE_JWT_TOKEN}"
-        os.environ["DATABASE_URL"] = "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres"
+        os.environ["DATABASE_URL"] = "postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres"
         os.environ["OPENAI_API_KEY"] = "${OPENAI_API_KEY}"
         os.environ["LLAMAPARSE_API_KEY"] = "${LLAMAPARSE_API_KEY}"
         

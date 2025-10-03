@@ -75,7 +75,7 @@ Phase 3 cloud deployment testing has been **successfully completed** with compre
 - **API Service**: `https://insurance-navigator-api.onrender.com`
 - **API Version**: 3.0.0
 - **Worker Service**: Background worker (Render.com)
-- **Database**: Production Supabase (`znvwzkdblknkkztqyfnu.supabase.co`)
+- **Database**: Production Supabase (`your-project.supabase.co`)
 
 ---
 

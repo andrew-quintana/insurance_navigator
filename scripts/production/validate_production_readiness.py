@@ -45,7 +45,7 @@ class ProductionReadinessTestRunner:
             'vercel_url': os.getenv('VERCEL_URL', 'https://insurance-navigator.vercel.app'),
             'api_url': os.getenv('API_URL', 'https://insurance-navigator-api.onrender.com'),
             'worker_url': os.getenv('WORKER_URL', 'https://insurance-navigator-worker.onrender.com'),
-            'supabase_url': os.getenv('SUPABASE_URL', 'https://znvwzkdblknkkztqyfnu.supabase.co'),
+            'supabase_url': os.getenv('SUPABASE_URL', 'https://your-project.supabase.co'),
             'supabase_key': os.getenv('SUPABASE_ANON_KEY', ''),
             'render_token': os.getenv('RENDER_CLI_API_KEY', ''),
             'vercel_token': os.getenv('VERCEL_TOKEN', '')

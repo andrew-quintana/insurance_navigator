@@ -494,7 +494,7 @@ async def main():
     config = {
         "vercel_url": os.getenv("VERCEL_URL", "https://insurance-navigator.vercel.app"),
         "api_url": os.getenv("API_URL", "https://insurance-navigator-api.onrender.com"),
-        "supabase_url": os.getenv("SUPABASE_URL", "https://znvwzkdblknkkztqyfnu.supabase.co")
+        "supabase_url": os.getenv("SUPABASE_URL", "https://your-project.supabase.co")
     }
     
     try:

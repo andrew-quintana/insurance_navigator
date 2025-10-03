@@ -17,7 +17,7 @@ async def check_database_directly():
     """Check the database directly for existing chunks and documents."""
     
     # Use the production database URL from the example
-    DATABASE_URL = "postgresql://postgres:password@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres"
+    DATABASE_URL = "postgresql://postgres:password@db.your-project.supabase.co:5432/postgres"
     
     try:
         # Connect to database

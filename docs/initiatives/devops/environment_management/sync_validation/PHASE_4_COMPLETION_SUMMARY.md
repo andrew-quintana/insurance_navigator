@@ -82,7 +82,7 @@ Phase 4 environment validation has been successfully completed for the Insurance
 ### 5. Database Validation ✅
 
 #### Supabase Production
-- **URL:** https://znvwzkdblknkkztqyfnu.supabase.co
+- **URL:** https://your-project.supabase.co
 - **Database:** PostgreSQL 17.4
 - **Connection:** Successful
 - **Schema:** Validated (users table present)

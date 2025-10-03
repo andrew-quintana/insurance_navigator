@@ -67,7 +67,7 @@ Phase 2 has achieved **100% completion** with all major integration issues resol
   "storage_path": "files/766e8693-7fd5-465e-9ee4-4a9b3a696480/raw/20250906_140344_d03f5acd.pdf",
   "file_hash": "d03f5acd0bc3d78f17d79cc9470b5ba2d2cbabd425d642e6638e74d6080cfd6c",
   "file_size": 63,
-  "storage_url": "https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/files/..."
+  "storage_url": "https://your-project.supabase.co/storage/v1/object/files/..."
 }
 ```
 

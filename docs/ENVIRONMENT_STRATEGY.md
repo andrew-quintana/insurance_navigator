@@ -32,7 +32,7 @@ The Insurance Navigator follows a strict **environment separation strategy** whe
 |-----------|-----|---------------|
 | Frontend | https://insurance-navigator-git-staging-andrew-quintanas-projects.vercel.app | `ui/.env.staging` |
 | Backend | https://insurance-navigator-staging-api.onrender.com | `.env.staging` |
-| Database | https://dfgzeastcxnoqshgyotp.supabase.co | Supabase staging |
+| Database | https://your-staging-project.supabase.co | Supabase staging |
 
 **Start Command:**
 ```bash
@@ -46,7 +46,7 @@ The Insurance Navigator follows a strict **environment separation strategy** whe
 |-----------|-----|---------------|
 | Frontend | https://insurancenavigator.vercel.app | `ui/.env.production` |
 | Backend | https://insurance-navigator-api.onrender.com | `.env.production` |
-| Database | https://znvwzkdblknkkztqyfnu.supabase.co | Supabase production |
+| Database | https://your-project.supabase.co | Supabase production |
 
 **Start Command:**
 ```bash
@@ -126,14 +126,14 @@ API_BASE_URL=http://localhost:8000
 DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
 
 # Staging (.env.staging)
-SUPABASE_URL=https://dfgzeastcxnoqshgyotp.supabase.co
+SUPABASE_URL=https://your-staging-project.supabase.co
 API_BASE_URL=https://insurance-navigator-staging-api.onrender.com
-DATABASE_URL=postgresql://postgres:ERaZFjCEnuJsliSQ@db.dfgzeastcxnoqshgyotp.supabase.co:5432/postgres
+DATABASE_URL=postgresql://postgres:your_database_password_here@db.your-staging-project.supabase.co:5432/postgres
 
 # Production (.env.production)
-SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
+SUPABASE_URL=https://your-project.supabase.co
 API_BASE_URL=https://insurance-navigator-api.onrender.com
-DATABASE_URL=postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres
+DATABASE_URL=postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres
 ```
 
 ### Frontend Environment Variables
@@ -146,11 +146,11 @@ NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 NEXT_PUBLIC_API_URL=http://localhost:8000
 
 # Staging (ui/.env.staging)
-NEXT_PUBLIC_SUPABASE_URL=https://dfgzeastcxnoqshgyotp.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://your-staging-project.supabase.co
 NEXT_PUBLIC_API_URL=https://insurance-navigator-staging-api.onrender.com
 
 # Production (ui/.env.production)
-NEXT_PUBLIC_SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_API_URL=https://insurance-navigator-api.onrender.com
 ```
 

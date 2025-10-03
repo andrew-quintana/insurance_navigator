@@ -464,7 +464,7 @@ startxref
             simulated_response = {
                 "job_id": str(uuid.uuid4()),
                 "document_id": str(uuid.uuid4()),
-                "signed_url": "https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/upload/files/user/test-user/raw/2025-09-07_abc123.pdf",
+                "signed_url": "https://your-project.supabase.co/storage/v1/object/upload/files/user/test-user/raw/2025-09-07_abc123.pdf",
                 "upload_expires_at": "2025-09-07T01:00:00Z"
             }
             

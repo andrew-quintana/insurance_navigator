@@ -21,7 +21,7 @@ The staging API service is failing to start due to a network connectivity issue 
 The staging API service is experiencing the **same network connectivity issue** as the staging worker service. This is a **Render platform network restriction** preventing outbound connections to external databases.
 
 ### Database Connection Details
-- **Target**: `db.znvwzkdblknkkztqyfnu.supabase.co:5432`
+- **Target**: `db.your-project.supabase.co:5432`
 - **Error**: `[Errno 101] Network is unreachable`
 - **Connection Type**: Direct database connection (not pooler)
 
@@ -36,7 +36,7 @@ The staging API service is experiencing the **same network connectivity issue** 
 
 #### 19:07:25 - Database Initialization Attempt
 ```
-2025-09-20 19:07:25,498 - core.database - INFO - Initializing database pool: db.znvwzkdblknkkztqyfnu.supabase.co:5432
+2025-09-20 19:07:25,498 - core.database - INFO - Initializing database pool: db.your-project.supabase.co:5432
 2025-09-20 19:07:25,501 - core.database - ERROR - Failed to initialize database pool: [Errno 101] Network is unreachable
 ```
 
@@ -118,7 +118,7 @@ The API service has **ONE issue** (same as worker's second issue):
 ## Immediate Actions Required
 
 ### 1. Update API Service Database URL
-**Current**: `db.znvwzkdblknkkztqyfnu.supabase.co:5432` (direct)  
+**Current**: `db.your-project.supabase.co:5432` (direct)  
 **Required**: `aws-0-us-west-1.pooler.supabase.com:6543` (pooler)
 
 ### 2. Verify Environment Variables

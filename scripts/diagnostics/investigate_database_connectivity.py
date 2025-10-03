@@ -71,13 +71,13 @@ class DatabaseConnectivityInvestigator:
         # Production Configuration
         self.configs['production'] = DatabaseConfig(
             name="Production",
-            host="db.znvwzkdblknkkztqyfnu.supabase.co",
+            host="db.your-project.supabase.co",
             port=5432,
             database="postgres",
             user="postgres",
             password="beqhar-qincyg-Syxxi8",
             ssl_mode="require",
-            connection_string="postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres"
+            connection_string="postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres"
         )
         
         # Staging Configuration

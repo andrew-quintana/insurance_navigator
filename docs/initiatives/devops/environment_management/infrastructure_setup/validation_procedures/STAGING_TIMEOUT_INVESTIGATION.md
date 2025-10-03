@@ -103,7 +103,7 @@ The staging API service successfully initializes all components but times out du
 
 ### 4. Database Connection Issues
 **Problem**: Staging service using production database credentials
-- **Current**: `DATABASE_URL=postgresql://postgres:password@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres`
+- **Current**: `DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/postgres`
 - **Expected**: Should use staging database credentials from `.env.staging`
 - **Impact**: Service may fail database operations or connect to wrong environment
 

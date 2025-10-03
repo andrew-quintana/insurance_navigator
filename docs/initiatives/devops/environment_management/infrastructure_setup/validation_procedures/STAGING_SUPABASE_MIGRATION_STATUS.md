@@ -9,8 +9,8 @@
 The staging Supabase instance has been identified and configured, but requires manual database schema setup through the Supabase Dashboard.
 
 ### **Staging Supabase Details**
-- **URL**: `https://dfgzeastcxnoqshgyotp.supabase.co`
-- **Dashboard**: https://supabase.com/dashboard/project/dfgzeastcxnoqshgyotp
+- **URL**: `https://your-staging-project.supabase.co`
+- **Dashboard**: https://supabase.com/dashboard/project/your-staging-project
 - **Status**: ✅ Accessible
 - **Database Schema**: ❌ Empty (no tables)
 
@@ -32,7 +32,7 @@ The staging Supabase instance doesn't have the necessary SQL execution functions
 ### **Step 1: Access Supabase Dashboard**
 
 1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
-2. Select project `dfgzeastcxnoqshgyotp` (staging instance)
+2. Select project `your-staging-project` (staging instance)
 3. Navigate to SQL Editor (left sidebar)
 
 ### **Step 2: Apply Core Migrations**
@@ -50,11 +50,11 @@ Test the API endpoints after migration:
 
 ```bash
 # Test users table
-curl -s "https://dfgzeastcxnoqshgyotp.supabase.co/rest/v1/users" \
+curl -s "https://your-staging-project.supabase.co/rest/v1/users" \
   -H "apikey: [ANON_KEY]"
 
 # Test documents table
-curl -s "https://dfgzeastcxnoqshgyotp.supabase.co/rest/v1/upload_pipeline.documents" \
+curl -s "https://your-staging-project.supabase.co/rest/v1/upload_pipeline.documents" \
   -H "apikey: [ANON_KEY]"
 ```
 

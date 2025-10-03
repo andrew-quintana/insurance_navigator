@@ -316,7 +316,7 @@ class TestDatabaseManager:
     
     def test_is_supabase_connection_true(self, db_manager):
         """Test Supabase connection detection."""
-        db_manager.config.host = "znvwzkdblknkkztqyfnu.supabase.com"
+        db_manager.config.host = "your-project.supabase.com"
         assert db_manager._is_supabase_connection() is True
         
         db_manager.config.host = "project.supabase.co"

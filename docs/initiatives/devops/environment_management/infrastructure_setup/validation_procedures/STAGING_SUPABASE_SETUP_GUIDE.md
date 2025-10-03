@@ -9,7 +9,7 @@
 The staging Supabase instance is **accessible but empty**. It needs to be manually configured with the database schema.
 
 ### **Staging Supabase Details**
-- **URL**: `https://dfgzeastcxnoqshgyotp.supabase.co`
+- **URL**: `https://your-staging-project.supabase.co`
 - **Status**: ✅ Accessible
 - **Database Schema**: ❌ Empty (no tables)
 - **API Endpoints**: ❌ No tables available
@@ -21,7 +21,7 @@ Since the staging Supabase instance doesn't have the `exec_sql` function and dir
 ### **Step 1: Access Supabase Dashboard**
 
 1. **Go to**: [Supabase Dashboard](https://supabase.com/dashboard)
-2. **Select Project**: `dfgzeastcxnoqshgyotp` (staging instance)
+2. **Select Project**: `your-staging-project` (staging instance)
 3. **Navigate to**: SQL Editor
 
 ### **Step 2: Apply Database Migrations**
@@ -64,11 +64,11 @@ After applying all migrations, test the setup:
 
 ```bash
 # Test users table
-curl -s "https://dfgzeastcxnoqshgyotp.supabase.co/rest/v1/users" \
+curl -s "https://your-staging-project.supabase.co/rest/v1/users" \
   -H "apikey: ${SUPABASE_ANON_KEY}"
 
 # Test documents table
-curl -s "https://dfgzeastcxnoqshgyotp.supabase.co/rest/v1/upload_pipeline.documents" \
+curl -s "https://your-staging-project.supabase.co/rest/v1/upload_pipeline.documents" \
   -H "apikey: ${SUPABASE_ANON_KEY}"
 ```
 
@@ -81,7 +81,7 @@ If you have the Supabase CLI installed, you can apply migrations directly:
 supabase login
 
 # Link to staging project
-supabase link --project-ref dfgzeastcxnoqshgyotp
+supabase link --project-ref your-staging-project
 
 # Apply migrations
 supabase db push

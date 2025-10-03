@@ -7,15 +7,15 @@
 ## 🎯 **CONFIGURATION SUMMARY**
 
 ### **✅ Production Environment**
-- **Supabase Instance**: `znvwzkdblknkkztqyfnu.supabase.co` (Production)
-- **Database URL**: `postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres`
+- **Supabase Instance**: `your-project.supabase.co` (Production)
+- **Database URL**: `postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres`
 - **Port Configuration**: `PORT=8000`, `API_PORT=8000`
 - **Render Service**: `api-service-production` (srv-d0v2nqvdiees73cejf0g)
 - **Deployment Status**: 🔄 **BUILDING** (dep-d37ntemr433s73ethgm0)
 
 ### **✅ Staging Environment**
-- **Supabase Instance**: `dfgzeastcxnoqshgyotp.supabase.co` (Staging)
-- **Database URL**: `postgresql://postgres:ERaZFjCEnuJsliSQ@db.dfgzeastcxnoqshgyotp.supabase.co:5432/postgres`
+- **Supabase Instance**: `your-staging-project.supabase.co` (Staging)
+- **Database URL**: `postgresql://postgres:your_database_password_here@db.your-staging-project.supabase.co:5432/postgres`
 - **Port Configuration**: `PORT=10000`, `API_PORT=10000` (Correct for staging)
 - **Render Service**: `api-service-staging` (srv-d3740ijuibrs738mus1g)
 - **Deployment Status**: 🔄 **BUILDING** (dep-d37nu7mr433s73eti140)

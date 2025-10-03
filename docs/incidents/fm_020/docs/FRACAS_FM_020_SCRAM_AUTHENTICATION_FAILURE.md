@@ -54,7 +54,7 @@ This error occurs during database connection pool initialization when attempting
 
 **Test Environment**: Local development with staging environment variables
 **Test Results**:
-- ✅ Database configuration correctly uses direct URL: `db.dfgzeastcxnoqshgyotp.supabase.co:5432`
+- ✅ Database configuration correctly uses direct URL: `db.your-staging-project.supabase.co:5432`
 - ✅ No pooler URL selection logic active
 - ✅ Database connection successful with SCRAM authentication
 - ✅ Connection pool initialized successfully (5-20 connections)
@@ -69,9 +69,9 @@ This error occurs during database connection pool initialization when attempting
 
 ### Environment Variable Analysis
 **Staging Environment Variables**:
-- `DATABASE_URL`: `postgresql://postgres:ERaZFjCEnuJsliSQ@db.dfgzeastcxnoqshgyotp.supabase.co:5432/postgres` ✅
-- `SUPABASE_POOLER_URL`: `postgresql://postgres.dfgzeastcxnoqshgyotp:password@aws-0-us-west-1.pooler.supabase.com:6543/postgres` ❌
-- `SUPABASE_SESSION_POOLER_URL`: `postgresql://postgres.dfgzeastcxnoqshgyotp:password@aws-0-us-west-1.pooler.supabase.com:6543/postgres` ❌
+- `DATABASE_URL`: `postgresql://postgres:your_database_password_here@db.your-staging-project.supabase.co:5432/postgres` ✅
+- `SUPABASE_POOLER_URL`: `postgresql://postgres.your-staging-project:password@aws-0-us-west-1.pooler.supabase.com:6543/postgres` ❌
+- `SUPABASE_SESSION_POOLER_URL`: `postgresql://postgres.your-staging-project:password@aws-0-us-west-1.pooler.supabase.com:6543/postgres` ❌
 
 **Root Cause Confirmed**: The pooler URLs are causing SCRAM authentication failures. The direct database URL works correctly.
 

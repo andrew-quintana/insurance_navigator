@@ -46,12 +46,12 @@ The Insurance Navigator application has been successfully deployed and validated
 ### Production Environment
 - **Frontend:** https://insurancenavigator.vercel.app
 - **Backend API:** https://insurance-navigator-api.onrender.com
-- **Database:** Supabase Production (znvwzkdblknkkztqyfnu)
+- **Database:** Supabase Production (your-project)
 - **Status:** Fully operational
 
 ### Staging Environment
 - **Backend API:** https://insurance-navigator-staging-api.onrender.com
-- **Database:** Supabase Staging (dfgzeastcxnoqshgyotp)
+- **Database:** Supabase Staging (your-staging-project)
 - **Status:** Fully operational
 
 ### Development Environment
@@ -113,8 +113,8 @@ The Insurance Navigator application has been successfully deployed and validated
 ## Database Configuration
 
 ### Supabase Production
-- **Project ID:** znvwzkdblknkkztqyfnu
-- **URL:** https://znvwzkdblknkkztqyfnu.supabase.co
+- **Project ID:** your-project
+- **URL:** https://your-project.supabase.co
 - **Database:** PostgreSQL 17.4
 - **Status:** Connected and operational
 
@@ -140,12 +140,12 @@ CREATE TABLE users (
 ### Production Environment Variables
 ```bash
 # Supabase Configuration
-SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
+SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 # Database Configuration
-DATABASE_URL=postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres
+DATABASE_URL=postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres
 
 # API Configuration
 API_BASE_URL=https://insurance-navigator-api.onrender.com
@@ -156,7 +156,7 @@ ENVIRONMENT=production
 ```bash
 # Frontend Configuration
 NEXT_PUBLIC_API_BASE_URL=https://insurance-navigator-api.onrender.com
-NEXT_PUBLIC_SUPABASE_URL=https://znvwzkdblknkkztqyfnu.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 

@@ -65,12 +65,12 @@ The Insurance Navigator repository has been successfully cleaned of sensitive in
 ## Sensitive Data Removed
 
 ### **Supabase Credentials**
-- Production URL: `https://znvwzkdblknkkztqyfnu.supabase.co`
+- Production URL: `https://your-project.supabase.co`
 - Staging URL: `https://dfgzeastcxnoqshgyotp.supabase.co`
 - JWT Tokens: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
 
 ### **Database Credentials**
-- Production DB: `postgresql://postgres:password@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres`
+- Production DB: `postgresql://postgres:password@db.your-project.supabase.co:5432/postgres`
 - Example DB: `postgresql://postgres:password@prod-db.example.com:5432/insurance_navigator_prod`
 
 ### **API Keys**
@@ -114,13 +114,13 @@ The Insurance Navigator repository has been successfully cleaned of sensitive in
 The following credentials need immediate rotation:
 
 #### **Supabase Credentials**
-- **Production Project**: `znvwzkdblknkkztqyfnu`
+- **Production Project**: `your-project`
 - **Staging Project**: `dfgzeastcxnoqshgyotp`
 - **Action**: Rotate all API keys and JWT secrets
 - **Impact**: All applications using these credentials
 
 #### **Database Credentials**
-- **Production DB**: `db.znvwzkdblknkkztqyfnu.supabase.co`
+- **Production DB**: `db.your-project.supabase.co`
 - **Action**: Change database passwords
 - **Impact**: All database connections
 

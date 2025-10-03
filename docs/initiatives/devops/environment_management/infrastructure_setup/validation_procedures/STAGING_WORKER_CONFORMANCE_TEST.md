@@ -32,7 +32,7 @@ The staging worker service is now in a fully conforming state as a component. Al
 ```
 2025-09-20 18:38:35,381 - Enhanced BaseWorker initialized
 2025-09-20 18:38:35,790 - Database pool initialized with 5-20 connections
-2025-09-20 18:38:35,869 - Storage manager initialized for https://znvwzkdblknkkztqyfnu.supabase.co
+2025-09-20 18:38:35,869 - Storage manager initialized for https://your-project.supabase.co
 2025-09-20 18:38:35,881 - Registered service: llamaparse
 2025-09-20 18:38:35,889 - Registered service: openai
 2025-09-20 18:38:35,889 - Enhanced BaseWorker initialization completed successfully

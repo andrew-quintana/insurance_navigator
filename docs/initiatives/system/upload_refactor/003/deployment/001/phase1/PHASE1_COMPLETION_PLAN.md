@@ -45,7 +45,7 @@
 #### Option A: Unpause Production Projects
 1. **Get Admin Access**
    - Contact Supabase project admin
-   - Unpause production project (znvwzkdblknkkztqyfnu)
+   - Unpause production project (your-project)
    - Unpause staging project (${SUPABASE_PROJECT_REF})
 
 2. **Configure Production Supabase**

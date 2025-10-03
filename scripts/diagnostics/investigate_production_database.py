@@ -48,12 +48,12 @@ class ProductionDatabaseInvestigator:
     
     def __init__(self):
         self.production_config = {
-            'host': 'db.znvwzkdblknkkztqyfnu.supabase.co',
+            'host': 'db.your-project.supabase.co',
             'port': 5432,
             'database': 'postgres',
             'user': 'postgres',
             'password': 'beqhar-qincyg-Syxxi8',
-            'connection_string': 'postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres'
+            'connection_string': 'postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres'
         }
         self.results: List[TestResult] = []
     

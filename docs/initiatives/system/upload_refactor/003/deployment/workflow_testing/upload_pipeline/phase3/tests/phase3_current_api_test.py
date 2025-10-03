@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 # Configuration
 API_BASE_URL = "https://insurance-navigator-api.onrender.com"
-SUPABASE_URL = "https://znvwzkdblknkkztqyfnu.supabase.co"
+SUPABASE_URL = "https://your-project.supabase.co"
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
 class Phase3CurrentAPITester:

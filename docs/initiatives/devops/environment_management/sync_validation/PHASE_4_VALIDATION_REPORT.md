@@ -59,7 +59,7 @@ The comprehensive environment validation for the Insurance Navigator application
 ### 3. Database Connectivity and Permissions ✅
 
 **Supabase Production Database:**
-- **URL:** https://znvwzkdblknkkztqyfnu.supabase.co
+- **URL:** https://your-project.supabase.co
 - **Database:** PostgreSQL 17.4
 - **Connection:** Successful
 - **Schema:** Validated (users table present with proper structure)
@@ -82,8 +82,8 @@ The comprehensive environment validation for the Insurance Navigator application
 ### 4. Supabase Configuration Validation ✅
 
 **Production Instance:**
-- **Project ID:** znvwzkdblknkkztqyfnu
-- **API URL:** https://znvwzkdblknkkztqyfnu.supabase.co
+- **Project ID:** your-project
+- **API URL:** https://your-project.supabase.co
 - **Anon Key:** Validated and functional
 - **Service Role Key:** Available and configured
 

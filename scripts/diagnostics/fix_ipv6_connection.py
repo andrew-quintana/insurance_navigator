@@ -14,7 +14,7 @@ async def test_supavisor_connection():
     """Test the Supavisor connection pooler."""
     
     # Supavisor connection string (IPv4 compatible)
-    supavisor_conn = "postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
+    supavisor_conn = "postgresql://postgres.your-project:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
     
     print("🔍 Testing Supavisor Connection Pooler")
     print("-" * 50)
@@ -36,7 +36,7 @@ async def test_supavisor_connection():
 async def test_direct_connection():
     """Test direct connection for comparison."""
     
-    direct_conn = "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres"
+    direct_conn = "postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres"
     
     print("\n🔍 Testing Direct Connection (for comparison)")
     print("-" * 50)
@@ -62,12 +62,12 @@ def generate_environment_variables():
     
     # Production environment variables with Supavisor
     env_vars = {
-        'DATABASE_URL': 'postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres',
-        'SUPABASE_DATABASE_URL': 'postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres',
+        'DATABASE_URL': 'postgresql://postgres.your-project:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres',
+        'SUPABASE_DATABASE_URL': 'postgresql://postgres.your-project:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres',
         'DB_HOST': 'aws-0-us-west-1.pooler.supabase.com',
         'DB_PORT': '6543',
         'DB_NAME': 'postgres',
-        'DB_USER': 'postgres.znvwzkdblknkkztqyfnu',
+        'DB_USER': 'postgres.your-project',
         'DB_PASSWORD': 'beqhar-qincyg-Syxxi8',
         'DB_SSL_MODE': 'require',
         'DB_CONNECTION_TIMEOUT': '30',

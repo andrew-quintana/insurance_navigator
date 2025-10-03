@@ -26,7 +26,7 @@ async def test_production_environment():
     print("=" * 60)
     
     # Set production environment variables exactly as they are in Render
-    os.environ["DATABASE_URL"] = "postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
+    os.environ["DATABASE_URL"] = "postgresql://postgres.your-project:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
     os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "sk-test-key-for-testing")
     os.environ["DATABASE_SCHEMA"] = "upload_pipeline"
     os.environ["ENVIRONMENT"] = "production"

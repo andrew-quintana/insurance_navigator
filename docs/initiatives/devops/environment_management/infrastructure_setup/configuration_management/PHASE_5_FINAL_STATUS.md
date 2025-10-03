@@ -97,8 +97,8 @@ Failed: 3 (API Health, End-to-End Workflow, Error Handling)
 - **Polling**: 5-second intervals
 
 ### Environment Variables
-- **Database**: `postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres`
-- **Supabase URL**: `https://znvwzkdblknkkztqyfnu.supabase.co`
+- **Database**: `postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres`
+- **Supabase URL**: `https://your-project.supabase.co`
 - **Service Role Key**: Configured for production environment
 - **API Keys**: Staging-specific keys for external services
 

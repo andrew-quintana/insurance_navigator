@@ -11,7 +11,7 @@
           "storage_path": "files/766e8693-7fd5-465e-9ee4-4a9b3a696480/raw/20250906_141805_4b57f54b.pdf",
           "file_hash": "4b57f54b818dc06d810b1ee9bd57bde8c72aa48f3484a9283579ddde3f366715",
           "file_size": 63,
-          "storage_url": "https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/files/files/766e8693-7fd5-465e-9ee4-4a9b3a696480/raw/20250906_141805_4b57f54b.pdf"
+          "storage_url": "https://your-project.supabase.co/storage/v1/object/files/files/766e8693-7fd5-465e-9ee4-4a9b3a696480/raw/20250906_141805_4b57f54b.pdf"
         },
         "llamaparse_webhook": {
           "success": true,

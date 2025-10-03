@@ -85,7 +85,7 @@ All 24 database migrations have been successfully applied to the staging Supabas
 - All microservices: ✅ Healthy
 
 ### **✅ Environment Configuration**
-- Staging Supabase URL: ✅ `https://dfgzeastcxnoqshgyotp.supabase.co`
+- Staging Supabase URL: ✅ `https://your-staging-project.supabase.co`
 - Database password: ✅ Updated and working
 - API service: ✅ Connected to staging Supabase
 

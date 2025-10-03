@@ -35,7 +35,7 @@ We have successfully achieved **100% success** with the real API pipeline integr
   "storage_path": "files/766e8693-7fd5-465e-9ee4-4a9b3a696480/raw/20250906_141007_73628ca6.pdf",
   "file_hash": "73628ca6...",
   "file_size": 63,
-  "storage_url": "https://znvwzkdblknkkztqyfnu.supabase.co/storage/v1/object/files/..."
+  "storage_url": "https://your-project.supabase.co/storage/v1/object/files/..."
 }
 ```
 

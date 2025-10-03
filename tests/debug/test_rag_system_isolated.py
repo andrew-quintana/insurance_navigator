@@ -28,7 +28,7 @@ async def test_database_connection():
     print("-" * 50)
     
     # Use production database URL
-    database_url = "postgresql://postgres.znvwzkdblknkkztqyfnu:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
+    database_url = "postgresql://postgres.your-project:beqhar-qincyg-Syxxi8@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
     
     try:
         conn = await asyncpg.connect(database_url, statement_cache_size=0)

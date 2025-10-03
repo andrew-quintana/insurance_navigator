@@ -13,7 +13,7 @@ import asyncpg
 
 async def test_basic_connectivity():
     """Test basic connectivity to production database."""
-    host = "db.znvwzkdblknkkztqyfnu.supabase.co"
+    host = "db.your-project.supabase.co"
     port = 5432
     
     print(f"🔍 Testing connectivity to {host}:{port}")
@@ -88,9 +88,9 @@ async def test_connection_strings():
     print("\n4. Testing connection string formats...")
     
     connection_strings = [
-        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres",
-        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres?sslmode=require",
-        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres?ssl=require",
+        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres",
+        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres?sslmode=require",
+        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres?ssl=require",
     ]
     
     for i, conn_str in enumerate(connection_strings, 1):

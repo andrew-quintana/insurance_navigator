@@ -39,7 +39,7 @@ PORT=8000
 
 # Existing (verified working)
 API_PORT=8000
-DATABASE_URL=postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres
+DATABASE_URL=postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres
 ```
 
 #### **Staging (`.env.staging`)**
@@ -48,22 +48,22 @@ DATABASE_URL=postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.
 PORT=8000  # Changed from PORT=10000
 
 # Added
-DATABASE_URL=postgresql://postgres:ERaZFjCEnuJsliSQ@db.dfgzeastcxnoqshgyotp.supabase.co:5432/postgres
+DATABASE_URL=postgresql://postgres:your_database_password_here@db.your-staging-project.supabase.co:5432/postgres
 
 # Disabled problematic pooler
-SUPABASE_POOLER_URL_DISABLED=postgresql://postgres.dfgzeastcxnoqshgyotp:ERaZFjCEnuJsliSQ@aws-0-us-west-1.pooler.supabase.com:6543/postgres
+SUPABASE_POOLER_URL_DISABLED=postgresql://postgres.your-staging-project:your_database_password_here@aws-0-us-west-1.pooler.supabase.com:6543/postgres
 ```
 
 ### **Database Connection Strategy**
 
 #### **Production**
 - **Method**: Direct Supabase connection
-- **URL**: `postgresql://postgres:beqhar-qincyg-Syxxi8@db.znvwzkdblknkkztqyfnu.supabase.co:5432/postgres`
+- **URL**: `postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres`
 - **Status**: ✅ **VERIFIED WORKING**
 
 #### **Staging**
 - **Method**: Direct Supabase connection (bypassed pooler)
-- **URL**: `postgresql://postgres:ERaZFjCEnuJsliSQ@db.dfgzeastcxnoqshgyotp.supabase.co:5432/postgres`
+- **URL**: `postgresql://postgres:your_database_password_here@db.your-staging-project.supabase.co:5432/postgres`
 - **Status**: ✅ **VERIFIED WORKING**
 
 ## 🧪 **VALIDATION RESULTS**
