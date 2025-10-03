@@ -2,6 +2,12 @@
 
 A soon-to-be HIPAA-compliant AI-powered system that helps patients understand their insurance documents through intelligent document processing and conversational AI.
 
+## 🌐 Try It Now
+
+**🚀 [Use the Insurance Navigator Webapp](https://insurance-navigator.vercel.app)**
+
+No installation required! Upload your insurance documents and start asking questions immediately. The webapp is fully functional and ready to help you understand your insurance coverage, benefits, and claims.
+
 ## 🎯 Overview
 
 Insurance Navigator is a comprehensive platform that combines document processing, AI-powered analysis, and conversational interfaces to help patients navigate complex insurance information. The system processes insurance documents (PDFs, images) and provides intelligent responses to user questions about their coverage, benefits, and claims.
