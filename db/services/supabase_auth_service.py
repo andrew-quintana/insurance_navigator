@@ -314,11 +314,10 @@ class SupabaseAuthService:
             # Get the regular Supabase client
             client = await self._get_client()
             
-            # Set the session with the token to validate it
-            client.auth.set_session(token, token)
-            
-            # Get user from the session - this validates the token
-            auth_response = client.auth.get_user()
+            # Validate token directly using get_user() - this is the correct approach
+            # The previous implementation incorrectly used set_session(token, token)
+            # which caused validation failures
+            auth_response = client.auth.get_user(token)
             
             if not auth_response or not auth_response.user:
                 logger.warning("Invalid token - Supabase validation failed")
