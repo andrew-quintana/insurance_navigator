@@ -160,7 +160,7 @@ export default function LoginForm({ onSuccess, redirectTo = '/chat' }: LoginForm
 
           <Button
             type="submit"
-            className="w-full"
+            className="w-full bg-green-600 hover:bg-green-700 text-white"
             disabled={isLoading}
           >
             {isLoading ? 'Signing In...' : 'Sign In'}
