@@ -19,7 +19,7 @@ import {
 
 export default function Home() {
   const router = useRouter()
-  const { user, loading } = useAuth()
+  const { user, loading, signOut } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -36,8 +36,32 @@ export default function Home() {
   }
 
   const handleLogout = async () => {
-    // This will be handled by the AuthProvider's signOut method
-    // The user will be automatically redirected when the auth state changes
+    await signOut()
+    router.push("/")
+  }
+
+  const handleDemoLogin = async () => {
+    setIsLoading(true)
+    try {
+      const { supabase } = await import('@/lib/supabase-client')
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: 'sendaqmail@gmail.com',
+        password: 'xasdez-katjuc-zyttI2'
+      })
+
+      if (authError) {
+        console.error('Demo login error:', authError)
+        return
+      }
+
+      if (data.user && data.session) {
+        router.push("/chat")
+      }
+    } catch (error) {
+      console.error('Demo login error:', error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -124,6 +148,25 @@ export default function Home() {
               Get personalized questions to ask your doctor, understand your insurance plan, and feel more in control —
               all in one secure place.
             </p>
+            
+            {/* Demo Button */}
+            {!user && (
+              <div className="mb-6">
+                <Button
+                  onClick={handleDemoLogin}
+                  variant="outline"
+                  size="lg"
+                  className="border-teal-300 text-teal-700 hover:bg-teal-50 hover:text-teal-800 px-8 py-6 text-lg rounded-xl shadow-lg transition-all mr-4"
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Loading..." : "Try Demo"}
+                </Button>
+                <p className="text-sm text-teal-600 mt-2">
+                  Experience the Insurance Navigator with a pre-loaded 250-page policy document
+                </p>
+              </div>
+            )}
+            
             <Button
               onClick={handleStartNow}
               size="lg"
