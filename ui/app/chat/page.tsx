@@ -27,12 +27,12 @@ export default function ChatPage() {
     {
       id: 1,
       sender: "bot",
-      text: "Hello! I'm your Medicare Navigator assistant. I'm here to help you understand your Medicare benefits and navigate insurance questions.\n\n**How can I assist you today?**",
+      text: "Hello! I'm your Insurance Navigator assistant. I'm here to help you understand your insurance benefits and navigate insurance questions.\n\n**How can I assist you today?**",
       options: [
-        "What's covered under Medicare Part B?",
-        "Help me understand my Medicare Supplement options",
-        "Questions about Medicare enrollment periods",
-        "I need help with a specific claim or benefit"
+        "What is covered under my plan?",
+        "What is a copay?",
+        "What is my deductible?",
+        "How would I get access to mental health services?"
       ]
     }
   ])
@@ -63,12 +63,12 @@ export default function ChatPage() {
       const initialMessage: Message = {
         id: 1,
         sender: "bot",
-        text: `Hello ${userName}! I'm your Medicare Navigator. I can help you with Medicare questions, find healthcare providers, understand your benefits, and more. What would you like to know today?`,
+        text: `Hello ${userName}! I'm your Insurance Navigator. I can help you with insurance questions, find healthcare providers, understand your benefits, and more. What would you like to know today?`,
         options: [
-          "What's covered under Medicare Part B?",
-          "Help me understand my Medicare Supplement options",
-          "Questions about Medicare enrollment periods",
-          "I need help with a specific claim or benefit"
+          "What is covered under my plan?",
+          "What is a copay?",
+          "What is my deductible?",
+          "How would I get access to mental health services?"
         ]
       }
       setMessages([initialMessage])

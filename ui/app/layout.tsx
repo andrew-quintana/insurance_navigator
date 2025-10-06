@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     template: "%s | Insurance Navigator"
   },
   description:
-    "Navigate Medicare with confidence. Get personalized questions to ask your doctor, understand your insurance plan, and feel more in control.",
+    "Navigate insurance with confidence. Get personalized questions to ask your doctor, understand your insurance plan, and feel more in control.",
   keywords: [
     "Medicare",
     "Healthcare",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
     title: 'Insurance Navigator',
-    description: 'Navigate Medicare with confidence. Get personalized questions to ask your doctor, understand your insurance plan, and feel more in control.',
+    description: 'Navigate insurance with confidence. Get personalized questions to ask your doctor, understand your insurance plan, and feel more in control.',
     siteName: 'Insurance Navigator',
     images: [
       {
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Insurance Navigator',
-    description: 'Navigate Medicare with confidence. Get personalized questions to ask your doctor, understand your insurance plan, and feel more in control.',
+    description: 'Navigate insurance with confidence. Get personalized questions to ask your doctor, understand your insurance plan, and feel more in control.',
     images: ['/images/twitter-image.png'],
     creator: '@insurancenavigator',
   },

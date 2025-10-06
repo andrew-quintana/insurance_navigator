@@ -250,7 +250,7 @@ export default function DocumentManager({
                 <p className="font-medium text-blue-800">How to Search</p>
                 <ul className="text-sm text-blue-700 mt-1 space-y-1">
                   <li>• Use natural language to search your documents</li>
-                  <li>• Try queries like &quot;Medicare Part B coverage&quot; or &quot;prescription drugs&quot;</li>
+                  <li>• Try queries like &quot;insurance coverage&quot; or &quot;prescription drugs&quot;</li>
                   <li>• Search results show the most relevant sections from your documents</li>
                   <li>• Upload documents first to enable search functionality</li>
                 </ul>

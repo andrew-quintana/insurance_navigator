@@ -122,7 +122,7 @@ export default function Home() {
         {/* Content positioned with z-index to appear above the background */}
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-3xl bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-sm">
-            <h1 className="text-4xl md:text-5xl font-bold text-teal-800 mb-6">Navigate Medicare with Confidence</h1>
+            <h1 className="text-4xl md:text-5xl font-bold text-teal-800 mb-6">Navigate Insurance with Confidence</h1>
             <p className="text-xl text-teal-700 mb-8">
               Get personalized questions to ask your doctor, understand your insurance plan, and feel more in control —
               all in one secure place.
@@ -145,19 +145,29 @@ export default function Home() {
         <div className="grid md:grid-cols-2 gap-8 items-start">
           {/* Sample Output */}
           <div>
-            <h2 className="text-3xl font-bold text-teal-800 mb-8">Sample Output</h2>
+            <h2 className="text-3xl font-bold text-teal-800 mb-8">Demo Setup</h2>
             <Card className="p-6 shadow-lg rounded-xl bg-white">
               <div className="mb-6 p-4 bg-sky-50 rounded-lg">
-                <p className="text-teal-800 italic">
-                  &ldquo;I&rsquo;ve been having lower back pain for a few weeks — what should I ask my doctor during my Medicare
-                  visit?&rdquo;
+                <p className="text-teal-800 font-medium mb-4">
+                  Try the Insurance Navigator with a pre-loaded sample policy document.
+                </p>
+                <p className="text-teal-700">
+                  <span className="font-medium">View Sample Policy Document:</span>{" "}
+                  <a 
+                    href="https://github.com/andrew-quintana/insurance_navigator/blob/7970075fb90ba8c6e7215ed6668b0dd40dfb06e1/examples/scan_classic_hmo.pdf"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 underline"
+                  >
+                    a pre-uploaded 250-page Medicare policy document
+                  </a>
                 </p>
               </div>
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <div className="border-l-4 border-teal-500 pl-4">
-                  <h3 className="font-semibold text-teal-800 mb-2">What to track before your visit:</h3>
+                  <h3 className="font-semibold text-teal-800 mb-2">What you can test:</h3>
                   <ul className="space-y-2">
-                    {["Symptoms", "Duration", "Patterns", "What helps or worsens", "Mobility changes"].map(
+                    {["Ask questions about coverage", "Understand copays and deductibles", "Find mental health services", "Get personalized guidance"].map(
                       (item, i) => (
                         <li key={i} className="flex items-start">
                           <CheckCircle className="h-5 w-5 text-teal-500 mr-2 flex-shrink-0 mt-0.5" />
@@ -167,32 +177,8 @@ export default function Home() {
                     )}
                   </ul>
                 </div>
-                <div className="border-l-4 border-sky-500 pl-4">
-                  <h3 className="font-semibold text-teal-800 mb-2">Questions to ask your PCP:</h3>
-                  <ul className="space-y-2">
-                    {["Causes", "Medicare Part B coverage for imaging", "Exercises", "Red flag symptoms"].map(
-                      (item, i) => (
-                        <li key={i} className="flex items-start">
-                          <CheckCircle className="h-5 w-5 text-sky-500 mr-2 flex-shrink-0 mt-0.5" />
-                          <span className="text-teal-700">{item}</span>
-                        </li>
-                      ),
-                    )}
-                  </ul>
-                </div>
-                <div className="border-l-4 border-cream-500 pl-4">
-                  <h3 className="font-semibold text-teal-800 mb-2">What to expect:</h3>
-                  <ul className="space-y-2">
-                    {["Referrals", "Coverage through Medicare Part B", "Next steps"].map((item, i) => (
-                      <li key={i} className="flex items-start">
-                        <CheckCircle className="h-5 w-5 text-cream-600 mr-2 flex-shrink-0 mt-0.5" />
-                        <span className="text-teal-700">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
                 <p className="text-teal-700 italic mt-4 p-3 bg-cream-50 rounded-lg">
-                  Some next steps may depend on what&rsquo;s covered with your Medicare Part B insurance.
+                  This demo uses a real insurance policy document to show how the Insurance Navigator can help you understand your coverage.
                 </p>
               </div>
             </Card>
@@ -208,7 +194,7 @@ export default function Home() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-teal-800 mb-1">Step 1</h3>
-                  <p className="text-teal-700">Upload your Medicare plan or start with a question</p>
+                  <p className="text-teal-700">Upload your insurance plan or start with a question</p>
                 </div>
               </div>
 
@@ -218,7 +204,7 @@ export default function Home() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-teal-800 mb-1">Step 2</h3>
-                  <p className="text-teal-700">Chat securely with our Medicare Navigator</p>
+                  <p className="text-teal-700">Chat securely with our Insurance Navigator</p>
                 </div>
               </div>
 
@@ -241,51 +227,11 @@ export default function Home() {
                 <p className="text-teal-600 text-sm">Coming Soon</p>
               </div>
             </div>
-            <p className="text-center text-teal-700 mt-4">See how Medicare Navigator helps you stay one step ahead.</p>
+            <p className="text-center text-teal-700 mt-4">See how Insurance Navigator helps you stay one step ahead.</p>
           </div>
         </div>
       </section>
 
-      {/* What's Coming */}
-      <section className="container mx-auto px-4 py-16 bg-gradient-to-b from-white to-cream-50">
-        <h2 className="text-3xl font-bold text-center text-teal-800 mb-6">What&rsquo;s Coming</h2>
-        <p className="text-center text-teal-700 mb-12 max-w-2xl mx-auto">
-          More tools coming soon to help you plan, prepare, and follow up on care.
-        </p>
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          <Card className="p-6 bg-white border border-teal-100 text-center rounded-xl shadow-sm hover:shadow-md transition-all">
-            <div className="bg-sky-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Calendar className="h-8 w-8 text-sky-600" />
-            </div>
-            <h3 className="text-xl font-semibold text-teal-800 mb-2">Doctor&rsquo;s Office Scheduling</h3>
-            <p className="text-teal-700">
-              Easily request appointments through Medicare Navigator, with scheduling and doctor research handled automatically through the chat.
-            </p>
-          </Card>
-
-          <Card className="p-6 bg-white border border-teal-100 text-center rounded-xl shadow-sm hover:shadow-md transition-all">
-            <div className="bg-cream-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <DollarSign className="h-8 w-8 text-terracotta" />
-            </div>
-            <h3 className="text-xl font-semibold text-teal-800 mb-2">Claim Evaluation and Filing</h3>
-            <p className="text-teal-700">
-              Optimize your healthcare benefits with our compliant assessment tools that help determine claim
-              eligibility and streamline the filing process.
-            </p>
-          </Card>
-
-          <Card className="p-6 bg-white border border-teal-100 text-center rounded-xl shadow-sm hover:shadow-md transition-all">
-            <div className="bg-teal-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Activity className="h-8 w-8 text-teal-600" />
-            </div>
-            <h3 className="text-xl font-semibold text-teal-800 mb-2">Symptom Tracking</h3>
-            <p className="text-teal-700">
-              Easily log and organize your symptoms through simple conversations, creating a clear record your doctor
-              can review during visits.
-            </p>
-          </Card>
-        </div>
-      </section>
 
     </div>
   )
