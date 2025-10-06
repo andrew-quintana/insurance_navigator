@@ -262,7 +262,7 @@ export default function RegisterForm({ onSuccess, redirectTo = '/chat' }: Regist
 
           <Button
             type="submit"
-            className="w-full bg-green-600 hover:bg-green-700 text-white"
+            className="w-full bg-teal-700 hover:bg-teal-800 text-white"
             disabled={isLoading}
           >
             {isLoading ? 'Creating Account...' : 'Create Account'}
