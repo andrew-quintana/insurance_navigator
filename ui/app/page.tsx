@@ -14,9 +14,6 @@ import {
   FileText,
   PlayCircle,
   Upload,
-  Calendar,
-  DollarSign,
-  Activity,
   LogIn,
 } from "lucide-react"
 
