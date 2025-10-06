@@ -207,7 +207,7 @@ export default function Home() {
                 <div className="border-l-4 border-teal-500 pl-4">
                   <h3 className="font-semibold text-teal-800 mb-2">What you can test:</h3>
                   <ul className="space-y-2">
-                    {["Ask questions about coverage", "Understand copays and deductibles", "Find mental health services", "Get personalized guidance"].map(
+                    {["Ask questions about coverage", "Get personalized guidance", "Plan how to get access to services"].map(
                       (item, i) => (
                         <li key={i} className="flex items-start">
                           <CheckCircle className="h-5 w-5 text-teal-500 mr-2 flex-shrink-0 mt-0.5" />
