@@ -299,7 +299,7 @@ export default function ChatPage() {
             <ArrowLeft className="h-5 w-5 mr-2" />
             <span>Return to Home</span>
           </Link>
-          <h1 className="text-xl font-semibold text-teal-800">Medicare Navigator Chat</h1>
+          <h1 className="text-xl font-semibold text-teal-800">Insurance Navigator Chat</h1>
           <div className="flex items-center space-x-4">
             <div className="flex items-center text-teal-700">
               <User className="h-5 w-5 mr-2" />
