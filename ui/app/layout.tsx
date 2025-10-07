@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { AuthProvider } from "@/components/auth/SessionManager"
 import Footer from "@/components/Footer"
+import { Analytics } from '@vercel/analytics/react'
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -140,6 +141,9 @@ export default function RootLayout({
             }}
           />
         )}
+        
+        {/* Vercel Web Analytics */}
+        <Analytics />
         
         {/* Maintenance mode overlay */}
         {process.env.NEXT_PUBLIC_MAINTENANCE_MODE === 'true' && (

@@ -34,5 +34,30 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Analytics
+
+This application uses multiple analytics platforms:
+
+### Vercel Web Analytics
+- Lightweight (~1KB), privacy-friendly analytics
+- Auto-enabled when deployed to Vercel
+- No configuration required
+- Tracks page views and visitor metrics
+
+### Google Analytics (Optional)
+- Enabled via `NEXT_PUBLIC_GOOGLE_ANALYTICS_ID` environment variable
+- Provides detailed user behavior tracking
+
+### Hotjar (Optional)
+- Enabled via `NEXT_PUBLIC_HOTJAR_ID` environment variable
+- Session recordings and heatmaps
+
+To enable analytics in Vercel:
+1. Deploy your application to Vercel
+2. Go to your project dashboard
+3. Navigate to Analytics tab
+4. Click "Enable" for Web Analytics
+
 # Environment variables configured for production API connection
 # Environment variables configured for production deployment Tue Jun  3 18:52:45 PDT 2025
