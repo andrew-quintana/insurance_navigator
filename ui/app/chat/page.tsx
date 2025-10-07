@@ -34,7 +34,7 @@ export default function ChatPage() {
         "What is my deductible?",
         "How would I get access to mental health services?",
         "Am I covered for ambulances?",
-        "What is a standard vs non-standard x-ray?"
+        "What is a standard vs non-standard imaging procedure?"
       ]
     }
   ])
@@ -72,7 +72,7 @@ export default function ChatPage() {
           "What is my deductible?",
           "How would I get access to mental health services?",
           "Am I covered for ambulances?",
-          "What is a standard vs non-standard x-ray?"
+          "What is a standard vs non-standard imaging procedure?"
         ]
       }
       setMessages([initialMessage])
