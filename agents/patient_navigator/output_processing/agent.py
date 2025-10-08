@@ -286,15 +286,27 @@ class CommunicationAgent(BaseAgent):
         
         try:
             self.logger.info(f"Processing communication request with {len(request.agent_outputs)} agent outputs")
+            self.logger.info(f"Agent outputs: {[output.agent_id for output in request.agent_outputs]}")
+            self.logger.info(f"User context: {request.user_context}")
             
             # Validate input
+            self.logger.info("Step 1: Validating request")
             self._validate_request(request)
+            self.logger.info("Request validation passed")
             
             # Prepare input for LLM
+            self.logger.info("Step 2: Formatting agent outputs for LLM")
             formatted_input = self._format_agent_outputs(request)
+            self.logger.info(f"Formatted input length: {len(formatted_input)} characters")
             
-            # Call the agent (inherited from BaseAgent)
-            response = self(formatted_input, user_context=request.user_context)
+            # Call the agent (inherited from BaseAgent) with timeout
+            self.logger.info("Step 3: Calling LLM with 30-second timeout")
+            import asyncio
+            response = await asyncio.wait_for(
+                asyncio.to_thread(self, formatted_input, user_context=request.user_context),
+                timeout=30.0  # 30 second timeout
+            )
+            self.logger.info("LLM call completed successfully")
             
             # Calculate processing time
             processing_time = time.time() - start_time
@@ -319,6 +331,14 @@ class CommunicationAgent(BaseAgent):
             self.logger.info(f"Successfully enhanced response in {processing_time:.2f}s")
             return enhanced_response
             
+        except asyncio.TimeoutError:
+            processing_time = time.time() - start_time
+            self.logger.error(f"Communication agent timed out after 30 seconds")
+            
+            if self.config.enable_fallback and self.config.fallback_to_original:
+                return self._create_fallback_response(request, processing_time, "Communication agent timeout after 30 seconds")
+            else:
+                raise
         except Exception as e:
             processing_time = time.time() - start_time
             self.logger.error(f"Error enhancing response: {e}")
