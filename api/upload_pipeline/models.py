@@ -43,6 +43,16 @@ class UploadResponse(BaseModel):
     upload_expires_at: datetime = Field(..., description="Upload URL expiration time")
 
 
+class DuplicateDocumentError(BaseModel):
+    """Error response model for duplicate document uploads."""
+    
+    error_type: str = Field(default="duplicate_document", description="Type of error")
+    message: str = Field(..., description="User-friendly error message")
+    document_title: str = Field(..., description="Title of the duplicate document")
+    last_uploaded: str = Field(..., description="When the document was last uploaded")
+    emoji: str = Field(default="❌", description="Error emoji")
+
+
 class JobStatusResponse(BaseModel):
     """Response model for job status."""
     

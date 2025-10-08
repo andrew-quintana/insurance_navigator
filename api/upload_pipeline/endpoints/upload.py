@@ -12,7 +12,7 @@ from uuid import uuid4
 from fastapi import APIRouter, HTTPException, Depends, status, File, UploadFile, Request
 from fastapi.responses import JSONResponse
 
-from ..models import UploadRequest, UploadResponse, JobPayloadJobValidated
+from ..models import UploadRequest, UploadResponse, JobPayloadJobValidated, DuplicateDocumentError
 from ..auth import require_user, User
 from ..database import get_database
 from ..config import get_config
@@ -28,6 +28,16 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _format_upload_date(upload_datetime) -> str:
+    """Format upload datetime into a user-friendly string."""
+    if isinstance(upload_datetime, str):
+        from datetime import datetime
+        upload_datetime = datetime.fromisoformat(upload_datetime.replace('Z', '+00:00'))
+    
+    # Format as "October 8, 2025 at 3:24 PM"
+    return upload_datetime.strftime("%B %d, %Y at %I:%M %p")
+
+
 @router.post("/upload", response_model=UploadResponse)
 async def upload_document(
     request: UploadRequest,
@@ -38,7 +48,7 @@ async def upload_document(
     
     This endpoint:
     1. Validates the upload request
-    2. Checks for duplicate documents (same user gets 409 error, different users proceed)
+    2. Checks for duplicate documents
     3. Creates a new document record
     4. Initializes a job in the queue
     5. Returns a signed URL for file upload
@@ -78,7 +88,7 @@ async def upload_document(
         )
         
         if user_existing_document:
-            # User already has this document - return clear error message
+            # User already has this document - return duplicate error
             logger.info(
                 f"User duplicate document detected - user_id: {current_user.user_id}, file_sha256: {request.sha256}, existing_document_id: {user_existing_document['document_id']}"
             )
@@ -97,10 +107,21 @@ async def upload_document(
                 }
             )
             
-            # Return clear error message for duplicate document
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"You have already uploaded this document: '{request.filename}'. Please upload a different file or check your existing documents."
+            # Format the upload date nicely
+            last_uploaded = _format_upload_date(user_existing_document["created_at"])
+            
+            # Create user-friendly error message
+            error_message = f"❌ Duplicate document upload for {user_existing_document['filename']}"
+            
+            # Return duplicate error response
+            return JSONResponse(
+                status_code=409,  # Conflict status code
+                content=DuplicateDocumentError(
+                    message=error_message,
+                    document_title=user_existing_document["filename"],
+                    last_uploaded=last_uploaded,
+                    emoji="❌"
+                ).dict()
             )
         
         # Check if any other user has uploaded this document content
@@ -116,6 +137,9 @@ async def upload_document(
                 f"source_document_id: {cross_user_existing_document['document_id']}, "
                 f"source_user_id: {cross_user_existing_document['user_id']}"
             )
+            
+            # Note: Cross-user duplicates are allowed and will be processed
+            # This is different from same-user duplicates which are blocked
             
             try:
                 # Duplicate the document for this user
