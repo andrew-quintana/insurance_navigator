@@ -377,13 +377,18 @@ class PatientNavigatorChatInterface:
     async def _process_outputs(self, workflow_outputs: List[WorkflowOutput], message: ChatMessage):
         """Process workflow outputs through two-stage synthesizer for human-readable responses."""
         logger.info("Processing workflow outputs through two-stage synthesizer")
+        logger.info(f"Number of workflow outputs to process: {len(workflow_outputs)}")
         
         try:
             # Convert workflow outputs to agent outputs for two-stage synthesizer
+            logger.info("Step 1: Converting workflow outputs to agent outputs")
             agent_outputs = []
-            for workflow_output in workflow_outputs:
+            for i, workflow_output in enumerate(workflow_outputs):
+                logger.info(f"Processing workflow output {i+1}/{len(workflow_outputs)}: {workflow_output.workflow_type.value}")
+                
                 # Extract meaningful content from workflow output
                 content = self._extract_workflow_content(workflow_output)
+                logger.info(f"Extracted content length: {len(content)} characters")
                 
                 agent_outputs.append(AgentOutput(
                     agent_id=workflow_output.workflow_type.value,
@@ -395,15 +400,22 @@ class PatientNavigatorChatInterface:
                     }
                 ))
             
+            logger.info(f"Successfully converted {len(agent_outputs)} workflow outputs to agent outputs")
+            
             # Process through two-stage synthesizer
+            logger.info("Step 2: Calling two-stage synthesizer")
+            user_context = {
+                "user_id": message.user_id,
+                "language": message.language,
+                "conversation_history": self.conversation_history.get(message.user_id, [])
+            }
+            logger.info(f"User context: {user_context}")
+            
             response = await self.two_stage_synthesizer.synthesize_outputs(
                 agent_outputs=agent_outputs,
-                user_context={
-                    "user_id": message.user_id,
-                    "language": message.language,
-                    "conversation_history": self.conversation_history.get(message.user_id, [])
-                }
+                user_context=user_context
             )
+            logger.info("Two-stage synthesizer completed successfully")
             
             return ChatResponse(
                 content=response.enhanced_content,
