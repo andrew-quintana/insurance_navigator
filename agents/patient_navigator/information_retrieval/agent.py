@@ -467,9 +467,15 @@ Generate a detailed response that would be most helpful to the user.
                 # Return a mock string response for query reframing
                 return "expert insurance terminology query reframe"
             
-            # Call the LLM directly for string response
-            response = self.llm(prompt)
+            # Call the LLM with proper async handling and timeout
+            response = await asyncio.wait_for(
+                asyncio.to_thread(self.llm, prompt),
+                timeout=30.0  # 30 second timeout
+            )
             return response
+        except asyncio.TimeoutError:
+            self.logger.error("LLM call timed out after 30 seconds")
+            return "expert insurance terminology query reframe"
         except Exception as e:
             self.logger.error(f"Error calling LLM: {e}")
             # Return fallback response
