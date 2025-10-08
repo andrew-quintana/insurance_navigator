@@ -1,0 +1,38 @@
+# FM-027 Reproduction Harness
+.PHONY: repro-fm027
+
+# Environment variables for FM-027 reproduction
+# These should be set in your environment or .env file
+export SUPABASE_URL := $(or $(SUPABASE_URL),https://your-staging-project.supabase.co)
+export ANON_KEY := $(or $(SUPABASE_ANON_KEY),$(ANON_KEY))
+export SUPABASE_SERVICE_ROLE_KEY := $(or $(SUPABASE_SERVICE_ROLE_KEY),$(SERVICE_ROLE_KEY))
+
+# FM-027 reproduction target
+repro-fm027:
+	@echo "🚀 Running FM-027 reproduction harness..."
+	@echo "Environment: Staging Supabase"
+	@echo "Date: $(shell date -u +%Y-%m-%dT%H:%M:%SZ)"
+	@echo ""
+	@echo "1️⃣ Validating StorageManager fix..."
+	@python ../debug/test_storage_manager_debug.py
+	@echo ""
+	@echo "2️⃣ Testing complete flow simulation..."
+	@python ../debug/test_complete_flow_simulation.py
+	@echo ""
+	@echo "3️⃣ Checking actual file access..."
+	@python ../debug/test_actual_file_access.py
+	@echo ""
+	@echo "4️⃣ Listing storage files..."
+	@python ../debug/test_list_storage_files.py
+	@echo ""
+
+# Help target
+help:
+	@echo "Available targets:"
+	@echo "  repro-fm027    - Run FM-027 reproduction harness"
+	@echo "  help          - Show this help message"
+	@echo ""
+	@echo "Usage:"
+	@echo "  make -f Makefile.fm027 repro-fm027"
+	@echo "  make -f Makefile.fm027 help"
+

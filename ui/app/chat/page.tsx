@@ -27,12 +27,14 @@ export default function ChatPage() {
     {
       id: 1,
       sender: "bot",
-      text: "Hello! I'm your Medicare Navigator assistant. I'm here to help you understand your Medicare benefits and navigate insurance questions.\n\n**How can I assist you today?**",
+      text: "Hello! I'm your Insurance Navigator assistant. I'm here to help you understand your insurance benefits and navigate insurance questions.\n\n**How can I assist you today?**",
       options: [
-        "What's covered under Medicare Part B?",
-        "Help me understand my Medicare Supplement options",
-        "Questions about Medicare enrollment periods",
-        "I need help with a specific claim or benefit"
+        "What is covered under my plan?",
+        "What is a copay?",
+        "What is my deductible?",
+        "How would I get access to mental health services?",
+        "Am I covered for ambulances?",
+        "What is a standard vs non-standard imaging procedure?"
       ]
     }
   ])
@@ -63,12 +65,14 @@ export default function ChatPage() {
       const initialMessage: Message = {
         id: 1,
         sender: "bot",
-        text: `Hello ${userName}! I'm your Medicare Navigator. I can help you with Medicare questions, find healthcare providers, understand your benefits, and more. What would you like to know today?`,
+        text: `Hello ${userName}! I'm your Insurance Navigator. I can help you with insurance questions, find healthcare providers, understand your benefits, and more. What would you like to know today?`,
         options: [
-          "What's covered under Medicare Part B?",
-          "Help me understand my Medicare Supplement options",
-          "Questions about Medicare enrollment periods",
-          "I need help with a specific claim or benefit"
+          "What is covered under my plan?",
+          "What is a copay?",
+          "What is my deductible?",
+          "How would I get access to mental health services?",
+          "Am I covered for ambulances?",
+          "What is a standard vs non-standard imaging procedure?"
         ]
       }
       setMessages([initialMessage])
@@ -295,7 +299,7 @@ export default function ChatPage() {
             <ArrowLeft className="h-5 w-5 mr-2" />
             <span>Return to Home</span>
           </Link>
-          <h1 className="text-xl font-semibold text-teal-800">Medicare Navigator Chat</h1>
+          <h1 className="text-xl font-semibold text-teal-800">Insurance Navigator Chat</h1>
           <div className="flex items-center space-x-4">
             <div className="flex items-center text-teal-700">
               <User className="h-5 w-5 mr-2" />

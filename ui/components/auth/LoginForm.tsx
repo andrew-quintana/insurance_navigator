@@ -67,6 +67,37 @@ export default function LoginForm({ onSuccess, redirectTo = '/chat' }: LoginForm
     }
   }
 
+  const handleDemoLogin = async () => {
+    setIsLoading(true)
+    setError('')
+
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: 'sendaqmail@gmail.com',
+        password: 'xasdez-katjuc-zyttI2'
+      })
+
+      if (authError) {
+        setError(authError.message)
+        return
+      }
+
+      if (data.user && data.session) {
+        // Successfully logged in
+        if (onSuccess) {
+          onSuccess()
+        } else {
+          router.push(redirectTo)
+        }
+      }
+    } catch (error) {
+      console.error('Demo login error:', error)
+      setError('An unexpected error occurred. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
@@ -129,7 +160,7 @@ export default function LoginForm({ onSuccess, redirectTo = '/chat' }: LoginForm
 
           <Button
             type="submit"
-            className="w-full"
+            className="w-full bg-teal-700 hover:bg-teal-800 text-white"
             disabled={isLoading}
           >
             {isLoading ? 'Signing In...' : 'Sign In'}
@@ -146,6 +177,22 @@ export default function LoginForm({ onSuccess, redirectTo = '/chat' }: LoginForm
             <Link href="/forgot-password" className="text-blue-600 hover:text-blue-800">
               Forgot your password?
             </Link>
+          </div>
+
+          {/* Demo Mode Button */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full border-teal-300 text-teal-700 hover:bg-teal-50 hover:text-teal-800"
+              onClick={handleDemoLogin}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Signing In...' : 'Demo Mode'}
+            </Button>
+            <p className="text-xs text-gray-500 text-center mt-2">
+              Sign in with demo account (pre-loaded with 250-page policy)
+            </p>
           </div>
         </form>
       </CardContent>
