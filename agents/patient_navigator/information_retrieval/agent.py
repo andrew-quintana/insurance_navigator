@@ -127,6 +127,7 @@ class InformationRetrievalAgent(BaseAgent):
             # Step 3: RAG Integration with existing system
             chunks = await self._retrieve_chunks(expert_query, user_id)
             self.logger.info(f"Retrieved {len(chunks)} chunks")
+            self.logger.info("=== RAG OPERATIONS COMPLETED ===")
             
             # Step 4-N: Self-Consistency Loop (3-5 iterations)
             response_variants = await self._generate_response_variants(chunks, user_query, expert_query)
