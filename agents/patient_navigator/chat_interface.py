@@ -162,18 +162,23 @@ class PatientNavigatorChatInterface:
         # Use supervisor workflow to determine workflow
         try:
             # Try to use the real supervisor workflow
+            logger.info("Attempting to use supervisor workflow for routing")
             workflow_prescription = await self._use_supervisor_workflow(
                 agent_prompt.prompt_text,
                 agent_prompt.context,
                 message.user_id
             )
+            logger.info(f"Supervisor workflow succeeded: {workflow_prescription}")
         except Exception as e:
-            logger.warning(f"Supervisor workflow failed, falling back to simple routing: {e}")
+            logger.error(f"Supervisor workflow failed, falling back to simple routing: {e}")
+            logger.error(f"Supervisor workflow error type: {type(e).__name__}")
+            logger.error(f"Supervisor workflow error details: {str(e)}")
             # Fallback to simple routing if supervisor workflow fails
             workflow_prescription = await self._simple_workflow_routing(
                 agent_prompt.prompt_text,
                 agent_prompt.context
             )
+            logger.info(f"Using simple routing fallback: {workflow_prescription}")
         
         workflow_outputs = []
         
@@ -292,8 +297,11 @@ class PatientNavigatorChatInterface:
                 workflow_type="information_retrieval"  # Default type
             )
             
-            # Execute the supervisor workflow
-            result = await self.supervisor_workflow.execute(workflow_input)
+            # Execute the supervisor workflow with timeout
+            result = await asyncio.wait_for(
+                self.supervisor_workflow.execute(workflow_input),
+                timeout=30.0  # 30 second timeout
+            )
             
             # Extract routing decision from result
             if hasattr(result, 'prescribed_workflows') and result.prescribed_workflows:
@@ -319,6 +327,9 @@ class PatientNavigatorChatInterface:
                     "reasoning": "Supervisor workflow completed but no workflow information available"
                 }
                 
+        except asyncio.TimeoutError:
+            logger.error("Supervisor workflow timed out after 30 seconds")
+            raise
         except Exception as e:
             logger.error(f"Supervisor workflow execution failed: {e}")
             raise

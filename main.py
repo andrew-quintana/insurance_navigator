@@ -1064,7 +1064,28 @@ async def chat_with_agent(
         # Note: Graceful degradation is handled within individual RAG operations,
         # not at the chat interface level to avoid masking other processing errors
         try:
-            response = await chat_interface.process_message(chat_message)
+            # Add timeout to prevent indefinite hanging
+            response = await asyncio.wait_for(
+                chat_interface.process_message(chat_message),
+                timeout=60.0  # 60 second timeout for entire chat processing
+            )
+        except asyncio.TimeoutError:
+            logger.error("Chat processing timed out after 60 seconds")
+            return {
+                "text": "I apologize, but your request is taking longer than expected. Please try again with a simpler question.",
+                "response": "I apologize, but your request is taking longer than expected. Please try again with a simpler question.",
+                "conversation_id": conversation_id or f"conv_{int(time.time())}",
+                "timestamp": datetime.now().isoformat(),
+                "metadata": {
+                    "processing_time": 60.0,
+                    "confidence": 0.0,
+                    "agent_sources": ["system"],
+                    "error": "Request timeout after 60 seconds",
+                    "error_type": "chat_processing_timeout"
+                },
+                "next_steps": ["Please try rephrasing your question", "Contact support if the issue persists"],
+                "sources": ["system"]
+            }
         except Exception as e:
             logger.error(f"Chat processing failed: {e}")
             # Return a proper error response instead of triggering graceful degradation
@@ -1083,22 +1104,6 @@ async def chat_with_agent(
                 "next_steps": ["Please try rephrasing your question", "Contact support if the issue persists"],
                 "sources": ["system"]
             }
-        
-        # Handle both ChatResponse objects and dictionary responses (for backward compatibility)
-        if isinstance(response, dict):
-            # Handle dictionary response (fallback case)
-            content = response.get("content", "I apologize, but I encountered an error processing your request.")
-            agent_sources = response.get("agent_sources", response.get("sources", ["system"]))
-            confidence = response.get("confidence", 0.0)
-            processing_time = response.get("processing_time", 0.0)
-            metadata = response.get("metadata", {})
-        else:
-            # Handle ChatResponse object (normal case)
-            content = response.content
-            agent_sources = response.agent_sources
-            confidence = response.confidence
-            processing_time = response.processing_time
-            metadata = response.metadata or {}
         
         # Handle both ChatResponse objects and dictionary responses (for backward compatibility)
         if isinstance(response, dict):
