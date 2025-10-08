@@ -951,6 +951,7 @@ async def chat_with_agent(
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """Chat endpoint for AI agent interaction with full agentic workflow integration."""
+    logger.info("=== CHAT ENDPOINT CALLED ===")
     try:
         data = await request.json()
         message = data.get("message", "")

@@ -401,6 +401,7 @@ class PatientNavigatorChatInterface:
                 ))
             
             logger.info(f"Successfully converted {len(agent_outputs)} workflow outputs to agent outputs")
+            logger.info("=== WORKFLOW OUTPUTS PROCESSING COMPLETED ===")
             
             # Process through two-stage synthesizer
             logger.info("Step 2: Calling two-stage synthesizer")
