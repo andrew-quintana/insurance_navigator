@@ -1060,32 +1060,29 @@ async def chat_with_agent(
             }
         )
         
-        # Process message through the complete agentic workflow with graceful degradation
-        degradation_registry = get_degradation_registry()
-        rag_degradation = degradation_registry.get("rag")
-        
-        if rag_degradation:
-            # Use graceful degradation for RAG processing
-            async def process_with_rag():
-                return await chat_interface.process_message(chat_message)
-            
-            degradation_result = await rag_degradation.execute_with_fallback(process_with_rag)
-            
-            if degradation_result.success:
-                response = degradation_result.result
-                # Add degradation metadata
-                if degradation_result.service_level.value != "full":
-                    logger.info(f"Chat processed with degraded service level: {degradation_result.service_level.value}")
-            else:
-                # All fallbacks failed, return error response
-                logger.error(f"Chat processing failed completely: {degradation_result.error}")
-                raise HTTPException(
-                    status_code=500,
-                    detail="Chat service is temporarily unavailable. Please try again later."
-                )
-        else:
-            # Fallback to direct processing if degradation manager not available
+        # Process message through the complete agentic workflow
+        # Note: Graceful degradation is handled within individual RAG operations,
+        # not at the chat interface level to avoid masking other processing errors
+        try:
             response = await chat_interface.process_message(chat_message)
+        except Exception as e:
+            logger.error(f"Chat processing failed: {e}")
+            # Return a proper error response instead of triggering graceful degradation
+            return {
+                "text": "I apologize, but I encountered an error processing your request. Please try again in a moment.",
+                "response": "I apologize, but I encountered an error processing your request. Please try again in a moment.",
+                "conversation_id": conversation_id or f"conv_{int(time.time())}",
+                "timestamp": datetime.now().isoformat(),
+                "metadata": {
+                    "processing_time": 0.0,
+                    "confidence": 0.0,
+                    "agent_sources": ["system"],
+                    "error": str(e),
+                    "error_type": "chat_processing_error"
+                },
+                "next_steps": ["Please try rephrasing your question", "Contact support if the issue persists"],
+                "sources": ["system"]
+            }
         
         # Handle both ChatResponse objects and dictionary responses (for backward compatibility)
         if isinstance(response, dict):
