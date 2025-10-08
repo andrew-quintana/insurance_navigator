@@ -31,9 +31,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY backend/ ./backend/
 COPY core/ ./core/
 COPY utils/ ./utils/
-
-# Remove any conflicting config files that might be imported from the main API
-RUN rm -rf ./config/ 2>/dev/null || true
+COPY config/ ./config/
 
 # Set Python path to include the current directory
 ENV PYTHONPATH=/app
