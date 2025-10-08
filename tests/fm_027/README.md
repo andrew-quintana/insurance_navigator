@@ -28,6 +28,17 @@ All test files have been audited for sensitive information:
 
 ## Running Tests
 
+### Using the Makefile (Recommended)
+```bash
+# Run FM-027 reproduction harness
+cd tests/fm_027/
+make -f Makefile.fm027 repro-fm027
+
+# Show help
+make -f Makefile.fm027 help
+```
+
+### Using pytest directly
 ```bash
 # Run all FM-027 tests
 pytest tests/fm_027/ -v

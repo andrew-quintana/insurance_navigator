@@ -44,10 +44,10 @@ export default function WelcomePage() {
         {/* Welcome Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-teal-800 mb-4">
-            Welcome to Medicare Navigator!
+            Welcome to Insurance Navigator!
           </h1>
           <p className="text-xl text-teal-700 max-w-2xl mx-auto leading-relaxed">
-            Your personal AI assistant for navigating Medicare plans, understanding benefits, and making informed healthcare decisions.
+            Your personal AI assistant for navigating insurance plans, understanding benefits, and making informed healthcare decisions.
           </p>
         </div>
 
@@ -67,7 +67,7 @@ export default function WelcomePage() {
           </div>
           
           <p className="text-center text-teal-700 text-lg">
-            Watch how Medicare Navigator helps you stay one step ahead with personalized guidance.
+            Watch how Insurance Navigator helps you stay one step ahead with personalized guidance.
           </p>
         </Card>
 
@@ -83,7 +83,7 @@ export default function WelcomePage() {
                 <CheckCircle className="h-6 w-6 text-teal-700" />
               </div>
               <div>
-                <h3 className="font-semibold text-teal-800 mb-2">Compare Medicare Plans</h3>
+                <h3 className="font-semibold text-teal-800 mb-2">Compare Insurance Plans</h3>
                 <p className="text-gray-600">Get personalized recommendations based on your health needs, budget, and preferred doctors.</p>
               </div>
             </div>
@@ -94,7 +94,7 @@ export default function WelcomePage() {
               </div>
               <div>
                 <h3 className="font-semibold text-teal-800 mb-2">Understand Your Benefits</h3>
-                <p className="text-gray-600">Decode complex Medicare terminology and understand exactly what&rsquo;s covered.</p>
+                <p className="text-gray-600">Decode complex insurance terminology and understand exactly what&rsquo;s covered.</p>
               </div>
             </div>
             
@@ -104,7 +104,7 @@ export default function WelcomePage() {
               </div>
               <div>
                 <h3 className="font-semibold text-teal-800 mb-2">Track Important Dates</h3>
-                <p className="text-gray-600">Never miss enrollment periods, renewals, or important Medicare deadlines.</p>
+                <p className="text-gray-600">Never miss enrollment periods, renewals, or important insurance deadlines.</p>
               </div>
             </div>
             
@@ -114,7 +114,7 @@ export default function WelcomePage() {
               </div>
               <div>
                 <h3 className="font-semibold text-teal-800 mb-2">Get Instant Answers</h3>
-                <p className="text-gray-600">Ask questions anytime and get immediate, accurate responses about Medicare.</p>
+                <p className="text-gray-600">Ask questions anytime and get immediate, accurate responses about insurance.</p>
               </div>
             </div>
           </div>
@@ -132,7 +132,7 @@ export default function WelcomePage() {
                 1
               </div>
               <p className="text-lg text-teal-800">
-                <span className="font-semibold">Start a conversation</span> - Simply type your Medicare question or concern
+                <span className="font-semibold">Start a conversation</span> - Simply type your insurance question or concern
               </p>
             </div>
             
@@ -150,7 +150,7 @@ export default function WelcomePage() {
                 3
               </div>
               <p className="text-lg text-teal-800">
-                <span className="font-semibold">Take action</span> - Follow clear, step-by-step recommendations to optimize your Medicare experience
+                <span className="font-semibold">Take action</span> - Follow clear, step-by-step recommendations to optimize your insurance experience
               </p>
             </div>
           </div>
@@ -176,8 +176,8 @@ export default function WelcomePage() {
             {loading
               ? "Verifying your session..."
               : user 
-                ? "You're all set! Click to start your Medicare conversation."
-                : "Please sign in to begin your Medicare journey."
+                ? "You're all set! Click to start your insurance conversation."
+                : "Please sign in to begin your insurance journey."
             }
           </p>
         </div>
