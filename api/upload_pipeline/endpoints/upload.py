@@ -98,7 +98,8 @@ async def upload_document(
             )
             
             # Generate proper signed URL for duplicate document
-            signed_url, upload_expires_at = await _get_upload_url_for_path(user_existing_document["raw_path"], config.signed_url_ttl_seconds)
+            signed_url = await _generate_signed_url(user_existing_document["raw_path"], config.signed_url_ttl_seconds)
+            upload_expires_at = datetime.utcnow() + timedelta(seconds=config.signed_url_ttl_seconds)
             
             # Create a new job for the duplicate upload request
             duplicate_job_id = uuid4()
@@ -158,7 +159,8 @@ async def upload_document(
                 )
                 
                 # Generate signed URL for the duplicated document
-                signed_url, upload_expires_at = await _get_upload_url_for_path(duplicated_document["raw_path"], config.signed_url_ttl_seconds)
+                signed_url = await _generate_signed_url(duplicated_document["raw_path"], config.signed_url_ttl_seconds)
+                upload_expires_at = datetime.utcnow() + timedelta(seconds=config.signed_url_ttl_seconds)
                 
                 logger.info(
                     f"Document successfully duplicated - new_document_id: {duplicated_document['document_id']}, "
@@ -220,8 +222,9 @@ async def upload_document(
             db=db
         )
         
-        # Check if file already exists in storage and handle accordingly
-        signed_url, upload_expires_at = await _get_upload_url_for_path(raw_path, config.signed_url_ttl_seconds)
+        # Generate proper signed URL for file upload
+        signed_url = await _generate_signed_url(raw_path, config.signed_url_ttl_seconds)
+        upload_expires_at = datetime.utcnow() + timedelta(seconds=config.signed_url_ttl_seconds)
         
         # Log upload accepted event
         log_event(
@@ -495,94 +498,6 @@ async def _create_upload_job(
     )
 
 
-async def _get_upload_url_for_path(storage_path: str, ttl_seconds: int = 3600) -> tuple[str, datetime]:
-    """
-    Get upload URL for a path, handling existing files in storage.
-    
-    Returns:
-        tuple: (signed_url, upload_expires_at)
-    """
-    # First check if file already exists in storage
-    if await _file_exists_in_storage(storage_path):
-        logger.info(f"File already exists in storage: {storage_path}, generating download URL")
-        # File exists, generate a download URL instead of upload URL
-        signed_url = await _generate_download_url(storage_path, ttl_seconds)
-    else:
-        logger.info(f"File does not exist in storage: {storage_path}, generating upload URL")
-        # File doesn't exist, generate upload URL
-        signed_url = await _generate_signed_url(storage_path, ttl_seconds)
-    
-    upload_expires_at = datetime.utcnow() + timedelta(seconds=ttl_seconds)
-    return signed_url, upload_expires_at
-
-
-async def _file_exists_in_storage(storage_path: str) -> bool:
-    """Check if a file exists in Supabase Storage."""
-    try:
-        from config.database import get_supabase_service_client
-        supabase = await get_supabase_service_client()
-        
-        # Handle new path format: files/user/{userId}/raw/{datetime}_{hash}.{ext}
-        if storage_path.startswith("files/user/"):
-            key = storage_path[6:]  # Remove "files/" prefix
-            bucket = "files"
-            
-            # Try to get file info - if it exists, this will succeed
-            response = supabase.storage.from_(bucket).list(path=key)
-            return len(response) > 0
-        
-        # Handle legacy storage:// format
-        elif storage_path.startswith("storage://"):
-            path_parts = storage_path[10:].split("/", 1)
-            if len(path_parts) == 2:
-                bucket, key = path_parts
-                response = supabase.storage.from_(bucket).list(path=key)
-                return len(response) > 0
-        
-        return False
-    except Exception as e:
-        logger.warning(f"Failed to check if file exists in storage {storage_path}: {e}")
-        return False
-
-
-async def _generate_download_url(storage_path: str, ttl_seconds: int = 3600) -> str:
-    """Generate a download URL for an existing file."""
-    try:
-        from config.database import get_supabase_service_client
-        supabase = await get_supabase_service_client()
-        
-        # Handle new path format: files/user/{userId}/raw/{datetime}_{hash}.{ext}
-        if storage_path.startswith("files/user/"):
-            key = storage_path[6:]  # Remove "files/" prefix
-            bucket = "files"
-            
-            # Generate download URL
-            response = supabase.storage.from_(bucket).create_signed_url(key, ttl_seconds)
-            
-            if response.get('error'):
-                raise ValueError(f"Failed to generate download URL: {response['error']}")
-            
-            return response['signed_url']
-        
-        # Handle legacy storage:// format
-        elif storage_path.startswith("storage://"):
-            path_parts = storage_path[10:].split("/", 1)
-            if len(path_parts) == 2:
-                bucket, key = path_parts
-                response = supabase.storage.from_(bucket).create_signed_url(key, ttl_seconds)
-                
-                if response.get('error'):
-                    raise ValueError(f"Failed to generate download URL: {response['error']}")
-                
-                return response['signed_url']
-        
-        raise ValueError(f"Unsupported storage path format: {storage_path}")
-        
-    except Exception as e:
-        logger.error(f"Failed to generate download URL for {storage_path}: {e}")
-        raise
-
-
 async def _generate_signed_url(storage_path: str, ttl_seconds: int) -> str:
     """Generate a signed URL for file upload. For development, return a direct upload URL."""
     config = get_config()
@@ -606,6 +521,7 @@ async def _generate_signed_url(storage_path: str, ttl_seconds: int) -> str:
     # For production, use proper Supabase signed URL generation
     try:
         from config.database import get_supabase_service_client
+        from storage3.exceptions import StorageApiError
         supabase = await get_supabase_service_client()
         
         # Handle new path format: files/user/{userId}/raw/{datetime}_{hash}.{ext}
@@ -613,25 +529,87 @@ async def _generate_signed_url(storage_path: str, ttl_seconds: int) -> str:
             key = storage_path[6:]  # Remove "files/" prefix
             bucket = "files"
             
-            # Generate signed URL using Supabase client
-            response = supabase.storage.from_(bucket).create_signed_upload_url(key)
-            
-            if response.get('error'):
-                raise ValueError(f"Failed to generate signed URL: {response['error']}")
-            
-            return response['signed_url']
-        
-        # Handle legacy storage:// format
-        elif storage_path.startswith("storage://"):
-            path_parts = storage_path[10:].split("/", 1)
-            if len(path_parts) == 2:
-                bucket, key = path_parts
+            try:
+                # Generate signed URL using Supabase client
                 response = supabase.storage.from_(bucket).create_signed_upload_url(key)
                 
                 if response.get('error'):
                     raise ValueError(f"Failed to generate signed URL: {response['error']}")
                 
                 return response['signed_url']
+                
+            except StorageApiError as e:
+                # Handle 409 Duplicate error - file already exists in storage
+                if e.status_code == 409:
+                    logger.warning(f"File already exists in storage: {key}. Checking if file is accessible...")
+                    
+                    # Check if the file actually exists and is accessible
+                    try:
+                        # Try to get file info to verify it exists
+                        file_info = supabase.storage.from_(bucket).get_public_url(key)
+                        if file_info:
+                            logger.info(f"File exists in storage: {key}. Proceeding with existing file.")
+                            # Return a signed download URL instead of upload URL
+                            # For now, we'll generate a new unique path to avoid conflicts
+                            import time
+                            unique_key = f"{key.rsplit('.', 1)[0]}_{int(time.time())}.{key.split('.')[-1]}"
+                            response = supabase.storage.from_(bucket).create_signed_upload_url(unique_key)
+                            
+                            if response.get('error'):
+                                raise ValueError(f"Failed to generate unique signed URL: {response['error']}")
+                            
+                            logger.info(f"Generated unique path for duplicate file: {unique_key}")
+                            return response['signed_url']
+                    except Exception as check_error:
+                        logger.error(f"Error checking existing file: {check_error}")
+                        # If we can't verify the file exists, re-raise the original error
+                        raise e
+                else:
+                    # Re-raise other storage errors
+                    raise e
+        
+        # Handle legacy storage:// format
+        elif storage_path.startswith("storage://"):
+            path_parts = storage_path[10:].split("/", 1)
+            if len(path_parts) == 2:
+                bucket, key = path_parts
+                
+                try:
+                    response = supabase.storage.from_(bucket).create_signed_upload_url(key)
+                    
+                    if response.get('error'):
+                        raise ValueError(f"Failed to generate signed URL: {response['error']}")
+                    
+                    return response['signed_url']
+                    
+                except StorageApiError as e:
+                    # Handle 409 Duplicate error - file already exists in storage
+                    if e.status_code == 409:
+                        logger.warning(f"File already exists in storage: {key}. Checking if file is accessible...")
+                        
+                        # Check if the file actually exists and is accessible
+                        try:
+                            # Try to get file info to verify it exists
+                            file_info = supabase.storage.from_(bucket).get_public_url(key)
+                            if file_info:
+                                logger.info(f"File exists in storage: {key}. Proceeding with existing file.")
+                                # Generate a new unique path to avoid conflicts
+                                import time
+                                unique_key = f"{key.rsplit('.', 1)[0]}_{int(time.time())}.{key.split('.')[-1]}"
+                                response = supabase.storage.from_(bucket).create_signed_upload_url(unique_key)
+                                
+                                if response.get('error'):
+                                    raise ValueError(f"Failed to generate unique signed URL: {response['error']}")
+                                
+                                logger.info(f"Generated unique path for duplicate file: {unique_key}")
+                                return response['signed_url']
+                        except Exception as check_error:
+                            logger.error(f"Error checking existing file: {check_error}")
+                            # If we can't verify the file exists, re-raise the original error
+                            raise e
+                    else:
+                        # Re-raise other storage errors
+                        raise e
         
         raise ValueError(f"Invalid storage path format: {storage_path}")
         
