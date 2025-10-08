@@ -98,8 +98,7 @@ async def upload_document(
             )
             
             # Generate proper signed URL for duplicate document
-            signed_url = await _generate_signed_url(user_existing_document["raw_path"], config.signed_url_ttl_seconds)
-            upload_expires_at = datetime.utcnow() + timedelta(seconds=config.signed_url_ttl_seconds)
+            signed_url, upload_expires_at = await _get_upload_url_for_path(user_existing_document["raw_path"], config.signed_url_ttl_seconds)
             
             # Create a new job for the duplicate upload request
             duplicate_job_id = uuid4()
@@ -159,8 +158,7 @@ async def upload_document(
                 )
                 
                 # Generate signed URL for the duplicated document
-                signed_url = await _generate_signed_url(duplicated_document["raw_path"], config.signed_url_ttl_seconds)
-                upload_expires_at = datetime.utcnow() + timedelta(seconds=config.signed_url_ttl_seconds)
+                signed_url, upload_expires_at = await _get_upload_url_for_path(duplicated_document["raw_path"], config.signed_url_ttl_seconds)
                 
                 logger.info(
                     f"Document successfully duplicated - new_document_id: {duplicated_document['document_id']}, "
@@ -222,9 +220,8 @@ async def upload_document(
             db=db
         )
         
-        # Generate proper signed URL for file upload
-        signed_url = await _generate_signed_url(raw_path, config.signed_url_ttl_seconds)
-        upload_expires_at = datetime.utcnow() + timedelta(seconds=config.signed_url_ttl_seconds)
+        # Check if file already exists in storage and handle accordingly
+        signed_url, upload_expires_at = await _get_upload_url_for_path(raw_path, config.signed_url_ttl_seconds)
         
         # Log upload accepted event
         log_event(
@@ -496,6 +493,94 @@ async def _create_upload_job(
         "uploaded",  # status - file is uploaded when job is created
         "queued"  # state
     )
+
+
+async def _get_upload_url_for_path(storage_path: str, ttl_seconds: int = 3600) -> tuple[str, datetime]:
+    """
+    Get upload URL for a path, handling existing files in storage.
+    
+    Returns:
+        tuple: (signed_url, upload_expires_at)
+    """
+    # First check if file already exists in storage
+    if await _file_exists_in_storage(storage_path):
+        logger.info(f"File already exists in storage: {storage_path}, generating download URL")
+        # File exists, generate a download URL instead of upload URL
+        signed_url = await _generate_download_url(storage_path, ttl_seconds)
+    else:
+        logger.info(f"File does not exist in storage: {storage_path}, generating upload URL")
+        # File doesn't exist, generate upload URL
+        signed_url = await _generate_signed_url(storage_path, ttl_seconds)
+    
+    upload_expires_at = datetime.utcnow() + timedelta(seconds=ttl_seconds)
+    return signed_url, upload_expires_at
+
+
+async def _file_exists_in_storage(storage_path: str) -> bool:
+    """Check if a file exists in Supabase Storage."""
+    try:
+        from config.database import get_supabase_service_client
+        supabase = await get_supabase_service_client()
+        
+        # Handle new path format: files/user/{userId}/raw/{datetime}_{hash}.{ext}
+        if storage_path.startswith("files/user/"):
+            key = storage_path[6:]  # Remove "files/" prefix
+            bucket = "files"
+            
+            # Try to get file info - if it exists, this will succeed
+            response = supabase.storage.from_(bucket).list(path=key)
+            return len(response) > 0
+        
+        # Handle legacy storage:// format
+        elif storage_path.startswith("storage://"):
+            path_parts = storage_path[10:].split("/", 1)
+            if len(path_parts) == 2:
+                bucket, key = path_parts
+                response = supabase.storage.from_(bucket).list(path=key)
+                return len(response) > 0
+        
+        return False
+    except Exception as e:
+        logger.warning(f"Failed to check if file exists in storage {storage_path}: {e}")
+        return False
+
+
+async def _generate_download_url(storage_path: str, ttl_seconds: int = 3600) -> str:
+    """Generate a download URL for an existing file."""
+    try:
+        from config.database import get_supabase_service_client
+        supabase = await get_supabase_service_client()
+        
+        # Handle new path format: files/user/{userId}/raw/{datetime}_{hash}.{ext}
+        if storage_path.startswith("files/user/"):
+            key = storage_path[6:]  # Remove "files/" prefix
+            bucket = "files"
+            
+            # Generate download URL
+            response = supabase.storage.from_(bucket).create_signed_url(key, ttl_seconds)
+            
+            if response.get('error'):
+                raise ValueError(f"Failed to generate download URL: {response['error']}")
+            
+            return response['signed_url']
+        
+        # Handle legacy storage:// format
+        elif storage_path.startswith("storage://"):
+            path_parts = storage_path[10:].split("/", 1)
+            if len(path_parts) == 2:
+                bucket, key = path_parts
+                response = supabase.storage.from_(bucket).create_signed_url(key, ttl_seconds)
+                
+                if response.get('error'):
+                    raise ValueError(f"Failed to generate download URL: {response['error']}")
+                
+                return response['signed_url']
+        
+        raise ValueError(f"Unsupported storage path format: {storage_path}")
+        
+    except Exception as e:
+        logger.error(f"Failed to generate download URL for {storage_path}: {e}")
+        raise
 
 
 async def _generate_signed_url(storage_path: str, ttl_seconds: int) -> str:
