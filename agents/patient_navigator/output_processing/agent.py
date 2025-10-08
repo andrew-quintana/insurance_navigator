@@ -282,6 +282,7 @@ class CommunicationAgent(BaseAgent):
         Returns:
             CommunicationResponse with enhanced content and metadata
         """
+        self.logger.info("=== COMMUNICATION AGENT ENHANCE_RESPONSE CALLED ===")
         start_time = time.time()
         
         try:

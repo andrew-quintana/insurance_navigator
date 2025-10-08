@@ -1072,6 +1072,7 @@ async def chat_with_agent(
                 timeout=60.0  # 60 second timeout for entire chat processing
             )
             logger.info("Chat message processing completed successfully")
+            logger.info("=== CHAT INTERFACE RETURNED RESPONSE ===")
         except asyncio.TimeoutError:
             logger.error("Chat processing timed out after 60 seconds")
             return {
@@ -1125,7 +1126,8 @@ async def chat_with_agent(
             metadata = response.metadata or {}
         
         # Return enhanced response with metadata
-        return {
+        logger.info("=== CREATING FINAL JSON RESPONSE ===")
+        final_response = {
             "text": content,
             "response": content,  # For backward compatibility
             "conversation_id": conversation_id or f"conv_{int(time.time())}",
@@ -1151,6 +1153,8 @@ async def chat_with_agent(
             "next_steps": metadata.get("next_steps", []),
             "sources": agent_sources
         }
+        logger.info("=== FINAL JSON RESPONSE CREATED SUCCESSFULLY ===")
+        return final_response
         
     except HTTPException:
         raise
