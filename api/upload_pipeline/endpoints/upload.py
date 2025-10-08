@@ -17,11 +17,7 @@ from ..auth import require_user, User
 from ..database import get_database
 from ..config import get_config
 from ..utils.upload_pipeline_utils import generate_document_id, log_event, generate_storage_path
-from ..utils.document_duplication import (
-    find_existing_document_by_content_hash,
-    check_user_has_document,
-    duplicate_document_for_user
-)
+# Duplicate checking imports removed
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +34,9 @@ async def upload_document(
     
     This endpoint:
     1. Validates the upload request
-    2. Checks for duplicate documents
-    3. Creates a new document record
-    4. Initializes a job in the queue
-    5. Returns a signed URL for file upload
+    2. Creates a new document record
+    3. Initializes a job in the queue
+    4. Returns a signed URL for file upload
     
     Args:
         request: Upload request with file metadata
@@ -69,125 +64,7 @@ async def upload_document(
         # Check daily upload limits (3 documents per day per user)
         await _check_daily_upload_limits(current_user.user_id, db)
         
-        # Phase 3: Multi-User Data Integrity - Check for duplicates
-        # First check if this user already has this document
-        user_existing_document = await check_user_has_document(
-            str(current_user.user_id),
-            request.sha256,
-            db
-        )
-        
-        if user_existing_document:
-            # User already has this document - return existing document
-            logger.info(
-                f"User duplicate document detected - user_id: {current_user.user_id}, file_sha256: {request.sha256}, existing_document_id: {user_existing_document['document_id']}"
-            )
-            
-            # Log duplicate event
-            log_event(
-                event_type="UPLOAD_USER_DEDUP_HIT",
-                user_id=str(current_user.user_id),
-                document_id=user_existing_document["document_id"],
-                job_id=None,
-                status="duplicate",
-                details={
-                    "file_sha256": request.sha256,
-                    "filename": request.filename,
-                    "duplicate_type": "user_existing"
-                }
-            )
-            
-            # Generate proper signed URL for duplicate document
-            signed_url = await _generate_signed_url(user_existing_document["raw_path"], config.signed_url_ttl_seconds)
-            upload_expires_at = datetime.utcnow() + timedelta(seconds=config.signed_url_ttl_seconds)
-            
-            # Create a new job for the duplicate upload request
-            duplicate_job_id = uuid4()
-            await _create_upload_job_for_duplicate(
-                job_id=str(duplicate_job_id),
-                document_id=user_existing_document["document_id"],
-                user_id=str(current_user.user_id),
-                raw_path=user_existing_document["raw_path"],
-                db=db
-            )
-            
-            # Return existing document response with new job_id
-            return UploadResponse(
-                job_id=duplicate_job_id,
-                document_id=user_existing_document["document_id"],
-                signed_url=signed_url,
-                upload_expires_at=upload_expires_at
-            )
-        
-        # Check if any other user has uploaded this document content
-        cross_user_existing_document = await find_existing_document_by_content_hash(
-            request.sha256,
-            db
-        )
-        
-        if cross_user_existing_document:
-            # Another user has this document - duplicate it for this user
-            logger.info(
-                f"Cross-user duplicate detected - creating duplicate for user: {current_user.user_id}, "
-                f"source_document_id: {cross_user_existing_document['document_id']}, "
-                f"source_user_id: {cross_user_existing_document['user_id']}"
-            )
-            
-            try:
-                # Duplicate the document for this user
-                duplicated_document = await duplicate_document_for_user(
-                    source_document_id=cross_user_existing_document["document_id"],
-                    target_user_id=str(current_user.user_id),
-                    target_filename=request.filename,
-                    db_connection=db
-                )
-                
-                # Log duplication event
-                log_event(
-                    event_type="UPLOAD_CROSS_USER_DEDUP",
-                    user_id=str(current_user.user_id),
-                    document_id=duplicated_document["document_id"],
-                    job_id=None,
-                    status="duplicate",
-                    details={
-                        "file_sha256": request.sha256,
-                        "filename": request.filename,
-                        "duplicate_type": "cross_user_duplicated",
-                        "source_document_id": cross_user_existing_document["document_id"],
-                        "source_user_id": cross_user_existing_document["user_id"]
-                    }
-                )
-                
-                # Generate signed URL for the duplicated document
-                signed_url = await _generate_signed_url(duplicated_document["raw_path"], config.signed_url_ttl_seconds)
-                upload_expires_at = datetime.utcnow() + timedelta(seconds=config.signed_url_ttl_seconds)
-                
-                logger.info(
-                    f"Document successfully duplicated - new_document_id: {duplicated_document['document_id']}, "
-                    f"user: {current_user.user_id}, source: {cross_user_existing_document['document_id']}"
-                )
-                
-                # Create a job for the duplicated document
-                duplicate_job_id = uuid4()
-                await _create_upload_job_for_duplicate(
-                    job_id=str(duplicate_job_id),
-                    document_id=duplicated_document["document_id"],
-                    user_id=str(current_user.user_id),
-                    raw_path=duplicated_document["raw_path"],
-                    db=db
-                )
-                
-                return UploadResponse(
-                    job_id=duplicate_job_id,
-                    document_id=duplicated_document["document_id"],
-                    signed_url=signed_url,
-                    upload_expires_at=upload_expires_at
-                )
-                
-            except Exception as e:
-                logger.error(f"Failed to duplicate document for user {current_user.user_id}: {str(e)}")
-                # Fall through to create new document if duplication fails
-                pass
+        # Duplicate checking removed - process all uploads as new documents
         
         # Generate new document ID using deterministic approach
         document_id = generate_document_id(str(current_user.user_id), request.sha256)
@@ -334,59 +211,7 @@ async def _check_daily_upload_limits(user_id: str, db) -> None:
         )
 
 
-async def _check_duplicate_document(user_id: str, file_sha256: str, db) -> Optional[dict]:
-    """
-    Check if document with same hash already exists for user.
-    
-    This function is now deprecated in favor of the new Phase 3 approach
-    using check_user_has_document and find_existing_document_by_content_hash.
-    Kept for backward compatibility.
-    """
-    # Use the new Phase 3 function
-    result = await check_user_has_document(user_id, file_sha256, db)
-    if not result:
-        return None
-    
-    # Check if there's an active job for this document
-    job_query = """
-        SELECT job_id, status, state
-        FROM upload_pipeline.upload_jobs
-        WHERE document_id = $1 
-        AND state IN ('queued', 'working', 'retryable')
-        ORDER BY created_at DESC
-        LIMIT 1
-    """
-    
-    job_result = await db.fetchrow(job_query, result["document_id"])
-    
-    # If no active job exists, create a new one for the duplicate
-    if not job_result:
-        from uuid import uuid4
-        new_job_id = str(uuid4())
-        
-        # Create a new job for the duplicate document
-        await _create_upload_job_for_duplicate(
-            job_id=new_job_id,
-            document_id=result["document_id"],
-            user_id=user_id,
-            raw_path=result["raw_path"],
-            db=db
-        )
-        job_id = new_job_id
-    else:
-        job_id = job_result["job_id"]
-    
-    # Generate signed URL for existing file
-    config = get_config()
-    signed_url = await _generate_signed_url(result["raw_path"], config.signed_url_ttl_seconds)
-    upload_expires_at = datetime.utcnow() + timedelta(seconds=config.signed_url_ttl_seconds)
-    
-    return {
-        "document_id": result["document_id"],
-        "job_id": job_id,
-        "signed_url": signed_url,
-        "upload_expires_at": upload_expires_at
-    }
+# _check_duplicate_document function removed - duplicate checking disabled
 
 
 async def _create_document_record(
@@ -419,43 +244,7 @@ async def _create_document_record(
     )
 
 
-async def _create_upload_job_for_duplicate(
-    job_id: str,
-    document_id: str,
-    user_id: str,
-    raw_path: str,
-    db
-) -> None:
-    """Create a new upload job for a duplicate document."""
-    # Create job payload for duplicate
-    payload = JobPayloadJobValidated(
-        user_id=user_id,
-        document_id=document_id,
-        file_sha256="",  # Will be filled from existing document
-        bytes_len=0,     # Will be filled from existing document
-        mime="application/pdf",  # Default for existing documents
-        storage_path=raw_path
-    )
-    
-    query = """
-        INSERT INTO upload_pipeline.upload_jobs (
-            job_id, document_id, status, state, 
-            created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, NOW(), NOW())
-    """
-    
-    # Convert UUIDs to strings for JSON serialization
-    payload_dict = payload.dict()
-    payload_dict["user_id"] = str(payload_dict["user_id"])
-    payload_dict["document_id"] = str(payload_dict["document_id"])
-    
-    await db.execute(
-        query,
-        job_id,
-        document_id,
-        "uploaded",  # status - duplicate documents are already uploaded
-        "queued"  # state
-    )
+# _create_upload_job_for_duplicate function removed - duplicate checking disabled
 
 
 async def _create_upload_job(
