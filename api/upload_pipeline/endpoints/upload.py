@@ -38,7 +38,7 @@ async def upload_document(
     
     This endpoint:
     1. Validates the upload request
-    2. Checks for duplicate documents
+    2. Checks for duplicate documents (same user gets 409 error, different users proceed)
     3. Creates a new document record
     4. Initializes a job in the queue
     5. Returns a signed URL for file upload
@@ -78,7 +78,7 @@ async def upload_document(
         )
         
         if user_existing_document:
-            # User already has this document - return existing document
+            # User already has this document - return clear error message
             logger.info(
                 f"User duplicate document detected - user_id: {current_user.user_id}, file_sha256: {request.sha256}, existing_document_id: {user_existing_document['document_id']}"
             )
@@ -97,26 +97,10 @@ async def upload_document(
                 }
             )
             
-            # Generate proper signed URL for duplicate document
-            signed_url = await _generate_signed_url(user_existing_document["raw_path"], config.signed_url_ttl_seconds)
-            upload_expires_at = datetime.utcnow() + timedelta(seconds=config.signed_url_ttl_seconds)
-            
-            # Create a new job for the duplicate upload request
-            duplicate_job_id = uuid4()
-            await _create_upload_job_for_duplicate(
-                job_id=str(duplicate_job_id),
-                document_id=user_existing_document["document_id"],
-                user_id=str(current_user.user_id),
-                raw_path=user_existing_document["raw_path"],
-                db=db
-            )
-            
-            # Return existing document response with new job_id
-            return UploadResponse(
-                job_id=duplicate_job_id,
-                document_id=user_existing_document["document_id"],
-                signed_url=signed_url,
-                upload_expires_at=upload_expires_at
+            # Return clear error message for duplicate document
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"You have already uploaded this document: '{request.filename}'. Please upload a different file or check your existing documents."
             )
         
         # Check if any other user has uploaded this document content
