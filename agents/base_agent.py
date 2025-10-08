@@ -104,15 +104,26 @@ class BaseAgent:
         """
         Run the agent: format prompt, call LLM (or mock), validate output.
         """
+        self.logger.info(f"[{self.name}] Starting agent execution")
+        self.logger.info(f"[{self.name}] Input length: {len(user_input)} characters")
+        self.logger.info(f"[{self.name}] Input preview: {user_input[:100]}...")
+        
         prompt = self.format_prompt(user_input, **kwargs)
-        self.logger.info(f"[{self.name}] Running agent with input: {user_input[:80]}")
+        self.logger.info(f"[{self.name}] Prompt formatted, length: {len(prompt)} characters")
+        
         if self.mock or self.llm is None:
             self.logger.info(f"[{self.name}] Using mock output mode.")
             output = self.mock_output(user_input)
+            self.logger.info(f"[{self.name}] Mock output generated")
         else:
             try:
+                self.logger.info(f"[{self.name}] Calling LLM...")
                 llm_result = self.llm(prompt)
+                self.logger.info(f"[{self.name}] LLM call completed, result length: {len(str(llm_result))} characters")
+                
+                self.logger.info(f"[{self.name}] Validating output...")
                 output = self.validate_output(llm_result)
+                self.logger.info(f"[{self.name}] Output validation successful")
             except Exception as e:
                 self.logger.error(f"[{self.name}] LLM call or validation failed: {e}")
                 raise

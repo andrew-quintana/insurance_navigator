@@ -372,15 +372,23 @@ class TwoStageOutputSynthesizer:
             CommunicationResponse: Final synthesized response
         """
         self.logger.info(f"Starting two-stage synthesis for {len(agent_outputs)} agent outputs")
+        self.logger.info(f"Agent outputs: {[output.agent_id for output in agent_outputs]}")
         
         try:
             # Stage 1: Extract and analyze content
+            self.logger.info("Stage 1: Starting content extraction")
             extracted_content = self.stage_one.extract_content(agent_outputs)
             self.logger.info(f"Stage 1 complete: {extracted_content.content_type.value} content extracted")
+            self.logger.info(f"Extracted content - Main topic: {extracted_content.main_topic}")
+            self.logger.info(f"Extracted content - Key points count: {len(extracted_content.key_points)}")
+            self.logger.info(f"Extracted content - Confidence: {extracted_content.confidence_score}")
             
             # Stage 2: Format for human consumption
+            self.logger.info("Stage 2: Starting human-readable formatting")
             formatted_response = await self.stage_two.format_response(extracted_content, user_context)
             self.logger.info(f"Stage 2 complete: Response formatted for {formatted_response.content_type.value}")
+            self.logger.info(f"Formatted response - Content length: {len(formatted_response.content)} characters")
+            self.logger.info(f"Formatted response - Confidence: {formatted_response.confidence}")
             
             # Create final response
             return CommunicationResponse(
