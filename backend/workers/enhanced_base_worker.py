@@ -688,13 +688,13 @@ class EnhancedBaseWorker:
                 if environment == "staging":
                     base_url = os.getenv(
                         "STAGING_WEBHOOK_BASE_URL", 
-                        "https://insurance-navigator-staging-api.onrender.com"
+                        os.getenv("STAGING_API_URL", "https://staging-api.example.com")
                     )
                     self.logger.info(f"Using staging webhook base URL: {base_url}")
                 else:
                     base_url = os.getenv(
                         "PRODUCTION_WEBHOOK_BASE_URL", 
-                        "https://insurance-navigator-api.onrender.com"
+                        os.getenv("PRODUCTION_API_URL", "https://api.example.com")
                     )
                     self.logger.info(f"Using production webhook base URL: {base_url}")
             
@@ -1048,6 +1048,9 @@ class EnhancedBaseWorker:
                 # Get configuration for duplicate chunk check
                 config_manager = get_config_manager()
                 duplicate_check_enabled = config_manager.get_duplicate_chunk_check_enabled()
+                
+                # Initialize existing_chunks for logging purposes
+                existing_chunks = 0
                 
                 if duplicate_check_enabled:
                     # Check if chunks already exist for this document
@@ -1535,7 +1538,7 @@ class EnhancedBaseWorker:
         try:
             # Get API configuration
             LLAMAPARSE_API_KEY = os.getenv("LLAMAPARSE_API_KEY")
-            LLAMAPARSE_BASE_URL = "https://api.cloud.llamaindex.ai"
+            LLAMAPARSE_BASE_URL = os.getenv("LLAMAPARSE_BASE_URL", "https://api.cloud.llamaindex.ai")
             import hashlib
             
             # Use StorageManager for consistent authentication with API service
