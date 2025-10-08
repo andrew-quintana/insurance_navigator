@@ -12,7 +12,7 @@ from datetime import datetime
 from io import BytesIO
 
 # Staging configuration
-SUPABASE_URL = "https://dfgzeastcxnoqshgyotp.supabase.co"
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://your-staging-project.supabase.co")
 SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 
 async def test_pipeline_standardization():

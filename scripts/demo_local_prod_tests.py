@@ -30,7 +30,7 @@ async def demo_local_prod_tests():
     # Configuration details
     print("\n🔧 Configuration:")
     print("  Backend: Local (http://localhost:8000)")
-    print("  Database: Production Supabase (https://your-project.supabase.co)")
+    print(f"  Database: Production Supabase ({os.getenv('SUPABASE_URL', 'https://your-project.supabase.co')})")
     print("  Environment: Hybrid Testing")
     
     # Prerequisites check
@@ -55,7 +55,7 @@ async def demo_local_prod_tests():
     # Check database connectivity
     try:
         import asyncpg
-        database_url = "postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres"
+        database_url = os.getenv("DATABASE_URL", "postgresql://***REDACTED***@db.your-project.supabase.co:5432/postgres")
         conn = await asyncpg.connect(database_url)
         await conn.close()
         print("✅ Production Supabase database is accessible")
@@ -177,7 +177,7 @@ async def demo_local_prod_tests():
     print()
     
     print("6. Test production Supabase connection:")
-    print("   python -c \"import asyncpg; import asyncio; asyncio.run(asyncpg.connect('postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres'))\"")
+    print(f"   python -c \"import asyncpg; import asyncio; asyncio.run(asyncpg.connect('{os.getenv('DATABASE_URL', 'postgresql://***REDACTED***@db.your-project.supabase.co:5432/postgres')}'))\"")
     print()
     
     # Troubleshooting tips

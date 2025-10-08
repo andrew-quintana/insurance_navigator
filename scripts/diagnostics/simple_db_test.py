@@ -6,6 +6,7 @@ Basic test to identify the production database connectivity issue.
 """
 
 import asyncio
+import os
 import socket
 import ssl
 import time
@@ -87,10 +88,12 @@ async def test_connection_strings():
     """Test different connection string formats."""
     print("\n4. Testing connection string formats...")
     
+    # Use environment variables for database connection
+    db_url = os.getenv("DATABASE_URL", "postgresql://***REDACTED***@db.your-project.supabase.co:5432/postgres")
     connection_strings = [
-        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres",
-        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres?sslmode=require",
-        "postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres?ssl=require",
+        db_url,
+        f"{db_url}?sslmode=require",
+        f"{db_url}?ssl=require",
     ]
     
     for i, conn_str in enumerate(connection_strings, 1):

@@ -17,7 +17,7 @@ load_dotenv()
 
 def main():
     # Supabase connection details
-    supabase_url = "https://jhrespvvhbnloxrieycf.supabase.co"
+    supabase_url = os.getenv("SUPABASE_URL", "https://your-project.supabase.co")
     supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
     
     if not supabase_key:

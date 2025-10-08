@@ -71,25 +71,25 @@ class DatabaseConnectivityInvestigator:
         # Production Configuration
         self.configs['production'] = DatabaseConfig(
             name="Production",
-            host="db.your-project.supabase.co",
-            port=5432,
-            database="postgres",
-            user="postgres",
-            password="beqhar-qincyg-Syxxi8",
+            host=os.getenv("DB_HOST", "db.your-project.supabase.co"),
+            port=int(os.getenv("DB_PORT", "5432")),
+            database=os.getenv("DB_NAME", "postgres"),
+            user=os.getenv("DB_USER", "postgres"),
+            password=os.getenv("DB_PASSWORD", "***REDACTED***"),
             ssl_mode="require",
-            connection_string="postgresql://postgres:beqhar-qincyg-Syxxi8@db.your-project.supabase.co:5432/postgres"
+            connection_string=os.getenv("DATABASE_URL", "postgresql://***REDACTED***@db.your-project.supabase.co:5432/postgres")
         )
         
         # Staging Configuration
         self.configs['staging'] = DatabaseConfig(
             name="Staging",
-            host="db.dfgzeastcxnoqshgyotp.supabase.co",
-            port=5432,
-            database="postgres",
-            user="postgres",
-            password="ERaZFjCEnuJsliSQ",
+            host=os.getenv("STAGING_DB_HOST", "db.dfgzeastcxnoqshgyotp.supabase.co"),
+            port=int(os.getenv("STAGING_DB_PORT", "5432")),
+            database=os.getenv("STAGING_DB_NAME", "postgres"),
+            user=os.getenv("STAGING_DB_USER", "postgres"),
+            password=os.getenv("STAGING_DB_PASSWORD", "***REDACTED***"),
             ssl_mode="require",
-            connection_string="postgresql://postgres:ERaZFjCEnuJsliSQ@db.dfgzeastcxnoqshgyotp.supabase.co:5432/postgres"
+            connection_string=os.getenv("STAGING_DATABASE_URL", "postgresql://***REDACTED***@db.dfgzeastcxnoqshgyotp.supabase.co:5432/postgres")
         )
         
         # Development Configuration (local)
