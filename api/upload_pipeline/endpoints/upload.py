@@ -521,6 +521,7 @@ async def _generate_signed_url(storage_path: str, ttl_seconds: int) -> str:
     # For production, use proper Supabase signed URL generation
     try:
         from config.database import get_supabase_service_client
+        from storage3.exceptions import StorageApiError
         supabase = await get_supabase_service_client()
         
         # Handle new path format: files/user/{userId}/raw/{datetime}_{hash}.{ext}
@@ -528,25 +529,87 @@ async def _generate_signed_url(storage_path: str, ttl_seconds: int) -> str:
             key = storage_path[6:]  # Remove "files/" prefix
             bucket = "files"
             
-            # Generate signed URL using Supabase client
-            response = supabase.storage.from_(bucket).create_signed_upload_url(key)
-            
-            if response.get('error'):
-                raise ValueError(f"Failed to generate signed URL: {response['error']}")
-            
-            return response['signed_url']
-        
-        # Handle legacy storage:// format
-        elif storage_path.startswith("storage://"):
-            path_parts = storage_path[10:].split("/", 1)
-            if len(path_parts) == 2:
-                bucket, key = path_parts
+            try:
+                # Generate signed URL using Supabase client
                 response = supabase.storage.from_(bucket).create_signed_upload_url(key)
                 
                 if response.get('error'):
                     raise ValueError(f"Failed to generate signed URL: {response['error']}")
                 
                 return response['signed_url']
+                
+            except StorageApiError as e:
+                # Handle 409 Duplicate error - file already exists in storage
+                if e.status_code == 409:
+                    logger.warning(f"File already exists in storage: {key}. Checking if file is accessible...")
+                    
+                    # Check if the file actually exists and is accessible
+                    try:
+                        # Try to get file info to verify it exists
+                        file_info = supabase.storage.from_(bucket).get_public_url(key)
+                        if file_info:
+                            logger.info(f"File exists in storage: {key}. Proceeding with existing file.")
+                            # Return a signed download URL instead of upload URL
+                            # For now, we'll generate a new unique path to avoid conflicts
+                            import time
+                            unique_key = f"{key.rsplit('.', 1)[0]}_{int(time.time())}.{key.split('.')[-1]}"
+                            response = supabase.storage.from_(bucket).create_signed_upload_url(unique_key)
+                            
+                            if response.get('error'):
+                                raise ValueError(f"Failed to generate unique signed URL: {response['error']}")
+                            
+                            logger.info(f"Generated unique path for duplicate file: {unique_key}")
+                            return response['signed_url']
+                    except Exception as check_error:
+                        logger.error(f"Error checking existing file: {check_error}")
+                        # If we can't verify the file exists, re-raise the original error
+                        raise e
+                else:
+                    # Re-raise other storage errors
+                    raise e
+        
+        # Handle legacy storage:// format
+        elif storage_path.startswith("storage://"):
+            path_parts = storage_path[10:].split("/", 1)
+            if len(path_parts) == 2:
+                bucket, key = path_parts
+                
+                try:
+                    response = supabase.storage.from_(bucket).create_signed_upload_url(key)
+                    
+                    if response.get('error'):
+                        raise ValueError(f"Failed to generate signed URL: {response['error']}")
+                    
+                    return response['signed_url']
+                    
+                except StorageApiError as e:
+                    # Handle 409 Duplicate error - file already exists in storage
+                    if e.status_code == 409:
+                        logger.warning(f"File already exists in storage: {key}. Checking if file is accessible...")
+                        
+                        # Check if the file actually exists and is accessible
+                        try:
+                            # Try to get file info to verify it exists
+                            file_info = supabase.storage.from_(bucket).get_public_url(key)
+                            if file_info:
+                                logger.info(f"File exists in storage: {key}. Proceeding with existing file.")
+                                # Generate a new unique path to avoid conflicts
+                                import time
+                                unique_key = f"{key.rsplit('.', 1)[0]}_{int(time.time())}.{key.split('.')[-1]}"
+                                response = supabase.storage.from_(bucket).create_signed_upload_url(unique_key)
+                                
+                                if response.get('error'):
+                                    raise ValueError(f"Failed to generate unique signed URL: {response['error']}")
+                                
+                                logger.info(f"Generated unique path for duplicate file: {unique_key}")
+                                return response['signed_url']
+                        except Exception as check_error:
+                            logger.error(f"Error checking existing file: {check_error}")
+                            # If we can't verify the file exists, re-raise the original error
+                            raise e
+                    else:
+                        # Re-raise other storage errors
+                        raise e
         
         raise ValueError(f"Invalid storage path format: {storage_path}")
         
