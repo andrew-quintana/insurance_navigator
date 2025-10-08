@@ -684,19 +684,9 @@ class EnhancedBaseWorker:
                     self.logger.error(f"Ngrok discovery failed: {e}")
                     raise RuntimeError(f"Development environment requires ngrok: {e}")
             else:
-                # For staging/production, use environment-specific URLs with fallbacks
-                if environment == "staging":
-                    base_url = os.getenv(
-                        "STAGING_WEBHOOK_BASE_URL", 
-                        os.getenv("STAGING_API_URL", "https://staging-api.example.com")
-                    )
-                    self.logger.info(f"Using staging webhook base URL: {base_url}")
-                else:
-                    base_url = os.getenv(
-                        "PRODUCTION_WEBHOOK_BASE_URL", 
-                        os.getenv("PRODUCTION_API_URL", "https://api.example.com")
-                    )
-                    self.logger.info(f"Using production webhook base URL: {base_url}")
+                # For staging/production, use SUPABASE_WEBHOOK_URL environment variable
+                base_url = os.getenv("SUPABASE_WEBHOOK_URL", "https://api.example.com")
+                self.logger.info(f"Using webhook base URL: {base_url}")
             
             webhook_url = f"{base_url}/api/upload-pipeline/webhook/llamaparse/{job_id}"
             webhook_secret = str(uuid.uuid4())  # Generate webhook secret
