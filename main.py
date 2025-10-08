@@ -1087,32 +1087,48 @@ async def chat_with_agent(
             # Fallback to direct processing if degradation manager not available
             response = await chat_interface.process_message(chat_message)
         
+        # Handle both ChatResponse objects and dictionary responses (for backward compatibility)
+        if isinstance(response, dict):
+            # Handle dictionary response (fallback case)
+            content = response.get("content", "I apologize, but I encountered an error processing your request.")
+            agent_sources = response.get("agent_sources", response.get("sources", ["system"]))
+            confidence = response.get("confidence", 0.0)
+            processing_time = response.get("processing_time", 0.0)
+            metadata = response.get("metadata", {})
+        else:
+            # Handle ChatResponse object (normal case)
+            content = response.content
+            agent_sources = response.agent_sources
+            confidence = response.confidence
+            processing_time = response.processing_time
+            metadata = response.metadata or {}
+        
         # Return enhanced response with metadata
         return {
-            "text": response.content,
-            "response": response.content,  # For backward compatibility
+            "text": content,
+            "response": content,  # For backward compatibility
             "conversation_id": conversation_id or f"conv_{int(time.time())}",
             "timestamp": datetime.now().isoformat(),
             "metadata": {
-                "processing_time": response.processing_time,
-                "confidence": response.confidence,
-                "agent_sources": response.agent_sources,
+                "processing_time": processing_time,
+                "confidence": confidence,
+                "agent_sources": agent_sources,
                 "input_processing": {
                     "original_language": user_language,
                     "translation_applied": user_language != "en" and user_language != "auto"
                 },
                 "agent_processing": {
-                    "agents_used": response.agent_sources,
-                    "processing_time_ms": int(response.processing_time * 1000)
+                    "agents_used": agent_sources,
+                    "processing_time_ms": int(processing_time * 1000)
                 },
                 "output_formatting": {
                     "tone_applied": "empathetic",
                     "readability_level": "8th_grade",
-                    "next_steps_included": "next_steps" in response.metadata
+                    "next_steps_included": "next_steps" in metadata
                 }
             },
-            "next_steps": response.metadata.get("next_steps", []),
-            "sources": response.agent_sources
+            "next_steps": metadata.get("next_steps", []),
+            "sources": agent_sources
         }
         
     except HTTPException:

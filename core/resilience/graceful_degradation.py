@@ -288,14 +288,15 @@ class RAGServiceDegradation(GracefulDegradationManager):
         cached_fallback = CachedFallback("rag_cache", ServiceLevel.DEGRADED)
         self.add_fallback(cached_fallback)
         
-        # Fallback 2: Return generic helpful message
-        generic_response = {
-            "content": "I apologize, but I'm currently unable to access your documents. Please try again in a moment, or contact support if the issue persists.",
-            "confidence": 0.0,
-            "sources": ["system"],
-            "processing_time": 0.0,
-            "agent_sources": ["system"]
-        }
+        # Fallback 2: Return generic helpful message as ChatResponse object
+        from agents.patient_navigator.chat_interface import ChatResponse
+        generic_response = ChatResponse(
+            content="I apologize, but I'm currently unable to access your documents. Please try again in a moment, or contact support if the issue persists.",
+            agent_sources=["system"],
+            confidence=0.0,
+            processing_time=0.0,
+            metadata={"fallback": True, "service_level": "minimal"}
+        )
         static_fallback = StaticFallback(generic_response, ServiceLevel.MINIMAL)
         self.add_fallback(static_fallback)
 
