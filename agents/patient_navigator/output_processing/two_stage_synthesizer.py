@@ -371,6 +371,7 @@ class TwoStageOutputSynthesizer:
         Returns:
             CommunicationResponse: Final synthesized response
         """
+        self.logger.info("=== TWO-STAGE SYNTHESIZER CALLED ===")
         self.logger.info(f"Starting two-stage synthesis for {len(agent_outputs)} agent outputs")
         self.logger.info(f"Agent outputs: {[output.agent_id for output in agent_outputs]}")
         

@@ -401,6 +401,7 @@ class PatientNavigatorChatInterface:
                 ))
             
             logger.info(f"Successfully converted {len(agent_outputs)} workflow outputs to agent outputs")
+            logger.info("=== WORKFLOW OUTPUTS PROCESSING COMPLETED ===")
             
             # Process through two-stage synthesizer
             logger.info("Step 2: Calling two-stage synthesizer")
@@ -416,14 +417,17 @@ class PatientNavigatorChatInterface:
                 user_context=user_context
             )
             logger.info("Two-stage synthesizer completed successfully")
+            logger.info("=== CREATING CHAT RESPONSE ===")
             
-            return ChatResponse(
+            chat_response = ChatResponse(
                 content=response.enhanced_content,
                 agent_sources=response.original_sources,
                 confidence=response.metadata.get("confidence", 0.0),
                 processing_time=response.processing_time,
                 metadata=response.metadata
             )
+            logger.info("=== CHAT RESPONSE CREATED SUCCESSFULLY ===")
+            return chat_response
             
         except Exception as e:
             logger.error(f"Two-stage synthesizer failed: {e}")
