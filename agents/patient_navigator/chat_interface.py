@@ -185,6 +185,7 @@ class PatientNavigatorChatInterface:
         # Execute prescribed workflow using agnostic approach
         if workflow_prescription["recommended_workflow"] == "information_retrieval":
             try:
+                logger.info("=== CALLING INFORMATION RETRIEVAL AGENT ===")
                 # Create proper input format for information retrieval agent
                 from .information_retrieval.models import InformationRetrievalInput
                 
@@ -195,7 +196,9 @@ class PatientNavigatorChatInterface:
                     document_requirements=[]
                 )
                 
+                logger.info(f"=== CALLING retrieve_information with query: {agent_prompt.prompt_text[:100]}... ===")
                 result = await self.information_retrieval_agent.retrieve_information(input_data)
+                logger.info("=== INFORMATION RETRIEVAL AGENT COMPLETED ===")
                 
                 # Convert to agnostic workflow output
                 from .shared.workflow_output import create_workflow_output
