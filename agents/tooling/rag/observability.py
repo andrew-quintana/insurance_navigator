@@ -63,6 +63,9 @@ class RAGObservabilityLogger:
     def __init__(self, logger_name: str = "RAGObservability"):
         self.logger = logging.getLogger(logger_name)
         self.logger.setLevel(logging.INFO)
+        # CRITICAL FIX: Prevent log propagation to avoid duplicate logs
+        # Without this, messages propagate to root logger causing double logging
+        self.logger.propagate = False
         
         # Ensure we have a handler
         if not self.logger.handlers:
