@@ -302,14 +302,15 @@ class RAGTool:
             self.logger.info(f"API key length: {len(api_key) if api_key else 0}")
             
             # Initialize OpenAI client with Pydantic v2 compatibility
+            # OpenAI recommended timeout: 30s for embeddings API
             client = AsyncOpenAI(
                 api_key=api_key,
-                max_retries=5,
-                timeout=60.0
+                max_retries=3,  # OpenAI recommended: 3 retries max
+                timeout=30.0   # OpenAI recommended: 30s timeout for embeddings
             )
             
             # DIAGNOSTIC: Log client configuration
-            self.logger.info(f"OpenAI client initialized with timeout: 60.0s, max_retries: 5")
+            self.logger.info(f"OpenAI client initialized with timeout: 30.0s, max_retries: 3")
             
             # Generate real OpenAI embedding with Pydantic error handling
             self.logger.info(f"Generating embedding for text: {text[:100]}...")
@@ -325,7 +326,7 @@ class RAGTool:
                         input=text,
                         encoding_format="float"
                     ),
-                    timeout=30.0  # 30 second timeout to prevent indefinite hangs
+                    timeout=30.0  # OpenAI recommended: 30s timeout for embeddings
                 )
                 
                 # DIAGNOSTIC: Log successful response
@@ -337,7 +338,7 @@ class RAGTool:
                 end_time = time.time()
                 self.logger.error(f"OpenAI API call timed out after {end_time - start_time:.2f}s")
                 self.logger.error("This suggests either rate limiting or network issues")
-                raise RuntimeError("OpenAI embedding API call timed out after 30 seconds")
+                raise RuntimeError("OpenAI embedding API call timed out after 30 seconds (OpenAI recommended limit)")
                 
             except Exception as pydantic_error:
                 # DIAGNOSTIC: Log detailed error information
