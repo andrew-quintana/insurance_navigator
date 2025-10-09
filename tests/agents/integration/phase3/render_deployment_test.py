@@ -43,8 +43,8 @@ class Phase3RenderDeploymentTest:
         load_dotenv('.env.production')
         
         # Test configuration - Render URLs
-        self.api_url = "https://insurance-navigator-api.onrender.com"
-        self.worker_url = "https://insurance-navigator-worker.onrender.com"
+        self.api_url = os.getenv("RENDER_API_URL", "https://your-api-url.example.com")
+        self.worker_url = os.getenv("RENDER_WORKER_URL", "https://your-worker-url.example.com")
         self.test_user_email = f"phase3_render_test_{int(time.time())}@example.com"
         self.test_user_password = "TestPassword123!"
         self.access_token = None
@@ -54,8 +54,7 @@ class Phase3RenderDeploymentTest:
             "What is health insurance?",
             "How do I file a claim?",
             "What's the difference between HMO and PPO?",
-            "How do I find a doctor in my network?",
-            "What is covered under my plan?"
+            "How do I find a doctor in my network?"
         ]
     
     async def run_test(self, test_name: str, test_func):

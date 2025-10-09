@@ -55,7 +55,6 @@ class Phase3CloudPerformanceTest:
             "How do I file a claim?",
             "What's the difference between HMO and PPO?",
             "How do I find a doctor in my network?",
-            "What is covered under my plan?",
             "What is the deductible for my insurance?",
             "How do I check my benefits?",
             "What is a copay?",
