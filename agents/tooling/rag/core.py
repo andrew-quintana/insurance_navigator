@@ -326,12 +326,19 @@ class RAGTool:
                 
                 def api_call():
                     try:
-                        response = client.embeddings.create(
-                            model="text-embedding-3-small",
-                            input=text,
-                            encoding_format="float"
-                        )
-                        result_queue.put(response)
+                        import asyncio
+                        # Create new event loop for this thread
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        try:
+                            response = loop.run_until_complete(client.embeddings.create(
+                                model="text-embedding-3-small",
+                                input=text,
+                                encoding_format="float"
+                            ))
+                            result_queue.put(response)
+                        finally:
+                            loop.close()
                     except Exception as e:
                         exception_queue.put(e)
                 
@@ -389,11 +396,18 @@ class RAGTool:
                     
                     def minimal_api_call():
                         try:
-                            response = minimal_client.embeddings.create(
-                                model="text-embedding-3-small",
-                                input=text
-                            )
-                            result_queue.put(response)
+                            import asyncio
+                            # Create new event loop for this thread
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                            try:
+                                response = loop.run_until_complete(minimal_client.embeddings.create(
+                                    model="text-embedding-3-small",
+                                    input=text
+                                ))
+                                result_queue.put(response)
+                            finally:
+                                loop.close()
                         except Exception as e:
                             exception_queue.put(e)
                     
