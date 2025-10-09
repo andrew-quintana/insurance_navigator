@@ -220,6 +220,9 @@ class InformationRetrievalAgent(BaseAgent):
             
             # Step 4-N: Self-Consistency Loop (3-5 iterations)
             self.logger.info("=== STARTING SELF-CONSISTENCY LOOP ===")
+            self.logger.info("=== POST-RAG WORKFLOW STARTED ===")
+            self.logger.info(f"RAG completed successfully, starting self-consistency loop...")
+            
             response_variants = await self._generate_response_variants(chunks, user_query, expert_query)
             self.logger.info(f"Self-consistency loop completed with {len(response_variants)} variants")
             
@@ -228,8 +231,13 @@ class InformationRetrievalAgent(BaseAgent):
             self.logger.info(f"Consistency score calculated: {consistency_score}")
             
             # Final: Structured Output generation
+            self.logger.info("=== SYNTHESIZING FINAL RESPONSE ===")
             final_response = self.consistency_checker.synthesize_final_response(response_variants, consistency_score)
+            self.logger.info(f"Final response synthesized: {len(final_response)} characters")
+            
+            self.logger.info("=== EXTRACTING KEY POINTS ===")
             key_points = self.consistency_checker.extract_key_points(response_variants)
+            self.logger.info(f"Key points extracted: {len(key_points)} points")
             
             # Ensure we have at least one key point to satisfy Pydantic validation
             if not key_points:

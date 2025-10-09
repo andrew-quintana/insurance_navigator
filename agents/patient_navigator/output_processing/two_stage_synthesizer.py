@@ -278,7 +278,14 @@ class StageTwoHumanFormatter:
         )
         
         try:
+            self.logger.info("=== CALLING COMMUNICATION AGENT ENHANCE_RESPONSE ===")
+            self.logger.info(f"Communication request prepared with {len(request.agent_outputs)} agent outputs")
+            self.logger.info(f"User context provided: {bool(request.user_context)}")
+            
             response = await self.communication_agent.enhance_response(request)
+            self.logger.info("=== COMMUNICATION AGENT ENHANCE_RESPONSE COMPLETED SUCCESSFULLY ===")
+            self.logger.info(f"Enhanced response length: {len(response.enhanced_content)} characters")
+            
             return FormattedResponse(
                 content=response.enhanced_content,
                 content_type=extracted_content.content_type,
@@ -293,6 +300,7 @@ class StageTwoHumanFormatter:
             )
         except Exception as e:
             self.logger.error(f"Communication agent failed: {e}")
+            self.logger.error(f"Communication agent error type: {type(e).__name__}")
             return self._create_fallback_response(extracted_content)
     
     def _create_structured_content(self, extracted_content: ExtractedContent) -> str:

@@ -408,6 +408,7 @@ class PatientNavigatorChatInterface:
             
             # Process through two-stage synthesizer
             logger.info("Step 2: Calling two-stage synthesizer")
+            logger.info("=== POST-RAG WORKFLOW: TWO-STAGE SYNTHESIZER STARTED ===")
             user_context = {
                 "user_id": message.user_id,
                 "language": message.language,
@@ -415,11 +416,12 @@ class PatientNavigatorChatInterface:
             }
             logger.info(f"User context: {user_context}")
             
+            logger.info("=== CALLING TWO-STAGE SYNTHESIZER SYNTHESIZE_OUTPUTS ===")
             response = await self.two_stage_synthesizer.synthesize_outputs(
                 agent_outputs=agent_outputs,
                 user_context=user_context
             )
-            logger.info("Two-stage synthesizer completed successfully")
+            logger.info("=== TWO-STAGE SYNTHESIZER COMPLETED SUCCESSFULLY ===")
             logger.info("=== CREATING CHAT RESPONSE ===")
             
             chat_response = ChatResponse(
