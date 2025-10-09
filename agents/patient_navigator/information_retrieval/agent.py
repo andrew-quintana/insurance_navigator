@@ -130,8 +130,13 @@ class InformationRetrievalAgent(BaseAgent):
             self.logger.info("=== RAG OPERATIONS COMPLETED ===")
             
             # Step 4-N: Self-Consistency Loop (3-5 iterations)
+            self.logger.info("=== STARTING SELF-CONSISTENCY LOOP ===")
             response_variants = await self._generate_response_variants(chunks, user_query, expert_query)
+            self.logger.info(f"Self-consistency loop completed with {len(response_variants)} variants")
+            
+            self.logger.info("=== CALCULATING CONSISTENCY SCORE ===")
             consistency_score = self.consistency_checker.calculate_consistency(response_variants)
+            self.logger.info(f"Consistency score calculated: {consistency_score}")
             
             # Final: Structured Output generation
             final_response = self.consistency_checker.synthesize_final_response(response_variants, consistency_score)
@@ -290,37 +295,71 @@ Expert Query Reframe:
         Returns:
             List of response variants
         """
+        self.logger.info("=== SELF-CONSISTENCY LOOP STARTED ===")
+        
         if not chunks:
+            self.logger.warning("No chunks available for self-consistency loop")
             return ["No relevant information found in the available documents."]
         
         # Prepare document context for LLM
+        self.logger.info("=== PREPARING DOCUMENT CONTEXT ===")
         document_context = self._prepare_document_context(chunks)
+        self.logger.info(f"Document context prepared: {len(document_context)} characters")
         
         # Generate multiple variants
         variants = []
         max_variants = 3  # Start with 3 variants for MVP
         
+        self.logger.info(f"=== GENERATING {max_variants} RESPONSE VARIANTS ===")
+        
         for i in range(max_variants):
             try:
+                self.logger.info(f"=== GENERATING VARIANT {i+1}/{max_variants} ===")
+                
                 # Create variant-specific prompt
+                self.logger.info("Creating variant-specific prompt...")
                 variant_prompt = self._create_variant_prompt(
                     user_query, expert_query, document_context, variant_num=i+1
                 )
+                self.logger.info(f"Variant prompt created: {len(variant_prompt)} characters")
                 
-                # Generate variant using LLM
-                variant_response = await self._call_llm(variant_prompt)
+                # Generate variant using LLM with isolated timeout
+                self.logger.info(f"=== CALLING LLM FOR VARIANT {i+1} ===")
+                start_time = asyncio.get_event_loop().time()
+                
+                try:
+                    variant_response = await asyncio.wait_for(
+                        self._call_llm(variant_prompt),
+                        timeout=15.0  # 15 second timeout per variant
+                    )
+                    end_time = asyncio.get_event_loop().time()
+                    self.logger.info(f"LLM call for variant {i+1} completed in {end_time - start_time:.2f}s")
+                    
+                except asyncio.TimeoutError:
+                    self.logger.error(f"LLM call for variant {i+1} timed out after 15 seconds")
+                    continue
+                except Exception as e:
+                    self.logger.error(f"LLM call for variant {i+1} failed: {e}")
+                    continue
                 
                 # Clean and validate variant
+                self.logger.info(f"Cleaning and validating variant {i+1}...")
                 cleaned_variant = self._clean_response_variant(variant_response)
                 if cleaned_variant:
                     variants.append(cleaned_variant)
+                    self.logger.info(f"Variant {i+1} successfully generated and cleaned")
+                else:
+                    self.logger.warning(f"Variant {i+1} failed validation")
                 
             except Exception as e:
                 self.logger.error(f"Error generating variant {i+1}: {e}")
                 continue
         
+        self.logger.info(f"=== SELF-CONSISTENCY LOOP COMPLETED: {len(variants)} variants generated ===")
+        
         # Ensure we have at least one variant
         if not variants:
+            self.logger.error("No variants generated, using fallback response")
             variants = ["Unable to generate response due to processing error."]
         
         return variants
@@ -465,15 +504,20 @@ Generate a detailed response that would be most helpful to the user.
         """
         try:
             if self.mock or self.llm is None:
-                # Return a mock string response for query reframing
+                self.logger.info("Using mock LLM response")
                 return "expert insurance terminology query reframe"
+            
+            self.logger.info(f"Calling LLM with prompt length: {len(prompt)} characters")
             
             # Call the LLM with proper async handling and timeout
             response = await asyncio.wait_for(
                 asyncio.to_thread(self.llm, prompt),
                 timeout=30.0  # 30 second timeout
             )
+            
+            self.logger.info(f"LLM response received: {len(response)} characters")
             return response
+            
         except asyncio.TimeoutError:
             self.logger.error("LLM call timed out after 30 seconds")
             return "expert insurance terminology query reframe"
