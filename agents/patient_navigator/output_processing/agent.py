@@ -49,94 +49,29 @@ def _get_claude_haiku_llm():
                 if not content:
                     raise ValueError("Empty response from Claude Haiku")
                 
-                # Try to extract JSON from the response
+                # The response should now be plain text, not JSON
                 content = content.strip()
                 
-                # If the response starts with a backtick, extract the JSON from within
+                # If the response starts with a backtick, extract the content from within
                 if content.startswith("```json"):
                     content = content.split("```json")[1].split("```")[0].strip()
                 elif content.startswith("```"):
                     content = content.split("```")[1].split("```")[0].strip()
                 
-                # Try to find JSON object in the response if it's not at the start
-                if not content.startswith('{'):
-                    # Look for JSON object pattern
-                    import re
-                    json_match = re.search(r'\{.*\}', content, re.DOTALL)
-                    if json_match:
-                        content = json_match.group(0).strip()
+                # Check if the response is still JSON format (fallback for old behavior)
+                if content.startswith('{'):
+                    logging.warning("Claude Haiku returned JSON format instead of plain text, extracting content...")
+                    try:
+                        import json
+                        parsed_json = json.loads(content)
+                        enhanced_content = parsed_json.get("enhanced_content", content)
+                        return enhanced_content
+                    except json.JSONDecodeError:
+                        # If JSON parsing fails, return the content as-is
+                        pass
                 
-                # Validate that we have valid JSON
-                try:
-                    import json
-                    parsed_json = json.loads(content)
-                    
-                    # Ensure the JSON has the required fields for CommunicationResponse
-                    required_fields = ["enhanced_content", "original_sources", "processing_time", "metadata"]
-                    missing_fields = [field for field in required_fields if field not in parsed_json]
-                    
-                    if missing_fields:
-                        logging.warning(f"Claude Haiku response missing required fields: {missing_fields}")
-                        # Create a fallback response with the available content
-                        fallback_response = {
-                            "enhanced_content": parsed_json.get("enhanced_content", content),
-                            "original_sources": parsed_json.get("original_sources", ["unknown"]),
-                            "processing_time": parsed_json.get("processing_time", 0.0),
-                            "metadata": parsed_json.get("metadata", {"fallback_created": True})
-                        }
-                        return json.dumps(fallback_response)
-                    
-                    return content
-                    
-                except json.JSONDecodeError:
-                    # If JSON parsing fails, try to fix common issues
-                    logging.warning("Claude Haiku returned invalid JSON, attempting to fix...")
-                    
-                    # Remove any leading/trailing text that's not JSON
-                    lines = content.split('\n')
-                    json_lines = []
-                    in_json = False
-                    
-                    for line in lines:
-                        line = line.strip()
-                        if line.startswith('{'):
-                            in_json = True
-                        if in_json:
-                            json_lines.append(line)
-                        if line.endswith('}'):
-                            break
-                    
-                    if json_lines:
-                        content = '\n'.join(json_lines)
-                        # Try parsing again
-                        try:
-                            json.loads(content)
-                            return content
-                        except json.JSONDecodeError:
-                            pass
-                    
-                    # If all else fails, create a fallback response
-                    logging.error("Could not extract valid JSON from Claude Haiku response, creating fallback")
-                    
-                    # Clean up the content for better fallback response
-                    cleaned_content = content.strip()
-                    if cleaned_content.startswith('```'):
-                        # Remove markdown formatting
-                        cleaned_content = cleaned_content.split('```')[1].split('```')[0].strip()
-                    
-                    # Use the full content, not truncated
-                    fallback_response = {
-                        "enhanced_content": f"Based on the information provided: {cleaned_content}",
-                        "original_sources": ["unknown"],
-                        "processing_time": 0.0,
-                        "metadata": {
-                            "fallback_created": True,
-                            "original_response": cleaned_content,
-                            "error": "Invalid JSON format",
-                            "content_length": len(cleaned_content)
-                        }
-                    }
-                    return json.dumps(fallback_response)
+                # Return the plain text content directly
+                return content
                 
             except Exception as e:
                 logging.error(f"Claude Haiku API call failed: {e}")
