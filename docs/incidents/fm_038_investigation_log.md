@@ -293,3 +293,113 @@ direct_answer
 - `agents/tooling/rag/observability.py` - RAG metrics updates
 
 **Status**: Ongoing investigation - awaiting production testing results to determine if these fixes resolve the identified issues.
+
+---
+
+## LATEST INVESTIGATION UPDATE: Self-Consistency Loop Timeout Issue
+
+### Date: 2025-10-09 (Post-Fix Attempts)
+
+### New Root Cause Hypothesis
+
+**Problem**: After RAG operations complete successfully, the workflow hangs in the self-consistency loop.
+
+**Evidence from Logs**:
+```
+2025-10-09 03:35:20,952 - RAG Operation Started [d1e93efe-b35f-4f6f-a2c8-90d89fb76dd0] | Data: {"query_text": "\"Does the plan provide coverage for ambulance transportation services..."}
+2025-10-09 03:35:24,244 - RAG Operation SUCCESS [f15fc89f-405d-47dc-886b-320f122336af] - Duration:615.9ms Chunks:5/25 Tokens:0
+```
+
+**Analysis**:
+- ✅ Query reframing is working perfectly (clean, focused queries)
+- ✅ RAG operations complete successfully (5 chunks retrieved)
+- ❌ **No logs after RAG completion** - workflow hangs before self-consistency loop
+- ❌ Missing expected logs: "=== STARTING SELF-CONSISTENCY LOOP ==="
+
+### Attempted Fix #4 (Commit: `017db2be`)
+
+**Hypothesis**: The `_call_llm` method in the self-consistency loop is using the old timeout mechanism that can hang indefinitely.
+
+**Root Cause Analysis**:
+- Self-consistency loop calls `_call_llm` for response variant generation
+- `_call_llm` was using `asyncio.wait_for(asyncio.to_thread(self.llm, prompt), timeout=15.0)`
+- This is the same hanging mechanism we fixed in `call_llm` but missed in `_call_llm`
+- The hang occurs at: `variant_response = await asyncio.wait_for(self._call_llm(variant_prompt), timeout=15.0)`
+
+**Fix Applied**:
+- Applied threading-based timeout mechanism to `_call_llm` method
+- Uses 25-second timeout with queue-based communication
+- Same robust timeout handling as the original `call_llm` fix
+- Added proper exception handling and fallback responses
+
+**Code Changes**:
+```python
+# Old (hanging) implementation:
+response = await asyncio.wait_for(
+    asyncio.to_thread(self.llm, prompt),
+    timeout=15.0  # This can hang indefinitely!
+)
+
+# New (robust) implementation:
+# Use threading with timeout for robust timeout handling
+import threading
+import queue
+
+result_queue = queue.Queue()
+exception_queue = queue.Queue()
+
+def api_call():
+    try:
+        response = self.llm(prompt)
+        result_queue.put(response)
+    except Exception as e:
+        exception_queue.put(e)
+
+thread = threading.Thread(target=api_call)
+thread.daemon = True
+thread.start()
+thread.join(timeout=25.0)  # Robust timeout
+```
+
+**Status**: Deployed, awaiting testing results
+
+### Current Investigation Status
+
+**What We've Tried**:
+1. ✅ Initial timeout fix (threading-based Anthropic API timeout)
+2. ✅ Query reframing optimization (simplified prompt, reduced timeout)
+3. ✅ RAG parameter tuning (higher threshold, fewer chunks)
+4. ✅ Fallback response validation fix
+5. ✅ Debug logging for query tracking
+6. ✅ **Self-consistency loop timeout fix** (threading-based `_call_llm`)
+
+**What We're Waiting For**:
+- Production testing to verify if the self-consistency loop timeout fix resolves the hang
+- Log analysis to confirm we see the expected self-consistency loop logs
+- Verification that complex queries complete the full workflow
+
+**Expected Logs if Fix Works**:
+```
+=== STARTING SELF-CONSISTENCY LOOP ===
+=== GENERATING VARIANT 1/3 ===
+=== CALLING LLM FOR VARIANT 1 ===
+LLM call for variant 1 completed in X.XXs
+Self-consistency loop completed with 3 variants
+=== CALCULATING CONSISTENCY SCORE ===
+```
+
+**If Fix Doesn't Work**:
+- We'll need to investigate other potential hang points in the workflow
+- May need to examine the consistency checker or final response synthesis
+- Could be a different timeout mechanism we haven't identified yet
+
+### Key Questions to Answer
+- Do we see the self-consistency loop logs after RAG operations complete?
+- Are LLM calls for response variants completing within 25 seconds?
+- Does the workflow proceed to consistency score calculation?
+- Are we getting final structured output generation?
+
+### Files Modified (Latest Attempt)
+- `agents/patient_navigator/information_retrieval/agent.py` - Applied threading-based timeout to `_call_llm` method
+
+**Status**: Ongoing investigation - awaiting production testing to determine if this fix resolves the self-consistency loop hang issue.
