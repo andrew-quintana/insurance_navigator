@@ -285,7 +285,6 @@ class RAGTool:
         self.logger.info(f"Text encoding: {text.encode('utf-8', errors='replace')[:100]}")
         
         try:
-            from openai import AsyncOpenAI
             import os
             import time
             
@@ -299,16 +298,8 @@ class RAGTool:
             self.logger.info(f"OpenAI API key available: {bool(api_key)}")
             self.logger.info(f"API key length: {len(api_key) if api_key else 0}")
             
-            # Initialize OpenAI client with Pydantic v2 compatibility
-            # OpenAI recommended timeout: 30s for embeddings API
-            client = AsyncOpenAI(
-                api_key=api_key,
-                max_retries=3,  # OpenAI recommended: 3 retries max
-                timeout=30.0   # OpenAI recommended: 30s timeout for embeddings
-            )
-            
-            # DIAGNOSTIC: Log client configuration
-            self.logger.info(f"OpenAI client initialized with timeout: 30.0s, max_retries: 3")
+            # DIAGNOSTIC: Log API key configuration
+            self.logger.info(f"OpenAI API key configured for synchronous client")
             
             # Generate real OpenAI embedding with Pydantic error handling
             self.logger.info(f"Generating embedding for text: {text[:100]}...")
@@ -317,30 +308,37 @@ class RAGTool:
             start_time = time.time()
             
             try:
-                # DIAGNOSTIC: Use robust threading-based timeout for OpenAI API calls
+                # CRITICAL FIX: Use synchronous OpenAI client to avoid async client lifecycle conflicts
+                # This eliminates the HTTP client cleanup errors and event loop conflicts
                 import threading
                 import queue
+                from openai import OpenAI  # Synchronous client
                 
                 result_queue = queue.Queue()
                 exception_queue = queue.Queue()
                 
                 def api_call():
                     try:
-                        import asyncio
-                        # Create new event loop for this thread
-                        loop = asyncio.new_event_loop()
-                        asyncio.set_event_loop(loop)
-                        try:
-                            response = loop.run_until_complete(client.embeddings.create(
-                                model="text-embedding-3-small",
-                                input=text,
-                                encoding_format="float"
-                            ))
-                            result_queue.put(response)
-                        finally:
-                            loop.close()
+                        self.logger.info("Thread started for OpenAI API call")
+                        # Use synchronous OpenAI client - no event loops needed
+                        sync_client = OpenAI(
+                            api_key=api_key,
+                            max_retries=3,
+                            timeout=30.0
+                        )
+                        
+                        response = sync_client.embeddings.create(
+                            model="text-embedding-3-small",
+                            input=text,
+                            encoding_format="float"
+                        )
+                        result_queue.put(response)
+                        self.logger.info("Thread completed OpenAI API call successfully")
                     except Exception as e:
+                        self.logger.error(f"Thread failed with exception: {e}")
                         exception_queue.put(e)
+                    finally:
+                        self.logger.info("Thread exiting")
                 
                 # Start API call in separate thread
                 thread = threading.Thread(target=api_call)
@@ -354,7 +352,10 @@ class RAGTool:
                     # Thread is still running, timeout occurred
                     end_time = time.time()
                     self.logger.error(f"OpenAI embedding API call timed out after {end_time - start_time:.2f}s")
-                    self.logger.error("This suggests either rate limiting or network issues")
+                    self.logger.error("Thread is still alive after timeout - investigating...")
+                    self.logger.error(f"Thread name: {thread.name}")
+                    self.logger.error(f"Thread daemon: {thread.daemon}")
+                    self.logger.error(f"Thread ident: {thread.ident}")
                     raise RuntimeError("OpenAI embedding API call timed out after 25 seconds")
                 
                 # Check for exceptions
@@ -388,28 +389,26 @@ class RAGTool:
                     self.logger.warning(f"Pydantic v2 compatibility issue detected: {pydantic_error}")
                     self.logger.info("Attempting workaround with different client configuration...")
                     
-                    # Try with minimal client configuration using threading-based timeout
-                    minimal_client = AsyncOpenAI(api_key=api_key)
+                    # Try with minimal client configuration using synchronous client
+                    minimal_client = OpenAI(api_key=api_key)
                     
                     result_queue = queue.Queue()
                     exception_queue = queue.Queue()
                     
                     def minimal_api_call():
                         try:
-                            import asyncio
-                            # Create new event loop for this thread
-                            loop = asyncio.new_event_loop()
-                            asyncio.set_event_loop(loop)
-                            try:
-                                response = loop.run_until_complete(minimal_client.embeddings.create(
-                                    model="text-embedding-3-small",
-                                    input=text
-                                ))
-                                result_queue.put(response)
-                            finally:
-                                loop.close()
+                            self.logger.info("Thread started for minimal OpenAI API call")
+                            response = minimal_client.embeddings.create(
+                                model="text-embedding-3-small",
+                                input=text
+                            )
+                            result_queue.put(response)
+                            self.logger.info("Thread completed minimal OpenAI API call successfully")
                         except Exception as e:
+                            self.logger.error(f"Thread failed with exception: {e}")
                             exception_queue.put(e)
+                        finally:
+                            self.logger.info("Thread exiting")
                     
                     # Start minimal API call in separate thread
                     thread = threading.Thread(target=minimal_api_call)

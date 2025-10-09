@@ -619,11 +619,16 @@ Generate a detailed response that would be most helpful to the user.
             
             def api_call():
                 try:
+                    self.logger.info("Thread started for Information Retrieval LLM call")
                     # Make the actual LLM call
                     response = self.llm(prompt)
                     result_queue.put(response)
+                    self.logger.info("Thread completed Information Retrieval LLM call successfully")
                 except Exception as e:
+                    self.logger.error(f"Thread failed with exception: {e}")
                     exception_queue.put(e)
+                finally:
+                    self.logger.info("Thread exiting")
             
             # Start API call in separate thread
             thread = threading.Thread(target=api_call)
@@ -635,6 +640,10 @@ Generate a detailed response that would be most helpful to the user.
             
             if thread.is_alive():
                 self.logger.error("LLM call timed out after 25 seconds")
+                self.logger.error("Thread is still alive after timeout - investigating...")
+                self.logger.error(f"Thread name: {thread.name}")
+                self.logger.error(f"Thread daemon: {thread.daemon}")
+                self.logger.error(f"Thread ident: {thread.ident}")
                 return "expert insurance terminology query reframe"
             
             # Check for exceptions
