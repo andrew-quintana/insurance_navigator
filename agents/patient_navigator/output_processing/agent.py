@@ -298,11 +298,16 @@ class CommunicationAgent(BaseAgent):
             
             def llm_call():
                 try:
+                    self.logger.info("Thread started for Communication Agent LLM call")
                     # Make the actual LLM call
                     response = self(formatted_input, user_context=request.user_context)
                     result_queue.put(response)
+                    self.logger.info("Thread completed Communication Agent LLM call successfully")
                 except Exception as e:
+                    self.logger.error(f"Thread failed with exception: {e}")
                     exception_queue.put(e)
+                finally:
+                    self.logger.info("Thread exiting")
             
             # Start LLM call in separate thread
             thread = threading.Thread(target=llm_call)
@@ -314,6 +319,10 @@ class CommunicationAgent(BaseAgent):
             
             if thread.is_alive():
                 self.logger.error("Communication Agent LLM call timed out after 25 seconds")
+                self.logger.error("Thread is still alive after timeout - investigating...")
+                self.logger.error(f"Thread name: {thread.name}")
+                self.logger.error(f"Thread daemon: {thread.daemon}")
+                self.logger.error(f"Thread ident: {thread.ident}")
                 raise asyncio.TimeoutError("Communication Agent LLM call timed out after 25 seconds")
             
             # Check for exceptions
