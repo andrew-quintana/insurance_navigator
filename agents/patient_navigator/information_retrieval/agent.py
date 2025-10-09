@@ -190,6 +190,9 @@ class InformationRetrievalAgent(BaseAgent):
             expert_query = await self._reframe_query(user_query)
             self.logger.info(f"Expert reframe: {expert_query}")
             
+            # Debug: Log the exact query being sent to RAG
+            self.logger.info(f"DEBUG: Sending to RAG - Query length: {len(expert_query)}, Query: '{expert_query}'")
+            
             # Step 3: RAG Integration with existing system
             chunks = await self._retrieve_chunks(expert_query, user_id)
             self.logger.info(f"Retrieved {len(chunks)} chunks")
@@ -202,7 +205,8 @@ class InformationRetrievalAgent(BaseAgent):
                 fallback_response = f"I don't have access to your specific insurance documents to answer your question about {user_query.lower()}. To get personalized information about your coverage, please upload your insurance documents (policy documents, benefit summaries, etc.) so I can provide you with accurate, plan-specific information."
                 
                 return InformationRetrievalOutput(
-                    response=fallback_response,
+                    expert_reframe="No documents available for expert reframing",
+                    direct_answer=fallback_response,
                     key_points=["No documents available for personalized response"],
                     source_chunks=[],
                     confidence_score=0.1,  # Low confidence since no documents
@@ -272,20 +276,21 @@ class InformationRetrievalAgent(BaseAgent):
         Returns:
             Expert-level query in insurance terminology
         """
-        # Simple, focused prompt for query reframing - no need for full system prompt
-        expert_prompt = f"""Convert this user query into professional insurance terminology for document search:
+        # System prompt for RAG-optimized query reframing
+        expert_prompt = f"""You are an expert insurance document search specialist. Your job is to reframe user queries into terms that will find relevant information in insurance policies, benefit summaries, and legal documents.
 
 User Query: "{user_query}"
 
-Convert to expert terms:
-- "doctor visits" → "outpatient physician services"
-- "prescription drugs" → "prescription drug benefits" 
-- "copay" → "cost-sharing" or "copayment"
-- "deductible" → "annual deductible"
-- "coverage" → "benefit coverage" or "covered services"
-- "network" → "provider network" or "participating providers"
+Reframe this query using professional insurance terminology that would appear in:
+- Insurance policy documents
+- Benefit summaries and schedules
+- Legal contracts and terms
+- Provider network agreements
+- Coverage guidelines
 
-Expert Query Reframe:"""
+Focus on terms like: covered services, benefit coverage, cost-sharing arrangements, provider networks, authorization requirements, eligibility criteria, exclusions, limitations, copayments, deductibles, coinsurance, out-of-pocket maximums.
+
+Return ONLY the reframed query, nothing else:"""
         
         try:
             # Use BaseAgent's LLM capabilities for expert reframing
@@ -294,9 +299,19 @@ Expert Query Reframe:"""
             # Extract the expert reframe from the response
             expert_query = response.strip()
             
-            # Validate the translation using the terminology translator
-            if not self.terminology_translator.validate_translation(user_query, expert_query):
-                self.logger.warning("LLM translation validation failed, using fallback")
+            # Clean up the response - remove any extra text or formatting
+            if "reframe" in expert_query.lower() or "query" in expert_query.lower():
+                # If the LLM included extra text, try to extract just the query
+                lines = expert_query.split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if line and not line.lower().startswith(('user query', 'reframe', 'expert', 'return')):
+                        expert_query = line
+                        break
+            
+            # Ensure we have a valid query
+            if not expert_query or len(expert_query) < 10:
+                self.logger.warning("LLM returned invalid query, using fallback")
                 expert_query = self.terminology_translator.get_fallback_translation(user_query)
             
             return expert_query
