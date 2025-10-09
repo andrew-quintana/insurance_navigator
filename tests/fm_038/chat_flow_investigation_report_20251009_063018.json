@@ -1,0 +1,15 @@
+{
+  "timestamp": "2025-10-09T06:30:18.894087",
+  "test_user": "sendaqmail@gmail.com",
+  "test_user_id": "cae3b3ec-b355-4509-bd4e-0f7da8cb2858",
+  "api_base_url": null,
+  "metrics": {
+    "total_duration_seconds": 0.15147805213928223,
+    "total_requests": 0,
+    "successful_requests": 0,
+    "failed_requests": 0,
+    "function_calls": 0,
+    "average_function_duration_ms": 0
+  },
+  "function_calls": []
+}
