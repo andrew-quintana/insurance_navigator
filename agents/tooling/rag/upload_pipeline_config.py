@@ -38,8 +38,8 @@ class UploadPipelineRAGConfig(RetrievalConfig):
         self.chunk_index_column = "chunk_index"
         
         # RAG query configuration
-        self.similarity_threshold = kwargs.get('similarity_threshold', 0.3)
-        self.max_chunks = kwargs.get('max_chunks', 10)
+        self.similarity_threshold = kwargs.get('similarity_threshold', 0.5)
+        self.max_chunks = kwargs.get('max_chunks', 5)
         self.token_budget = kwargs.get('token_budget', 4000)
         
         # Vector search configuration
