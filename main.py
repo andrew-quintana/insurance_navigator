@@ -1076,8 +1076,8 @@ async def chat_with_agent(
         except asyncio.TimeoutError:
             logger.error("Chat processing timed out after 120 seconds")
             return {
-                "text": "I apologize, but your request is taking longer than expected. Please try again with a simpler question.",
-                "response": "I apologize, but your request is taking longer than expected. Please try again with a simpler question.",
+                "text": "I'm currently processing your request, but it's taking longer than usual. Please wait a moment and try your question again. If you continue to experience delays, try breaking your question into smaller parts.",
+                "response": "I'm currently processing your request, but it's taking longer than usual. Please wait a moment and try your question again. If you continue to experience delays, try breaking your question into smaller parts.",
                 "conversation_id": conversation_id or f"conv_{int(time.time())}",
                 "timestamp": datetime.now().isoformat(),
                 "metadata": {
@@ -1087,7 +1087,7 @@ async def chat_with_agent(
                     "error": "Request timeout after 120 seconds",
                     "error_type": "chat_processing_timeout"
                 },
-                "next_steps": ["Please try rephrasing your question", "Contact support if the issue persists"],
+                "next_steps": ["Wait a moment before trying again", "Break complex questions into smaller parts", "Contact support if the issue persists"],
                 "sources": ["system"]
             }
         except Exception as e:
