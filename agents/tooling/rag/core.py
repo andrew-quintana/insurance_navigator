@@ -122,14 +122,9 @@ class RAGTool:
         """
         self.config.validate()
         
-        # Start performance monitoring
-        operation_metrics = self.performance_monitor.start_operation(
-            user_id=self.user_id,
-            query_text=None,  # We don't have query text in this method
-            similarity_threshold=self.config.similarity_threshold,
-            max_chunks=self.config.max_chunks,
-            token_budget=self.config.token_budget
-        )
+        # Note: Performance monitoring is handled by the calling method (retrieve_chunks_from_text)
+        # to avoid duplicate RAG operations in logs
+        operation_metrics = None
         
         conn = None
         try:
@@ -154,8 +149,9 @@ class RAGTool:
             all_similarity_rows = await conn.fetch(all_similarities_sql, vector_string, self.user_id)
             all_similarities = [float(row["similarity"]) for row in all_similarity_rows]
             
-            # Record similarity scores for histogram analysis
-            self.performance_monitor.record_similarity_scores(operation_metrics.operation_uuid, all_similarities)
+            # Record similarity scores for histogram analysis (if operation_metrics available)
+            if operation_metrics:
+                self.performance_monitor.record_similarity_scores(operation_metrics.operation_uuid, all_similarities)
             
             # Now get the actual results with threshold filtering
             sql = f"""
@@ -194,22 +190,24 @@ class RAGTool:
                 chunks.append(chunk)
                 total_tokens += tokens
             
-            # Record retrieval results
-            self.performance_monitor.record_retrieval_results(
-                operation_metrics.operation_uuid,
-                chunks_returned=len(chunks),
-                total_tokens_used=total_tokens,
-                total_chunks_available=len(all_similarity_rows)
-            )
-            
-            # Complete the operation successfully
-            self.performance_monitor.complete_operation(operation_metrics.operation_uuid, success=True)
+            # Record retrieval results (if operation_metrics available)
+            if operation_metrics:
+                self.performance_monitor.record_retrieval_results(
+                    operation_metrics.operation_uuid,
+                    chunks_returned=len(chunks),
+                    total_tokens_used=total_tokens,
+                    total_chunks_available=len(all_similarity_rows)
+                )
+                
+                # Complete the operation successfully
+                self.performance_monitor.complete_operation(operation_metrics.operation_uuid, success=True)
             
             return chunks
         except Exception as e:
             self.logger.error(f"RAGTool retrieval error: {e}")
-            # Complete the operation with error
-            self.performance_monitor.complete_operation(operation_metrics.operation_uuid, success=False, error_message=str(e))
+            # Complete the operation with error (if operation_metrics available)
+            if operation_metrics:
+                self.performance_monitor.complete_operation(operation_metrics.operation_uuid, success=False, error_message=str(e))
             return []
         finally:
             if conn:
@@ -319,26 +317,57 @@ class RAGTool:
             start_time = time.time()
             
             try:
-                # DIAGNOSTIC: Wrap API call with timeout to prevent indefinite hangs
-                response = await asyncio.wait_for(
-                    client.embeddings.create(
-                        model="text-embedding-3-small",
-                        input=text,
-                        encoding_format="float"
-                    ),
-                    timeout=30.0  # OpenAI recommended: 30s timeout for embeddings
-                )
+                # DIAGNOSTIC: Use robust threading-based timeout for OpenAI API calls
+                import threading
+                import queue
                 
-                # DIAGNOSTIC: Log successful response
-                end_time = time.time()
-                self.logger.info(f"OpenAI API call completed in {end_time - start_time:.2f}s")
+                result_queue = queue.Queue()
+                exception_queue = queue.Queue()
                 
-            except asyncio.TimeoutError:
-                # DIAGNOSTIC: Log timeout information
-                end_time = time.time()
-                self.logger.error(f"OpenAI API call timed out after {end_time - start_time:.2f}s")
-                self.logger.error("This suggests either rate limiting or network issues")
-                raise RuntimeError("OpenAI embedding API call timed out after 30 seconds (OpenAI recommended limit)")
+                def api_call():
+                    try:
+                        response = client.embeddings.create(
+                            model="text-embedding-3-small",
+                            input=text,
+                            encoding_format="float"
+                        )
+                        result_queue.put(response)
+                    except Exception as e:
+                        exception_queue.put(e)
+                
+                # Start API call in separate thread
+                thread = threading.Thread(target=api_call)
+                thread.daemon = True
+                thread.start()
+                
+                # Wait for result with 25-second timeout
+                thread.join(timeout=25.0)
+                
+                if thread.is_alive():
+                    # Thread is still running, timeout occurred
+                    end_time = time.time()
+                    self.logger.error(f"OpenAI embedding API call timed out after {end_time - start_time:.2f}s")
+                    self.logger.error("This suggests either rate limiting or network issues")
+                    raise RuntimeError("OpenAI embedding API call timed out after 25 seconds")
+                
+                # Check for exceptions
+                if not exception_queue.empty():
+                    exception = exception_queue.get()
+                    end_time = time.time()
+                    self.logger.error(f"OpenAI API call failed after {end_time - start_time:.2f}s: {exception}")
+                    self.logger.error(f"Error type: {type(exception).__name__}")
+                    self.logger.error(f"Error details: {str(exception)}")
+                    raise exception
+                
+                # Get the result
+                if not result_queue.empty():
+                    response = result_queue.get()
+                    end_time = time.time()
+                    self.logger.info(f"OpenAI API call completed in {end_time - start_time:.2f}s")
+                else:
+                    end_time = time.time()
+                    self.logger.error(f"No response received from OpenAI API after {end_time - start_time:.2f}s")
+                    raise RuntimeError("No response received from OpenAI embedding API")
                 
             except Exception as pydantic_error:
                 # DIAGNOSTIC: Log detailed error information
@@ -352,16 +381,51 @@ class RAGTool:
                     self.logger.warning(f"Pydantic v2 compatibility issue detected: {pydantic_error}")
                     self.logger.info("Attempting workaround with different client configuration...")
                     
-                    # Try with minimal client configuration
+                    # Try with minimal client configuration using threading-based timeout
                     minimal_client = AsyncOpenAI(api_key=api_key)
-                    response = await minimal_client.embeddings.create(
-                        model="text-embedding-3-small",
-                        input=text
-                    )
                     
-                    # DIAGNOSTIC: Log workaround success
-                    end_time = time.time()
-                    self.logger.info(f"Workaround successful, completed in {end_time - start_time:.2f}s")
+                    result_queue = queue.Queue()
+                    exception_queue = queue.Queue()
+                    
+                    def minimal_api_call():
+                        try:
+                            response = minimal_client.embeddings.create(
+                                model="text-embedding-3-small",
+                                input=text
+                            )
+                            result_queue.put(response)
+                        except Exception as e:
+                            exception_queue.put(e)
+                    
+                    # Start minimal API call in separate thread
+                    thread = threading.Thread(target=minimal_api_call)
+                    thread.daemon = True
+                    thread.start()
+                    
+                    # Wait for result with 25-second timeout
+                    thread.join(timeout=25.0)
+                    
+                    if thread.is_alive():
+                        end_time = time.time()
+                        self.logger.error(f"OpenAI minimal API call timed out after {end_time - start_time:.2f}s")
+                        raise RuntimeError("OpenAI embedding API call timed out after 25 seconds (minimal client)")
+                    
+                    # Check for exceptions
+                    if not exception_queue.empty():
+                        exception = exception_queue.get()
+                        end_time = time.time()
+                        self.logger.error(f"OpenAI minimal API call failed after {end_time - start_time:.2f}s: {exception}")
+                        raise exception
+                    
+                    # Get the result
+                    if not result_queue.empty():
+                        response = result_queue.get()
+                        end_time = time.time()
+                        self.logger.info(f"Workaround successful, completed in {end_time - start_time:.2f}s")
+                    else:
+                        end_time = time.time()
+                        self.logger.error(f"No response received from OpenAI minimal API after {end_time - start_time:.2f}s")
+                        raise RuntimeError("No response received from OpenAI embedding API (minimal client)")
                 else:
                     raise pydantic_error
             
