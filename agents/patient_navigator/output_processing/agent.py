@@ -127,6 +127,57 @@ class CommunicationAgent(BaseAgent):
         
         self.logger = logging.getLogger(f"agent.{self.name}")
         self.logger.info(f"Initialized Communication Agent with config: {self.config.to_dict()}")
+    
+    def __call__(self, user_input: str, **kwargs) -> CommunicationResponse:
+        """
+        Override BaseAgent.__call__ to handle plain text responses instead of JSON.
+        
+        Args:
+            user_input: Formatted input containing agent outputs
+            **kwargs: Additional arguments (user_context, etc.)
+            
+        Returns:
+            CommunicationResponse with enhanced content
+        """
+        self.logger.info(f"[{self.name}] Starting agent execution")
+        self.logger.info(f"[{self.name}] Input length: {len(user_input)} characters")
+        
+        prompt = self.format_prompt(user_input, **kwargs)
+        self.logger.info(f"[{self.name}] Prompt formatted, length: {len(prompt)} characters")
+        
+        if self.mock or self.llm is None:
+            self.logger.info(f"[{self.name}] Using mock output mode.")
+            return self.mock_output(user_input)
+        else:
+            try:
+                self.logger.info(f"[{self.name}] Calling LLM...")
+                llm_result = self.llm(prompt)
+                self.logger.info(f"[{self.name}] LLM call completed, result length: {len(str(llm_result))} characters")
+                
+                # Handle plain text response instead of JSON
+                enhanced_content = str(llm_result).strip()
+                
+                # Extract user_context if provided
+                user_context = kwargs.get('user_context', {})
+                
+                # Create CommunicationResponse with plain text content
+                response = CommunicationResponse(
+                    enhanced_content=enhanced_content,
+                    original_sources=["unknown"],  # Will be set by caller
+                    processing_time=0.0,  # Will be calculated by caller
+                    metadata={
+                        "tone_applied": "warm_empathetic",
+                        "content_type": "enhanced_response",
+                        "enhancement_quality": "high"
+                    }
+                )
+                
+                self.logger.info(f"[{self.name}] Response created successfully")
+                return response
+                
+            except Exception as e:
+                self.logger.error(f"[{self.name}] LLM call failed: {e}")
+                raise
         
         # Log LLM status
         if llm_client:
