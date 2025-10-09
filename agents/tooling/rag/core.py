@@ -238,8 +238,10 @@ class RAGTool:
         
         try:
             # Step 1: Generate embedding for the query text (MUST happen first)
-            self.logger.info(f"Generating embedding for query: {query_text[:100]}...")
+            self.logger.info(f"PRE-EMBEDDING: About to call _generate_embedding for query: {query_text[:100]}...")
+            self.logger.info("PRE-EMBEDDING: Checkpoint - calling await self._generate_embedding()")
             query_embedding = await self._generate_embedding(query_text)
+            self.logger.info("POST-EMBEDDING: _generate_embedding() returned successfully")
             
             # Validate embedding
             if not self._validate_embedding(query_embedding, "query"):
