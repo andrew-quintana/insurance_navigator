@@ -29,7 +29,6 @@ export default function ChatPage() {
       sender: "bot",
       text: "Hello! I'm your Insurance Navigator assistant. I'm here to help you understand your insurance benefits and navigate insurance questions.\n\n**How can I assist you today?**",
       options: [
-        "What is covered under my plan?",
         "What is a copay?",
         "What is my deductible?",
         "How would I get access to mental health services?",
@@ -67,7 +66,6 @@ export default function ChatPage() {
         sender: "bot",
         text: `Hello ${userName}! I'm your Insurance Navigator. I can help you with insurance questions, find healthcare providers, understand your benefits, and more. What would you like to know today?`,
         options: [
-          "What is covered under my plan?",
           "What is a copay?",
           "What is my deductible?",
           "How would I get access to mental health services?",
