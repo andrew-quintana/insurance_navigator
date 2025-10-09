@@ -1065,26 +1065,26 @@ async def chat_with_agent(
         # Note: Graceful degradation is handled within individual RAG operations,
         # not at the chat interface level to avoid masking other processing errors
         try:
-            logger.info("Starting chat message processing with 60-second timeout")
+            logger.info("Starting chat message processing with 120-second timeout")
             # Add timeout to prevent indefinite hanging
             response = await asyncio.wait_for(
                 chat_interface.process_message(chat_message),
-                timeout=60.0  # 60 second timeout for entire chat processing
+                timeout=120.0  # 120 second timeout for entire chat processing
             )
             logger.info("Chat message processing completed successfully")
             logger.info("=== CHAT INTERFACE RETURNED RESPONSE ===")
         except asyncio.TimeoutError:
-            logger.error("Chat processing timed out after 60 seconds")
+            logger.error("Chat processing timed out after 120 seconds")
             return {
                 "text": "I apologize, but your request is taking longer than expected. Please try again with a simpler question.",
                 "response": "I apologize, but your request is taking longer than expected. Please try again with a simpler question.",
                 "conversation_id": conversation_id or f"conv_{int(time.time())}",
                 "timestamp": datetime.now().isoformat(),
                 "metadata": {
-                    "processing_time": 60.0,
+                    "processing_time": 120.0,
                     "confidence": 0.0,
                     "agent_sources": ["system"],
-                    "error": "Request timeout after 60 seconds",
+                    "error": "Request timeout after 120 seconds",
                     "error_type": "chat_processing_timeout"
                 },
                 "next_steps": ["Please try rephrasing your question", "Contact support if the issue persists"],
