@@ -587,7 +587,7 @@ Generate a detailed response that would be most helpful to the user.
     
     async def _call_llm(self, prompt: str) -> str:
         """
-        Call LLM with prompt using BaseAgent's capabilities.
+        Call LLM with prompt using robust threading-based timeout handling.
         
         Args:
             prompt: Prompt to send to LLM
@@ -602,21 +602,48 @@ Generate a detailed response that would be most helpful to the user.
             
             self.logger.info(f"Calling LLM with prompt length: {len(prompt)} characters")
             
-            # Call the LLM with proper async handling and timeout
-            response = await asyncio.wait_for(
-                asyncio.to_thread(self.llm, prompt),
-                timeout=15.0  # 15 second timeout for simple query reframing
-            )
+            # Use threading with timeout for robust timeout handling
+            import threading
+            import queue
             
-            self.logger.info(f"LLM response received: {len(response)} characters")
-            return response
+            result_queue = queue.Queue()
+            exception_queue = queue.Queue()
             
-        except asyncio.TimeoutError:
-            self.logger.error("LLM call timed out after 15 seconds")
-            return "expert insurance terminology query reframe"
-        except TimeoutError as e:
-            self.logger.error(f"LLM call timed out: {e}")
-            return "expert insurance terminology query reframe"
+            def api_call():
+                try:
+                    # Make the actual LLM call
+                    response = self.llm(prompt)
+                    result_queue.put(response)
+                except Exception as e:
+                    exception_queue.put(e)
+            
+            # Start API call in separate thread
+            thread = threading.Thread(target=api_call)
+            thread.daemon = True
+            thread.start()
+            
+            # Wait for result with 25-second timeout
+            thread.join(timeout=25.0)
+            
+            if thread.is_alive():
+                self.logger.error("LLM call timed out after 25 seconds")
+                return "expert insurance terminology query reframe"
+            
+            # Check for exceptions
+            if not exception_queue.empty():
+                exception = exception_queue.get()
+                self.logger.error(f"LLM call failed: {exception}")
+                return "expert insurance terminology query reframe"
+            
+            # Get the result
+            if not result_queue.empty():
+                response = result_queue.get()
+                self.logger.info(f"LLM response received: {len(response)} characters")
+                return response
+            else:
+                self.logger.error("No response received from LLM")
+                return "expert insurance terminology query reframe"
+            
         except Exception as e:
             self.logger.error(f"Error calling LLM: {e}")
             # Return fallback response
