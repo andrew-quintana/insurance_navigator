@@ -113,31 +113,32 @@
 
 ### 2.3 Root Cause Hypotheses (Prioritized)
 
-#### Hypothesis 1: No Chunks in Database (MOST LIKELY) 🔥
-**Probability:** 70%  
-**Evidence For:**
-- Consistent 0 chunks across all queries
-- Would explain "SUCCESS" status (query succeeded, just no results)
-- Would explain fast completion (no data to process)
-
+#### Hypothesis 1: No Chunks in Database (RULED OUT) ❌
+**Probability:** 0% - **CONFIRMED FALSE**  
 **Evidence Against:**
-- User has uploaded documents (assumed - needs verification)
-- System should log warning if no chunks found
+- ✅ **VERIFIED**: User has 1 document (`scan_classic_hmo.pdf`)
+- ✅ **VERIFIED**: User has 1138 chunks with embeddings
+- ✅ **VERIFIED**: All chunks have embeddings (1138/1138)
+- ✅ **VERIFIED**: Data is recent (created 2025-10-08 22:14:30)
 
-**Test Required:**
-```sql
-SELECT COUNT(*) FROM document_chunks dc
-JOIN documents d ON dc.document_id = d.document_id
-WHERE d.user_id = 'cae3b3ec-b355-4509-bd4e-0f7da8cb2858'
-AND dc.embedding IS NOT NULL;
+**Database Verification Results:**
+```
+Documents found: 1
+Chunks with embeddings: 1138
+Total chunks: 1138
+Chunks without embeddings: 0
+Document: scan_classic_hmo.pdf (1138 chunks, created 2025-10-08 22:14:30)
 ```
 
-#### Hypothesis 2: Embedding Generation Failing Silently (LIKELY) ⚠️
-**Probability:** 60%  
+**Conclusion:** This hypothesis is completely ruled out. The zero-chunk issue is NOT due to missing data.
+
+#### Hypothesis 2: Embedding Generation Failing Silently (MOST LIKELY) 🔥
+**Probability:** 80% - **HIGHEST PRIORITY**  
 **Evidence For:**
 - No CHECKPOINT logs appearing (may not reach embedding code)
 - Previous threading issues with OpenAI SDK
 - Could fail without raising exception
+- Database has chunks but retrieval returns 0
 
 **Evidence Against:**
 - Would expect some error logs
@@ -148,30 +149,13 @@ AND dc.embedding IS NOT NULL;
 - Check if `_generate_embedding()` is being called
 - Verify embedding dimensions and values
 
-#### Hypothesis 3: Similarity Threshold Too High (POSSIBLE) ⚠️
-**Probability:** 50%  
-**Evidence For:**
-- Default threshold is 0.5 (relatively high)
-- Shows "0/0" (0 returned, 0 above threshold)
-- Would explain success with no results
-
-**Evidence Against:**
-- Second 0 suggests no chunks at all, not just below threshold
-- System should show total_chunks_available > 0 if chunks exist
-
-**Test Required:**
-```python
-# Test with lower threshold
-self.config.similarity_threshold = 0.1
-
-# Or query for similarity distribution
-```
-
-#### Hypothesis 4: Database Query Malformed (LESS LIKELY) ⚠️
-**Probability:** 30%  
+#### Hypothesis 3: Database Query Issues (LIKELY) ⚠️
+**Probability:** 70%  
 **Evidence For:**
 - Recent threading changes might affect async queries
 - Vector search syntax could be incorrect
+- Async context might be disrupted
+- Data exists but query returns 0 results
 
 **Evidence Against:**
 - No error logs suggesting query failure
@@ -182,11 +166,13 @@ self.config.similarity_threshold = 0.1
 - Check for asyncpg errors
 - Verify vector syntax
 
-#### Hypothesis 5: Threading Interfering with Async Queries (UNLIKELY) ⚠️
-**Probability:** 20%  
+#### Hypothesis 4: Threading Affecting Database Queries (LIKELY) ⚠️
+**Probability:** 60%  
 **Evidence For:**
 - Threading added for embedding generation
 - Might affect async database connection context
+- Connection pool issues possible
+- Data exists but threading might interfere with queries
 
 **Evidence Against:**
 - Database queries are in separate async context
@@ -197,7 +183,37 @@ self.config.similarity_threshold = 0.1
 - Check connection pool status
 - Verify async context maintained
 
+#### Hypothesis 5: Similarity Threshold Too High (POSSIBLE) ⚠️
+**Probability:** 40%  
+**Evidence For:**
+- Default threshold is 0.5 (relatively high)
+- Shows "0/0" (0 returned, 0 above threshold)
+- Would explain success with no results
+
+**Evidence Against:**
+- Was working earlier when chunks were being pulled
+- Shows "0/0" suggesting no chunks at all, not just below threshold
+- System should show total_chunks_available > 0 if chunks exist
+
+**Test Required:**
+```python
+# Test with lower threshold
+self.config.similarity_threshold = 0.1
+# Or query for similarity distribution
+```
+
 ### 2.4 Data Analysis
+
+**Critical Database Verification (2025-01-27):**
+```
+✅ Documents found: 1 (scan_classic_hmo.pdf)
+✅ Chunks with embeddings: 1138
+✅ Total chunks: 1138
+✅ Chunks without embeddings: 0
+✅ Document created: 2025-10-08 22:14:30
+```
+
+**Key Finding:** The zero-chunk issue is NOT due to missing data. User has 1138 chunks with embeddings ready for retrieval.
 
 **Log Sequence Analysis:**
 ```
@@ -534,14 +550,16 @@ if len(chunks) == 0:
 ✅ Always returns exactly 0 chunks  
 ✅ Code is deployed to production correctly  
 ✅ Duplicate logs fixed  
+✅ **CRITICAL**: User has 1138 chunks with embeddings in database  
+✅ **CRITICAL**: Data is recent and ready for retrieval  
 
 **What We Don't Know:**
-❓ Are there chunks in the database for this user?  
 ❓ Is embedding generation succeeding?  
 ❓ Are CHECKPOINT logs appearing now?  
 ❓ What are the actual similarity scores?  
 ❓ Is the database query executing correctly?  
-❓ Is threading affecting async queries?
+❓ Is threading affecting async queries?  
+❓ Why does retrieval return 0 chunks when data exists?
 
 ### 5.3 Lessons Learned
 
@@ -568,9 +586,10 @@ if len(chunks) == 0:
 ### 5.4 Recommendations
 
 **Immediate:**
-1. ⭐ Verify database has chunks for test user (highest priority)
-2. ⭐ Confirm CHECKPOINT logs are appearing in production
-3. ⭐ Add embedding validation logging
+1. ⭐ **HIGHEST PRIORITY**: Verify embedding generation is working (Hypothesis 2)
+2. ⭐ **HIGH PRIORITY**: Add database query logging to see what SQL returns (Hypothesis 3)
+3. ⭐ **HIGH PRIORITY**: Check if threading is affecting async queries (Hypothesis 4)
+4. ⭐ **MEDIUM PRIORITY**: Test with lower similarity threshold (Hypothesis 5)
 
 **Short-term:**
 1. Implement comprehensive database query logging
