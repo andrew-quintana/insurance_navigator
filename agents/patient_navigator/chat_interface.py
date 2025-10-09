@@ -303,7 +303,7 @@ class PatientNavigatorChatInterface:
             # Execute the supervisor workflow with timeout
             result = await asyncio.wait_for(
                 self.supervisor_workflow.execute(workflow_input),
-                timeout=30.0  # 30 second timeout
+                timeout=120.0  # 120 second timeout for complex queries
             )
             
             # Extract routing decision from result

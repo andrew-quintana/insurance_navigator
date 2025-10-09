@@ -272,27 +272,20 @@ class InformationRetrievalAgent(BaseAgent):
         Returns:
             Expert-level query in insurance terminology
         """
-        # Use LLM for expert reframing - more flexible than static dictionary
-        system_prompt = self._load_if_path("prompts/system_prompt.md")
-        
-        # Create expert reframing prompt
-        expert_prompt = f"""
-{system_prompt}
-
-Please reframe the following user query into expert insurance terminology:
+        # Simple, focused prompt for query reframing - no need for full system prompt
+        expert_prompt = f"""Convert this user query into professional insurance terminology for document search:
 
 User Query: "{user_query}"
 
-Instructions:
-1. Convert the user's natural language into professional insurance terminology
-2. Use terms that would appear in insurance documents and benefit descriptions
-3. Focus on key concepts like: physician services, prescription drug benefits, cost-sharing, 
-   benefit coverage, provider networks, authorization requirements, etc.
-4. Maintain the original intent while using expert terminology
-5. Provide ONLY the expert-level query reframing, no additional explanation
+Convert to expert terms:
+- "doctor visits" → "outpatient physician services"
+- "prescription drugs" → "prescription drug benefits" 
+- "copay" → "cost-sharing" or "copayment"
+- "deductible" → "annual deductible"
+- "coverage" → "benefit coverage" or "covered services"
+- "network" → "provider network" or "participating providers"
 
-Expert Query Reframe:
-"""
+Expert Query Reframe:"""
         
         try:
             # Use BaseAgent's LLM capabilities for expert reframing
@@ -597,14 +590,14 @@ Generate a detailed response that would be most helpful to the user.
             # Call the LLM with proper async handling and timeout
             response = await asyncio.wait_for(
                 asyncio.to_thread(self.llm, prompt),
-                timeout=30.0  # 30 second timeout
+                timeout=15.0  # 15 second timeout for simple query reframing
             )
             
             self.logger.info(f"LLM response received: {len(response)} characters")
             return response
             
         except asyncio.TimeoutError:
-            self.logger.error("LLM call timed out after 30 seconds")
+            self.logger.error("LLM call timed out after 15 seconds")
             return "expert insurance terminology query reframe"
         except TimeoutError as e:
             self.logger.error(f"LLM call timed out: {e}")
