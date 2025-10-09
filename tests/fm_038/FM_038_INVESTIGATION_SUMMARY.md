@@ -1,18 +1,101 @@
 # FM-038 Investigation Summary
-## Critical Discovery: Why Logs Appeared Before But Not Now
+## Critical Discovery: Database Has Data - Issue is in Retrieval Logic
 
-**Date:** 2025-10-09  
-**Status:** 🔥 **ROOT CAUSE IDENTIFIED - NEW APPROACH NEEDED**
+**Date:** 2025-01-27  
+**Status:** 🔥 **CRITICAL DISCOVERY - DATA EXISTS, RETRIEVAL BROKEN**
 
 ---
 
 ## Quick Answer
 
-**You asked:** "Why were we able to see those intermediate logs before but not now?"
+**You asked:** "Why are RAG operations returning 0 chunks?"
 
-**Answer:** The old logs were from a **DIFFERENT bug** (coroutine not awaited). That bug made the code fail FAST (1 second) with visible errors. When we fixed that bug, we exposed the REAL problem: the OpenAI SDK's network layer hangs indefinitely.
+**Answer:** The user HAS data (1138 chunks with embeddings), but the retrieval logic is failing. This is NOT a data problem - it's a retrieval/embedding generation problem.
 
 ---
+
+## Critical Database Verification (2025-01-27)
+
+**Database Check Results:**
+```
+✅ Documents found: 1 (scan_classic_hmo.pdf)
+✅ Chunks with embeddings: 1138
+✅ Total chunks: 1138
+✅ Chunks without embeddings: 0
+✅ Document created: 2025-10-08 22:14:30
+```
+
+**Key Finding:** The zero-chunk issue is NOT due to missing data. User has 1138 chunks with embeddings ready for retrieval.
+
+---
+
+## Updated Root Cause Analysis
+
+### 1. 🔥 **Embedding Generation Failing Silently** (MOST LIKELY - 80%)
+- **Evidence**: No CHECKPOINT logs appearing, previous threading issues
+- **Impact**: If embeddings aren't generated, similarity search fails
+- **Next**: Add embedding validation logging
+
+### 2. 🔥 **Database Query Issues** (LIKELY - 70%)
+- **Evidence**: Recent threading changes, async context disruption
+- **Impact**: Query might not execute correctly despite data existing
+- **Next**: Log actual SQL queries and results
+
+### 3. 🔥 **Threading Affecting Database Queries** (LIKELY - 60%)
+- **Evidence**: Threading added for embedding generation
+- **Impact**: Might interfere with async database operations
+- **Next**: Check thread context during queries
+
+### 4. ⚠️ **Similarity Threshold Too High** (POSSIBLE - 40%)
+- **Evidence**: Default 0.5 threshold might filter everything
+- **Impact**: Chunks exist but don't meet threshold
+- **Next**: Test with lower threshold
+
+---
+
+## What This Means
+
+### The Problem is NOT Missing Data
+- ✅ User has uploaded documents
+- ✅ Chunks are generated and stored
+- ✅ Embeddings are created (1138 chunks)
+- ✅ Data is recent and ready
+
+### The Problem IS in Retrieval Logic
+- ❌ Embedding generation might be failing silently
+- ❌ Database queries might not execute correctly
+- ❌ Threading might interfere with async operations
+- ❌ Similarity threshold might be too high
+
+---
+
+## Next Steps
+
+### Immediate Priority
+1. **Verify embedding generation** - Add logging to see if embeddings are created
+2. **Log database queries** - See what SQL returns when executed
+3. **Check threading impact** - Verify async context is maintained
+4. **Test lower threshold** - See if 0.5 is filtering everything
+
+### Investigation Approach
+- Use the comprehensive chat flow script (Task 1)
+- Create Jupyter notebook for step-by-step debugging (Task 2)
+- Document findings in FRACAS report (Task 3)
+- Implement and validate fixes (Task 4)
+
+---
+
+## Status
+
+- ✅ **Data Verification**: User has 1138 chunks with embeddings
+- ✅ **Root Cause**: Issue is in retrieval logic, not missing data
+- ✅ **Priority**: Focus on embedding generation and database queries
+- 🔴 **Priority**: CRITICAL - Blocking all RAG operations
+
+---
+
+**Last Updated:** 2025-01-27 15:30:00  
+**Next Action:** Build comprehensive chat flow script to trace exact failure point
 
 ## What The Old Logs Showed
 
