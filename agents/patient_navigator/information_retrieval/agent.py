@@ -77,20 +77,58 @@ class InformationRetrievalAgent(BaseAgent):
             def call_llm(prompt: str) -> str:
                 """Call Claude Haiku with the given prompt."""
                 try:
-                    resp = client.messages.create(
-                        model=model,
-                        max_tokens=4000,
-                        temperature=0.2,
-                        messages=[{"role": "user", "content": prompt}],
-                    )
+                    # Use threading with timeout for more robust timeout handling
+                    import threading
+                    import queue
                     
-                    content = resp.content[0].text if getattr(resp, "content", None) else ""
+                    result_queue = queue.Queue()
+                    exception_queue = queue.Queue()
                     
-                    if not content:
-                        raise ValueError("Empty response from Claude Haiku")
+                    def api_call():
+                        try:
+                            resp = client.messages.create(
+                                model=model,
+                                max_tokens=4000,
+                                temperature=0.2,
+                                messages=[{"role": "user", "content": prompt}],
+                            )
+                            
+                            content = resp.content[0].text if getattr(resp, "content", None) else ""
+                            
+                            if not content:
+                                raise ValueError("Empty response from Claude Haiku")
+                            
+                            result_queue.put(content.strip())
+                            
+                        except Exception as e:
+                            exception_queue.put(e)
                     
-                    return content.strip()
+                    # Start the API call in a separate thread
+                    thread = threading.Thread(target=api_call)
+                    thread.daemon = True
+                    thread.start()
                     
+                    # Wait for result with timeout
+                    thread.join(timeout=25.0)  # 25 second timeout
+                    
+                    if thread.is_alive():
+                        # Thread is still running, timeout occurred
+                        logging.error("Claude Haiku API call timed out after 25 seconds")
+                        raise TimeoutError("Anthropic API call timed out after 25 seconds")
+                    
+                    # Check for exceptions
+                    if not exception_queue.empty():
+                        raise exception_queue.get()
+                    
+                    # Get the result
+                    if not result_queue.empty():
+                        return result_queue.get()
+                    else:
+                        raise ValueError("No result received from API call")
+                    
+                except TimeoutError:
+                    logging.error("Claude Haiku API call timed out after 25 seconds")
+                    raise
                 except Exception as e:
                     logging.error(f"Claude Haiku API call failed: {e}")
                     raise
@@ -520,6 +558,9 @@ Generate a detailed response that would be most helpful to the user.
             
         except asyncio.TimeoutError:
             self.logger.error("LLM call timed out after 30 seconds")
+            return "expert insurance terminology query reframe"
+        except TimeoutError as e:
+            self.logger.error(f"LLM call timed out: {e}")
             return "expert insurance terminology query reframe"
         except Exception as e:
             self.logger.error(f"Error calling LLM: {e}")
