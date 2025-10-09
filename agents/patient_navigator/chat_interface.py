@@ -162,23 +162,23 @@ class PatientNavigatorChatInterface:
         # Use supervisor workflow to determine workflow
         try:
             # Try to use the real supervisor workflow
-            logger.info("Attempting to use supervisor workflow for routing")
+            logger.info("=== ATTEMPTING TO USE SUPERVISOR WORKFLOW ===")
             workflow_prescription = await self._use_supervisor_workflow(
                 agent_prompt.prompt_text,
                 agent_prompt.context,
                 message.user_id
             )
-            logger.info(f"Supervisor workflow succeeded: {workflow_prescription}")
+            logger.info(f"=== SUPERVISOR WORKFLOW SUCCEEDED: {workflow_prescription} ===")
         except Exception as e:
-            logger.error(f"Supervisor workflow failed, falling back to simple routing: {e}")
-            logger.error(f"Supervisor workflow error type: {type(e).__name__}")
-            logger.error(f"Supervisor workflow error details: {str(e)}")
+            logger.error(f"=== SUPERVISOR WORKFLOW FAILED, FALLING BACK TO SIMPLE ROUTING: {e} ===")
+            logger.error(f"=== SUPERVISOR WORKFLOW ERROR TYPE: {type(e).__name__} ===")
+            logger.error(f"=== SUPERVISOR WORKFLOW ERROR DETAILS: {str(e)} ===")
             # Fallback to simple routing if supervisor workflow fails
             workflow_prescription = await self._simple_workflow_routing(
                 agent_prompt.prompt_text,
                 agent_prompt.context
             )
-            logger.info(f"Using simple routing fallback: {workflow_prescription}")
+            logger.info(f"=== USING SIMPLE ROUTING FALLBACK: {workflow_prescription} ===")
         
         workflow_outputs = []
         
