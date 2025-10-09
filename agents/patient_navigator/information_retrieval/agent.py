@@ -75,63 +75,91 @@ class InformationRetrievalAgent(BaseAgent):
             model = os.getenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307")
             
             def call_llm(prompt: str) -> str:
-                """Call Claude Haiku with the given prompt."""
-                try:
-                    # Use threading with timeout for more robust timeout handling
-                    import threading
-                    import queue
+                """Call Claude Haiku with exponential backoff retry logic."""
+                import threading
+                import queue
+                import time
+                
+                # Retry configuration
+                max_retries = 3
+                base_delay = 1.0
+                max_delay = 30.0
+                exponential_base = 2.0
+                
+                last_exception = None
+                
+                for attempt in range(max_retries + 1):
+                    try:
+                        result_queue = queue.Queue()
+                        exception_queue = queue.Queue()
+                        
+                        def api_call():
+                            try:
+                                resp = client.messages.create(
+                                    model=model,
+                                    max_tokens=4000,
+                                    temperature=0.2,
+                                    messages=[{"role": "user", "content": prompt}],
+                                )
+                                
+                                content = resp.content[0].text if getattr(resp, "content", None) else ""
+                                
+                                if not content:
+                                    raise ValueError("Empty response from Claude Haiku")
+                                
+                                result_queue.put(content.strip())
+                                
+                            except Exception as e:
+                                exception_queue.put(e)
+                        
+                        # Start the API call in a separate thread
+                        thread = threading.Thread(target=api_call)
+                        thread.daemon = True
+                        thread.start()
+                        
+                        # Wait for result with timeout
+                        thread.join(timeout=25.0)  # 25 second timeout
+                        
+                        if thread.is_alive():
+                            # Thread is still running, timeout occurred
+                            raise TimeoutError("Anthropic API call timed out after 25 seconds")
+                        
+                        # Check for exceptions
+                        if not exception_queue.empty():
+                            raise exception_queue.get()
+                        
+                        # Get the result
+                        if not result_queue.empty():
+                            if attempt > 0:
+                                logging.info(f"Claude Haiku API call succeeded on attempt {attempt + 1}")
+                            return result_queue.get()
+                        else:
+                            raise ValueError("No result received from API call")
                     
-                    result_queue = queue.Queue()
-                    exception_queue = queue.Queue()
-                    
-                    def api_call():
-                        try:
-                            resp = client.messages.create(
-                                model=model,
-                                max_tokens=4000,
-                                temperature=0.2,
-                                messages=[{"role": "user", "content": prompt}],
+                    except Exception as e:
+                        last_exception = e
+                        
+                        # Log the attempt
+                        if attempt < max_retries:
+                            logging.warning(f"Claude Haiku API call failed on attempt {attempt + 1}: {e}")
+                            
+                            # Calculate exponential backoff delay
+                            delay = min(
+                                base_delay * (exponential_base ** attempt),
+                                max_delay
                             )
                             
-                            content = resp.content[0].text if getattr(resp, "content", None) else ""
-                            
-                            if not content:
-                                raise ValueError("Empty response from Claude Haiku")
-                            
-                            result_queue.put(content.strip())
-                            
-                        except Exception as e:
-                            exception_queue.put(e)
-                    
-                    # Start the API call in a separate thread
-                    thread = threading.Thread(target=api_call)
-                    thread.daemon = True
-                    thread.start()
-                    
-                    # Wait for result with timeout
-                    thread.join(timeout=25.0)  # 25 second timeout
-                    
-                    if thread.is_alive():
-                        # Thread is still running, timeout occurred
-                        logging.error("Claude Haiku API call timed out after 25 seconds")
-                        raise TimeoutError("Anthropic API call timed out after 25 seconds")
-                    
-                    # Check for exceptions
-                    if not exception_queue.empty():
-                        raise exception_queue.get()
-                    
-                    # Get the result
-                    if not result_queue.empty():
-                        return result_queue.get()
-                    else:
-                        raise ValueError("No result received from API call")
-                    
-                except TimeoutError:
-                    logging.error("Claude Haiku API call timed out after 25 seconds")
-                    raise
-                except Exception as e:
-                    logging.error(f"Claude Haiku API call failed: {e}")
-                    raise
+                            logging.info(f"Retrying Claude Haiku API call in {delay} seconds")
+                            time.sleep(delay)
+                        else:
+                            logging.error(f"Claude Haiku API call failed after {max_retries + 1} attempts: {e}")
+                            raise
+                
+                # Should never reach here, but just in case
+                if last_exception:
+                    raise last_exception
+                else:
+                    raise RuntimeError("Unexpected error in LLM call retry logic")
             
             return call_llm
             

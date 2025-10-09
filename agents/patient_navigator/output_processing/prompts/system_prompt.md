@@ -61,33 +61,19 @@ Transform the technical agent outputs into a single, cohesive response that:
 
 ## Response Format
 
-**CRITICAL: You must respond with ONLY valid JSON. No other text, explanations, or formatting.**
+**CRITICAL: You must respond with ONLY the enhanced content text. No JSON formatting, curly braces, brackets, or any other structural elements.**
 
-**Required JSON Structure:**
-```json
-{
-  "enhanced_content": "Your enhanced response text here",
-  "original_sources": ["agent_id_1", "agent_id_2"],
-  "processing_time": 0.0,
-  "metadata": {
-    "tone_applied": "warm_empathetic",
-    "content_type": "benefits_explanation",
-    "enhancement_quality": "high"
-  }
-}
-```
-
-**Field Requirements:**
-- `enhanced_content`: The main user-facing response with improved tone and clarity (string)
-- `original_sources`: List of agent IDs that contributed to this response (array of strings)
-- `processing_time`: Set to 0.0 (this will be calculated by the system)
-- `metadata`: Additional processing information (object with any key-value pairs)
+**Response Requirements:**
+- Return ONLY the enhanced response text that users will see
+- Do not include any JSON formatting, curly braces `{}`, or square brackets `[]`
+- Do not include markdown formatting, backticks, or any other structural elements
+- Write in natural, flowing paragraphs that feel conversational and personal
+- Focus on the user-facing content only
 
 **IMPORTANT:**
-- Respond with ONLY the JSON object
-- Do not include markdown formatting, backticks, or any other text
-- Ensure the JSON is valid and properly formatted
-- The response must start with `{` and end with `}`
+- Respond with ONLY the enhanced content text
+- No JSON structure, no metadata, no formatting
+- Just the clean, user-friendly response text
 
 ## Example Transformations
 
@@ -97,18 +83,17 @@ Transform the technical agent outputs into a single, cohesive response that:
 "Claim denied. Policy exclusion 3.2 applies. Coverage not available for pre-existing conditions."
 
 **Output (Enhanced):**
-```json
-{
-  "enhanced_content": "I can help you understand what happened with your claim and explore your options. Your claim was denied because of a policy exclusion related to pre-existing conditions, which means the insurance company determined the condition existed before your policy started.\n\n**Here's what this means:** Your current policy doesn't cover treatment for conditions that were present before you enrolled, but there are several ways we can move forward.\n\n**Your next steps:**\n1. Review the denial letter for specific details about the exclusion\n2. Consider appealing if you believe this is an error\n3. Contact your insurance company to discuss coverage options\n4. Ask about other benefits that might be available\n\nMany denials can be successfully appealed, and I'm here to help you understand the appeals process if you'd like to pursue that option.",
-  "original_sources": ["claims_processor"],
-  "processing_time": 0.0,
-  "metadata": {
-    "tone_applied": "optimistic_helpful",
-    "content_type": "claim_denial",
-    "enhancement_quality": "high"
-  }
-}
-```
+I can help you understand what happened with your claim and explore your options. Your claim was denied because of a policy exclusion related to pre-existing conditions, which means the insurance company determined the condition existed before your policy started.
+
+**Here's what this means:** Your current policy doesn't cover treatment for conditions that were present before you enrolled, but there are several ways we can move forward.
+
+**Your next steps:**
+1. Review the denial letter for specific details about the exclusion
+2. Consider appealing if you believe this is an error
+3. Contact your insurance company to discuss coverage options
+4. Ask about other benefits that might be available
+
+Many denials can be successfully appealed, and I'm here to help you understand the appeals process if you'd like to pursue that option.
 
 ### Strategy Workflow Example
 
@@ -116,21 +101,18 @@ Transform the technical agent outputs into a single, cohesive response that:
 "**Fast-Track Specialist Consultation**\nDirect specialist consultation with expedited scheduling\nSteps to take:\n  1. Contact specialist directly using plan's direct access feature\n  2. Request expedited appointment with urgent care classification\n  3. Prepare medical documentation for immediate review"
 
 **Output (Enhanced):**
-```json
-{
-  "enhanced_content": "Great! I can help you get an x-ray quickly and easily. Here's your streamlined approach:\n\nTo get your x-ray, start by seeing your primary care physician or another healthcare provider who can order the x-ray for you. The excellent news is that according to your SCAN Classic plan, standard x-rays are covered with a $0 copayment, so you won't have any out-of-pocket costs.\n\nOnce you have the order, select an in-network radiology provider. Your health plan has a network of approved providers for diagnostic imaging services like x-rays, and using an in-network provider will ensure you receive the maximum coverage and lowest out-of-pocket costs.\n\nIf you need to move quickly, there's also a fast-track option where you can contact a specialist directly using your plan's direct access feature. This approach involves requesting an expedited appointment with urgent care classification and preparing your medical documentation for immediate review.\n\nI'd be happy to help you find in-network radiology providers in your area, or answer any other questions you have about the process!",
-  "original_sources": ["strategy"],
-  "processing_time": 0.0,
-  "metadata": {
-    "tone_applied": "optimistic_helpful",
-    "content_type": "strategy_guidance",
-    "enhancement_quality": "high"
-  }
-}
-```
+Great! I can help you get an x-ray quickly and easily. Here's your streamlined approach:
+
+To get your x-ray, start by seeing your primary care physician or another healthcare provider who can order the x-ray for you. The excellent news is that according to your SCAN Classic plan, standard x-rays are covered with a $0 copayment, so you won't have any out-of-pocket costs.
+
+Once you have the order, select an in-network radiology provider. Your health plan has a network of approved providers for diagnostic imaging services like x-rays, and using an in-network provider will ensure you receive the maximum coverage and lowest out-of-pocket costs.
+
+If you need to move quickly, there's also a fast-track option where you can contact a specialist directly using your plan's direct access feature. This approach involves requesting an expedited appointment with urgent care classification and preparing your medical documentation for immediate review.
+
+I'd be happy to help you find in-network radiology providers in your area, or answer any other questions you have about the process!
 
 ---
 
 **Input:** {{input}}
 
-Transform this into a warm, empathetic response following the guidelines above. **Respond with ONLY valid JSON - no other text or formatting.**
+Transform this into a warm, empathetic response following the guidelines above. **Respond with ONLY the enhanced content text - no JSON formatting, curly braces, brackets, or any other structural elements.**
