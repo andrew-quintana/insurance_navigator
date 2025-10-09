@@ -26,8 +26,8 @@ class RAGOperationMetrics:
     user_id: str
     query_text: Optional[str] = None
     query_embedding_dim: Optional[int] = None
-    similarity_threshold: float = 0.3
-    max_chunks: int = 10
+    similarity_threshold: float = 0.5
+    max_chunks: int = 5
     token_budget: int = 4000
     
     # Performance metrics
@@ -227,7 +227,7 @@ class RAGPerformanceMonitor:
         self.operation_metrics: Dict[str, RAGOperationMetrics] = {}
     
     def start_operation(self, user_id: str, query_text: Optional[str] = None, 
-                       similarity_threshold: float = 0.3, max_chunks: int = 10, 
+                       similarity_threshold: float = 0.5, max_chunks: int = 5, 
                        token_budget: int = 4000) -> RAGOperationMetrics:
         """Start monitoring a RAG operation."""
         operation_uuid = self.logger.generate_operation_uuid()
@@ -321,7 +321,7 @@ class RAGPerformanceMonitor:
 class ConfigurableThresholdManager:
     """Manages configurable similarity thresholds per user/context."""
     
-    def __init__(self, default_threshold: float = 0.3):
+    def __init__(self, default_threshold: float = 0.5):
         self.default_threshold = default_threshold
         self.user_thresholds: Dict[str, float] = {}
         self.context_thresholds: Dict[str, float] = {}
@@ -385,4 +385,4 @@ class ConfigurableThresholdManager:
 # Global instances for easy access
 rag_observability_logger = RAGObservabilityLogger()
 rag_performance_monitor = RAGPerformanceMonitor(rag_observability_logger)
-threshold_manager = ConfigurableThresholdManager(default_threshold=0.3)
+threshold_manager = ConfigurableThresholdManager(default_threshold=0.5)

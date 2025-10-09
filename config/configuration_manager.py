@@ -43,8 +43,8 @@ class DatabaseConfig:
 @dataclass
 class RAGConfig:
     """RAG system configuration settings."""
-    similarity_threshold: float = 0.3
-    max_chunks: int = 10
+    similarity_threshold: float = 0.5
+    max_chunks: int = 5
     token_budget: int = 4000
     embedding_model: str = "text-embedding-3-small"
     vector_dimension: int = 1536
