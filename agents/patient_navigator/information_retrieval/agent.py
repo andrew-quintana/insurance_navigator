@@ -195,6 +195,25 @@ class InformationRetrievalAgent(BaseAgent):
             self.logger.info(f"Retrieved {len(chunks)} chunks")
             self.logger.info("=== RAG OPERATIONS COMPLETED ===")
             
+            # Handle case where no chunks are retrieved
+            if not chunks:
+                self.logger.warning("No chunks retrieved from RAG system - user may not have documents uploaded")
+                # Create a fallback response indicating no documents available
+                fallback_response = f"I don't have access to your specific insurance documents to answer your question about {user_query.lower()}. To get personalized information about your coverage, please upload your insurance documents (policy documents, benefit summaries, etc.) so I can provide you with accurate, plan-specific information."
+                
+                return InformationRetrievalOutput(
+                    response=fallback_response,
+                    key_points=["No documents available for personalized response"],
+                    source_chunks=[],
+                    confidence_score=0.1,  # Low confidence since no documents
+                    processing_time=0.0,
+                    metadata={
+                        "no_documents_available": True,
+                        "fallback_response": True,
+                        "user_guidance": "Please upload insurance documents for personalized assistance"
+                    }
+                )
+            
             # Step 4-N: Self-Consistency Loop (3-5 iterations)
             self.logger.info("=== STARTING SELF-CONSISTENCY LOOP ===")
             response_variants = await self._generate_response_variants(chunks, user_query, expert_query)
