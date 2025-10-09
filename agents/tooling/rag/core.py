@@ -279,15 +279,27 @@ class RAGTool:
             self.logger.error("Empty text provided for embedding generation")
             raise ValueError("Empty text cannot be embedded")
         
+        # DIAGNOSTIC: Log detailed information about the request
+        self.logger.info(f"=== EMBEDDING GENERATION DIAGNOSTICS ===")
+        self.logger.info(f"Text length: {len(text)} characters")
+        self.logger.info(f"Text preview: {text[:200]}...")
+        self.logger.info(f"Text contains special chars: {any(ord(c) > 127 for c in text)}")
+        self.logger.info(f"Text encoding: {text.encode('utf-8', errors='replace')[:100]}")
+        
         try:
             from openai import AsyncOpenAI
             import os
+            import time
             
             # Get OpenAI API key
             api_key = os.getenv('OPENAI_API_KEY')
             if not api_key:
                 self.logger.error("OPENAI_API_KEY not found - RAG will not work properly")
                 raise ValueError("OPENAI_API_KEY is required for RAG functionality")
+            
+            # DIAGNOSTIC: Log API key status
+            self.logger.info(f"OpenAI API key available: {bool(api_key)}")
+            self.logger.info(f"API key length: {len(api_key) if api_key else 0}")
             
             # Initialize OpenAI client with Pydantic v2 compatibility
             client = AsyncOpenAI(
@@ -296,16 +308,44 @@ class RAGTool:
                 timeout=60.0
             )
             
+            # DIAGNOSTIC: Log client configuration
+            self.logger.info(f"OpenAI client initialized with timeout: 60.0s, max_retries: 5")
+            
             # Generate real OpenAI embedding with Pydantic error handling
             self.logger.info(f"Generating embedding for text: {text[:100]}...")
             
+            # DIAGNOSTIC: Record start time for timeout analysis
+            start_time = time.time()
+            
             try:
-                response = await client.embeddings.create(
-                    model="text-embedding-3-small",
-                    input=text,
-                    encoding_format="float"
+                # DIAGNOSTIC: Wrap API call with timeout to prevent indefinite hangs
+                response = await asyncio.wait_for(
+                    client.embeddings.create(
+                        model="text-embedding-3-small",
+                        input=text,
+                        encoding_format="float"
+                    ),
+                    timeout=30.0  # 30 second timeout to prevent indefinite hangs
                 )
+                
+                # DIAGNOSTIC: Log successful response
+                end_time = time.time()
+                self.logger.info(f"OpenAI API call completed in {end_time - start_time:.2f}s")
+                
+            except asyncio.TimeoutError:
+                # DIAGNOSTIC: Log timeout information
+                end_time = time.time()
+                self.logger.error(f"OpenAI API call timed out after {end_time - start_time:.2f}s")
+                self.logger.error("This suggests either rate limiting or network issues")
+                raise RuntimeError("OpenAI embedding API call timed out after 30 seconds")
+                
             except Exception as pydantic_error:
+                # DIAGNOSTIC: Log detailed error information
+                end_time = time.time()
+                self.logger.error(f"OpenAI API call failed after {end_time - start_time:.2f}s: {pydantic_error}")
+                self.logger.error(f"Error type: {type(pydantic_error).__name__}")
+                self.logger.error(f"Error details: {str(pydantic_error)}")
+                
                 # Handle specific Pydantic v2 error pattern
                 if "Fields must not use names with leading underscores" in str(pydantic_error):
                     self.logger.warning(f"Pydantic v2 compatibility issue detected: {pydantic_error}")
@@ -317,6 +357,10 @@ class RAGTool:
                         model="text-embedding-3-small",
                         input=text
                     )
+                    
+                    # DIAGNOSTIC: Log workaround success
+                    end_time = time.time()
+                    self.logger.info(f"Workaround successful, completed in {end_time - start_time:.2f}s")
                 else:
                     raise pydantic_error
             
@@ -330,7 +374,13 @@ class RAGTool:
             return embedding
             
         except Exception as e:
-            self.logger.error(f"OpenAI embedding generation failed: {e}")
+            # DIAGNOSTIC: Log comprehensive error information
+            self.logger.error(f"=== EMBEDDING GENERATION FAILED ===")
+            self.logger.error(f"Error type: {type(e).__name__}")
+            self.logger.error(f"Error message: {str(e)}")
+            self.logger.error(f"Text that failed: {text[:200]}...")
+            self.logger.error(f"Text length: {len(text)}")
+            
             # Don't fall back to mock - fail explicitly
             raise RuntimeError(f"Failed to generate query embedding: {e}")
     
