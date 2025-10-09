@@ -223,11 +223,16 @@ class RAGTool:
         Returns:
             List of ChunkWithContext objects
         """
+        self.logger.info("CHECKPOINT A: retrieve_chunks_from_text() method ENTRY")
+        
         if not query_text or not query_text.strip():
             self.logger.error("Empty query text provided to RAG")
             return []
         
+        self.logger.info("CHECKPOINT B: Query text validation passed")
+        
         # Start performance monitoring with query text
+        self.logger.info("CHECKPOINT C: About to call performance_monitor.start_operation()")
         operation_metrics = self.performance_monitor.start_operation(
             user_id=self.user_id,
             query_text=query_text,
@@ -235,12 +240,17 @@ class RAGTool:
             max_chunks=self.config.max_chunks,
             token_budget=self.config.token_budget
         )
+        self.logger.info("CHECKPOINT D: performance_monitor.start_operation() returned successfully")
         
+        self.logger.info("CHECKPOINT E: About to enter try block")
         try:
+            self.logger.info("CHECKPOINT F: Inside try block, before embedding generation")
             # Step 1: Generate embedding for the query text (MUST happen first)
             self.logger.info(f"PRE-EMBEDDING: About to call _generate_embedding for query: {query_text[:100]}...")
             self.logger.info("PRE-EMBEDDING: Checkpoint - calling await self._generate_embedding()")
+            self.logger.info("CHECKPOINT G: About to await self._generate_embedding()")
             query_embedding = await self._generate_embedding(query_text)
+            self.logger.info("CHECKPOINT H: await self._generate_embedding() returned!")
             self.logger.info("POST-EMBEDDING: _generate_embedding() returned successfully")
             
             # Validate embedding
