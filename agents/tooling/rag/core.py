@@ -310,53 +310,82 @@ class RAGTool:
             try:
                 # CRITICAL FIX: Use synchronous OpenAI client to avoid async client lifecycle conflicts
                 # This eliminates the HTTP client cleanup errors and event loop conflicts
+                
+                # HEARTBEAT 1: Pre-import logging
+                self.logger.info("HEARTBEAT 1: About to import threading modules")
                 import threading
                 import queue
                 from openai import OpenAI  # Synchronous client
+                self.logger.info("HEARTBEAT 2: Threading modules imported successfully")
                 
+                # HEARTBEAT 3: Queue creation
+                self.logger.info("HEARTBEAT 3: Creating result and exception queues")
                 result_queue = queue.Queue()
                 exception_queue = queue.Queue()
+                self.logger.info("HEARTBEAT 4: Queues created successfully")
                 
                 def api_call():
                     try:
+                        self.logger.info("HEARTBEAT 5: Thread execution started - api_call() entered")
                         self.logger.info("Thread started for OpenAI API call")
-                        # Use synchronous OpenAI client - no event loops needed
+                        
+                        # HEARTBEAT 6: Client creation
+                        self.logger.info("HEARTBEAT 6: Creating synchronous OpenAI client")
                         sync_client = OpenAI(
                             api_key=api_key,
                             max_retries=3,
                             timeout=30.0
                         )
+                        self.logger.info("HEARTBEAT 7: OpenAI client created successfully")
                         
+                        # HEARTBEAT 8: API call
+                        self.logger.info("HEARTBEAT 8: Calling OpenAI embeddings.create API")
                         response = sync_client.embeddings.create(
                             model="text-embedding-3-small",
                             input=text,
                             encoding_format="float"
                         )
+                        self.logger.info("HEARTBEAT 9: OpenAI API call returned successfully")
+                        
+                        # HEARTBEAT 10: Queue result
+                        self.logger.info("HEARTBEAT 10: Putting result in queue")
                         result_queue.put(response)
+                        self.logger.info("HEARTBEAT 11: Result queued successfully")
                         self.logger.info("Thread completed OpenAI API call successfully")
                     except Exception as e:
+                        self.logger.error(f"HEARTBEAT ERROR: Thread exception at some point: {e}")
                         self.logger.error(f"Thread failed with exception: {e}")
                         exception_queue.put(e)
                     finally:
+                        self.logger.info("HEARTBEAT 12: Thread exiting (finally block)")
                         self.logger.info("Thread exiting")
                 
-                # Start API call in separate thread
+                # HEARTBEAT 13: Thread creation
+                self.logger.info("HEARTBEAT 13: Creating thread object")
                 thread = threading.Thread(target=api_call)
+                self.logger.info("HEARTBEAT 14: Thread object created, setting daemon=True")
                 thread.daemon = True
+                self.logger.info("HEARTBEAT 15: Starting thread")
                 thread.start()
+                self.logger.info("HEARTBEAT 16: Thread started successfully")
                 
-                # Wait for result with 25-second timeout
+                # HEARTBEAT 17: Wait for thread
+                self.logger.info("HEARTBEAT 17: Waiting for thread to complete (25s timeout)")
                 thread.join(timeout=25.0)
+                self.logger.info("HEARTBEAT 18: Thread join returned, checking if thread is alive")
                 
                 if thread.is_alive():
                     # Thread is still running, timeout occurred
                     end_time = time.time()
+                    self.logger.error(f"HEARTBEAT 19: TIMEOUT - Thread is still alive after {end_time - start_time:.2f}s")
                     self.logger.error(f"OpenAI embedding API call timed out after {end_time - start_time:.2f}s")
                     self.logger.error("Thread is still alive after timeout - investigating...")
                     self.logger.error(f"Thread name: {thread.name}")
                     self.logger.error(f"Thread daemon: {thread.daemon}")
                     self.logger.error(f"Thread ident: {thread.ident}")
                     raise RuntimeError("OpenAI embedding API call timed out after 25 seconds")
+                
+                self.logger.info("HEARTBEAT 20: Thread is not alive, checking queues")
                 
                 # Check for exceptions
                 if not exception_queue.empty():
