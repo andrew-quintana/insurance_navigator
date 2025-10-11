@@ -1,66 +1,77 @@
-# Threading Update Initiative
+# Threading Update Initiative - MVP
 
 ## Overview
 
-This initiative addresses critical threading issues in the RAG system that cause hanging failures under concurrent load. The current implementation uses complex manual thread management with queues and timeouts, leading to resource contention and deadlocks when multiple requests are processed simultaneously.
+This MVP initiative addresses the critical hanging issue in the RAG system with a minimal, focused approach. The goal is to get the system working reliably under concurrent load without over-engineering the solution.
 
 ## Problem Statement
 
-### Current Issue
-- **Hanging Failure**: System hangs completely with 5+ concurrent requests
-- **Resource Contention**: Multiple threads competing for HTTP connections and resources
-- **Thread Pool Exhaustion**: No limits on concurrent threads or connection pooling
-- **Complex Threading Logic**: Manual thread management with queue-based communication
+The RAG system's `_generate_embedding()` method in `agents/tooling/rag/core.py` causes:
+- **Hanging failures** with 5+ concurrent requests
+- **60+ second timeouts** 
+- **Resource contention** and deadlocks
+- **Poor user experience** under load
 
-### Impact
-- **Production Failure**: Complete system failure under concurrent load
-- **User Experience**: Requests timeout after 60 seconds
-- **Scalability**: System cannot handle multiple users simultaneously
-- **Reliability**: Unpredictable behavior under load
+## MVP Solution
 
-## Initiative Phases
+**Simple async/await conversion** - Replace the complex threading logic with basic async patterns:
+- Convert `_generate_embedding()` to async method
+- Use `httpx.AsyncClient` for HTTP requests  
+- Remove threading and queue management
+- Keep existing interfaces unchanged
 
-### Phase 1: Scope Update & Research (Current)
-- [ ] Research async/await best practices
-- [ ] Analyze current threading implementation
-- [ ] Document findings in RFC
-- [ ] Define implementation approach
+## MVP Scope
 
-### Phase 2: Implementation
-- [ ] Replace threading logic with async/await
-- [ ] Add connection pooling
-- [ ] Implement concurrency limits
-- [ ] Update RAG system architecture
+**What we're doing:**
+- ✅ Fix the hanging issue with minimal changes
+- ✅ Convert threading to async/await
+- ✅ Test with concurrent requests
+- ✅ Deploy to production
 
-### Phase 3: Local Validation
-- [ ] Test in development environment
-- [ ] Validate concurrent request handling
-- [ ] Performance testing
-- [ ] Load testing
+**What we're NOT doing:**
+- ❌ Complex architecture redesign
+- ❌ Extensive connection pooling optimization
+- ❌ Advanced circuit breaker patterns
+- ❌ Comprehensive monitoring overhaul
+- ❌ Performance optimization beyond fixing hangs
 
-### Phase 4: Production Deployment
-- [ ] Commit and push changes
-- [ ] Deploy to production
-- [ ] Monitor performance
-- [ ] Validate fix effectiveness
+## Implementation Plan
+
+### Step 1: Minimal Async Conversion
+- Convert `_generate_embedding()` to async
+- Replace threading with `httpx.AsyncClient`
+- Remove queue and thread management code
+- Test basic functionality
+
+### Step 2: Concurrent Testing
+- Test with 2-3 concurrent requests
+- Test with 5+ concurrent requests (hanging scenario)
+- Verify no timeouts or hangs
+- Measure response times
+
+### Step 3: Production Deployment
+- Deploy MVP fix to production
+- Monitor for hanging issues
+- Validate concurrent request handling
+- Confirm fix effectiveness
 
 ## Success Criteria
 
-- ✅ System handles 10+ concurrent requests without hanging
-- ✅ Response times remain under 30 seconds under load
-- ✅ No resource exhaustion or deadlocks
-- ✅ Improved scalability and reliability
+- ✅ No hanging with 5+ concurrent requests
+- ✅ Response times under 10 seconds
+- ✅ System remains stable under load
+- ✅ Existing functionality preserved
 
-## Files Structure
+## Files to Modify
 
-```
-docs/initiatives/agents/threading_update/
-├── README.md                 # This overview
-├── rfc.md                    # RFC document (Phase 1)
-├── implementation-plan.md    # Implementation details (Phase 2)
-├── testing-plan.md          # Testing strategy (Phase 3)
-└── deployment-plan.md        # Deployment strategy (Phase 4)
-```
+- `agents/tooling/rag/core.py` - Main RAG implementation
+- Test scripts for concurrent request validation
+
+## Documentation
+
+- [`prd.md`](./prd.md) - MVP requirements
+- [`phased-todo.md`](./phased-todo.md) - MVP task tracking
+- [`prompts.md`](./prompts.md) - Implementation prompts
 
 ## Related Issues
 

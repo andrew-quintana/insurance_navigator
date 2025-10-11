@@ -1,8 +1,8 @@
-# Product Requirements Document: Threading Update Initiative
+# Threading Update Initiative - MVP Product Requirements Document
 
 ## Document Information
 
-- **Title**: Threading Update Initiative
+- **Title**: Threading Update Initiative - MVP
 - **Version**: 1.0
 - **Date**: 2025-10-10
 - **Status**: Draft
@@ -11,16 +11,16 @@
 
 ## Executive Summary
 
-The Threading Update Initiative addresses critical system reliability issues caused by complex threading logic in the RAG system. The current implementation causes complete system hangs under concurrent load, preventing the system from serving multiple users simultaneously.
+This MVP initiative addresses the critical hanging issue in the RAG system with a minimal, focused approach. The goal is to get the system working reliably under concurrent load without over-engineering the solution.
 
 ## Problem Statement
 
-### Current State
-The RAG system uses complex manual threading with queues and timeouts, leading to:
-- **System Hangs**: Complete failure with 5+ concurrent requests
-- **Resource Contention**: Multiple threads competing for HTTP connections
-- **Poor Scalability**: Cannot handle multiple users simultaneously
-- **Unreliable Performance**: Unpredictable behavior under load
+### Current Issue
+The RAG system's `_generate_embedding()` method in `agents/tooling/rag/core.py` causes:
+- **Hanging failures** with 5+ concurrent requests
+- **60+ second timeouts** 
+- **Resource contention** and deadlocks
+- **Poor user experience** under load
 
 ### Business Impact
 - **User Experience**: Requests timeout after 60 seconds
@@ -28,126 +28,117 @@ The RAG system uses complex manual threading with queues and timeouts, leading t
 - **Scalability**: Cannot support multiple concurrent users
 - **Operational Overhead**: Manual intervention required for failures
 
-## Product Requirements
+## MVP Solution
+
+**Simple async/await conversion** - Replace the complex threading logic with basic async patterns:
+- Convert `_generate_embedding()` to async method
+- Use `httpx.AsyncClient` for HTTP requests  
+- Remove threading and queue management
+- Keep existing interfaces unchanged
+
+## MVP Requirements
 
 ### Functional Requirements
 
-#### FR1: Async Implementation
-- **Requirement**: Replace threading with async/await pattern
+#### FR1: Minimal Async Conversion
+- **Requirement**: Convert threading to async/await
 - **Acceptance Criteria**: 
+  - `_generate_embedding()` method is async
   - No manual thread management
-  - Async/await used throughout
-  - Proper async error handling
+  - Uses `httpx.AsyncClient`
+  - Existing interfaces preserved
 
-#### FR2: Connection Pooling
-- **Requirement**: Implement HTTP connection pooling
+#### FR2: Concurrent Request Handling
+- **Requirement**: Handle concurrent requests without hanging
 - **Acceptance Criteria**:
-  - Reuse HTTP connections
-  - Configurable pool size
-  - Connection timeout handling
-
-#### FR3: Concurrency Control
-- **Requirement**: Implement concurrency limits
-- **Acceptance Criteria**:
-  - Semaphore-based limiting
-  - Configurable concurrency limits
-  - Graceful degradation under load
-
-#### FR4: Performance Monitoring
-- **Requirement**: Add performance monitoring
-- **Acceptance Criteria**:
-  - Response time metrics
-  - Concurrency metrics
-  - Error rate monitoring
+  - No hanging with 5+ concurrent requests
+  - Response times under 10 seconds
+  - System remains stable under load
 
 ### Non-Functional Requirements
 
 #### NFR1: Performance
-- **Requirement**: Maintain or improve response times
+- **Requirement**: Fix hanging issue with minimal performance impact
 - **Acceptance Criteria**:
-  - Single request: <30 seconds
-  - Concurrent requests: <30 seconds each
-  - No performance degradation
+  - No hanging with 5+ concurrent requests
+  - Response times under 10 seconds
+  - Existing functionality preserved
 
 #### NFR2: Reliability
 - **Requirement**: Eliminate hanging failures
 - **Acceptance Criteria**:
-  - Handle 10+ concurrent requests
+  - Handle 5+ concurrent requests
   - No system hangs
-  - Graceful error handling
+  - Proper error handling
 
-#### NFR3: Scalability
-- **Requirement**: Support multiple concurrent users
-- **Acceptance Criteria**:
-  - Handle 10+ concurrent requests
-  - Linear scalability
-  - Resource usage optimization
-
-#### NFR4: Maintainability
+#### NFR3: Maintainability
 - **Requirement**: Simplify codebase
 - **Acceptance Criteria**:
   - Reduced complexity
   - Better error handling
-  - Improved debugging
+  - Easier debugging
 
-## User Stories
+## MVP Scope
 
-### Story 1: Concurrent User Support
-**As a** user of the insurance navigator
-**I want** the system to handle multiple users simultaneously
-**So that** I don't experience timeouts or failures
+### What We're Doing (MVP)
+- ✅ Fix the hanging issue with minimal changes
+- ✅ Convert threading to async/await
+- ✅ Test with concurrent requests
+- ✅ Deploy to production
 
-### Story 2: Reliable Performance
-**As a** user of the insurance navigator
-**I want** consistent response times
-**So that** I can rely on the system for my insurance needs
-
-### Story 3: System Stability
-**As an** operations team member
-**I want** the system to be stable under load
-**So that** I don't need to manually intervene during failures
+### What We're NOT Doing (Out of Scope)
+- ❌ Complex architecture redesign
+- ❌ Extensive connection pooling optimization
+- ❌ Advanced circuit breaker patterns
+- ❌ Comprehensive monitoring overhaul
+- ❌ Performance optimization beyond fixing hangs
 
 ## Success Metrics
 
 ### Primary Metrics
-- **Concurrent Request Handling**: 10+ requests without hanging
-- **Response Time**: <30 seconds for all requests
+- **Concurrent Request Handling**: 5+ requests without hanging
+- **Response Time**: <10 seconds for all requests
 - **Success Rate**: >99% request success rate
 - **System Stability**: No hanging failures
 
 ### Secondary Metrics
 - **Memory Usage**: Stable memory consumption
 - **Error Rate**: <1% error rate
-- **Resource Utilization**: Efficient resource usage
 - **Code Complexity**: Reduced complexity metrics
 
-## Implementation Phases
+## Implementation Plan
 
-### Phase 1: Research & Analysis
-- **Duration**: 2 days
-- **Deliverables**: RFC document, research findings
-- **Success Criteria**: Complete analysis and recommendations
+### Step 1: Minimal Async Conversion
+- Convert `_generate_embedding()` to async
+- Replace threading with `httpx.AsyncClient`
+- Remove queue and thread management code
+- Test basic functionality
 
-### Phase 2: Implementation
-- **Duration**: 5 days
-- **Deliverables**: Async implementation, connection pooling
-- **Success Criteria**: Code changes implemented and tested
+### Step 2: Concurrent Testing
+- Test with 2-3 concurrent requests
+- Test with 5+ concurrent requests (hanging scenario)
+- Verify no timeouts or hangs
+- Measure response times
 
-### Phase 3: Testing & Validation
-- **Duration**: 2 days
-- **Deliverables**: Test results, performance validation
-- **Success Criteria**: All tests pass, performance validated
+### Step 3: Production Deployment
+- Deploy MVP fix to production
+- Monitor for hanging issues
+- Validate concurrent request handling
+- Confirm fix effectiveness
 
-### Phase 4: Deployment
-- **Duration**: 1 day
-- **Deliverables**: Production deployment, monitoring
-- **Success Criteria**: Successful deployment, monitoring active
+## Timeline
+
+- **Step 1**: 1-2 hours (Async conversion)
+- **Step 2**: 1 hour (Testing)
+- **Step 3**: 1 hour (Deployment)
+
+**Total Estimated Duration**: 3-4 hours
 
 ## Risks and Mitigation
 
 ### Risk 1: Performance Regression
 - **Risk**: New implementation may be slower
-- **Mitigation**: Comprehensive performance testing, rollback plan
+- **Mitigation**: Basic performance testing, rollback plan
 
 ### Risk 2: Compatibility Issues
 - **Risk**: Changes may break existing functionality
@@ -160,21 +151,13 @@ The RAG system uses complex manual threading with queues and timeouts, leading t
 ## Dependencies
 
 ### Technical Dependencies
-- **HTTP Client Library**: httpx or aiohttp
+- **HTTP Client Library**: httpx
 - **Async Framework**: Python asyncio
 - **Monitoring**: Existing observability system
 
 ### Team Dependencies
 - **Development Team**: Implementation
 - **Operations Team**: Deployment support
-- **Architecture Team**: Review and approval
-
-## Timeline
-
-- **Total Duration**: 10 days
-- **Start Date**: 2025-10-10
-- **Target Completion**: 2025-10-20
-- **Critical Path**: Research → Implementation → Testing → Deployment
 
 ## Approval
 
