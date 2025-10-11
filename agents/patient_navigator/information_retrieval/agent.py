@@ -118,11 +118,11 @@ class InformationRetrievalAgent(BaseAgent):
                         thread.start()
                         
                         # Wait for result with timeout
-                        thread.join(timeout=25.0)  # 25 second timeout
+                        thread.join(timeout=60.0)  # 60 second timeout to match RAG timeout
                         
                         if thread.is_alive():
                             # Thread is still running, timeout occurred
-                            raise TimeoutError("Anthropic API call timed out after 25 seconds")
+                            raise TimeoutError("Anthropic API call timed out after 60 seconds")
                         
                         # Check for exceptions
                         if not exception_queue.empty():
@@ -636,10 +636,10 @@ Generate a detailed response that would be most helpful to the user.
             thread.start()
             
             # Wait for result with 25-second timeout
-            thread.join(timeout=25.0)
+            thread.join(timeout=60.0)
             
             if thread.is_alive():
-                self.logger.error("LLM call timed out after 25 seconds")
+                self.logger.error("LLM call timed out after 60 seconds")
                 self.logger.error("Thread is still alive after timeout - investigating...")
                 self.logger.error(f"Thread name: {thread.name}")
                 self.logger.error(f"Thread daemon: {thread.daemon}")
