@@ -320,7 +320,8 @@ class RAGTool:
             }
             
             # Use httpx.AsyncClient for async HTTP requests
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            # Increased timeout to 60s to match chat processing timeout
+            async with httpx.AsyncClient(timeout=60.0) as client:
                 self.logger.info("Making OpenAI API request using httpx.AsyncClient")
                 
                 response = await client.post(
