@@ -286,66 +286,55 @@ class CommunicationAgent(BaseAgent):
             formatted_input = self._format_agent_outputs(request)
             self.logger.info(f"Formatted input length: {len(formatted_input)} characters")
             
-            # Call the agent (inherited from BaseAgent) with robust timeout handling
-            self.logger.info("Step 3: Calling LLM with robust timeout handling")
+            # Call the agent (inherited from BaseAgent) with async timeout handling
+            self.logger.info("Step 3: Calling LLM with async timeout handling")
             import asyncio
-            import threading
-            import queue
+            import concurrent.futures
             
-            # Use threading-based timeout for robust timeout handling
-            result_queue = queue.Queue()
-            exception_queue = queue.Queue()
+            # Use asyncio.run_in_executor for proper async handling
+            loop = asyncio.get_event_loop()
             
             def llm_call():
                 try:
-                    self.logger.info("Thread started for Communication Agent LLM call")
+                    self.logger.info("Executor started for Communication Agent LLM call")
                     # Make the actual LLM call
                     response = self(formatted_input, user_context=request.user_context)
-                    result_queue.put(response)
-                    self.logger.info("Thread completed Communication Agent LLM call successfully")
+                    self.logger.info("Executor completed Communication Agent LLM call successfully")
+                    return response
                 except Exception as e:
-                    self.logger.error(f"Thread failed with exception: {e}")
-                    exception_queue.put(e)
-                finally:
-                    self.logger.info("Thread exiting")
+                    self.logger.error(f"Executor failed with exception: {e}")
+                    raise
             
-            # Start LLM call in separate thread
-            thread = threading.Thread(target=llm_call)
-            thread.daemon = True
-            thread.start()
-            
-            # Wait for result with 60-second timeout
-            thread.join(timeout=60.0)
-            
-            if thread.is_alive():
+            # Run LLM call in thread pool with timeout
+            try:
+                self.logger.info("Starting LLM call with 60-second timeout")
+                response = await asyncio.wait_for(
+                    loop.run_in_executor(None, llm_call),
+                    timeout=60.0
+                )
+                self.logger.info("=== CLAUDE API RESPONSE RECEIVED ===")
+                self.logger.info(f"Response type: {type(response)}")
+                self.logger.info(f"Response length: {len(str(response))}")
+                self.logger.info("=== STARTING POST-PROCESSING ===")
+            except asyncio.TimeoutError:
                 self.logger.error("Communication Agent LLM call timed out after 60 seconds")
-                self.logger.error("Thread is still alive after timeout - investigating...")
-                self.logger.error(f"Thread name: {thread.name}")
-                self.logger.error(f"Thread daemon: {thread.daemon}")
-                self.logger.error(f"Thread ident: {thread.ident}")
                 raise asyncio.TimeoutError("Communication Agent LLM call timed out after 60 seconds")
-            
-            # Check for exceptions
-            if not exception_queue.empty():
-                exception = exception_queue.get()
-                self.logger.error(f"Communication Agent LLM call failed: {exception}")
-                raise exception
-            
-            # Get the result
-            if not result_queue.empty():
-                response = result_queue.get()
-                self.logger.info("Communication Agent LLM call completed successfully")
-            else:
-                self.logger.error("No response received from Communication Agent LLM")
-                raise RuntimeError("No response received from Communication Agent LLM")
+            except Exception as e:
+                self.logger.error(f"Communication Agent LLM call failed: {e}")
+                raise
             
             # Calculate processing time
             processing_time = time.time() - start_time
+            self.logger.info(f"=== CALCULATING PROCESSING TIME ===")
+            self.logger.info(f"Processing time: {processing_time:.2f}s")
             
             # Extract original sources
             original_sources = [output.agent_id for output in request.agent_outputs]
+            self.logger.info(f"=== EXTRACTING ORIGINAL SOURCES ===")
+            self.logger.info(f"Original sources: {original_sources}")
             
             # Create enhanced response
+            self.logger.info("=== CREATING ENHANCED RESPONSE ===")
             enhanced_response = CommunicationResponse(
                 enhanced_content=response.enhanced_content,
                 original_sources=original_sources,
@@ -358,6 +347,7 @@ class CommunicationAgent(BaseAgent):
                     "model_used": os.getenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307") if not self.mock else "mock"
                 }
             )
+            self.logger.info("=== ENHANCED RESPONSE CREATED ===")
             
             self.logger.info(f"Successfully enhanced response in {processing_time:.2f}s")
             return enhanced_response
