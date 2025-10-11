@@ -138,37 +138,19 @@ class InformationRetrievalAgent(BaseAgent):
                     
                     except Exception as e:
                         last_exception = e
-                        error_msg = str(e)
-                        
-                        # Check if this is a retryable error
-                        is_retryable = (
-                            "timeout" in error_msg.lower() or
-                            "connection" in error_msg.lower() or
-                            "429" in error_msg or  # Rate limit
-                            "500" in error_msg or  # Server error
-                            "502" in error_msg or  # Bad gateway
-                            "503" in error_msg or  # Service unavailable
-                            "504" in error_msg     # Gateway timeout
-                        )
                         
                         # Log the attempt
-                        if attempt < max_retries and is_retryable:
+                        if attempt < max_retries:
                             logging.warning(f"Claude Haiku API call failed on attempt {attempt + 1}: {e}")
                             
-                            # Calculate exponential backoff delay with jitter
+                            # Calculate exponential backoff delay
                             delay = min(
                                 base_delay * (exponential_base ** attempt),
                                 max_delay
                             )
-                            import random
-                            jitter = random.uniform(0, 1)  # Add jitter to prevent synchronized retries
-                            total_delay = delay + jitter
                             
-                            logging.info(f"Retrying Claude Haiku API call in {total_delay:.2f} seconds")
-                            time.sleep(total_delay)
-                        elif not is_retryable:
-                            logging.error(f"Non-retryable error on attempt {attempt + 1}: {e}")
-                            break
+                            logging.info(f"Retrying Claude Haiku API call in {delay} seconds")
+                            time.sleep(delay)
                         else:
                             logging.error(f"Claude Haiku API call failed after {max_retries + 1} attempts: {e}")
                             raise
