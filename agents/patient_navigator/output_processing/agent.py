@@ -28,7 +28,7 @@ def _get_claude_haiku_llm():
         if not api_key:
             return None
         
-        client = Anthropic(api_key=api_key)
+        client = Anthropic(api_key=api_key, timeout=30.0)
         model = os.getenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307")
         
         def call_llm(prompt: str) -> str:
