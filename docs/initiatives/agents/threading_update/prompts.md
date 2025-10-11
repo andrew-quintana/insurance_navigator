@@ -1,5 +1,15 @@
 # Threading Update Initiative - Prompts
 
+> **Reference Documents**: This prompts document should be used in conjunction with:
+> - [`README.md`](./README.md) - Initiative overview and phase summary
+> - [`prd.md`](./prd.md) - Product Requirements Document with functional/non-functional requirements
+> - [`rfc.md`](./rfc.md) - RFC document (to be completed in Phase 1)
+> - [`phase1-research-plan.md`](./phase1-research-plan.md) - Detailed research plan for Phase 1
+> - [`phase2-implementation-plan.md`](./phase2-implementation-plan.md) - Implementation strategy for Phase 2
+> - [`phase3-testing-plan.md`](./phase3-testing-plan.md) - Testing strategy for Phase 3
+> - [`phase4-deployment-plan.md`](./phase4-deployment-plan.md) - Deployment strategy for Phase 4
+> - [`phased-todo.md`](./phased-todo.md) - Comprehensive task tracking for all phases
+
 ## Phase 1: Research & Analysis Prompts
 
 ### Research Prompt 1: Async/Await Best Practices
@@ -21,6 +31,8 @@ Focus on:
 - Integration with existing frameworks
 
 Document findings with code examples and implementation recommendations.
+
+Reference: See [phase1-research-plan.md](./phase1-research-plan.md) for detailed research areas and [rfc.md](./rfc.md) for documenting findings.
 ```
 
 ### Research Prompt 2: Current Implementation Analysis
@@ -42,6 +54,8 @@ Focus on:
 - Integration complexity
 
 Provide detailed analysis with code references and problem identification.
+
+Reference: See [phase1-research-plan.md](./phase1-research-plan.md) for code analysis tasks and [rfc.md](./rfc.md) for documenting current state analysis.
 ```
 
 ### Research Prompt 3: Architecture Design
@@ -63,6 +77,8 @@ Focus on:
 - Backward compatibility
 
 Provide architectural diagrams and implementation specifications.
+
+Reference: See [phase1-research-plan.md](./phase1-research-plan.md) for architecture design tasks and [rfc.md](./rfc.md) for documenting proposed solution.
 ```
 
 ## Phase 2: Implementation Prompts
@@ -85,6 +101,8 @@ Requirements:
 - Performance monitoring
 
 Provide implementation with configuration options and testing.
+
+Reference: See [phase2-implementation-plan.md](./phase2-implementation-plan.md) for Task 1 details and [phased-todo.md](./phased-todo.md) for implementation tracking.
 ```
 
 ### Implementation Prompt 2: Concurrency Control
@@ -105,6 +123,8 @@ Requirements:
 - Performance metrics
 
 Provide implementation with configuration and monitoring.
+
+Reference: See [phase2-implementation-plan.md](./phase2-implementation-plan.md) for Task 2 details and [phased-todo.md](./phased-todo.md) for implementation tracking.
 ```
 
 ### Implementation Prompt 3: RAG System Refactor
@@ -125,6 +145,8 @@ Requirements:
 - Ensure backward compatibility
 
 Provide refactored code with tests and documentation.
+
+Reference: See [phase2-implementation-plan.md](./phase2-implementation-plan.md) for Task 3 details and [phased-todo.md](./phased-todo.md) for implementation tracking.
 ```
 
 ## Phase 3: Testing Prompts
@@ -147,6 +169,8 @@ Requirements:
 - Coverage requirements
 
 Provide test suite with examples and assertions.
+
+Reference: See [phase3-testing-plan.md](./phase3-testing-plan.md) for unit testing strategy and [phased-todo.md](./phased-todo.md) for testing tracking.
 ```
 
 ### Testing Prompt 2: Load Testing
@@ -167,6 +191,8 @@ Requirements:
 - Success rate validation
 
 Provide load testing script with metrics and reporting.
+
+Reference: See [phase3-testing-plan.md](./phase3-testing-plan.md) for load testing scenarios and [phased-todo.md](./phased-todo.md) for testing tracking.
 ```
 
 ### Testing Prompt 3: Integration Testing
@@ -187,6 +213,8 @@ Requirements:
 - Performance validation
 
 Provide integration test suite with scenarios and assertions.
+
+Reference: See [phase3-testing-plan.md](./phase3-testing-plan.md) for integration testing strategy and [phased-todo.md](./phased-todo.md) for testing tracking.
 ```
 
 ## Phase 4: Deployment Prompts
@@ -209,6 +237,8 @@ Requirements:
 - Error monitoring
 
 Provide deployment script with monitoring and validation.
+
+Reference: See [phase4-deployment-plan.md](./phase4-deployment-plan.md) for deployment steps and [phased-todo.md](./phased-todo.md) for deployment tracking.
 ```
 
 ### Deployment Prompt 2: Production Validation
@@ -229,6 +259,8 @@ Requirements:
 - Long-term monitoring
 
 Provide validation script with monitoring and reporting.
+
+Reference: See [phase4-deployment-plan.md](./phase4-deployment-plan.md) for validation steps and [phased-todo.md](./phased-todo.md) for deployment tracking.
 ```
 
 ## General Prompts
@@ -251,6 +283,8 @@ Requirements:
 - Performance guidelines
 
 Provide documentation with examples and best practices.
+
+Reference: See [prd.md](./prd.md) for documentation requirements and [phased-todo.md](./phased-todo.md) for documentation tracking.
 ```
 
 ### Monitoring Prompt
@@ -271,4 +305,6 @@ Requirements:
 - Resource monitoring
 
 Provide monitoring setup with dashboards and alerts.
+
+Reference: See [prd.md](./prd.md) for monitoring requirements and [phased-todo.md](./phased-todo.md) for monitoring tracking.
 ```
