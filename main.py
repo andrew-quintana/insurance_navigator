@@ -945,8 +945,7 @@ async def login(request: Request, response: Response):
         )
 
 # Add /me endpoint for session validation
-@app.post("/chat")
-@app.post("/api/chat")  # Add API route for frontend compatibility
+@app.post("/api/chat")
 @time_metric("chat.request_duration", {"endpoint": "chat"})
 async def chat_with_agent(
     request: Request,
