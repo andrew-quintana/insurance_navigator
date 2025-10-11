@@ -52,8 +52,8 @@ except ImportError:
 import traceback
 from core import initialize_system, close_system, get_database, get_agents
 
-# Database service imports
-from config.database import db_pool
+# Database service imports - using core database manager
+from core.database import get_database_manager
 # User service removed - now using Supabase auth directly
 from db.services.auth_adapter import auth_adapter
 from db.services.conversation_service import get_conversation_service, ConversationService
@@ -123,6 +123,9 @@ async def startup_event():
         logging.getLogger().setLevel(log_level)
         logger.info(f"Logging level set to {config_manager.service.log_level}")
         
+        # Initialize core system first
+        await initialize_system()
+        
         # Initialize service manager
         service_manager = initialize_service_manager()
         app.state.service_manager = service_manager
@@ -137,9 +140,6 @@ async def startup_event():
         success = await service_manager.initialize_all_services()
         if not success:
             raise RuntimeError("Failed to initialize core services")
-        
-        # Initialize core system
-        await initialize_system()
         
         # Start monitoring
         system_monitor = get_system_monitor()
@@ -357,14 +357,14 @@ async def health_check(request: Request):
                 "version": "3.0.0"
             }
         else:
-            # Fallback to basic health check
+            # Fallback to basic health check using core database manager
             db_status = "unavailable"
-            if db_pool:
-                try:
-                    client = await db_pool.get_client()
-                    db_status = "healthy" if client else "not_initialized"
-                except Exception as e:
-                    db_status = f"error: {str(e)[:50]}"
+            try:
+                db_manager = await get_database_manager()
+                health = await db_manager.health_check()
+                db_status = health["status"]
+            except Exception as e:
+                db_status = f"error: {str(e)[:50]}"
             
             services_status = {
                 "database": db_status,
@@ -404,19 +404,19 @@ async def _register_core_services(service_manager, config_manager):
     try:
         # Register database service
         async def init_database():
-            await db_pool.initialize()
-            return db_pool
+            # Use core database manager instead of old db_pool
+            return await get_database_manager()
         
         async def health_check_database(instance):
             try:
-                client = await instance.get_client()
-                return client is not None
+                health = await instance.health_check()
+                return health["status"] == "healthy"
             except Exception:
                 return False
         
         service_manager.register_service(
             name="database",
-            service_type=type(db_pool),
+            service_type=type(None),  # Will be set when initialized
             init_func=init_database,
             health_check=health_check_database
         )
@@ -795,76 +795,76 @@ async def notify_document_status(
         logger.error(f"Failed to send WebSocket notification: {e}")
         # Don't re-raise the exception as this is a non-critical operation
 
-# Startup event
-@app.on_event("startup")
-async def startup_event():
-    """Initialize application services"""
-    logger.info("🚀 Starting Insurance Navigator API v3.0.0")
-    logger.info("🔧 Backend-orchestrated processing enabled")
-    logger.info("🔄 Service initialization starting...")
-    
-    try:
-        # Initialize database pool
-        await db_pool.initialize()
-        logger.info("✅ Database pool initialized")
-        
-        # Initialize other services
-        # User service removed - now using Supabase auth directly
-        
-        conversation_service_instance = await get_conversation_service()
-        logger.info("✅ Conversation service initialized")
-        
-        storage_service_instance = await get_storage_service()
-        logger.info("✅ Storage service initialized")
-        
-        # Initialize RAG tool and chat interface
-        try:
-            from agents.tooling.rag.core import RAGTool, RetrievalConfig
-            from agents.patient_navigator.chat_interface import PatientNavigatorChatInterface
-            logger.info("✅ RAG tool and chat interface imports successful")
-            
-            # Get configuration manager
-            config_manager = getattr(app.state, 'config_manager', None)
-            if not config_manager:
-                logger.warning("Configuration manager not available, using defaults")
-                config_manager = get_config_manager()
-            
-            # Initialize RAG tool with configuration from manager
-            rag_config = RetrievalConfig(
-                similarity_threshold=config_manager.get_rag_similarity_threshold(),
-                max_chunks=config_manager.get_config("rag.max_chunks", 10),
-                token_budget=config_manager.get_config("rag.token_budget", 4000)
-            )
-            
-            # Store RAG tool globally for use in chat endpoints
-            app.state.rag_tool = RAGTool
-            app.state.rag_config = rag_config
-            logger.info(f"✅ RAG tool initialized with similarity threshold: {rag_config.similarity_threshold}")
-            
-        except ImportError as e:
-            logger.error(f"❌ RAG tool or chat interface import failed: {e}")
-            import traceback
-            logger.error(f"Import error traceback: {traceback.format_exc()}")
-            app.state.rag_tool = None
-            app.state.rag_config = None
-        
-        # Verify environment variables
-        required_vars = [
-            "SUPABASE_URL",
-            "SUPABASE_SERVICE_ROLE_KEY",
-            "LLAMAPARSE_API_KEY",
-            "OPENAI_API_KEY"
-        ]
-        
-        missing_vars = [var for var in required_vars if not os.getenv(var)]
-        if missing_vars:
-            logger.warning(f"⚠️ Missing environment variables: {', '.join(missing_vars)}")
-        
-        logger.info("✅ Core services initialized")
-        
-    except Exception as e:
-        logger.error(f"⚠️ Service initialization failed: {str(e)}")
-        raise
+# Duplicate startup event - commented out to avoid conflicts
+# @app.on_event("startup")
+# async def startup_event():
+#     """Initialize application services"""
+#     logger.info("🚀 Starting Insurance Navigator API v3.0.0")
+#     logger.info("🔧 Backend-orchestrated processing enabled")
+#     logger.info("🔄 Service initialization starting...")
+#     
+#     try:
+#         # Initialize database pool
+#         await db_pool.initialize()
+#         logger.info("✅ Database pool initialized")
+#         
+#         # Initialize other services
+#         # User service removed - now using Supabase auth directly
+#         
+#         conversation_service_instance = await get_conversation_service()
+#         logger.info("✅ Conversation service initialized")
+#         
+#         storage_service_instance = await get_storage_service()
+#         logger.info("✅ Storage service initialized")
+#         
+#         # Initialize RAG tool and chat interface
+#         try:
+#             from agents.tooling.rag.core import RAGTool, RetrievalConfig
+#             from agents.patient_navigator.chat_interface import PatientNavigatorChatInterface
+#             logger.info("✅ RAG tool and chat interface imports successful")
+#             
+#             # Get configuration manager
+#             config_manager = getattr(app.state, 'config_manager', None)
+#             if not config_manager:
+#                 logger.warning("Configuration manager not available, using defaults")
+#                 config_manager = get_config_manager()
+#             
+#             # Initialize RAG tool with configuration from manager
+#             rag_config = RetrievalConfig(
+#                 similarity_threshold=config_manager.get_rag_similarity_threshold(),
+#                 max_chunks=config_manager.get_config("rag.max_chunks", 10),
+#                 token_budget=config_manager.get_config("rag.token_budget", 4000)
+#             )
+#             
+#             # Store RAG tool globally for use in chat endpoints
+#             app.state.rag_tool = RAGTool
+#             app.state.rag_config = rag_config
+#             logger.info(f"✅ RAG tool initialized with similarity threshold: {rag_config.similarity_threshold}")
+#             
+#         except ImportError as e:
+#             logger.error(f"❌ RAG tool or chat interface import failed: {e}")
+#             import traceback
+#             logger.error(f"Import error traceback: {traceback.format_exc()}")
+#             app.state.rag_tool = None
+#             app.state.rag_config = None
+#         
+#         # Verify environment variables
+#         required_vars = [
+#             "SUPABASE_URL",
+#             "SUPABASE_SERVICE_ROLE_KEY",
+#             "LLAMAPARSE_API_KEY",
+#             "OPENAI_API_KEY"
+#         ]
+#         
+#         missing_vars = [var for var in required_vars if not os.getenv(var)]
+#         if missing_vars:
+#             logger.warning(f"⚠️ Missing environment variables: {', '.join(missing_vars)}")
+#         
+#         logger.info("✅ Core services initialized")
+#         
+#     except Exception as e:
+#         logger.error(f"⚠️ Service initialization failed: {str(e)}")
+#         raise
 
 # Shutdown event
 @app.on_event("shutdown")
@@ -872,8 +872,9 @@ async def shutdown_event():
     """Cleanup application resources"""
     logger.info("🛑 Shutting down Insurance Navigator API")
     try:
-        # Cleanup database pool
-        await db_pool.cleanup()
+        # Cleanup database pool using core database manager
+        db_manager = await get_database_manager()
+        await db_manager.close()
         logger.info("✅ Database pool cleaned up")
         
         # Cleanup other services
@@ -945,6 +946,7 @@ async def login(request: Request, response: Response):
 
 # Add /me endpoint for session validation
 @app.post("/chat")
+@app.post("/api/chat")  # Add API route for frontend compatibility
 @time_metric("chat.request_duration", {"endpoint": "chat"})
 async def chat_with_agent(
     request: Request,
