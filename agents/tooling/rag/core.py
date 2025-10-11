@@ -29,7 +29,7 @@ class RetrievalConfig:
         max_chunks: Maximum number of chunks to return.
         token_budget: Maximum total tokens for all returned chunks.
     """
-    similarity_threshold: float = 0.5
+    similarity_threshold: float = 0.25
     max_chunks: int = 5
     token_budget: int = 4000
 
@@ -112,7 +112,7 @@ class RAGTool:
             self.config.similarity_threshold = configurable_threshold
             self.logger.info(f"Using configurable threshold {configurable_threshold} for user {user_id}")
 
-    async def retrieve_chunks(self, query_embedding: List[float]) -> List[ChunkWithContext]:
+    async def retrieve_chunks(self, query_embedding: List[float], operation_metrics=None) -> List[ChunkWithContext]:
         """
         Retrieve document chunks most similar to the query embedding, enforcing user access and token budget.
         Args:
@@ -124,7 +124,7 @@ class RAGTool:
         
         # Note: Performance monitoring is handled by the calling method (retrieve_chunks_from_text)
         # to avoid duplicate RAG operations in logs
-        operation_metrics = None
+        # operation_metrics will be passed from the calling method
         
         conn = None
         try:
@@ -263,7 +263,7 @@ class RAGTool:
             self.logger.info(f"Query embedding generated successfully: {len(query_embedding)} dimensions")
             
             # Step 2: Use the generated embedding to perform similarity search
-            chunks = await self.retrieve_chunks(query_embedding)
+            chunks = await self.retrieve_chunks(query_embedding, operation_metrics)
             
             # Complete the operation successfully
             self.performance_monitor.complete_operation(operation_metrics.operation_uuid, success=True)
