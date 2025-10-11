@@ -32,50 +32,85 @@ def _get_claude_haiku_llm():
         model = os.getenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307")
         
         def call_llm(prompt: str) -> str:
-            """Call Claude Haiku with the given prompt."""
-            try:
-                # Add explicit JSON formatting instruction to the prompt
-                json_prompt = prompt + "\n\nIMPORTANT: You must respond with ONLY valid JSON. Do not include any other text, explanations, or formatting outside the JSON object."
-                
-                resp = client.messages.create(
-                    model=model,
-                    max_tokens=4000,
-                    temperature=0.2,
-                    messages=[{"role": "user", "content": json_prompt}],
-                )
-                
-                content = resp.content[0].text if getattr(resp, "content", None) else ""
-                
-                if not content:
-                    raise ValueError("Empty response from Claude Haiku")
-                
-                # The response should now be plain text, not JSON
-                content = content.strip()
-                
-                # If the response starts with a backtick, extract the content from within
-                if content.startswith("```json"):
-                    content = content.split("```json")[1].split("```")[0].strip()
-                elif content.startswith("```"):
-                    content = content.split("```")[1].split("```")[0].strip()
-                
-                # Check if the response is still JSON format (fallback for old behavior)
-                if content.startswith('{'):
-                    logging.warning("Claude Haiku returned JSON format instead of plain text, extracting content...")
-                    try:
-                        import json
-                        parsed_json = json.loads(content)
-                        enhanced_content = parsed_json.get("enhanced_content", content)
-                        return enhanced_content
-                    except json.JSONDecodeError:
-                        # If JSON parsing fails, return the content as-is
-                        pass
-                
-                # Return the plain text content directly
-                return content
-                
-            except Exception as e:
-                logging.error(f"Claude Haiku API call failed: {e}")
-                raise
+            """Call Claude Haiku with exponential backoff retry strategy."""
+            import time
+            import random
+            
+            max_attempts = 3
+            base_delay = 1.0
+            max_delay = 10.0
+            
+            for attempt in range(max_attempts):
+                try:
+                    # Add explicit JSON formatting instruction to the prompt
+                    json_prompt = prompt + "\n\nIMPORTANT: You must respond with ONLY valid JSON. Do not include any other text, explanations, or formatting outside the JSON object."
+                    
+                    resp = client.messages.create(
+                        model=model,
+                        max_tokens=4000,
+                        temperature=0.2,
+                        messages=[{"role": "user", "content": json_prompt}],
+                    )
+                    
+                    content = resp.content[0].text if getattr(resp, "content", None) else ""
+                    
+                    if not content:
+                        raise ValueError("Empty response from Claude Haiku")
+                    
+                    # The response should now be plain text, not JSON
+                    content = content.strip()
+                    
+                    # If the response starts with a backtick, extract the content from within
+                    if content.startswith("```json"):
+                        content = content.split("```json")[1].split("```")[0].strip()
+                    elif content.startswith("```"):
+                        content = content.split("```")[1].split("```")[0].strip()
+                    
+                    # Check if the response is still JSON format (fallback for old behavior)
+                    if content.startswith('{'):
+                        logging.warning("Claude Haiku returned JSON format instead of plain text, extracting content...")
+                        try:
+                            import json
+                            parsed_json = json.loads(content)
+                            enhanced_content = parsed_json.get("enhanced_content", content)
+                            return enhanced_content
+                        except json.JSONDecodeError:
+                            # If JSON parsing fails, return the content as-is
+                            pass
+                    
+                    # Return the plain text content directly
+                    return content
+                    
+                except Exception as e:
+                    error_msg = str(e)
+                    logging.warning(f"Claude Haiku API call attempt {attempt + 1} failed: {error_msg}")
+                    
+                    # Check if this is a retryable error
+                    is_retryable = (
+                        "timeout" in error_msg.lower() or
+                        "connection" in error_msg.lower() or
+                        "429" in error_msg or  # Rate limit
+                        "500" in error_msg or  # Server error
+                        "502" in error_msg or  # Bad gateway
+                        "503" in error_msg or  # Service unavailable
+                        "504" in error_msg     # Gateway timeout
+                    )
+                    
+                    # If this is the last attempt or not retryable, raise the exception
+                    if attempt == max_attempts - 1 or not is_retryable:
+                        logging.error(f"Claude Haiku API call failed after {max_attempts} attempts: {error_msg}")
+                        raise
+                    
+                    # Calculate exponential backoff delay with jitter
+                    delay = min(base_delay * (2 ** attempt), max_delay)
+                    jitter = random.uniform(0, 1)  # Add jitter to prevent synchronized retries
+                    total_delay = delay + jitter
+                    
+                    logging.info(f"Retrying Claude Haiku API call in {total_delay:.2f} seconds (attempt {attempt + 2}/{max_attempts})")
+                    time.sleep(total_delay)
+            
+            # This should never be reached, but just in case
+            raise Exception("Max retry attempts reached")
         
         return call_llm
         
