@@ -290,9 +290,26 @@ class CommunicationAgent(BaseAgent):
             self.logger.info("Step 3: Calling LLM with async timeout handling")
             import asyncio
             import concurrent.futures
+            import psutil
+            import os
             
             # Use asyncio.run_in_executor for proper async handling
             loop = asyncio.get_event_loop()
+            
+            # Production environment detection and resource monitoring
+            is_production = os.getenv("ENVIRONMENT", "").lower() in ["production", "prod"]
+            if is_production:
+                self.logger.info("=== PRODUCTION ENVIRONMENT DETECTED ===")
+                # Log system resources for production debugging
+                try:
+                    memory_info = psutil.virtual_memory()
+                    self.logger.info(f"Memory usage: {memory_info.percent}% ({memory_info.available / 1024 / 1024:.1f}MB available)")
+                    cpu_percent = psutil.cpu_percent(interval=1)
+                    self.logger.info(f"CPU usage: {cpu_percent}%")
+                except Exception as e:
+                    self.logger.warning(f"Could not get system metrics: {e}")
+            else:
+                self.logger.info("=== DEVELOPMENT ENVIRONMENT DETECTED ===")
             
             def llm_call():
                 try:
@@ -305,22 +322,30 @@ class CommunicationAgent(BaseAgent):
                     self.logger.error(f"Executor failed with exception: {e}")
                     raise
             
-            # Run LLM call in thread pool with timeout
+            # Run LLM call in thread pool with timeout and production-optimized settings
             try:
                 self.logger.info("Starting LLM call with 60-second timeout")
-                response = await asyncio.wait_for(
-                    loop.run_in_executor(None, llm_call),
-                    timeout=60.0
-                )
+                
+                # Use a dedicated thread pool executor for better resource management
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="comm_agent") as executor:
+                    response = await asyncio.wait_for(
+                        loop.run_in_executor(executor, llm_call),
+                        timeout=60.0
+                    )
+                
                 self.logger.info("=== CLAUDE API RESPONSE RECEIVED ===")
                 self.logger.info(f"Response type: {type(response)}")
                 self.logger.info(f"Response length: {len(str(response))}")
                 self.logger.info("=== STARTING POST-PROCESSING ===")
             except asyncio.TimeoutError:
                 self.logger.error("Communication Agent LLM call timed out after 60 seconds")
+                # Add production-specific timeout handling
+                self.logger.warning("Production timeout detected - this may indicate resource constraints")
                 raise asyncio.TimeoutError("Communication Agent LLM call timed out after 60 seconds")
             except Exception as e:
                 self.logger.error(f"Communication Agent LLM call failed: {e}")
+                # Add production-specific error handling
+                self.logger.warning(f"Production error detected: {type(e).__name__}")
                 raise
             
             # Calculate processing time
