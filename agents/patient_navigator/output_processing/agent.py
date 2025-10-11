@@ -314,16 +314,16 @@ class CommunicationAgent(BaseAgent):
             thread.daemon = True
             thread.start()
             
-            # Wait for result with 25-second timeout
-            thread.join(timeout=25.0)
+            # Wait for result with 60-second timeout
+            thread.join(timeout=60.0)
             
             if thread.is_alive():
-                self.logger.error("Communication Agent LLM call timed out after 25 seconds")
+                self.logger.error("Communication Agent LLM call timed out after 60 seconds")
                 self.logger.error("Thread is still alive after timeout - investigating...")
                 self.logger.error(f"Thread name: {thread.name}")
                 self.logger.error(f"Thread daemon: {thread.daemon}")
                 self.logger.error(f"Thread ident: {thread.ident}")
-                raise asyncio.TimeoutError("Communication Agent LLM call timed out after 25 seconds")
+                raise asyncio.TimeoutError("Communication Agent LLM call timed out after 60 seconds")
             
             # Check for exceptions
             if not exception_queue.empty():
