@@ -289,16 +289,14 @@ class RAGTool:
             self.logger.error("Empty text provided for embedding generation")
             raise ValueError("Empty text cannot be embedded")
         
-        # DIAGNOSTIC: Log detailed information about the request
-        self.logger.info(f"=== EMBEDDING GENERATION DIAGNOSTICS ===")
+        # Log basic request information
+        self.logger.info(f"Generating embedding for text: {text[:100]}...")
         self.logger.info(f"Text length: {len(text)} characters")
-        self.logger.info(f"Text preview: {text[:200]}...")
-        self.logger.info(f"Text contains special chars: {any(ord(c) > 127 for c in text)}")
-        self.logger.info(f"Text encoding: {text.encode('utf-8', errors='replace')[:100]}")
         
         try:
             import os
             import time
+            import httpx
             
             # Get OpenAI API key
             api_key = os.getenv('OPENAI_API_KEY')
@@ -306,185 +304,44 @@ class RAGTool:
                 self.logger.error("OPENAI_API_KEY not found - RAG will not work properly")
                 raise ValueError("OPENAI_API_KEY is required for RAG functionality")
             
-            # DIAGNOSTIC: Log API key status
-            self.logger.info(f"OpenAI API key available: {bool(api_key)}")
-            self.logger.info(f"API key length: {len(api_key) if api_key else 0}")
-            
-            # DIAGNOSTIC: Log API key configuration
-            self.logger.info(f"OpenAI API key configured for synchronous client")
-            
-            # Generate real OpenAI embedding with Pydantic error handling
-            self.logger.info(f"Generating embedding for text: {text[:100]}...")
-            
-            # DIAGNOSTIC: Record start time for timeout analysis
+            # Record start time for performance monitoring
             start_time = time.time()
             
-            try:
-                # CRITICAL FIX: Use synchronous OpenAI client to avoid async client lifecycle conflicts
-                # This eliminates the HTTP client cleanup errors and event loop conflicts
-                
-                # HEARTBEAT 1: Pre-import logging
-                self.logger.info("HEARTBEAT 1: About to import threading modules")
-                import threading
-                import queue
-                from openai import OpenAI  # Synchronous client
-                self.logger.info("HEARTBEAT 2: Threading modules imported successfully")
-                
-                # HEARTBEAT 3: Queue creation
-                self.logger.info("HEARTBEAT 3: Creating result and exception queues")
-                result_queue = queue.Queue()
-                exception_queue = queue.Queue()
-                self.logger.info("HEARTBEAT 4: Queues created successfully")
-                
-                def api_call():
-                    try:
-                        self.logger.info("HEARTBEAT 5: Thread execution started - api_call() entered")
-                        self.logger.info("Thread started for OpenAI API call")
-                        
-                        # HEARTBEAT 6: Client creation
-                        self.logger.info("HEARTBEAT 6: Creating synchronous OpenAI client")
-                        sync_client = OpenAI(
-                            api_key=api_key,
-                            max_retries=3,
-                            timeout=30.0
-                        )
-                        self.logger.info("HEARTBEAT 7: OpenAI client created successfully")
-                        
-                        # HEARTBEAT 8: API call
-                        self.logger.info("HEARTBEAT 8: Calling OpenAI embeddings.create API")
-                        response = sync_client.embeddings.create(
-                            model="text-embedding-3-small",
-                            input=text,
-                            encoding_format="float"
-                        )
-                        self.logger.info("HEARTBEAT 9: OpenAI API call returned successfully")
-                        
-                        # HEARTBEAT 10: Queue result
-                        self.logger.info("HEARTBEAT 10: Putting result in queue")
-                        result_queue.put(response)
-                        self.logger.info("HEARTBEAT 11: Result queued successfully")
-                        self.logger.info("Thread completed OpenAI API call successfully")
-                    except Exception as e:
-                        self.logger.error(f"HEARTBEAT ERROR: Thread exception at some point: {e}")
-                        self.logger.error(f"Thread failed with exception: {e}")
-                        exception_queue.put(e)
-                    finally:
-                        self.logger.info("HEARTBEAT 12: Thread exiting (finally block)")
-                        self.logger.info("Thread exiting")
-                
-                # HEARTBEAT 13: Thread creation
-                self.logger.info("HEARTBEAT 13: Creating thread object")
-                thread = threading.Thread(target=api_call)
-                self.logger.info("HEARTBEAT 14: Thread object created, setting daemon=True")
-                thread.daemon = True
-                self.logger.info("HEARTBEAT 15: Starting thread")
-                thread.start()
-                self.logger.info("HEARTBEAT 16: Thread started successfully")
-                
-                # HEARTBEAT 17: Wait for thread
-                self.logger.info("HEARTBEAT 17: Waiting for thread to complete (25s timeout)")
-                thread.join(timeout=25.0)
-                self.logger.info("HEARTBEAT 18: Thread join returned, checking if thread is alive")
-                
-                if thread.is_alive():
-                    # Thread is still running, timeout occurred
-                    end_time = time.time()
-                    self.logger.error(f"HEARTBEAT 19: TIMEOUT - Thread is still alive after {end_time - start_time:.2f}s")
-                    self.logger.error(f"OpenAI embedding API call timed out after {end_time - start_time:.2f}s")
-                    self.logger.error("Thread is still alive after timeout - investigating...")
-                    self.logger.error(f"Thread name: {thread.name}")
-                    self.logger.error(f"Thread daemon: {thread.daemon}")
-                    self.logger.error(f"Thread ident: {thread.ident}")
-                    raise RuntimeError("OpenAI embedding API call timed out after 25 seconds")
-                
-                self.logger.info("HEARTBEAT 20: Thread is not alive, checking queues")
-                
-                # Check for exceptions
-                if not exception_queue.empty():
-                    exception = exception_queue.get()
-                    end_time = time.time()
-                    self.logger.error(f"OpenAI API call failed after {end_time - start_time:.2f}s: {exception}")
-                    self.logger.error(f"Error type: {type(exception).__name__}")
-                    self.logger.error(f"Error details: {str(exception)}")
-                    raise exception
-                
-                # Get the result
-                if not result_queue.empty():
-                    response = result_queue.get()
-                    end_time = time.time()
-                    self.logger.info(f"OpenAI API call completed in {end_time - start_time:.2f}s")
-                else:
-                    end_time = time.time()
-                    self.logger.error(f"No response received from OpenAI API after {end_time - start_time:.2f}s")
-                    raise RuntimeError("No response received from OpenAI embedding API")
-                
-            except Exception as pydantic_error:
-                # DIAGNOSTIC: Log detailed error information
-                end_time = time.time()
-                self.logger.error(f"OpenAI API call failed after {end_time - start_time:.2f}s: {pydantic_error}")
-                self.logger.error(f"Error type: {type(pydantic_error).__name__}")
-                self.logger.error(f"Error details: {str(pydantic_error)}")
-                
-                # Handle specific Pydantic v2 error pattern
-                if "Fields must not use names with leading underscores" in str(pydantic_error):
-                    self.logger.warning(f"Pydantic v2 compatibility issue detected: {pydantic_error}")
-                    self.logger.info("Attempting workaround with different client configuration...")
-                    
-                    # Try with minimal client configuration using synchronous client
-                    minimal_client = OpenAI(api_key=api_key)
-                    
-                    result_queue = queue.Queue()
-                    exception_queue = queue.Queue()
-                    
-                    def minimal_api_call():
-                        try:
-                            self.logger.info("Thread started for minimal OpenAI API call")
-                            response = minimal_client.embeddings.create(
-                                model="text-embedding-3-small",
-                                input=text
-                            )
-                            result_queue.put(response)
-                            self.logger.info("Thread completed minimal OpenAI API call successfully")
-                        except Exception as e:
-                            self.logger.error(f"Thread failed with exception: {e}")
-                            exception_queue.put(e)
-                        finally:
-                            self.logger.info("Thread exiting")
-                    
-                    # Start minimal API call in separate thread
-                    thread = threading.Thread(target=minimal_api_call)
-                    thread.daemon = True
-                    thread.start()
-                    
-                    # Wait for result with 25-second timeout
-                    thread.join(timeout=25.0)
-                    
-                    if thread.is_alive():
-                        end_time = time.time()
-                        self.logger.error(f"OpenAI minimal API call timed out after {end_time - start_time:.2f}s")
-                        raise RuntimeError("OpenAI embedding API call timed out after 25 seconds (minimal client)")
-                    
-                    # Check for exceptions
-                    if not exception_queue.empty():
-                        exception = exception_queue.get()
-                        end_time = time.time()
-                        self.logger.error(f"OpenAI minimal API call failed after {end_time - start_time:.2f}s: {exception}")
-                        raise exception
-                    
-                    # Get the result
-                    if not result_queue.empty():
-                        response = result_queue.get()
-                        end_time = time.time()
-                        self.logger.info(f"Workaround successful, completed in {end_time - start_time:.2f}s")
-                    else:
-                        end_time = time.time()
-                        self.logger.error(f"No response received from OpenAI minimal API after {end_time - start_time:.2f}s")
-                        raise RuntimeError("No response received from OpenAI embedding API (minimal client)")
-                else:
-                    raise pydantic_error
+            # Prepare request payload
+            payload = {
+                "model": "text-embedding-3-small",
+                "input": text,
+                "encoding_format": "float"
+            }
             
-            embedding = response.data[0].embedding
-            self.logger.info(f"Successfully generated embedding: {len(embedding)} dimensions")
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}"
+            }
+            
+            # Use httpx.AsyncClient for async HTTP requests
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                self.logger.info("Making OpenAI API request using httpx.AsyncClient")
+                
+                response = await client.post(
+                    "https://api.openai.com/v1/embeddings",
+                    json=payload,
+                    headers=headers
+                )
+                
+                # Check response status
+                if response.status_code != 200:
+                    error_text = response.text
+                    self.logger.error(f"OpenAI API error: {response.status_code} - {error_text}")
+                    raise RuntimeError(f"OpenAI API error: {response.status_code} - {error_text}")
+                
+                # Parse response
+                result = response.json()
+                embedding = result["data"][0]["embedding"]
+                
+                end_time = time.time()
+                self.logger.info(f"OpenAI API call completed in {end_time - start_time:.2f}s")
+                self.logger.info(f"Successfully generated embedding: {len(embedding)} dimensions")
             
             # Validate embedding quality
             if not self._validate_embedding(embedding, "query"):
@@ -493,7 +350,7 @@ class RAGTool:
             return embedding
             
         except Exception as e:
-            # DIAGNOSTIC: Log comprehensive error information
+            # Log comprehensive error information
             self.logger.error(f"=== EMBEDDING GENERATION FAILED ===")
             self.logger.error(f"Error type: {type(e).__name__}")
             self.logger.error(f"Error message: {str(e)}")
