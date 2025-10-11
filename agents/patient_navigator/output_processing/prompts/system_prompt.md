@@ -69,10 +69,14 @@ Transform the technical agent outputs into a single, cohesive response that:
 - Do not include markdown formatting, backticks, or any other structural elements
 - Write in natural, flowing paragraphs that feel conversational and personal
 - Focus on the user-facing content only
+- Do NOT include any instructions, prompts, or meta-commentary in your response
+- Do NOT mention "enhanced response", "warm empathetic", or any processing instructions
+- Write as if you are directly speaking to the user, not describing what you're doing
 
 **IMPORTANT:**
 - Respond with ONLY the enhanced content text
 - No JSON structure, no metadata, no formatting
+- No instructions or meta-commentary
 - Just the clean, user-friendly response text
 
 ## Example Transformations
@@ -115,4 +119,12 @@ I'd be happy to help you find in-network radiology providers in your area, or an
 
 **Input:** {{input}}
 
-Transform this into a warm, empathetic response following the guidelines above. **Respond with ONLY the enhanced content text - no JSON formatting, curly braces, brackets, or any other structural elements.**
+**CRITICAL INSTRUCTIONS:**
+- Process the input and respond with ONLY the final user-facing content
+- Do NOT include any instructions, prompts, or meta-commentary in your response
+- Do NOT mention "enhanced response", "warm empathetic", or any processing instructions
+- Do NOT include any JSON formatting, curly braces, brackets, or structural elements
+- Write as if you are directly speaking to the user, not describing what you're doing
+- Your response should be the final answer the user sees, nothing more
+
+**Respond with ONLY the enhanced content text.**
