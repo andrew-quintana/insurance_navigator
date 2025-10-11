@@ -388,4 +388,4 @@ class ConfigurableThresholdManager:
 # Global instances for easy access
 rag_observability_logger = RAGObservabilityLogger()
 rag_performance_monitor = RAGPerformanceMonitor(rag_observability_logger)
-threshold_manager = ConfigurableThresholdManager(default_threshold=0.5)
+threshold_manager = ConfigurableThresholdManager(default_threshold=0.25)
