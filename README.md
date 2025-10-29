@@ -1,6 +1,6 @@
 # Insurance Navigator
 
-A near HIPAA-compliant AI-powered system that helps patients understand their insurance documents through intelligent document processing and conversational AI.
+A near HIPAA-compliant AI-powered system that helps patients understand their insurance documents through intelligent document processing and conversational AI. It's goal is to help people understand their 
 
 ## 🌐 Try It Now
 
@@ -37,10 +37,10 @@ Insurance Navigator is **near HIPAA-compliant** and would achieve full HIPAA com
 
 ## 🚧 Next Steps
 
-1. **Debug Concurrency Failures** - Resolve concurrent processing issues in the system
+1. **Debug Concurrency Failures** - Resolve concurrent processing issues in the agentic system that cause timeouts and failures in the chat workflow
 2. **Documentation** - Expand and improve project documentation
 3. **Refactor Upload Pipeline** - Implement frontend deidentification of uploaded documents
-4. **Refactor Agentic Workflows** - Simplify by removing strategy workflow (will be better once I can implement a strategy database and MCP) and focusing more on guardrails instead of routing between workflows.
+4. **Refactor Agentic Workflows** - Simplify by removing strategy workflow (will be better once I can implement a strategy database and MCP) and focusing more on guardrails instead of routing between workflows. Also working to incorporate NLLB-200 to support helping as many people as possible
 5. **Restructure User Profiles** - Buffer user info from user messages, documents, and other context
 6. **OSS Launch** - With deidentification and stopgaps protecting data, launching an direct to consumer OSS to get feedback and help people!
 
