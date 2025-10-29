@@ -40,7 +40,9 @@ Insurance Navigator is **near HIPAA-compliant** and would achieve full HIPAA com
 1. **Debug Concurrency Failures** - Resolve concurrent processing issues in the system
 2. **Documentation** - Expand and improve project documentation
 3. **Refactor Upload Pipeline** - Implement frontend deidentification of uploaded documents
-4. **Restructure User Profiles** - Buffer user info from user messages, documents, and other context
+4. **Refactor Agentic Workflows** - Simplify by removing strategy workflow (will be better once I can implement a strategy database and MCP) and focusing more on guardrails instead of routing between workflows.
+5. **Restructure User Profiles** - Buffer user info from user messages, documents, and other context
+6. **OSS Launch** - With deidentification and stopgaps protecting data, launching an direct to consumer OSS to get feedback and help people!
 
 ## 📄 License
 
