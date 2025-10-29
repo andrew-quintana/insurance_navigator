@@ -1,6 +1,6 @@
 # Insurance Navigator
 
-A HIPAA-compliant AI-powered system that helps patients understand their insurance documents through intelligent document processing and conversational AI.
+A near HIPAA-compliant AI-powered system that helps patients understand their insurance documents through intelligent document processing and conversational AI.
 
 ## 🌐 Try It Now
 
@@ -19,6 +19,21 @@ Insurance Navigator is a comprehensive platform that combines document processin
 System design diagrams coming soon.
 
 The system consists of several key components including backend services, frontend UI, AI/ML components, and database infrastructure. Detailed architecture documentation and diagrams will be added shortly.
+
+## 🔒 HIPAA Compliance Status
+
+Insurance Navigator is **near HIPAA-compliant** and would achieve full HIPAA compliance if external services were to have Business Associate Agreements (BAAs) in place.
+
+**Current Status:**
+- The system architecture is designed with HIPAA compliance in mind
+- Full HIPAA compliance requires BAAs with all external service providers
+
+**Upcoming Work:**
+- Deidentification and decoupling of all data from users
+- This includes information sent to external APIs during:
+  - Document processing
+  - Chat interactions
+  - Context processing
 
 ## 🚧 Next Steps
 
