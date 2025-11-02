@@ -148,10 +148,11 @@ graph/sandbox/
 docs/initiatives/0templates/
 docs/initiatives/documentation_generation_agent_prompt.md
 .vercel
-media/
 
 # Security cleanup tracking (protected from git)
 security-cleanup-tracking.md
 sensitive-data-inventory.md
 git-cleanup-notes.md
 rollback-reference.md
+
+media/videos
