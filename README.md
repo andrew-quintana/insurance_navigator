@@ -8,9 +8,15 @@ A near HIPAA-compliant AI-powered system that helps patients understand their in
 
 The Insurance Navigator is available as a live demo. Upload your insurance documents and start asking questions immediately. The webapp is fully functional and ready to help you understand your insurance coverage, benefits, and claims.
 
-**📹 [Demo Video](https://youtube.com/shorts/Lw9nKe6onak)**
+**📹 Demo Video**
 
 Watch a demonstration of the Insurance Navigator in action, showing how it processes insurance documents and answers questions about coverage and benefits.
+
+<div align="center">
+
+[![Insurance Navigator Demo](https://img.youtube.com/vi/Lw9nKe6onak/maxresdefault.jpg)](https://youtube.com/shorts/Lw9nKe6onak)
+
+</div>
 
 **Note:** The project is not yet set up to be run locally on other machines. For now, please use the demo link above to experience the Insurance Navigator.
 

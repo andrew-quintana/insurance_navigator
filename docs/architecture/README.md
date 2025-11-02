@@ -42,24 +42,49 @@ The following diagrams illustrate various aspects of the system architecture:
 
 ### Component Diagrams
 
-- **[Component Architecture Overview](./../../media/diagrams/uml_v0_2-component-architecture_overview.svg)** - High-level overview of system components and their relationships
+#### Component Architecture Overview
 
-- **[Agentic Workflows (Simplified)](./../../media/diagrams/uml_v0_2-component-agentic_workflows_simplified.svg)** - Simplified view of the agentic workflow system
-  - **Note:** The agentic workflow diagram will be updated and consolidated to use this simplified version going forward
+High-level overview of system components and their relationships:
 
-- **[Agentic Workflows (Current)](./../../media/diagrams/uml_v0_2-component-agentic_workflows_current.svg)** - Current detailed agentic workflow diagram
+![Component Architecture Overview](./../../media/diagrams/uml_v0_2-component-architecture_overview.svg)
+
+#### Agentic Workflows
+
+**Simplified Version** (current standard):
+![Agentic Workflows Simplified](./../../media/diagrams/uml_v0_2-component-agentic_workflows_simplified.svg)
+
+> **Note:** The agentic workflow diagram will be updated and consolidated to use this simplified version going forward.
+
+**Current Detailed Version** (legacy):
+![Agentic Workflows Current](./../../media/diagrams/uml_v0_2-component-agentic_workflows_current.svg)
 
 ### Sequence Diagrams
 
-- **[Upload Sequence](./../../media/diagrams/uml_v0_2-sequence-upload.svg)** - Document upload and processing workflow
+#### Upload Sequence
+
+Document upload and processing workflow:
+
+![Upload Sequence](./../../media/diagrams/uml_v0_2-sequence-upload.svg)
 
 ### State Diagrams
 
-- **[Job State Machine](./../../media/diagrams/uml_v0_2-state-job_state_machine.svg)** - States and transitions for document processing jobs
+#### Job State Machine
 
-- **[Status State Logic](./../../media/diagrams/uml_v0_2-state-status_state_logic.svg)** - Status tracking and state management logic
+States and transitions for document processing jobs:
 
-- **[Status States](./../../media/diagrams/uml_v0_2-state-status.svg)** - Overall status state management
+![Job State Machine](./../../media/diagrams/uml_v0_2-state-job_state_machine.svg)
+
+#### Status State Logic
+
+Status tracking and state management logic:
+
+![Status State Logic](./../../media/diagrams/uml_v0_2-state-status_state_logic.svg)
+
+#### Status States
+
+Overall status state management:
+
+![Status States](./../../media/diagrams/uml_v0_2-state-status.svg)
 
 ## Pending Updates
 
