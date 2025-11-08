@@ -14,7 +14,7 @@ Watch a demonstration of the Insurance Navigator in action, showing how it proce
 
 <div align="center">
 
-[![Insurance Navigator Demo](https://img.youtube.com/vi/Lw9nKe6onak/maxresdefault.jpg)](https://youtube.com/shorts/Lw9nKe6onak)
+![Insurance Navigator Demo](media/gifs/chat_demo.gif)
 
 </div>
 
