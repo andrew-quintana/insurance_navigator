@@ -8,9 +8,9 @@ The MVP async fix converts the RAG system's `_generate_embedding()` method from 
 
 ## Test Scripts
 
-### 1. `validate_mvp_async.py` - Basic Validation
+### 1. `scripts/testing/validate_mvp_async.py` - Basic Validation
 **Purpose**: Quick validation before running full concurrent tests
-**Usage**: `python validate_mvp_async.py`
+**Usage**: `python scripts/testing/validate_mvp_async.py`
 
 **Tests**:
 - Environment variable setup
@@ -18,9 +18,9 @@ The MVP async fix converts the RAG system's `_generate_embedding()` method from 
 - Single request functionality
 - Basic async operation
 
-### 2. `test_concurrent_rag_mvp.py` - Full Concurrent Testing
+### 2. `scripts/testing/test_concurrent_rag_mvp.py` - Full Concurrent Testing
 **Purpose**: Comprehensive concurrent request testing
-**Usage**: `python test_concurrent_rag_mvp.py`
+**Usage**: `python scripts/testing/test_concurrent_rag_mvp.py`
 
 **Test Scenarios**:
 - **Test 1**: Basic Concurrent Test (3 requests)
