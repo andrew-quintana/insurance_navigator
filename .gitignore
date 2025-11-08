@@ -36,6 +36,7 @@ config/*.env*
 
 # Documentation
 docs/
+!docs/media/
 
 # Database files
 *.db
