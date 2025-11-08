@@ -34,10 +34,6 @@ config/credentials.json
 config/api-keys.json
 config/*.env*
 
-# Documentation
-docs/
-!docs/media/
-
 # Database files
 *.db
 *.sqlite
