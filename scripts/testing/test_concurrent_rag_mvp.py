@@ -19,6 +19,7 @@ import time
 import statistics
 import json
 from datetime import datetime
+from pathlib import Path
 from typing import List, Dict, Any, Tuple
 from dataclasses import dataclass, asdict
 from concurrent.futures import ThreadPoolExecutor
@@ -387,7 +388,11 @@ class ConcurrentRAGTester:
         
         # Save all results
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        summary_filename = f"mvp_concurrent_test_summary_{timestamp}.json"
+        
+        # Save to backend/test-results directory
+        results_dir = Path(__file__).parent.parent.parent / 'backend' / 'test-results'
+        results_dir.mkdir(parents=True, exist_ok=True)
+        summary_filename = results_dir / f"mvp_concurrent_test_summary_{timestamp}.json"
         
         summary_data = {
             "test_suite": "MVP Async Fix Concurrent Testing",
