@@ -8,7 +8,7 @@ A near HIPAA-compliant AI-powered system that helps patients understand their in
 
 The Insurance Navigator is available as a live demo. Upload your insurance documents and start asking questions immediately. The webapp is fully functional and ready to help you understand your insurance coverage, benefits, and claims.
 
-**Note:** The project is not yet set up to be run locally on other machines. For now, please use the demo link above to experience the Insurance Navigator.
+**Note:** The project is now set up for local development. See the [Development Setup](#-development-setup) section below.
 
 ## 🎯 Overview
 
@@ -34,6 +34,56 @@ Insurance Navigator is **near HIPAA-compliant** and would achieve full HIPAA com
   - Document processing
   - Chat interactions
   - Context processing
+
+## 🛠️ Development Setup
+
+The project uses [Overmind](https://github.com/DarthSim/overmind) to orchestrate development services.
+
+**Prerequisites:**
+- Docker Desktop (running)
+- Supabase CLI
+- Node.js (v18+)
+- Overmind
+
+**Installation:**
+```bash
+# Install Overmind
+brew install overmind  # macOS
+# See docs/environments/development/OVERMIND_SETUP.md for other platforms
+
+# Install Supabase CLI
+brew install supabase/tap/supabase  # macOS
+```
+
+**Start Development Environment:**
+```bash
+./scripts/dev-start.sh
+# or
+overmind start
+```
+
+**Stop Development Environment:**
+```bash
+./scripts/dev-stop.sh
+# or
+overmind stop
+```
+
+**View Logs:**
+```bash
+overmind logs
+overmind logs frontend
+overmind logs docker-services
+overmind logs supabase
+```
+
+**Service URLs:**
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- Supabase API: http://127.0.0.1:54321
+- Supabase Studio: http://127.0.0.1:54323
+
+See [docs/environments/development/OVERMIND_SETUP.md](docs/environments/development/OVERMIND_SETUP.md) for detailed setup and troubleshooting.
 
 ## 🚧 Next Steps
 
