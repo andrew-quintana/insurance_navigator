@@ -67,7 +67,7 @@ def create_database_config() -> DatabaseConfig:
         parsed = urllib.parse.urlparse(db_url)
         
         # Determine SSL mode based on connection type
-        if any(host in db_url for host in ["127.0.0.1", "localhost", "supabase_db_insurance_navigator"]):
+        if any(host in db_url for host in ["127.0.0.1", "localhost", "supabase_db_insurance_navigator", "host.docker.internal"]):
             ssl_mode = "disable"
         elif "pooler.supabase.com" in db_url or "dfgzeastcxnoqshgyotp" in db_url:
             # Supabase pooler URLs need require SSL

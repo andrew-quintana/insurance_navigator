@@ -7,8 +7,10 @@
 ## ⚡ Quick Start (One Command)
 
 ```bash
-# Start everything (Supabase + API + Worker)
-./scripts/start-dev.sh
+# Start everything (Supabase + API + Worker + Frontend)
+overmind start
+# or use convenience wrapper
+./scripts/dev-start.sh
 ```
 
 Then in another terminal:
@@ -403,7 +405,7 @@ Before running investigation, verify:
 
 ---
 
-**Quick Reference:** Use `./scripts/start-dev.sh` for one-command setup!
+**Quick Reference:** Use `overmind start` or `./scripts/dev-start.sh` for one-command setup!
 
 **Documentation:** See `PHASE_1_5_QUICKSTART.md` for full guide
 

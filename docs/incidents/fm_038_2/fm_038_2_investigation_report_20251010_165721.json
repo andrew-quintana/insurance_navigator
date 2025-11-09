@@ -1,0 +1,57 @@
+{
+  "timestamp": "2025-10-10T16:57:21.794383",
+  "investigation_id": "FM-038-2",
+  "test_user_id": "f0cfcc46-5fdb-48c4-af13-51c6cf53e408",
+  "test_query": "What does my insurance cover for preventive care?",
+  "metrics": {
+    "total_duration_seconds": 0.003987789154052734,
+    "total_tests": 6,
+    "successful_tests": 0,
+    "failed_tests": 6,
+    "success_rate_percent": 0.0
+  },
+  "test_results": [
+    {
+      "test_name": "RAG Tool Isolation",
+      "success": false,
+      "duration_ms": 0.17213821411132812,
+      "error": "No module named 'agents'",
+      "details": {}
+    },
+    {
+      "test_name": "InformationRetrievalAgent Methods",
+      "success": false,
+      "duration_ms": 0.11992454528808594,
+      "error": "No module named 'agents'",
+      "details": {}
+    },
+    {
+      "test_name": "InputProcessingWorkflow with UserContext",
+      "success": false,
+      "duration_ms": 0.1347064971923828,
+      "error": "No module named 'agents'",
+      "details": {}
+    },
+    {
+      "test_name": "SupervisorWorkflow with Mock",
+      "success": false,
+      "duration_ms": 0.10704994201660156,
+      "error": "No module named 'agents'",
+      "details": {}
+    },
+    {
+      "test_name": "OutputProcessingWorkflow",
+      "success": false,
+      "duration_ms": 0.1323223114013672,
+      "error": "No module named 'agents'",
+      "details": {}
+    },
+    {
+      "test_name": "TwoStageOutputSynthesizer",
+      "success": false,
+      "duration_ms": 0.12683868408203125,
+      "error": "No module named 'agents'",
+      "details": {}
+    }
+  ]
+}

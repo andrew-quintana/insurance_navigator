@@ -135,6 +135,15 @@ async def get_supabase_client() -> Client:
     if not supabase_url or not supabase_key:
         raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY (or ANON_KEY) environment variables must be set")
     
+    # Ensure host.docker.internal is used in Docker containers
+    # Replace localhost with host.docker.internal if we're in a container
+    if "localhost" in supabase_url and os.path.exists("/.dockerenv"):
+        supabase_url = supabase_url.replace("localhost", "host.docker.internal")
+        logger.info(f"Detected Docker container, using host.docker.internal: {supabase_url}")
+    
+    # Log the URL being used for debugging
+    logger.info(f"Creating Supabase client with URL: {supabase_url}")
+    
     try:
         # Create client with public schema (default)
         client = create_client(
@@ -157,6 +166,15 @@ async def get_supabase_service_client() -> Client:
     
     if not supabase_url or not supabase_service_key:
         raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables must be set")
+    
+    # Ensure host.docker.internal is used in Docker containers
+    # Replace localhost with host.docker.internal if we're in a container
+    if "localhost" in supabase_url and os.path.exists("/.dockerenv"):
+        supabase_url = supabase_url.replace("localhost", "host.docker.internal")
+        logger.info(f"Detected Docker container, using host.docker.internal: {supabase_url}")
+    
+    # Log the URL being used for debugging
+    logger.info(f"Creating Supabase service client with URL: {supabase_url}")
     
     try:
         # Create client with service role key for admin operations

@@ -9,7 +9,14 @@ ENV=${1:-dev}
 case $ENV in
   dev|development)
     echo "🚀 Starting Development Environment..."
-    ./scripts/start-dev.sh
+    if command -v overmind &> /dev/null; then
+      overmind start
+    else
+      echo "❌ Overmind is not installed."
+      echo "   Install with: brew install overmind"
+      echo "   Or use: ./scripts/dev-start.sh (which checks prerequisites)"
+      exit 1
+    fi
     ;;
   staging)
     echo "🚀 Starting Staging Environment..."

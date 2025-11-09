@@ -34,10 +34,6 @@ config/credentials.json
 config/api-keys.json
 config/*.env*
 
-# Documentation
-docs/
-!docs/media/
-
 # Database files
 *.db
 *.sqlite
@@ -156,4 +152,12 @@ sensitive-data-inventory.md
 git-cleanup-notes.md
 rollback-reference.md
 
-docs/media/videos
+# Overmind process manager
+.overmind.env
+.overmind.sock
+.overmind.pid
+.overmind.log
+
+# Large media files (exceed GitHub 100MB limit)
+*.mov
+docs/media/videos/*.mov

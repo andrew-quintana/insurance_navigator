@@ -33,7 +33,7 @@ class DatabaseManager:
             
             # Create connection pool with SSL configuration for Supabase
             # For local development, disable SSL; for production, require SSL
-            ssl_mode = "disable" if any(host in db_url for host in ["127.0.0.1", "localhost", "supabase_db_insurance_navigator"]) else "require"
+            ssl_mode = "disable" if any(host in db_url for host in ["127.0.0.1", "localhost", "supabase_db_insurance_navigator", "host.docker.internal"]) else "require"
             
             self.pool = await create_pool(
                 db_url,

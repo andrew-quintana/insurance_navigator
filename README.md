@@ -1,6 +1,6 @@
 # Insurance Navigator
 
-A near HIPAA-compliant AI-powered system that helps patients understand their insurance documents through intelligent document processing and conversational AI.
+A near HIPAA-compliant AI-powered system that helps patients understand their insurance documents through intelligent document processing and conversational AI. It's goal is to help people understand their 
 
 ## 🌐 Try It Now
 
@@ -8,17 +8,7 @@ A near HIPAA-compliant AI-powered system that helps patients understand their in
 
 The Insurance Navigator is available as a live demo. Upload your insurance documents and start asking questions immediately. The webapp is fully functional and ready to help you understand your insurance coverage, benefits, and claims.
 
-**📹 Demo Video**
-
-Watch a demonstration of the Insurance Navigator in action, showing how it processes insurance documents and answers questions about coverage and benefits.
-
-<div align="center">
-
-![Insurance Navigator Demo](docs/media/gifs/chat_demo.gif)
-
-</div>
-
-**Note:** The project is not yet set up to be run locally on other machines. For now, please use the demo link above to experience the Insurance Navigator.
+**Note:** The project is now set up for local development. See the [Development Setup](#-development-setup) section below.
 
 ## 🎯 Overview
 
@@ -26,11 +16,9 @@ Insurance Navigator is a comprehensive platform that combines document processin
 
 ## 🏗️ System Architecture
 
-The system consists of several key components including backend services, frontend UI, AI/ML components, and database infrastructure.
+System design diagrams coming soon.
 
-**📚 [System Design Documentation](./docs/architecture/README.md)**
-
-Detailed architecture documentation, system design breakdowns, and diagrams are available in the [architecture documentation](./docs/architecture/README.md). System designs are created and expanded upon there.
+The system consists of several key components including backend services, frontend UI, AI/ML components, and database infrastructure. Detailed architecture documentation and diagrams will be added shortly.
 
 ## 🔒 HIPAA Compliance Status
 
@@ -47,12 +35,64 @@ Insurance Navigator is **near HIPAA-compliant** and would achieve full HIPAA com
   - Chat interactions
   - Context processing
 
+## 🛠️ Development Setup
+
+The project uses [Overmind](https://github.com/DarthSim/overmind) to orchestrate development services.
+
+**Prerequisites:**
+- Docker Desktop (running)
+- Supabase CLI
+- Node.js (v18+)
+- Overmind
+
+**Installation:**
+```bash
+# Install Overmind
+brew install overmind  # macOS
+# See docs/environments/development/OVERMIND_SETUP.md for other platforms
+
+# Install Supabase CLI
+brew install supabase/tap/supabase  # macOS
+```
+
+**Start Development Environment:**
+```bash
+./scripts/dev-start.sh
+# or
+overmind start
+```
+
+**Stop Development Environment:**
+```bash
+./scripts/dev-stop.sh
+# or
+overmind stop
+```
+
+**View Logs:**
+```bash
+overmind logs
+overmind logs frontend
+overmind logs docker-services
+overmind logs supabase
+```
+
+**Service URLs:**
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- Supabase API: http://127.0.0.1:54321
+- Supabase Studio: http://127.0.0.1:54323
+
+See [docs/environments/development/OVERMIND_SETUP.md](docs/environments/development/OVERMIND_SETUP.md) for detailed setup and troubleshooting.
+
 ## 🚧 Next Steps
 
-1. **Debug Concurrency Failures** - Resolve concurrent processing issues in the system
+1. **Debug Concurrency Failures** - Resolve concurrent processing issues in the agentic system that cause timeouts and failures in the chat workflow
 2. **Documentation** - Expand and improve project documentation
 3. **Refactor Upload Pipeline** - Implement frontend deidentification of uploaded documents
-4. **Restructure User Profiles** - Buffer user info from user messages, documents, and other context
+4. **Refactor Agentic Workflows** - Simplify by removing strategy workflow (will be better once I can implement a strategy database and MCP) and focusing more on guardrails instead of routing between workflows. Also working to incorporate NLLB-200 to support helping as many people as possible
+5. **Restructure User Profiles** - Buffer user info from user messages, documents, and other context
+6. **OSS Launch** - With deidentification and stopgaps protecting data, launching an direct to consumer OSS to get feedback and help people!
 
 ## 📄 License
 

@@ -73,7 +73,7 @@ class DatabaseManager:
             # Create connection pool with SSL configuration for Supabase
             # For local development, disable SSL; for production, require SSL
             if self._is_supabase_connection():
-                ssl_config = "disable" if any(host in self.config.host for host in ["127.0.0.1", "localhost", "supabase_db_insurance_navigator"]) else "require"
+                ssl_config = "disable" if any(host in self.config.host for host in ["127.0.0.1", "localhost", "supabase_db_insurance_navigator", "host.docker.internal"]) else "require"
                 logger.info(f"Supabase connection detected, using SSL config: {ssl_config}")
             else:
                 ssl_config = self.config.ssl_mode
@@ -232,7 +232,7 @@ def create_database_config() -> DatabaseConfig:
             database=parsed.path.lstrip('/') or "postgres",
             user=parsed.username or "postgres",
             password=parsed.password or "",
-            ssl_mode="disable" if any(host in db_url for host in ["127.0.0.1", "localhost", "supabase_db_insurance_navigator"]) else "require"
+            ssl_mode="disable" if any(host in db_url for host in ["127.0.0.1", "localhost", "supabase_db_insurance_navigator", "host.docker.internal"]) else "require"
         )
     
     # Fallback to individual environment variables

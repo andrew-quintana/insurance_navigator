@@ -1,0 +1,46 @@
+{
+  "timestamp": "2025-09-26T08:13:51.462212",
+  "environment": "development",
+  "tests": [
+    {
+      "name": "User Registration Workflow",
+      "passed": true,
+      "message": "User registration successful"
+    },
+    {
+      "name": "User Login Workflow",
+      "passed": false,
+      "message": "User login failed: 400"
+    },
+    {
+      "name": "Session Management",
+      "passed": false,
+      "message": "Session management failed: 403"
+    },
+    {
+      "name": "Frontend Authentication Flow",
+      "passed": true,
+      "message": "Frontend authentication flow working"
+    },
+    {
+      "name": "User Workflow Integration",
+      "passed": true,
+      "message": "User workflow integration working"
+    },
+    {
+      "name": "JWT/UUID Consistency",
+      "passed": false,
+      "message": "JWT/UUID consistency failed: 403"
+    },
+    {
+      "name": "Error Handling",
+      "passed": true,
+      "message": "Error handling working"
+    }
+  ],
+  "summary": {
+    "total": 7,
+    "passed": 4,
+    "failed": 3
+  }
+}
