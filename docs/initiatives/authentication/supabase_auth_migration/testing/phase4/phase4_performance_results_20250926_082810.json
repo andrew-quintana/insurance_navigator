@@ -1,0 +1,36 @@
+{
+  "timestamp": "2025-09-26T08:28:10.177020",
+  "environment": "development",
+  "tests": [
+    {
+      "name": "Registration Performance",
+      "passed": true,
+      "message": "Registration performance good: 100.0% success, 0.13s avg"
+    },
+    {
+      "name": "Login Performance",
+      "passed": true,
+      "message": "Login performance good: 100.0% success, 0.10s avg"
+    },
+    {
+      "name": "Concurrent Requests",
+      "passed": true,
+      "message": "Concurrent performance good: 100.0% success, 0.21s avg"
+    },
+    {
+      "name": "Error Handling Performance",
+      "passed": true,
+      "message": "Error handling performance good: 100.0% correct, 0.00s avg"
+    },
+    {
+      "name": "Memory Usage",
+      "passed": true,
+      "message": "Memory usage good: -0.3MB increase"
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0
+  }
+}
