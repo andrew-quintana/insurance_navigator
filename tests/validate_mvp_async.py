@@ -131,7 +131,7 @@ async def main():
         
         if success:
             print("\n🚀 Proceeding to run full concurrent test suite...")
-            print("   Execute: python test_concurrent_rag_mvp.py")
+            print("   Execute: python tests/test_concurrent_rag_mvp.py")
             sys.exit(0)
         else:
             print("\n❌ Basic validation FAILED!")

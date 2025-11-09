@@ -157,3 +157,7 @@ rollback-reference.md
 .overmind.sock
 .overmind.pid
 .overmind.log
+
+# Large media files (exceed GitHub 100MB limit)
+*.mov
+docs/media/videos/*.mov

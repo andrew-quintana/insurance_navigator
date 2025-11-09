@@ -8,9 +8,9 @@ The MVP async fix converts the RAG system's `_generate_embedding()` method from 
 
 ## Test Scripts
 
-### 1. `validate_mvp_async.py` - Basic Validation
+### 1. `tests/validate_mvp_async.py` - Basic Validation
 **Purpose**: Quick validation before running full concurrent tests
-**Usage**: `python validate_mvp_async.py`
+**Usage**: `python tests/validate_mvp_async.py`
 
 **Tests**:
 - Environment variable setup
@@ -18,9 +18,9 @@ The MVP async fix converts the RAG system's `_generate_embedding()` method from 
 - Single request functionality
 - Basic async operation
 
-### 2. `test_concurrent_rag_mvp.py` - Full Concurrent Testing
+### 2. `tests/test_concurrent_rag_mvp.py` - Full Concurrent Testing
 **Purpose**: Comprehensive concurrent request testing
-**Usage**: `python test_concurrent_rag_mvp.py`
+**Usage**: `python tests/test_concurrent_rag_mvp.py`
 
 **Test Scenarios**:
 - **Test 1**: Basic Concurrent Test (3 requests)
@@ -45,7 +45,7 @@ The tests validate against these MVP success criteria:
 
 ### Step 1: Basic Validation
 ```bash
-python validate_mvp_async.py
+python tests/validate_mvp_async.py
 ```
 
 **Expected Output**:
@@ -76,12 +76,12 @@ python validate_mvp_async.py
    Ready to run full concurrent test suite.
 
 🚀 Proceeding to run full concurrent test suite...
-   Execute: python test_concurrent_rag_mvp.py
+   Execute: python tests/test_concurrent_rag_mvp.py
 ```
 
 ### Step 2: Concurrent Testing
 ```bash
-python test_concurrent_rag_mvp.py
+python tests/test_concurrent_rag_mvp.py
 ```
 
 **Expected Output**:
@@ -124,7 +124,7 @@ python test_concurrent_rag_mvp.py
 
 ### Output Files
 - `concurrent_test_results_YYYYMMDD_HHMMSS.json` - Individual test results
-- `mvp_concurrent_test_summary_YYYYMMDD_HHMMSS.json` - Complete test suite summary
+- `test-results/mvp_concurrent_test_summary_YYYYMMDD_HHMMSS.json` - Complete test suite summary
 
 ### Result Interpretation
 
@@ -194,7 +194,7 @@ logging.basicConfig(level=logging.DEBUG)
 ### Usage in CI/CD
 ```bash
 # Run validation
-python validate_mvp_async.py && python test_concurrent_rag_mvp.py
+python tests/validate_mvp_async.py && python tests/test_concurrent_rag_mvp.py
 
 # Check exit code
 if [ $? -eq 0 ]; then

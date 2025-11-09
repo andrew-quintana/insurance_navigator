@@ -387,7 +387,7 @@ class ConcurrentRAGTester:
         
         # Save all results
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        summary_filename = f"mvp_concurrent_test_summary_{timestamp}.json"
+        summary_filename = f"test-results/mvp_concurrent_test_summary_{timestamp}.json"
         
         summary_data = {
             "test_suite": "MVP Async Fix Concurrent Testing",
