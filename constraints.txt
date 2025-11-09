@@ -1,3 +1,4 @@
 # Constraint file to force exact pydantic versions
-pydantic==2.5.0
-pydantic-core==2.14.1
+# Updated to 2.9.0 to support supabase_auth with_config decorator (requires pydantic>=2.6.0)
+pydantic==2.9.0
+pydantic-core==2.23.0
