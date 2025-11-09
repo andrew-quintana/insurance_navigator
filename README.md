@@ -6,7 +6,7 @@ A near HIPAA-compliant AI-powered system that helps people understand their insu
 
 **🚀 [Live Demo](https://insurance-navigator.vercel.app)**
 
-The Insurance Navigator is available as a live demo. Upload your insurance documents and start asking questions immediately. The webapp is fully functional and ready to help you understand your insurance coverage, benefits, and claims.
+The Insurance Navigator is available as a live demo. A 250-page insurance document is already uploaded under my account so you can test this app. Just click the demo button on the front page, Register page, or Sign In page! 
 
 **📹 Demo Video**
 
