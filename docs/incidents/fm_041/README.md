@@ -92,6 +92,22 @@ The investigation focuses on four critical areas:
 - [ ] Root cause is identified and resolved
 - [ ] Prevention measures are in place
 
+## Quick Test Before Deployment
+
+**IMPORTANT**: Before deploying, test dependency compatibility to catch similar errors:
+
+```bash
+./scripts/test_docker_imports.sh
+```
+
+This test:
+- Builds the Docker image (same as Render)
+- Tests all critical imports in Docker environment
+- Catches dependency version mismatches (like the pydantic issue)
+- Verifies the application can start without import errors
+
+**See**: [LOCAL_TESTING_GUIDE.md](./LOCAL_TESTING_GUIDE.md) for detailed testing instructions
+
 ## Investigation Approaches
 
 ### Quick Investigation (Recommended)
