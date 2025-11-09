@@ -1,7 +1,6 @@
 {
   "version": 2,
   "framework": "nextjs",
-  "rootDirectory": "ui",
   "regions": ["iad1"],
   "rewrites": [
     {
