@@ -60,6 +60,13 @@ ImportError: cannot import name 'with_config' from 'pydantic'
 - `requirements-api.txt`: Updated pydantic and pydantic-settings versions
 - `constraints.txt`: Updated pydantic and pydantic-core versions
 
+### Additional Fix During Testing
+During local testing with `test_docker_imports.sh`, discovered and fixed a secondary dependency conflict:
+- **Issue**: `pydantic 2.9.0` requires `pydantic-core==2.23.2`, but constraints.txt had `2.23.0`
+- **Error**: `ResolutionImpossible: pydantic 2.9.0 depends on pydantic-core==2.23.2, but user requested pydantic-core==2.23.0`
+- **Fix**: Updated `constraints.txt` to use `pydantic-core==2.23.2` to match pydantic 2.9.0 requirements
+- **Lesson**: Local Docker testing caught this before deployment, validating the testing approach
+
 ## Verification
 
 ### Expected Outcome
@@ -95,9 +102,11 @@ ImportError: cannot import name 'with_config' from 'pydantic'
 ## Status
 
 - [x] Root cause identified
-- [x] Fix implemented
-- [ ] Fix verified (pending deployment)
-- [ ] Prevention measures implemented
+- [x] Fix implemented (pydantic 2.9.0, pydantic-core 2.23.2)
+- [x] Secondary dependency conflict fixed (pydantic-core version)
+- [x] Local testing validates fix (Docker import test passes)
+- [ ] Production deployment verification (pending)
+- [x] Prevention measures implemented (test_docker_imports.sh)
 
 ## Related Issues
 
