@@ -55,27 +55,26 @@ python3 scripts/test_dependency_compatibility.py
 - Quick checks during development
 - When you have a local virtual environment set up
 
-### Option 3: Full Deployment Readiness Test
+### Option 3: Quick Dependency Check (No Docker)
 
-Runs multiple checks including dependency compatibility:
+For quick checks when Docker isn't available:
 
 ```bash
-./scripts/test_deployment_readiness.sh
+python3 scripts/test_dependency_compatibility.py
 ```
 
-**What it does:**
-1. Runs dependency compatibility tests
-2. Tests application imports
-3. Validates Dockerfile (if Docker available)
+**Note**: Requires dependencies to be installed locally. For production-like testing, use Option 1 (Docker-based test).
 
 ## Pre-Deployment Checklist
 
 Before deploying to Render, run:
 
-1. **Docker Import Test** (catches FM-041 type errors):
+1. **Docker Import Test** (catches FM-041 type errors - REQUIRED):
    ```bash
    ./scripts/test_docker_imports.sh
    ```
+   
+   This is the primary test that validates dependencies in the same environment as Render.
 
 2. **Verify dependency versions**:
    ```bash

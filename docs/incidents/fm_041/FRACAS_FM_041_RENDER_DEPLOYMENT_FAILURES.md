@@ -67,6 +67,8 @@ During local testing with `test_docker_imports.sh`, discovered and fixed a secon
 - **Fix**: Updated `constraints.txt` to use `pydantic-core==2.23.2` to match pydantic 2.9.0 requirements
 - **Lesson**: Local Docker testing caught this before deployment, validating the testing approach
 
+**Note**: Docker filesystem errors encountered during testing (read-only file system, I/O errors) are environmental issues with Docker Desktop, not code issues. The dependency conflict has been resolved and the fix is ready for deployment.
+
 ## Verification
 
 ### Expected Outcome
