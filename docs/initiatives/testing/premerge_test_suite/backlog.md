@@ -71,7 +71,7 @@ Add a pre-merge validation test to ensure Vercel build configuration is correct:
 
 ---
 
-### FM-042: Dockerfile Validation and Consistency Tests
+### FM-042: API Dockerfile Validation and Pre-Merge Testing
 
 **Status**: ⏳ PENDING  
 **Priority**: HIGH  
@@ -80,7 +80,7 @@ Add a pre-merge validation test to ensure Vercel build configuration is correct:
 
 #### Problem Statement
 
-Dockerfile changes can break deployments if not properly validated. The API Dockerfile and worker Dockerfile need consistent validation, and both should be verified to work equivalently to docker-compose.yml configurations.
+API Dockerfile changes can break deployments if not properly validated. The API Dockerfile needs comprehensive pre-merge validation and should be verified to work equivalently to docker-compose.yml configurations. Note: Worker Dockerfile did not require changes in FM-042.
 
 #### Solution Implemented
 
@@ -97,8 +97,8 @@ Dockerfile changes can break deployments if not properly validated. The API Dock
 
 **Test Components**:
 
-1. **API Dockerfile Validation** (`scripts/test_dockerfile_fm042.sh` - already exists)
-   - ✅ Docker build succeeds
+1. **API Dockerfile Pre-Merge Validation** (`scripts/test_dockerfile_fm042.sh` - ✅ IMPLEMENTED)
+   - ✅ Docker build succeeds (with and without cache)
    - ✅ Image size is reasonable
    - ✅ Dependencies install correctly (pydantic 2.9.0)
    - ✅ Container starts and uvicorn runs
@@ -107,18 +107,15 @@ Dockerfile changes can break deployments if not properly validated. The API Dock
    - ✅ No conflicting flags (PIP_NO_CACHE_DIR, --no-cache-dir, --force-reinstall)
    - ✅ Cache mounts work properly
    - ✅ Environment variables configured correctly
+   - ✅ Handles expected database connection failures gracefully
+   
+   **Pre-Merge Integration**:
+   - Should run automatically before merge to `main` branch
+   - Should run on any changes to `Dockerfile` or `requirements-api.txt`
+   - Can be run manually: `./scripts/test_dockerfile_fm042.sh [--no-cache]`
+   - Exit code 0 = pass, non-zero = fail
 
-2. **Worker Dockerfile Validation** (`scripts/test_dockerfile_worker.sh` - to be created)
-   - Docker build succeeds
-   - Image size is reasonable
-   - Dependencies install correctly
-   - Container starts and worker process runs
-   - Worker imports successfully
-   - Required directories present
-   - Health check works
-   - No conflicting flags
-
-3. **Dockerfile ↔ docker-compose.yml Equivalence Test** (`scripts/test_dockerfile_compose_equivalence.sh` - to be created)
+2. **Dockerfile ↔ docker-compose.yml Equivalence Test** (`scripts/test_dockerfile_compose_equivalence.sh` - to be created)
    - Extract build configuration from docker-compose.yml
    - Extract build configuration from Dockerfile
    - Compare base images (should match)
@@ -178,18 +175,18 @@ Dockerfile changes can break deployments if not properly validated. The API Dock
 - Conflicting flags present
 
 **Integration Points**:
-- Should run before merge to `main` branch
-- Should run as part of CI/CD pipeline
-- Should be included in pre-deployment checklist
-- Should run on both API and worker Dockerfile changes
+- **Pre-Merge**: Run `./scripts/test_dockerfile_fm042.sh` before merge to `main` branch
+- **CI/CD Pipeline**: Integrate into GitHub Actions or similar
+- **Pre-Deployment**: Include in deployment checklist
+- **Trigger Conditions**: Run on changes to `Dockerfile`, `requirements-api.txt`, or `constraints.txt`
 
 **Implementation Notes**:
-- Base test script exists: `scripts/test_dockerfile_fm042.sh`
-- Need to create: `scripts/test_dockerfile_worker.sh`
-- Need to create: `scripts/test_dockerfile_compose_equivalence.sh`
+- ✅ API Dockerfile test script implemented: `scripts/test_dockerfile_fm042.sh`
+- ⏳ Need to create: `scripts/test_dockerfile_compose_equivalence.sh`
 - Consider using `docker inspect` to extract actual runtime configuration
 - Use `docker-compose config` to parse compose file programmatically
 - Make tests idempotent and parallelizable
+- Note: Worker Dockerfile validation can be added later if needed (not required for FM-042)
 
 **Related Documentation**:
 - [FM-042 FRACAS Report](../incidents/fm_042/FRACAS_FM_042_DOCKERFILE_OPTIMIZATION_INVESTIGATION.md)
