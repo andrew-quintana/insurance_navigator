@@ -595,7 +595,8 @@ Generate a detailed response that would be most helpful to the user.
     
     async def _call_llm(self, prompt: str) -> str:
         """
-        Call LLM with prompt using robust threading-based timeout handling.
+        Call LLM with prompt using proper async timeout handling.
+        Addresses: FM-043 - Replace daemon threading with async patterns.
         
         Args:
             prompt: Prompt to send to LLM
@@ -610,55 +611,19 @@ Generate a detailed response that would be most helpful to the user.
             
             self.logger.info(f"Calling LLM with prompt length: {len(prompt)} characters")
             
-            # Use threading with timeout for robust timeout handling
-            import threading
-            import queue
-            
-            result_queue = queue.Queue()
-            exception_queue = queue.Queue()
-            
-            def api_call():
-                try:
-                    self.logger.info("Thread started for Information Retrieval LLM call")
-                    # Make the actual LLM call
-                    response = self.llm(prompt)
-                    result_queue.put(response)
-                    self.logger.info("Thread completed Information Retrieval LLM call successfully")
-                except Exception as e:
-                    self.logger.error(f"Thread failed with exception: {e}")
-                    exception_queue.put(e)
-                finally:
-                    self.logger.info("Thread exiting")
-            
-            # Start API call in separate thread
-            thread = threading.Thread(target=api_call)
-            thread.daemon = True
-            thread.start()
-            
-            # Wait for result with 25-second timeout
-            thread.join(timeout=60.0)
-            
-            if thread.is_alive():
+            # Use asyncio timeout instead of threading
+            try:
+                async with asyncio.timeout(60.0):  # 60 second timeout
+                    self.logger.info("Starting LLM call with async timeout")
+                    # Run synchronous LLM call in executor
+                    loop = asyncio.get_running_loop()
+                    response = await loop.run_in_executor(None, self.llm, prompt)
+                    
+                    self.logger.info(f"LLM call completed successfully with response length: {len(response)} characters")
+                    return response
+                    
+            except asyncio.TimeoutError:
                 self.logger.error("LLM call timed out after 60 seconds")
-                self.logger.error("Thread is still alive after timeout - investigating...")
-                self.logger.error(f"Thread name: {thread.name}")
-                self.logger.error(f"Thread daemon: {thread.daemon}")
-                self.logger.error(f"Thread ident: {thread.ident}")
-                return "expert insurance terminology query reframe"
-            
-            # Check for exceptions
-            if not exception_queue.empty():
-                exception = exception_queue.get()
-                self.logger.error(f"LLM call failed: {exception}")
-                return "expert insurance terminology query reframe"
-            
-            # Get the result
-            if not result_queue.empty():
-                response = result_queue.get()
-                self.logger.info(f"LLM response received: {len(response)} characters")
-                return response
-            else:
-                self.logger.error("No response received from LLM")
                 return "expert insurance terminology query reframe"
             
         except Exception as e:

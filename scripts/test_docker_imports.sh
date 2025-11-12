@@ -28,14 +28,80 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-# Build the Docker image
+# Check if Docker daemon is running (with timeout to prevent hang)
+echo -e "${YELLOW}Checking Docker daemon...${NC}"
+if command -v timeout &> /dev/null; then
+    if ! timeout 5 docker info > /dev/null 2>&1; then
+        echo -e "${RED}✗ Docker daemon is not running or not accessible.${NC}"
+        echo "  Please start Docker Desktop or Docker daemon and try again."
+        echo "  Error: Docker daemon check timed out or failed"
+        exit 1
+    fi
+else
+    # Fallback for macOS without timeout - use a background process
+    docker info > /dev/null 2>&1 &
+    DOCKER_CHECK_PID=$!
+    sleep 2
+    if ! kill -0 $DOCKER_CHECK_PID 2>/dev/null; then
+        wait $DOCKER_CHECK_PID
+        DOCKER_EXIT=$?
+        if [ $DOCKER_EXIT -ne 0 ]; then
+            echo -e "${RED}✗ Docker daemon is not running or not accessible.${NC}"
+            echo "  Please start Docker Desktop or Docker daemon and try again."
+            exit 1
+        fi
+    else
+        # Still running after 2 seconds - likely hanging
+        kill $DOCKER_CHECK_PID 2>/dev/null
+        echo -e "${RED}✗ Docker daemon check is hanging - Docker may not be running.${NC}"
+        echo "  Please start Docker Desktop and try again."
+        exit 1
+    fi
+fi
+echo -e "${GREEN}✓ Docker daemon is running${NC}"
+echo ""
+
+# Build the Docker image with progress output
 echo -e "${YELLOW}Building Docker image...${NC}"
-if docker build -t insurance-navigator-test:latest -f Dockerfile . > /tmp/docker-build.log 2>&1; then
+echo "This may take 5-10 minutes on first build (compiling cryptography, numpy, etc.)"
+echo "Progress will be shown below..."
+echo ""
+
+# Set build timeout (20 minutes should be enough even for slow systems)
+BUILD_TIMEOUT=1200
+
+# Check if timeout command is available (not on macOS by default)
+if command -v timeout &> /dev/null; then
+    TIMEOUT_CMD="timeout $BUILD_TIMEOUT"
+    TIMEOUT_AVAILABLE=true
+else
+    TIMEOUT_CMD=""
+    TIMEOUT_AVAILABLE=false
+    echo -e "${YELLOW}⚠ timeout command not available - build will not have automatic timeout${NC}"
+    echo "  If build hangs, press Ctrl+C to cancel"
+    echo ""
+fi
+
+# Build with progress output and log to file simultaneously
+# Use timeout to prevent infinite hangs (if available)
+if $TIMEOUT_CMD docker build --progress=plain -t insurance-navigator-test:latest -f Dockerfile . 2>&1 | tee /tmp/docker-build.log; then
+    echo ""
     echo -e "${GREEN}✓ Docker image built successfully${NC}"
 else
-    echo -e "${RED}✗ Docker build failed${NC}"
-    echo "Build logs:"
+    EXIT_CODE=$?
+    echo ""
+    if [ "$TIMEOUT_AVAILABLE" = true ] && [ $EXIT_CODE -eq 124 ]; then
+        echo -e "${RED}✗ Docker build timed out after $((BUILD_TIMEOUT / 60)) minutes${NC}"
+        echo "  This usually indicates a network issue or a package that's taking too long to compile."
+        echo "  Check the build log for which package was being installed when it hung."
+    else
+        echo -e "${RED}✗ Docker build failed${NC}"
+    fi
+    echo ""
+    echo "Last 50 lines of build log:"
     tail -50 /tmp/docker-build.log
+    echo ""
+    echo "Full log available at: /tmp/docker-build.log"
     exit 1
 fi
 echo ""

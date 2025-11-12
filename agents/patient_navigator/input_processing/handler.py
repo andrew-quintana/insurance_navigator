@@ -81,7 +81,8 @@ class DefaultInputHandler(InputHandler):
         
         try:
             # Use asyncio to run audio capture in executor
-            loop = asyncio.get_event_loop()
+            # Addresses: FM-043 - Replace deprecated get_event_loop() with get_running_loop()
+            loop = asyncio.get_running_loop()
             audio_data = await loop.run_in_executor(
                 None, 
                 self._capture_audio_sync, 

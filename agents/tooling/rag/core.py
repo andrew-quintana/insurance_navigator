@@ -126,9 +126,12 @@ class RAGTool:
         # to avoid duplicate RAG operations in logs
         # operation_metrics will be passed from the calling method
         
+        # Addresses: FM-043 - Use connection pooling for database operations
+        from agents.tooling.rag.database_manager import get_db_connection, release_db_connection
+        
         conn = None
         try:
-            conn = await self._get_db_conn()
+            conn = await get_db_connection()
             # Query for top-k chunks with user-scoped access
             schema = os.getenv("DATABASE_SCHEMA", "upload_pipeline")
             
@@ -211,7 +214,7 @@ class RAGTool:
             return []
         finally:
             if conn:
-                await conn.close()
+                await release_db_connection(conn)
 
     async def retrieve_chunks_from_text(self, query_text: str) -> List[ChunkWithContext]:
         """
