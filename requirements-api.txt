@@ -6,8 +6,8 @@
 fastapi==0.110.0
 uvicorn[standard]==0.27.1
 python-multipart==0.0.9
-pydantic==2.5.0
-pydantic-settings==2.1.0
+pydantic==2.9.0
+pydantic-settings==2.6.0
 
 # Database - Essential
 asyncpg==0.29.0
@@ -29,7 +29,6 @@ python-dotenv==1.0.1
 
 # ========== AI/ML DEPENDENCIES - FOR RAG SYSTEM ==========
 # OpenAI for embeddings (used by RAG system)
-# Using 1.100.0 to avoid Pydantic 2.5.0 underscore field naming issues
 openai==1.100.0
 
 # Anthropic for Claude LLM integration (used by chat interface)

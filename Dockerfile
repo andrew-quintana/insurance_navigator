@@ -1,5 +1,5 @@
 # Multi-stage build for faster deployment
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 # Install system dependencies with optimized layer
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -16,7 +16,6 @@ RUN useradd --create-home --shell /bin/bash app
 # Set working directory and PATH
 WORKDIR /app
 ENV PATH=/home/app/.local/bin:$PATH
-ENV PIP_NO_CACHE_DIR=1
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Copy and install requirements as separate layer for better caching
@@ -25,7 +24,7 @@ COPY --chown=app:app constraints.txt /tmp/constraints.txt
 USER app
 # Use constraints file to force exact pydantic versions
 RUN --mount=type=cache,target=/home/app/.cache/pip,sharing=locked \
-    pip install --user --no-warn-script-location --no-cache-dir --force-reinstall -r /tmp/requirements.txt -c /tmp/constraints.txt
+    pip install --user --no-warn-script-location -r /tmp/requirements.txt -c /tmp/constraints.txt
 
 # Final stage - smaller image
 FROM python:3.11-slim
@@ -45,14 +44,31 @@ WORKDIR /app
 
 # Copy pre-built dependencies and app code
 COPY --from=builder --chown=app:app /home/app/.local /home/app/.local
-COPY --chown=app:app . .
+
+# Copy only necessary application directories and files
+# Main application with chat endpoint
+COPY --chown=app:app main.py ./
+# API endpoints (upload pipeline)
+COPY --chown=app:app api/ ./api/
+# Configuration
+COPY --chown=app:app config/ ./config/
+# Core services
+COPY --chown=app:app core/ ./core/
+# Database services
+COPY --chown=app:app db/ ./db/
+# Utilities
+COPY --chown=app:app utils/ ./utils/
+# Agents (needed for chat interface)
+COPY --chown=app:app agents/ ./agents/
+# Backend services
+COPY --chown=app:app backend/ ./backend/
 
 # Set up environment variables
 ENV PATH=/home/app/.local/bin:$PATH
-ENV PYTHONPATH=/home/app/.local/lib/python3.11/site-packages:$PYTHONPATH
+ENV PYTHONPATH=/home/app/.local/lib/python3.11/site-packages
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
-ENV PORT=${PORT:-8000}
+ENV PORT=8000
 ENV KEEP_ALIVE=75
 ENV MAX_REQUESTS=1000
 ENV MAX_REQUESTS_JITTER=100
@@ -62,7 +78,7 @@ ENV WORKERS=1
 USER app
 
 # Expose port and configure health check
-EXPOSE ${PORT:-8000}
+EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
