@@ -6,7 +6,7 @@
 **Priority**: P1 - High  
 
 ## 🎯 **Objective**
-Deploy centralized concurrency management framework with comprehensive monitoring and system-wide policy enforcement.
+Deploy centralized concurrency management framework with comprehensive monitoring and system-wide policy enforcement, validated through comprehensive integration testing.
 
 ## 📋 **Context & References**
 
@@ -45,6 +45,13 @@ class ConcurrencyManager:
         """Apply rate limiting for service operation"""
 ```
 
+**Integration Test Requirements**: `tests/integration/test_concurrency_manager_integration.py`
+- Test manager coordination across multiple agent workflows simultaneously
+- Test framework integration with existing Phase 1 & 2 components
+- Test YAML configuration loading and hot-reloading without restarts
+- Cross-component resource sharing validation and conflict resolution
+- Test graceful degradation when components reach limits
+
 ### **Task 2: Configuration Management System**
 **File**: `agents/shared/config/concurrency_config.py` (new)
 
@@ -73,6 +80,13 @@ class ConcurrencyConfig:
     alert_threshold_percentage: float = 0.8
 ```
 
+**Integration Test Requirements**: `tests/integration/test_policy_enforcement_integration.py`
+- Test policy enforcement across all agent types under realistic workloads
+- Test policy override mechanisms in different operational scenarios
+- Test policy validation during agent startup and configuration changes
+- End-to-end policy compliance verification across system boundaries
+- Test policy conflict resolution when multiple policies apply
+
 ### **Task 3: Advanced Monitoring and Alerting**
 **File**: `agents/shared/monitoring/advanced_monitor.py` (new)
 
@@ -88,16 +102,25 @@ class ConcurrencyConfig:
 - Rate limiter queue lengths and rejections
 - Overall system resource health
 
-### **Task 4: Performance Regression Testing**
-**File**: `tests/performance/concurrency_regression.py` (new)
+**Integration Test Requirements**: `tests/integration/test_monitoring_integration.py`
+- Test monitoring integration with all agents and workflows under load
+- Test alert system integration with external services and notifications
+- Test dashboard data accuracy across all system components
+- Test monitoring behavior and reliability under various load conditions
+- Test alert escalation and recovery notification systems
 
-**Required Implementation**: Automated performance testing integrated into CI/CD.
+### **Task 4: End-to-End Integration Validation**
+**File**: `tests/integration/test_e2e_concurrency_validation.py` (new)
 
-**Test Coverage**:
-- Baseline performance under various load conditions
-- Resource usage patterns validation
-- Concurrency limit enforcement verification
-- Performance regression detection
+**Required Implementation**: Comprehensive end-to-end integration testing covering complete user journeys.
+
+**Integration Test Requirements**: `tests/integration/test_e2e_concurrency_validation.py`
+- Test complete user journeys through all agent types with realistic workloads
+- Test cross-agent communication and resource sharing under concurrent load
+- Test framework behavior during system startup/shutdown sequences
+- Test graceful degradation scenarios and recovery procedures
+- Test framework rollback and recovery procedures for deployment failures
+- Validate end-to-end performance meets established baselines
 
 ## ✅ **Success Criteria**
 - [ ] All agent components use centralized concurrency framework
@@ -123,23 +146,30 @@ class ConcurrencyConfig:
 
 ## 🧪 **Testing Requirements**
 
-### **Framework Testing**
-- Unit tests for all framework components
-- Integration tests for component interactions
-- Load tests to validate performance under stress
-- Failover tests for error scenarios
+### **Integration Tests** (Primary Focus - Required for all components)
+Comprehensive integration test suite with >95% coverage:
+- `tests/integration/test_concurrency_manager_integration.py` - Framework integration
+- `tests/integration/test_policy_enforcement_integration.py` - Policy system integration  
+- `tests/integration/test_monitoring_integration.py` - Monitoring system integration
+- `tests/integration/test_e2e_concurrency_validation.py` - End-to-end validation
 
-### **Migration Testing**
-- Verify each component works with framework
-- Test resource limits are properly enforced
-- Validate monitoring captures all metrics
-- Performance comparison against previous phases
+### **Cross-Component Integration Testing**
+- Test all components work together seamlessly under realistic conditions
+- Validate resource sharing and conflict resolution across agent boundaries
+- Test framework coordination during high-concurrency scenarios
+- Verify monitoring captures metrics across all integrated components
 
-### **System Testing**
-- End-to-end testing with full framework
-- Load testing with production-like traffic
-- Monitoring and alerting validation
-- Regression testing against established baselines
+### **System Integration Testing**
+- Full system behavior testing under realistic traffic patterns
+- Integration with external services (databases, APIs, monitoring)
+- Cross-environment testing (dev, staging, production configurations)
+- Framework migration testing ensuring smooth transition from Phase 2 patterns
+
+### **Framework Migration Testing**
+- Test incremental migration of each component to framework
+- Validate rollback procedures work correctly
+- Test compatibility between framework and legacy patterns during transition
+- Performance validation throughout migration process
 
 ## 📊 **Monitoring and Alerting Setup**
 

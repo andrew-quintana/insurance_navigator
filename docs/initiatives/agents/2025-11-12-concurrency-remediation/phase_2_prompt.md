@@ -36,6 +36,12 @@ loop = asyncio.get_running_loop()  # CURRENT
 audio_data = await loop.run_in_executor(None, self._capture_audio_sync, timeout)
 ```
 
+**Unit Test Requirements**: `tests/unit/test_async_api_migration.py`
+- Test deprecated API removal and replacement
+- Test `get_running_loop()` functionality in different contexts
+- Test error handling when no event loop is running
+- Validate executor usage with new API patterns
+
 **Scope**: Search entire codebase for `get_event_loop()` usage and replace all instances.
 
 ### **Task 2: Migrate to Async HTTP Clients**
@@ -62,6 +68,14 @@ async def call_llm(self, prompt: str) -> str:
         return response.json()
 ```
 
+**Unit Test Requirements**: `tests/unit/test_async_http_client.py`
+- Test `httpx.AsyncClient` integration and functionality
+- Test timeout handling (60s) under various conditions
+- Test connection pooling behavior and connection reuse
+- Test error handling, retries, and failure scenarios
+- Performance comparison tests: async vs synchronous calls
+- Test concurrent requests handling
+
 ### **Task 3: Implement Async Context Managers**
 **Files**: All components with resource management needs
 
@@ -78,6 +92,14 @@ class ResourceManager:
         await self.cleanup()
 ```
 
+**Unit Test Requirements**: `tests/unit/test_async_context_managers.py`
+- Test `__aenter__` and `__aexit__` method implementation
+- Test resource cleanup on successful operations
+- Test resource cleanup during exception scenarios
+- Test nested context managers and proper cleanup ordering
+- Performance impact measurement and validation
+- Test concurrent access to context-managed resources
+
 ### **Task 4: Add Rate Limiting**
 **File**: `agents/shared/rate_limiting/limiter.py` (new)
 
@@ -89,6 +111,15 @@ class ResourceManager:
 - Configurable via environment variables
 
 **Implementation Pattern**: Token bucket or sliding window rate limiter.
+
+**Unit Test Requirements**: `tests/unit/test_rate_limiter.py`
+- Test token bucket algorithm accuracy and precision
+- Test sliding window algorithm accuracy and precision  
+- Test rate limit enforcement under sustained load
+- Test concurrent access to rate limiter (thread safety)
+- Performance benchmarks for different rate limiting algorithms
+- Test configuration changes during runtime operations
+- Test rate limiter behavior during system time changes
 
 ## ✅ **Success Criteria**
 - [ ] Zero deprecated async API usage across codebase
@@ -107,15 +138,23 @@ class ResourceManager:
 
 ## 🧪 **Testing Requirements**
 
+### **Unit Tests** (Required for all new components)
+All new components must have comprehensive unit test coverage (>90%):
+- `tests/unit/test_async_api_migration.py` - Async API modernization
+- `tests/unit/test_async_http_client.py` - HTTP client migration  
+- `tests/unit/test_async_context_managers.py` - Resource cleanup patterns
+- `tests/unit/test_rate_limiter.py` - Rate limiting algorithms
+
 ### **Compatibility Tests**
 - Verify all existing functionality works with new patterns
 - Test error scenarios with proper async handling
 - Validate timeout behavior with async clients
 
 ### **Performance Tests**  
-- Ensure no regression in response times
+- Ensure no regression in response times, measure improvements
 - Validate rate limiting doesn't impact normal operations
 - Test resource cleanup under load
+- Performance benchmarks for async vs sync patterns
 
 ### **Integration Tests**
 - Test async HTTP clients with real external APIs
