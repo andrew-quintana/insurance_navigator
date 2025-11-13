@@ -2,7 +2,7 @@
 Communication Agent for Output Processing Workflow.
 
 This agent transforms technical agent outputs into warm, empathetic, user-friendly responses
-using the BaseAgent pattern and Claude Haiku LLM.
+using the BaseAgent pattern and Claude Sonnet 4.5 LLM.
 """
 
 import logging
@@ -14,9 +14,9 @@ from .types import CommunicationRequest, CommunicationResponse, AgentOutput
 from .config import OutputProcessingConfig
 
 
-def _get_claude_haiku_llm():
+def _get_claude_sonnet_llm():
     """
-    Return a callable that invokes Claude Haiku, or None for mock mode.
+    Return a callable that invokes Claude Sonnet 4.5, or None for mock mode.
     
     We prefer to avoid hard dependency; if Anthropic client isn't available,
     we return None and the agent will run in mock mode.
@@ -29,10 +29,10 @@ def _get_claude_haiku_llm():
             return None
         
         client = Anthropic(api_key=api_key, timeout=30.0)
-        model = os.getenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307")
+        model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
         
         def call_llm(prompt: str) -> str:
-            """Call Claude Haiku with the given prompt."""
+            """Call Claude Sonnet 4.5 with the given prompt."""
             try:
                 # Add explicit JSON formatting instruction to the prompt
                 json_prompt = prompt + "\n\nIMPORTANT: You must respond with ONLY valid JSON. Do not include any other text, explanations, or formatting outside the JSON object."
@@ -47,7 +47,7 @@ def _get_claude_haiku_llm():
                 content = resp.content[0].text if getattr(resp, "content", None) else ""
                 
                 if not content:
-                    raise ValueError("Empty response from Claude Haiku")
+                    raise ValueError("Empty response from Claude Sonnet")
                 
                 # The response should now be plain text, not JSON
                 content = content.strip()
@@ -60,7 +60,7 @@ def _get_claude_haiku_llm():
                 
                 # Check if the response is still JSON format (fallback for old behavior)
                 if content.startswith('{'):
-                    logging.warning("Claude Haiku returned JSON format instead of plain text, extracting content...")
+                    logging.warning("Claude Sonnet returned JSON format instead of plain text, extracting content...")
                     try:
                         import json
                         parsed_json = json.loads(content)
@@ -74,7 +74,7 @@ def _get_claude_haiku_llm():
                 return content
                 
             except Exception as e:
-                logging.error(f"Claude Haiku API call failed: {e}")
+                logging.error(f"Claude Sonnet API call failed: {e}")
                 raise
         
         return call_llm
@@ -89,7 +89,7 @@ class CommunicationAgent(BaseAgent):
     Communication Agent that enhances agent outputs with warm, empathetic communication.
     
     Inherits from BaseAgent following established patterns in the codebase.
-    Uses Claude Haiku LLM for consistent performance and cost efficiency.
+    Uses Claude Sonnet 4.5 LLM for high-quality response generation.
     """
     
     def __init__(self, llm_client=None, config: Optional[OutputProcessingConfig] = None, **kwargs):
@@ -97,7 +97,7 @@ class CommunicationAgent(BaseAgent):
         Initialize the Communication Agent.
         
         Args:
-            llm_client: LLM client for Claude Haiku (or None for auto-detection)
+            llm_client: LLM client for Claude Sonnet 4.5 (or None for auto-detection)
             config: Configuration for the agent
             **kwargs: Additional arguments passed to BaseAgent
         """
@@ -106,17 +106,17 @@ class CommunicationAgent(BaseAgent):
         
         # Auto-detect LLM client if not provided
         if llm_client is None:
-            llm_client = _get_claude_haiku_llm()
+            llm_client = _get_claude_sonnet_llm()
             if llm_client:
-                logging.info("Auto-detected Claude Haiku LLM client")
+                logging.info("Auto-detected Claude Sonnet 4.5 LLM client")
             else:
-                logging.info("No Claude Haiku client available, using mock mode")
+                logging.info("No Claude Sonnet client available, using mock mode")
         
         super().__init__(
             name="output_communication",
             prompt=os.path.join(os.path.dirname(__file__), "prompts", "system_prompt.md"),
             output_schema=CommunicationResponse,
-            llm=llm_client,  # Claude Haiku client or None for mock mode
+            llm=llm_client,  # Claude Sonnet 4.5 client or None for mock mode
             mock=llm_client is None,
             config=original_config.to_dict(),  # Pass config as dictionary to BaseAgent
             **kwargs
@@ -181,7 +181,7 @@ class CommunicationAgent(BaseAgent):
         
         # Log LLM status
         if llm_client:
-            self.logger.info("Claude Haiku LLM client initialized successfully")
+            self.logger.info("Claude Sonnet 4.5 LLM client initialized successfully")
         else:
             self.logger.info("Running in mock mode - no LLM client available")
     
@@ -369,7 +369,7 @@ class CommunicationAgent(BaseAgent):
                     "input_agent_count": len(request.agent_outputs),
                     "user_context_provided": request.user_context is not None,
                     "llm_used": not self.mock,
-                    "model_used": os.getenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307") if not self.mock else "mock"
+                    "model_used": os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022") if not self.mock else "mock"
                 }
             )
             self.logger.info("=== ENHANCED RESPONSE CREATED ===")
@@ -461,5 +461,5 @@ class CommunicationAgent(BaseAgent):
             "prompt_length": len(self.prompt) if self.prompt else 0,
             "mock_mode": self.mock,
             "llm_available": self.llm is not None,
-            "claude_haiku_ready": self.llm is not None
+            "claude_sonnet_ready": self.llm is not None
         }

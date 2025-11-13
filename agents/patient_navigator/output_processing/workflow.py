@@ -27,7 +27,7 @@ class OutputWorkflow:
         
         Args:
             config: Configuration for the workflow
-            llm_client: LLM client for Claude Haiku
+            llm_client: LLM client for Claude Sonnet 4.5
         """
         self.config = config or OutputProcessingConfig.from_environment()
         self.communication_agent = CommunicationAgent(
