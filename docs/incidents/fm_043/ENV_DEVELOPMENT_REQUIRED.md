@@ -29,7 +29,10 @@ DATABASE_SCHEMA=upload_pipeline
 SUPABASE_URL=http://host.docker.internal:54321
 
 # Supabase Keys (from: supabase status)
-# Default local Supabase demo keys:
+# ⚠️ SECURITY NOTE: These are DEFAULT LOCAL DEVELOPMENT DEMO KEYS
+# These keys are publicly documented by Supabase and ONLY work for local dev instances
+# They are SAFE to commit as they cannot access production data
+# For production, use your actual Supabase project keys from the Supabase dashboard
 SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
 
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
@@ -75,6 +78,7 @@ DATABASE_URL_LOCAL=postgresql://postgres:postgres@host.docker.internal:54322/pos
 DATABASE_SCHEMA=upload_pipeline
 
 # Supabase Configuration
+# ⚠️ SECURITY NOTE: Demo keys below are SAFE for local development only
 SUPABASE_URL=http://host.docker.internal:54321
 SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU

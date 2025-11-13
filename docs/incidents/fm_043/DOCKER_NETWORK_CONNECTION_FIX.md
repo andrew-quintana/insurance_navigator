@@ -32,10 +32,12 @@ From `supabase status`:
 ### 1. `.env.development`
 ```bash
 # Before
+# ⚠️ NOTE: "postgres:postgres" is the default local dev password - safe for local only
 DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:54322/postgres
 DATABASE_URL_LOCAL=postgresql://postgres:postgres@host.docker.internal:54322/postgres
 
 # After
+# ⚠️ NOTE: "postgres:postgres" is the default local dev password - safe for local only
 DATABASE_URL=postgresql://postgres:postgres@supabase_db_insurance_navigator:5432/postgres
 DATABASE_URL_LOCAL=postgresql://postgres:postgres@supabase_db_insurance_navigator:5432/postgres
 ```
