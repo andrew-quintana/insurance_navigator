@@ -197,8 +197,16 @@ class PerformanceBenchmark:
                 self.logger.error(f"Concurrent request failed: {error}")
                 return 30.0, False
         
-        # Run concurrent requests
-        tasks = [run_single_workflow() for _ in range(concurrent_requests)]
+        # Run concurrent requests with semaphore control
+        # Addresses: FM-043 - Add semaphore controls to limit concurrent operations
+        semaphore = asyncio.Semaphore(10)  # Configurable limit to prevent resource exhaustion
+        
+        async def limited_workflow():
+            """Wrapper to apply semaphore control to workflow execution."""
+            async with semaphore:
+                return await run_single_workflow()
+        
+        tasks = [limited_workflow() for _ in range(concurrent_requests)]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         for duration, success in results:

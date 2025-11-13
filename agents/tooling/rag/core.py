@@ -126,14 +126,34 @@ class RAGTool:
         # to avoid duplicate RAG operations in logs
         # operation_metrics will be passed from the calling method
         
+        # Addresses: FM-043 - Use connection pooling for database operations
+        from agents.tooling.rag.database_manager import get_db_connection, release_db_connection
+        
         conn = None
         try:
-            conn = await self._get_db_conn()
+            # Validate query_embedding is a list of floats
+            if not isinstance(query_embedding, list):
+                self.logger.error(f"Invalid query_embedding type: {type(query_embedding)}, expected List[float]")
+                raise TypeError(f"query_embedding must be a List[float], got {type(query_embedding)}")
+            
+            if len(query_embedding) != 1536:
+                self.logger.error(f"Invalid query_embedding dimension: {len(query_embedding)}, expected 1536")
+                raise ValueError(f"query_embedding must have 1536 dimensions, got {len(query_embedding)}")
+            
+            # Validate all elements are floats
+            if not all(isinstance(x, (int, float)) for x in query_embedding):
+                self.logger.error(f"query_embedding contains non-numeric values")
+                raise TypeError("query_embedding must contain only numeric values")
+            
+            conn = await get_db_connection()
             # Query for top-k chunks with user-scoped access
             schema = os.getenv("DATABASE_SCHEMA", "upload_pipeline")
             
             # Convert Python list to PostgreSQL vector format (no spaces)
-            vector_string = '[' + ','.join(str(x) for x in query_embedding) + ']'
+            # Ensure proper formatting for pgvector
+            vector_string = '[' + ','.join(str(float(x)) for x in query_embedding) + ']'
+            
+            self.logger.debug(f"Vector string length: {len(vector_string)}, first 100 chars: {vector_string[:100]}")
             
             # First, get all chunks above threshold to calculate similarity distribution
             # This query gets all chunks without the threshold filter for histogram analysis
@@ -149,6 +169,8 @@ class RAGTool:
             all_similarity_rows = await conn.fetch(all_similarities_sql, vector_string, self.user_id)
             all_similarities = [float(row["similarity"]) for row in all_similarity_rows]
             
+            self.logger.info(f"Found {len(all_similarity_rows)} total chunks for user {self.user_id}, similarities range: {min(all_similarities) if all_similarities else 'N/A'} to {max(all_similarities) if all_similarities else 'N/A'}")
+            
             # Record similarity scores for histogram analysis (if operation_metrics available)
             if operation_metrics:
                 self.performance_monitor.record_similarity_scores(operation_metrics.operation_uuid, all_similarities)
@@ -159,16 +181,18 @@ class RAGTool:
                        NULL as section_path, NULL as section_title,
                        NULL as page_start, NULL as page_end,
                        NULL as tokens,
-                       1 - (dc.embedding <=> $1::vector) as similarity
+                       1 - (dc.embedding <=> $1::vector(1536)) as similarity
                 FROM {schema}.document_chunks dc
                 JOIN {schema}.documents d ON dc.document_id = d.document_id
                 WHERE d.user_id = $2
                   AND dc.embedding IS NOT NULL
-                  AND 1 - (dc.embedding <=> $1::vector) > $3
-                ORDER BY dc.embedding <=> $1::vector
+                  AND 1 - (dc.embedding <=> $1::vector(1536)) > $3
+                ORDER BY dc.embedding <=> $1::vector(1536)
                 LIMIT $4
             """
+            self.logger.debug(f"Executing similarity query with threshold: {self.config.similarity_threshold}, max_chunks: {self.config.max_chunks}")
             rows = await conn.fetch(sql, vector_string, self.user_id, self.config.similarity_threshold, self.config.max_chunks)
+            self.logger.info(f"Query returned {len(rows)} rows above threshold {self.config.similarity_threshold}")
             chunks = []
             total_tokens = 0
             for row in rows:
@@ -204,14 +228,17 @@ class RAGTool:
             
             return chunks
         except Exception as e:
+            import traceback
             self.logger.error(f"RAGTool retrieval error: {e}")
+            self.logger.error(f"Error type: {type(e).__name__}")
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
             # Complete the operation with error (if operation_metrics available)
             if operation_metrics:
                 self.performance_monitor.complete_operation(operation_metrics.operation_uuid, success=False, error_message=str(e))
             return []
         finally:
             if conn:
-                await conn.close()
+                await release_db_connection(conn)
 
     async def retrieve_chunks_from_text(self, query_text: str) -> List[ChunkWithContext]:
         """
@@ -515,33 +542,3 @@ class RAGTool:
         
         self.logger.warning(f"Using mock embedding for text: {text[:50]}...")
         return mock_embedding
-
-    async def _get_db_conn(self) -> Any:
-        """
-        Get an asyncpg database connection using environment variables.
-        Returns:
-            asyncpg.Connection
-        """
-        # Try to use DATABASE_URL first, then fall back to individual parameters
-        database_url = os.getenv("DATABASE_URL")
-        if database_url:
-            try:
-                return await asyncpg.connect(database_url, statement_cache_size=0)
-            except Exception as e:
-                self.logger.warning(f"Failed to connect using DATABASE_URL: {e}, falling back to individual parameters")
-        
-        # Fallback to individual environment variables
-        host = os.getenv("SUPABASE_DB_HOST", "127.0.0.1")
-        port = int(os.getenv("SUPABASE_DB_PORT", "5432"))
-        user = os.getenv("SUPABASE_DB_USER", "postgres")
-        password = os.getenv("SUPABASE_DB_PASSWORD", "postgres")
-        database = os.getenv("SUPABASE_DB_NAME", "postgres")
-        
-        return await asyncpg.connect(
-            host=host,
-            port=port,
-            user=user,
-            password=password,
-            database=database,
-            statement_cache_size=0
-        )

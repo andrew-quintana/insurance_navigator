@@ -8,14 +8,17 @@ integrate with the RAG system, and provide consistent responses using self-consi
 import logging
 import asyncio
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Callable
 from pydantic import BaseModel
+
+import httpx
 
 from agents.base_agent import BaseAgent
 from agents.tooling.rag.core import RAGTool, RetrievalConfig, ChunkWithContext
 from .models import InformationRetrievalInput, InformationRetrievalOutput, SourceChunk
 from ..shared.terminology import InsuranceTerminologyTranslator
 from ..shared.consistency import SelfConsistencyChecker
+from agents.shared.rate_limiting import get_anthropic_rate_limiter
 
 
 class InformationRetrievalAgent(BaseAgent):
@@ -57,115 +60,145 @@ class InformationRetrievalAgent(BaseAgent):
         self.consistency_checker = SelfConsistencyChecker()
         self.rag_tool = None  # Will be initialized with user context
     
-    def _get_claude_haiku_llm(self):
+    def _get_claude_haiku_llm(self) -> Optional[Callable[[str], str]]:
         """
-        Return a callable that invokes Claude Haiku, or None for mock mode.
+        Return an async callable that invokes Claude Haiku via httpx, or None for mock mode.
         
-        We prefer to avoid hard dependency; if Anthropic client isn't available,
+        Addresses: FM-043 - Migrate synchronous HTTP calls to async httpx.AsyncClient
+        
+        We prefer to avoid hard dependency; if Anthropic API key isn't available,
         we return None and the agent will run in mock mode.
         """
-        try:
-            from anthropic import Anthropic
-            
-            api_key = os.getenv("ANTHROPIC_API_KEY")
-            if not api_key:
-                return None
-            
-            client = Anthropic(api_key=api_key)
-            model = os.getenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307")
-            
-            def call_llm(prompt: str) -> str:
-                """Call Claude Haiku with exponential backoff retry logic."""
-                import threading
-                import queue
-                import time
-                
-                # Retry configuration
-                max_retries = 3
-                base_delay = 1.0
-                max_delay = 30.0
-                exponential_base = 2.0
-                
-                last_exception = None
-                
-                for attempt in range(max_retries + 1):
-                    try:
-                        result_queue = queue.Queue()
-                        exception_queue = queue.Queue()
-                        
-                        def api_call():
-                            try:
-                                resp = client.messages.create(
-                                    model=model,
-                                    max_tokens=4000,
-                                    temperature=0.2,
-                                    messages=[{"role": "user", "content": prompt}],
-                                )
-                                
-                                content = resp.content[0].text if getattr(resp, "content", None) else ""
-                                
-                                if not content:
-                                    raise ValueError("Empty response from Claude Haiku")
-                                
-                                result_queue.put(content.strip())
-                                
-                            except Exception as e:
-                                exception_queue.put(e)
-                        
-                        # Start the API call in a separate thread
-                        thread = threading.Thread(target=api_call)
-                        thread.daemon = True
-                        thread.start()
-                        
-                        # Wait for result with timeout
-                        thread.join(timeout=60.0)  # 60 second timeout to match RAG timeout
-                        
-                        if thread.is_alive():
-                            # Thread is still running, timeout occurred
-                            raise TimeoutError("Anthropic API call timed out after 60 seconds")
-                        
-                        # Check for exceptions
-                        if not exception_queue.empty():
-                            raise exception_queue.get()
-                        
-                        # Get the result
-                        if not result_queue.empty():
-                            if attempt > 0:
-                                logging.info(f"Claude Haiku API call succeeded on attempt {attempt + 1}")
-                            return result_queue.get()
-                        else:
-                            raise ValueError("No result received from API call")
-                    
-                    except Exception as e:
-                        last_exception = e
-                        
-                        # Log the attempt
-                        if attempt < max_retries:
-                            logging.warning(f"Claude Haiku API call failed on attempt {attempt + 1}: {e}")
-                            
-                            # Calculate exponential backoff delay
-                            delay = min(
-                                base_delay * (exponential_base ** attempt),
-                                max_delay
-                            )
-                            
-                            logging.info(f"Retrying Claude Haiku API call in {delay} seconds")
-                            time.sleep(delay)
-                        else:
-                            logging.error(f"Claude Haiku API call failed after {max_retries + 1} attempts: {e}")
-                            raise
-                
-                # Should never reach here, but just in case
-                if last_exception:
-                    raise last_exception
-                else:
-                    raise RuntimeError("Unexpected error in LLM call retry logic")
-            
-            return call_llm
-            
-        except Exception as e:
-            logging.warning(f"Failed to initialize Anthropic client: {e}")
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if not api_key:
             return None
+        
+        model = os.getenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307")
+        rate_limiter = get_anthropic_rate_limiter()
+        
+        # Store these for use in async call
+        self._anthropic_api_key = api_key
+        self._anthropic_model = model
+        self._anthropic_rate_limiter = rate_limiter
+        
+        # Return a placeholder - actual async call is in _call_llm_async
+        # This maintains backward compatibility with BaseAgent interface
+        def call_llm_sync(prompt: str) -> str:
+            """Synchronous wrapper - should not be called directly."""
+            raise RuntimeError(
+                "Synchronous LLM call not supported. Use async _call_llm method instead. "
+                "Addresses: FM-043 - Async HTTP client migration"
+            )
+        
+        return call_llm_sync
+    
+    async def _call_llm_async(self, prompt: str) -> str:
+        """
+        Call Claude Haiku API using async httpx with rate limiting and retry logic.
+        
+        Addresses: FM-043 - Migrate synchronous HTTP calls to async httpx.AsyncClient
+        
+        Args:
+            prompt: Prompt to send to LLM
+            
+        Returns:
+            LLM response string
+            
+        Raises:
+            Exception: If API call fails after retries
+        """
+        if not hasattr(self, '_anthropic_api_key') or not self._anthropic_api_key:
+            raise RuntimeError("Anthropic API key not configured")
+        
+        api_key = self._anthropic_api_key
+        model = getattr(self, '_anthropic_model', 'claude-3-haiku-20240307')
+        rate_limiter = getattr(self, '_anthropic_rate_limiter', get_anthropic_rate_limiter())
+        
+        # Retry configuration
+        max_retries = 3
+        base_delay = 1.0
+        max_delay = 30.0
+        exponential_base = 2.0
+        
+        last_exception = None
+        
+        for attempt in range(max_retries + 1):
+            try:
+                # Acquire rate limit permission
+                await rate_limiter.acquire()
+                
+                # Make async HTTP request with httpx
+                timeout = httpx.Timeout(60.0, connect=10.0)  # 60s total, 10s connect
+                
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    headers = {
+                        "x-api-key": api_key,
+                        "anthropic-version": "2023-06-01",
+                        "content-type": "application/json"
+                    }
+                    
+                    payload = {
+                        "model": model,
+                        "max_tokens": 4000,
+                        "temperature": 0.2,
+                        "messages": [{"role": "user", "content": prompt}]
+                    }
+                    
+                    response = await client.post(
+                        "https://api.anthropic.com/v1/messages",
+                        headers=headers,
+                        json=payload
+                    )
+                    
+                    response.raise_for_status()
+                    response_data = response.json()
+                    
+                    # Extract content from response
+                    content = ""
+                    if "content" in response_data:
+                        for block in response_data["content"]:
+                            if block.get("type") == "text":
+                                content = block.get("text", "")
+                                break
+                    
+                    if not content:
+                        raise ValueError("Empty response from Claude Haiku")
+                    
+                    if attempt > 0:
+                        logging.info(f"Claude Haiku API call succeeded on attempt {attempt + 1}")
+                    
+                    return content.strip()
+                    
+            except httpx.HTTPStatusError as e:
+                last_exception = e
+                if e.response.status_code == 429:  # Rate limited
+                    logging.warning(f"Rate limited on attempt {attempt + 1}, will retry")
+                else:
+                    logging.warning(f"Claude Haiku API HTTP error on attempt {attempt + 1}: {e.response.status_code}")
+            except httpx.TimeoutException as e:
+                last_exception = e
+                logging.warning(f"Claude Haiku API timeout on attempt {attempt + 1}: {e}")
+            except httpx.RequestError as e:
+                last_exception = e
+                logging.warning(f"Claude Haiku API request error on attempt {attempt + 1}: {e}")
+            except Exception as e:
+                last_exception = e
+                logging.warning(f"Claude Haiku API call failed on attempt {attempt + 1}: {e}")
+            
+            # Retry with exponential backoff
+            if attempt < max_retries:
+                delay = min(
+                    base_delay * (exponential_base ** attempt),
+                    max_delay
+                )
+                logging.info(f"Retrying Claude Haiku API call in {delay} seconds")
+                await asyncio.sleep(delay)
+            else:
+                logging.error(f"Claude Haiku API call failed after {max_retries + 1} attempts: {last_exception}")
+                raise last_exception or RuntimeError("Unexpected error in LLM call retry logic")
+        
+        # Should never reach here
+        raise RuntimeError("Unexpected error in LLM call retry logic")
         
     async def retrieve_information(self, input_data: InformationRetrievalInput) -> InformationRetrievalOutput:
         """
@@ -426,14 +459,16 @@ Return ONLY the reframed query, nothing else:"""
                 
                 # Generate variant using LLM with isolated timeout
                 self.logger.info(f"=== CALLING LLM FOR VARIANT {i+1} ===")
-                start_time = asyncio.get_event_loop().time()
+                # Addresses: FM-043 - Replace deprecated get_event_loop() with get_running_loop()
+                loop = asyncio.get_running_loop()
+                start_time = loop.time()
                 
                 try:
                     variant_response = await asyncio.wait_for(
                         self._call_llm(variant_prompt),
                         timeout=15.0  # 15 second timeout per variant
                     )
-                    end_time = asyncio.get_event_loop().time()
+                    end_time = loop.time()
                     self.logger.info(f"LLM call for variant {i+1} completed in {end_time - start_time:.2f}s")
                     
                 except asyncio.TimeoutError:
@@ -595,7 +630,8 @@ Generate a detailed response that would be most helpful to the user.
     
     async def _call_llm(self, prompt: str) -> str:
         """
-        Call LLM with prompt using robust threading-based timeout handling.
+        Call LLM with prompt using proper async timeout handling and httpx.
+        Addresses: FM-043 - Replace daemon threading with async patterns and async HTTP clients.
         
         Args:
             prompt: Prompt to send to LLM
@@ -610,55 +646,25 @@ Generate a detailed response that would be most helpful to the user.
             
             self.logger.info(f"Calling LLM with prompt length: {len(prompt)} characters")
             
-            # Use threading with timeout for robust timeout handling
-            import threading
-            import queue
-            
-            result_queue = queue.Queue()
-            exception_queue = queue.Queue()
-            
-            def api_call():
-                try:
-                    self.logger.info("Thread started for Information Retrieval LLM call")
-                    # Make the actual LLM call
-                    response = self.llm(prompt)
-                    result_queue.put(response)
-                    self.logger.info("Thread completed Information Retrieval LLM call successfully")
-                except Exception as e:
-                    self.logger.error(f"Thread failed with exception: {e}")
-                    exception_queue.put(e)
-                finally:
-                    self.logger.info("Thread exiting")
-            
-            # Start API call in separate thread
-            thread = threading.Thread(target=api_call)
-            thread.daemon = True
-            thread.start()
-            
-            # Wait for result with 25-second timeout
-            thread.join(timeout=60.0)
-            
-            if thread.is_alive():
+            # Use async httpx client with timeout
+            try:
+                async with asyncio.timeout(60.0):  # 60 second timeout
+                    self.logger.info("Starting LLM call with async httpx client")
+                    
+                    # Use async HTTP client directly
+                    if hasattr(self, '_anthropic_api_key') and self._anthropic_api_key:
+                        response = await self._call_llm_async(prompt)
+                    else:
+                        # Fallback: try to use existing llm callable if available
+                        # This maintains backward compatibility during migration
+                        loop = asyncio.get_running_loop()
+                        response = await loop.run_in_executor(None, self.llm, prompt)
+                    
+                    self.logger.info(f"LLM call completed successfully with response length: {len(response)} characters")
+                    return response
+                    
+            except asyncio.TimeoutError:
                 self.logger.error("LLM call timed out after 60 seconds")
-                self.logger.error("Thread is still alive after timeout - investigating...")
-                self.logger.error(f"Thread name: {thread.name}")
-                self.logger.error(f"Thread daemon: {thread.daemon}")
-                self.logger.error(f"Thread ident: {thread.ident}")
-                return "expert insurance terminology query reframe"
-            
-            # Check for exceptions
-            if not exception_queue.empty():
-                exception = exception_queue.get()
-                self.logger.error(f"LLM call failed: {exception}")
-                return "expert insurance terminology query reframe"
-            
-            # Get the result
-            if not result_queue.empty():
-                response = result_queue.get()
-                self.logger.info(f"LLM response received: {len(response)} characters")
-                return response
-            else:
-                self.logger.error("No response received from LLM")
                 return "expert insurance terminology query reframe"
             
         except Exception as e:

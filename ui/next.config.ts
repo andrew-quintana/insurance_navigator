@@ -1,8 +1,12 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   // Basic configuration
   output: 'standalone',
+  
+  // Fix lockfile warning by explicitly setting the workspace root
+  outputFileTracingRoot: path.join(__dirname, '..'),
 
   // Basic compression
   compress: true,

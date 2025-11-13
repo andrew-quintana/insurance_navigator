@@ -295,6 +295,7 @@ During local testing with `test_docker_imports.sh`, discovered and fixed a secon
 2. **Dependency Chain Awareness**: Need to be aware of the full dependency chain, not just direct dependencies
 3. **Build vs Runtime**: Successful Docker builds don't guarantee successful runtime - import errors only appear at runtime
 4. **Major Refactors**: Large refactors can expose existing issues that were previously hidden
+5. **Dockerfile Optimization Conflicts**: Multiple cache control mechanisms (cache mounts + `PIP_NO_CACHE_DIR` + `--no-cache-dir`) create conflicts and waste resources. Use ONE caching strategy, not multiple. (See FM-042 investigation)
 
 ## Status
 
@@ -307,7 +308,7 @@ During local testing with `test_docker_imports.sh`, discovered and fixed a secon
 
 ## Related Issues
 
-- None identified
+- **FM-042**: Dockerfile optimization conflicts identified post-FM-041. Investigation revealed conflicting cache flags (`PIP_NO_CACHE_DIR=1` + `--no-cache-dir` + cache mount) and redundant `--force-reinstall` flag causing 20-40% slower builds. See `docs/incidents/fm_042/` for complete analysis and recommended fixes.
 
 ## References
 
@@ -318,6 +319,8 @@ During local testing with `test_docker_imports.sh`, discovered and fixed a secon
 - Phase 3 Analysis: `docs/incidents/fm_041/phase3_dependency_analysis.md`
 - Phase 4 Analysis: `docs/incidents/fm_041/phase4_codebase_analysis.md`
 - Phase 5 Analysis: `docs/incidents/fm_041/phase5_root_cause_synthesis.md`
+- FM-042 Investigation: `docs/incidents/fm_042/fm_042_investigation_summary.md`
+- Dockerfile Best Practices: `docs/incidents/fm_042/DOCKERFILE_BEST_PRACTICES.md`
 
 ---
 

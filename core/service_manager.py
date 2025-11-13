@@ -394,12 +394,15 @@ class ServiceManager:
             else:
                 result = service_info.health_check(service_info.instance)
             
-            service_info.last_health_check = asyncio.get_event_loop().time()
+            # Addresses: FM-043 - Replace deprecated get_event_loop() with get_running_loop()
+            loop = asyncio.get_running_loop()
+            service_info.last_health_check = loop.time()
             return bool(result)
             
         except Exception as e:
             service_info.error_message = str(e)
-            service_info.last_health_check = asyncio.get_event_loop().time()
+            loop = asyncio.get_running_loop()
+            service_info.last_health_check = loop.time()
             return False
     
     def get_initialization_order(self) -> List[str]:
