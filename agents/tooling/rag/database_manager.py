@@ -107,6 +107,27 @@ class DatabasePoolManager:
                 self.logger.info("Database connection pool closed")
             except Exception as e:
                 self.logger.error(f"Error closing connection pool: {e}")
+    
+    async def __aenter__(self):
+        """
+        Async context manager entry.
+        Addresses: FM-043 - Implement async context managers for resource cleanup.
+        
+        Returns:
+            self
+        """
+        await self.initialize()
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """
+        Async context manager exit.
+        Addresses: FM-043 - Implement async context managers for resource cleanup.
+        
+        Ensures connection pool is properly closed even if exceptions occur.
+        """
+        await self.close_pool()
+        return False  # Don't suppress exceptions
 
     async def get_pool_status(self) -> dict:
         """

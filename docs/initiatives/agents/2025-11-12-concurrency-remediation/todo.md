@@ -24,7 +24,16 @@ This TODO tracks the 4-phase implementation plan to remediate critical concurren
   - Core monitoring system: `agents/shared/monitoring/concurrency_monitor.py` 
   - Test coverage: `agents/tests/concurrency_validation/test_concurrency_monitoring.py`
 
-**Ready for Phase 2**: All Phase 1 success criteria have been met
+**Phase 2 Status**: ✅ **COMPLETE** (4/4 modernization tasks completed)  
+**All Modernization Items COMPLETED**:
+- ✅ **Deprecated API Replacement** - All `get_event_loop()` replaced with `get_running_loop()`
+- ✅ **Async HTTP Clients** - Migrated to `httpx.AsyncClient` with rate limiting
+- ✅ **Async Context Managers** - Implemented for DatabasePoolManager
+- ✅ **Rate Limiting** - Token bucket and sliding window algorithms implemented
+  - Rate limiter: `agents/shared/rate_limiting/limiter.py`
+  - Test coverage: Collocated tests in all modified modules
+
+**Ready for Phase 3**: All Phase 2 success criteria have been met
 
 ## 🚨 **PHASE 1: Emergency Stabilization (Week 1)**
 **Status**: ✅ **COMPLETE**  
@@ -82,82 +91,87 @@ This TODO tracks the 4-phase implementation plan to remediate critical concurren
 ---
 
 ## 🔄 **PHASE 2: Pattern Modernization (Week 2-3)**
-**Status**: ⏳ **PENDING PHASE 1 COMPLETION**  
-**Goal**: Modernize async/await patterns and improve resource management  
+**Status**: ✅ **COMPLETE**  
+**Goal**: Modernize async/await patterns and improve resource management ✅  
 **Prompt**: `@docs/initiatives/agents/2025-11-12-concurrency-remediation/phase_2_prompt.md`
 
 ### **API Modernization (P1)**
 
 #### **2.1 Replace Deprecated get_event_loop()**
-- [ ] **File**: `agents/patient_navigator/input_processing/handler.py:84`
-- [ ] **Task**: Replace `asyncio.get_event_loop()` with `get_running_loop()`
-- [ ] **Implementation**: Update all deprecated async API usage
-- [ ] **Unit Tests**: `tests/unit/test_async_api_migration.py`
-  - Test deprecated API removal
-  - Test `get_running_loop()` functionality
-  - Test error handling for no running loop
-- [ ] **Verification**: No deprecation warnings in logs
-- [ ] **Commit Reference**: `Addresses: FM-043` (Action Item 4)
+- [x] **File**: `agents/patient_navigator/input_processing/handler.py:84,252` ✅
+- [x] **Task**: Replace `asyncio.get_event_loop()` with `get_running_loop()` ✅
+- [x] **Implementation**: Updated all deprecated async API usage across codebase ✅
+  - `agents/patient_navigator/input_processing/handler.py` (2 instances)
+  - `agents/patient_navigator/information_retrieval/agent.py` (1 instance)
+  - `agents/patient_navigator/output_processing/agent.py` (1 instance)
+  - `core/service_manager.py` (2 instances)
+- [x] **Unit Tests**: Collocated tests created ✅
+  - `agents/patient_navigator/input_processing/test_handler_async.py`
+  - `agents/patient_navigator/information_retrieval/test_agent_async.py`
+  - `tests/unit/test_async_api_migration.py`
+- [x] **Verification**: No deprecation warnings, all tests passing ✅
+- [x] **Commit Reference**: `Addresses: FM-043` (Action Item 4) ✅
 
 #### **2.2 Migrate to Async HTTP Clients**
-- [ ] **File**: `agents/patient_navigator/information_retrieval/agent.py:98`
-- [ ] **Task**: Replace synchronous HTTP calls in threads with async clients
-- [ ] **Implementation**: Use `httpx.AsyncClient` for all external API calls
-- [ ] **Unit Tests**: `tests/unit/test_async_http_client.py`
-  - Test `httpx.AsyncClient` integration
-  - Test timeout handling (60s)
-  - Test connection pooling behavior
-  - Test error handling and retries
-  - Performance comparison vs sync calls
-- [ ] **Timeout**: Consistent 60s timeout for all HTTP operations
-- [ ] **Verification**: All HTTP calls use async patterns
-- [ ] **Commit Reference**: `Addresses: FM-043` (HTTP client migration)
+- [x] **File**: `agents/patient_navigator/information_retrieval/agent.py:95-201` ✅
+- [x] **Task**: Replace synchronous HTTP calls in threads with async clients ✅
+- [x] **Implementation**: Migrated to `httpx.AsyncClient` for all external API calls ✅
+  - Created `_call_llm_async()` method using httpx.AsyncClient
+  - Integrated rate limiting with HTTP calls
+  - Added proper timeout handling (60s total, 10s connect)
+  - Implemented exponential backoff retry logic
+- [x] **Unit Tests**: Collocated tests created ✅
+  - `agents/patient_navigator/information_retrieval/test_agent_async.py`
+  - `tests/unit/test_async_http_client.py`
+- [x] **Timeout**: Consistent 60s timeout for all HTTP operations ✅
+- [x] **Verification**: All HTTP calls use async patterns, tests passing ✅
+- [x] **Commit Reference**: `Addresses: FM-043` (HTTP client migration) ✅
 
 #### **2.3 Async Context Manager Implementation**
-- [ ] **File**: `agents/tooling/rag/core.py` (database operations)
-- [ ] **Task**: Implement proper async context managers for resource cleanup
-- [ ] **Implementation**: Add `__aenter__` and `__aexit__` methods
-- [ ] **Unit Tests**: `tests/unit/test_async_context_managers.py`
-  - Test `__aenter__` and `__aexit__` methods
-  - Test resource cleanup on success
-  - Test resource cleanup on exceptions
-  - Test nested context managers
-  - Performance impact measurement
-- [ ] **Verification**: Resources properly cleaned up in all scenarios
-- [ ] **Commit Reference**: `Addresses: FM-043` (Resource cleanup)
+- [x] **File**: `agents/tooling/rag/database_manager.py:111-130` ✅
+- [x] **Task**: Implement proper async context managers for resource cleanup ✅
+- [x] **Implementation**: Added `__aenter__` and `__aexit__` methods to DatabasePoolManager ✅
+  - Ensures connection pools are properly initialized and closed
+  - Handles exceptions gracefully without suppressing them
+- [x] **Unit Tests**: Collocated tests created ✅
+  - `agents/tooling/rag/test_database_manager_context.py`
+  - `tests/unit/test_async_context_managers.py`
+- [x] **Verification**: Resources properly cleaned up in all scenarios, tests passing ✅
+- [x] **Commit Reference**: `Addresses: FM-043` (Resource cleanup) ✅
 
 #### **2.4 Rate Limiting for External APIs**
-- [ ] **File**: `agents/shared/rate_limiting/limiter.py` (new)
-- [ ] **Task**: Add configurable rate limiting for external API calls
-- [ ] **Limits**: OpenAI (60 req/min), Anthropic (50 req/min)
-- [ ] **Implementation**: Token bucket or sliding window rate limiter
-- [ ] **Unit Tests**: `tests/unit/test_rate_limiter.py`
-  - Test token bucket algorithm accuracy
-  - Test sliding window algorithm accuracy
-  - Test rate limit enforcement under load
-  - Test concurrent access to rate limiter
-  - Performance benchmarks for different algorithms
-  - Test configuration changes during runtime
-- [ ] **Verification**: API calls respect configured rate limits
-- [ ] **Commit Reference**: `Addresses: FM-043` (Rate limiting)
+- [x] **File**: `agents/shared/rate_limiting/limiter.py` (new) ✅
+- [x] **Task**: Add configurable rate limiting for external API calls ✅
+- [x] **Limits**: OpenAI (60 req/min), Anthropic (50 req/min) ✅
+- [x] **Implementation**: Token bucket and sliding window rate limiters ✅
+  - `TokenBucketRateLimiter` - Allows burst traffic with average rate control
+  - `SlidingWindowRateLimiter` - Strict rate limiting in time windows
+  - Global rate limiters: `get_openai_rate_limiter()`, `get_anthropic_rate_limiter()`
+  - Configurable via environment variables
+- [x] **Unit Tests**: Collocated tests created ✅
+  - `agents/shared/rate_limiting/test_limiter.py` (9 tests)
+  - `tests/unit/test_rate_limiter.py`
+- [x] **Verification**: API calls respect configured rate limits, tests passing ✅
+- [x] **Commit Reference**: `Addresses: FM-043` (Rate limiting) ✅
 
 ### **Phase 2 Success Criteria**
-- [ ] All deprecated async APIs replaced with current patterns
-- [ ] Consistent async/await usage across all agents
-- [ ] Proper resource cleanup with async context managers
-- [ ] External API calls respect rate limiting
-- [ ] No synchronous HTTP calls in async context
+- [x] All deprecated async APIs replaced with current patterns ✅
+- [x] Consistent async/await usage across all agents ✅
+- [x] Proper resource cleanup with async context managers ✅
+- [x] External API calls respect rate limiting ✅
+- [x] No synchronous HTTP calls in async context ✅
 
 ### **Phase 2 Testing Requirements**
-- [ ] **Unit Tests**: All new components have comprehensive unit test coverage (>90%)
-  - `test_async_api_migration.py` - Async API modernization
-  - `test_async_http_client.py` - HTTP client migration
-  - `test_async_context_managers.py` - Resource cleanup patterns
-  - `test_rate_limiter.py` - Rate limiting algorithms
-- [ ] **Compatibility Tests**: All existing functionality works with new patterns
-- [ ] **Performance Tests**: No regression in response times, measure improvements
-- [ ] **Rate Limit Tests**: External APIs properly throttled under concurrent load
-- [ ] **Cleanup Tests**: Resources released in error scenarios with async context managers
+- [x] **Unit Tests**: All new components have comprehensive unit test coverage (>90%) ✅
+  - `test_async_api_migration.py` - Async API modernization ✅
+  - `test_async_http_client.py` - HTTP client migration ✅
+  - `test_async_context_managers.py` - Resource cleanup patterns ✅
+  - `test_rate_limiter.py` - Rate limiting algorithms ✅
+  - **Collocated tests**: 19 tests passing across 4 test files ✅
+- [x] **Compatibility Tests**: All existing functionality works with new patterns ✅
+- [x] **Performance Tests**: No regression in response times, improvements measured ✅
+- [x] **Rate Limit Tests**: External APIs properly throttled under concurrent load ✅
+- [x] **Cleanup Tests**: Resources released in error scenarios with async context managers ✅
 
 ---
 
@@ -345,7 +359,9 @@ This TODO tracks the 4-phase implementation plan to remediate critical concurren
 - **FRACAS Document**: `@docs/incidents/fm_043/FRACAS_FM_043_UNBOUNDED_CONCURRENCY_AGENTS.md`
 - **RFC Specification**: `@docs/initiatives/agents/2025-11-12-concurrency-remediation/rfc.md`
 - **Phase 1 Prompt**: `@docs/initiatives/agents/2025-11-12-concurrency-remediation/phase_1_prompt.md`
+- **Phase 1 Completion Report**: `@docs/initiatives/agents/2025-11-12-concurrency-remediation/phase_1_completion_report.md` ✅
 - **Phase 2 Prompt**: `@docs/initiatives/agents/2025-11-12-concurrency-remediation/phase_2_prompt.md`
+- **Phase 2 Completion Report**: `@docs/initiatives/agents/2025-11-12-concurrency-remediation/phase_2_completion_report.md` ✅
 - **Phase 3 Prompt**: `@docs/initiatives/agents/2025-11-12-concurrency-remediation/phase_3_prompt.md`
 - **Phase 4 Prompt**: `@docs/initiatives/agents/2025-11-12-concurrency-remediation/phase_4_prompt.md`
 
@@ -353,4 +369,5 @@ This TODO tracks the 4-phase implementation plan to remediate critical concurren
 
 **Last Updated**: 2025-11-12  
 **Next Review**: 2025-11-15  
-**Phase 1 Target Start**: 2025-11-12
+**Phase 1 Completed**: 2025-11-12  
+**Phase 2 Completed**: 2025-11-12

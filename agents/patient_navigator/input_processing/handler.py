@@ -249,7 +249,8 @@ class DefaultInputHandler(InputHandler):
             logger.debug(f"Capturing text input with prompt: {prompt}")
             
             # Use asyncio to make this non-blocking
-            loop = asyncio.get_event_loop()
+            # Addresses: FM-043 - Replace deprecated get_event_loop() with get_running_loop()
+            loop = asyncio.get_running_loop()
             user_input = await loop.run_in_executor(None, input, prompt)
             
             # Validate input length

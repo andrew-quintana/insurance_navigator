@@ -294,7 +294,8 @@ class CommunicationAgent(BaseAgent):
             import os
             
             # Use asyncio.run_in_executor for proper async handling
-            loop = asyncio.get_event_loop()
+            # Addresses: FM-043 - Replace deprecated get_event_loop() with get_running_loop()
+            loop = asyncio.get_running_loop()
             
             # Production environment detection and resource monitoring
             is_production = os.getenv("ENVIRONMENT", "").lower() in ["production", "prod"]
