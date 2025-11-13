@@ -27,6 +27,27 @@ class DatabasePoolManager:
         self.pool: Optional[Pool] = None
         self.logger = logging.getLogger(__name__)
 
+    def _parse_database_url(self, database_url: str) -> dict:
+        """
+        Parse PostgreSQL connection URL into components.
+        
+        Args:
+            database_url: PostgreSQL connection string (postgresql://user:pass@host:port/db)
+            
+        Returns:
+            Dictionary with connection parameters
+        """
+        from urllib.parse import urlparse
+        
+        parsed = urlparse(database_url)
+        return {
+            'host': parsed.hostname or '127.0.0.1',
+            'port': parsed.port or 5432,
+            'user': parsed.username or 'postgres',
+            'password': parsed.password or '',
+            'database': parsed.path.lstrip('/') or 'postgres'
+        }
+
     async def initialize(self) -> None:
         """Initialize the connection pool."""
         if self.pool is not None:
@@ -38,14 +59,62 @@ class DatabasePoolManager:
             # Then try DATABASE_URL, then fall back to individual parameters
             database_url = os.getenv("DATABASE_URL_LOCAL") or os.getenv("DATABASE_URL")
             
+            self.logger.info(f"Initializing database pool...")
+            self.logger.debug(f"DATABASE_URL_LOCAL: {'SET' if os.getenv('DATABASE_URL_LOCAL') else 'NOT SET'}")
+            self.logger.debug(f"DATABASE_URL: {'SET' if os.getenv('DATABASE_URL') else 'NOT SET'}")
+            
             if database_url:
-                self.pool = await asyncpg.create_pool(
-                    database_url,
-                    min_size=self.min_size,
-                    max_size=self.max_size,
-                    statement_cache_size=0
-                )
-                self.logger.info(f"Database pool initialized with DATABASE_URL (min: {self.min_size}, max: {self.max_size})")
+                # Parse connection string to handle host.docker.internal correctly
+                try:
+                    conn_params = self._parse_database_url(database_url)
+                    host = conn_params['host']
+                    port = conn_params['port']
+                    user = conn_params['user']
+                    password = conn_params['password']
+                    database = conn_params['database']
+                    
+                    # Determine SSL mode based on host
+                    # For local development (host.docker.internal, localhost, 127.0.0.1), disable SSL
+                    # For production Supabase, require SSL
+                    ssl_mode = None
+                    if any(local_host in host for local_host in ["127.0.0.1", "localhost", "host.docker.internal", "supabase_db"]):
+                        ssl_mode = False  # Disable SSL for local connections
+                        self.logger.info(f"Using local connection (SSL disabled) for host: {host}")
+                    elif "supabase.com" in host or "your-project" in host:
+                        ssl_mode = "require"  # Require SSL for Supabase production
+                        self.logger.info(f"Using production connection (SSL required) for host: {host}")
+                    
+                    # Mask password in log for security
+                    self.logger.info(f"Connecting to database: {user}@{host}:{port}/{database}")
+                    
+                    # Use individual parameters instead of connection string for better compatibility
+                    # This handles host.docker.internal correctly
+                    self.pool = await asyncpg.create_pool(
+                        host=host,
+                        port=port,
+                        user=user,
+                        password=password,
+                        database=database,
+                        min_size=self.min_size,
+                        max_size=self.max_size,
+                        statement_cache_size=0,
+                        command_timeout=30,  # 30 second timeout for connection attempts
+                        ssl=ssl_mode
+                    )
+                    self.logger.info(f"Database pool initialized successfully (min: {self.min_size}, max: {self.max_size})")
+                except Exception as parse_error:
+                    self.logger.warning(f"Failed to parse database URL, trying direct connection string: {parse_error}")
+                    # Fallback to direct connection string
+                    masked_url = database_url.split('@')[1] if '@' in database_url else database_url
+                    self.logger.info(f"Connecting to database with connection string: ...@{masked_url}")
+                    self.pool = await asyncpg.create_pool(
+                        database_url,
+                        min_size=self.min_size,
+                        max_size=self.max_size,
+                        statement_cache_size=0,
+                        command_timeout=30
+                    )
+                    self.logger.info(f"Database pool initialized with connection string (min: {self.min_size}, max: {self.max_size})")
             else:
                 # Fallback to individual environment variables
                 host = os.getenv("SUPABASE_DB_HOST", "127.0.0.1")
@@ -54,6 +123,12 @@ class DatabasePoolManager:
                 password = os.getenv("SUPABASE_DB_PASSWORD", "postgres")
                 database = os.getenv("SUPABASE_DB_NAME", "postgres")
                 
+                # Determine SSL mode
+                ssl_mode = None
+                if any(local_host in host for local_host in ["127.0.0.1", "localhost", "host.docker.internal", "supabase_db"]):
+                    ssl_mode = False
+                
+                self.logger.info(f"Connecting to database: {user}@{host}:{port}/{database}")
                 self.pool = await asyncpg.create_pool(
                     host=host,
                     port=port,
@@ -62,12 +137,17 @@ class DatabasePoolManager:
                     database=database,
                     min_size=self.min_size,
                     max_size=self.max_size,
-                    statement_cache_size=0
+                    statement_cache_size=0,
+                    command_timeout=30,
+                    ssl=ssl_mode
                 )
                 self.logger.info(f"Database pool initialized with individual params (min: {self.min_size}, max: {self.max_size})")
 
         except Exception as e:
+            import traceback
             self.logger.error(f"Failed to initialize database pool: {e}")
+            self.logger.error(f"Error type: {type(e).__name__}")
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
             raise
 
     async def acquire_connection(self):
@@ -174,9 +254,24 @@ async def get_db_connection():
     
     Returns:
         asyncpg.Connection from the pool
+        
+    Raises:
+        RuntimeError: If pool initialization fails
+        Exception: If connection acquisition fails
     """
-    pool_manager = await get_pool_manager()
-    return await pool_manager.acquire_connection()
+    try:
+        pool_manager = await get_pool_manager()
+        conn = await pool_manager.acquire_connection()
+        logger = logging.getLogger(__name__)
+        logger.debug(f"Acquired database connection from pool")
+        return conn
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to get database connection: {e}")
+        logger.error(f"Error type: {type(e).__name__}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise
 
 
 async def release_db_connection(conn) -> None:

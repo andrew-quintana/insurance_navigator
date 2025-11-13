@@ -7,7 +7,7 @@ services:
       - "8000:8000"
     environment:
       - ENVIRONMENT=${ENVIRONMENT}
-      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:54322/postgres
+      - DATABASE_URL=postgresql://postgres:postgres@supabase_db_insurance_navigator:5432/postgres
       - SUPABASE_URL=http://host.docker.internal:54321
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
@@ -36,7 +36,7 @@ services:
       dockerfile: backend/workers/Dockerfile
     environment:
       - ENVIRONMENT=${ENVIRONMENT}
-      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:54322/postgres
+      - DATABASE_URL=postgresql://postgres:postgres@supabase_db_insurance_navigator:5432/postgres
       - SUPABASE_URL=http://host.docker.internal:54321
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
