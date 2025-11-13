@@ -518,33 +518,3 @@ class RAGTool:
         
         self.logger.warning(f"Using mock embedding for text: {text[:50]}...")
         return mock_embedding
-
-    async def _get_db_conn(self) -> Any:
-        """
-        Get an asyncpg database connection using environment variables.
-        Returns:
-            asyncpg.Connection
-        """
-        # Try to use DATABASE_URL first, then fall back to individual parameters
-        database_url = os.getenv("DATABASE_URL")
-        if database_url:
-            try:
-                return await asyncpg.connect(database_url, statement_cache_size=0)
-            except Exception as e:
-                self.logger.warning(f"Failed to connect using DATABASE_URL: {e}, falling back to individual parameters")
-        
-        # Fallback to individual environment variables
-        host = os.getenv("SUPABASE_DB_HOST", "127.0.0.1")
-        port = int(os.getenv("SUPABASE_DB_PORT", "5432"))
-        user = os.getenv("SUPABASE_DB_USER", "postgres")
-        password = os.getenv("SUPABASE_DB_PASSWORD", "postgres")
-        database = os.getenv("SUPABASE_DB_NAME", "postgres")
-        
-        return await asyncpg.connect(
-            host=host,
-            port=port,
-            user=user,
-            password=password,
-            database=database,
-            statement_cache_size=0
-        )

@@ -6,7 +6,7 @@
 # Supabase - Start local instance (manages own Docker containers)
 # Must start first to create external network
 # Always shows URLs after startup, then monitors
-supabase: sh -c 'if supabase status >/dev/null 2>&1; then echo "✅ Supabase already running"; supabase status 2>/dev/null | head -15; echo "Monitoring..."; while supabase status >/dev/null 2>&1; do sleep 10; done; else if [ "${LOG_LEVEL:-WARNING}" = "WARNING" ]; then supabase start >/dev/null 2>&1; else supabase start; fi && echo "✅ Supabase started" && sleep 3 && echo "" && echo "📊 Supabase Services:" && supabase status 2>/dev/null | grep -E "(API URL|Database URL|Studio URL|GraphQL URL)" && echo "" && echo "Monitoring..."; while supabase status >/dev/null 2>&1; do sleep 10; done; fi'
+supabase: sh -c 'if supabase status >/dev/null 2>&1; then echo "✅ Supabase already running"; supabase status 2>/dev/null | head -15; echo "Monitoring..."; while supabase status >/dev/null 2>&1; do sleep 10; done; else echo "🚀 Starting Supabase..."; if supabase start; then echo "✅ Supabase started" && sleep 3 && echo "" && echo "📊 Supabase Services:" && supabase status 2>/dev/null | grep -E "(API URL|Database URL|Studio URL|GraphQL URL)" && echo "" && echo "Monitoring..."; while supabase status >/dev/null 2>&1; do sleep 10; done; else echo "❌ Failed to start Supabase. Check Docker is running and try: supabase start"; exit 1; fi; fi'
 
 # Docker Compose Services - Backend API and Worker
 # Waits for Supabase network, then starts services

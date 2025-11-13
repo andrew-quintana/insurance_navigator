@@ -34,8 +34,9 @@ class DatabasePoolManager:
             return
 
         try:
-            # Try to use DATABASE_URL first, then fall back to individual parameters
-            database_url = os.getenv("DATABASE_URL")
+            # Prefer DATABASE_URL_LOCAL for local development (localhost connections)
+            # Then try DATABASE_URL, then fall back to individual parameters
+            database_url = os.getenv("DATABASE_URL_LOCAL") or os.getenv("DATABASE_URL")
             
             if database_url:
                 self.pool = await asyncpg.create_pool(
