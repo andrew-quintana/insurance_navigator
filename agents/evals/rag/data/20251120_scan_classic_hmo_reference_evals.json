@@ -1,0 +1,202 @@
+[
+  {
+    "prompt": "What is my annual deductible?",
+    "chunks": "Your annual deductible is $500 per individual or $1,000 per family. The deductible applies to most covered services except preventive care.",
+    "output": "",
+    "golden_output": "Your annual deductible is $500 per individual or $1,000 per family. The deductible applies to most covered services except preventive care, which is covered at 100% with no deductible.",
+    "llm_eval": "",
+    "llm_reasoning": "",
+    "human_eval": "",
+    "human_reasoning": ""
+  },
+  {
+    "prompt": "How much is my copay for a primary care visit?",
+    "chunks": "Primary care physician visits have a copay of $25 per visit. Specialist visits have a copay of $50 per visit.",
+    "output": "",
+    "golden_output": "Your copay for a primary care physician visit is $25 per visit. This copay applies to in-network providers only.",
+    "llm_eval": "",
+    "llm_reasoning": "",
+    "human_eval": "",
+    "human_reasoning": ""
+  },
+  {
+    "prompt": "Are emergency room visits covered?",
+    "chunks": "Emergency room visits are covered under your plan. The copay for emergency room visits is $200 per visit, unless the visit results in an inpatient admission.",
+    "output": "",
+    "golden_output": "Yes, emergency room visits are covered under your plan. The copay is $200 per visit, unless the visit results in an inpatient admission, in which case the emergency room copay is waived.",
+    "llm_eval": "",
+    "llm_reasoning": "",
+    "human_eval": "",
+    "human_reasoning": ""
+  },
+  {
+    "prompt": "What is my copay for generic prescriptions?",
+    "chunks": "Prescription drug copays vary by tier: Generic drugs have a copay of $10, preferred brand drugs have a copay of $40, and non-preferred brand drugs have a copay of $80.",
+    "output": "",
+    "golden_output": "Your copay for generic prescriptions is $10 per prescription. This applies to medications on the formulary at participating pharmacies.",
+    "llm_eval": "",
+    "llm_reasoning": "",
+    "human_eval": "",
+    "human_reasoning": ""
+  },
+  {
+    "prompt": "Do I need a referral to see a specialist?",
+    "chunks": "As an HMO plan, you need a referral from your primary care physician to see a specialist. Without a referral, specialist visits may not be covered.",
+    "output": "",
+    "golden_output": "Yes, as an HMO plan member, you need a referral from your primary care physician (PCP) to see a specialist. Without a referral, specialist visits may not be covered by your plan.",
+    "llm_eval": "",
+    "llm_reasoning": "",
+    "human_eval": "",
+    "human_reasoning": ""
+  },
+  {
+    "prompt": "Are annual physical exams covered?",
+    "chunks": "Preventive care services, including annual physical exams, are covered at 100% with no copay, deductible, or coinsurance when received from in-network providers.",
+    "output": "",
+    "golden_output": "Yes, annual physical exams are covered at 100% with no copay, deductible, or coinsurance when received from in-network providers. This is part of your preventive care benefits.",
+    "llm_eval": "",
+    "llm_reasoning": "",
+    "human_eval": "",
+    "human_reasoning": ""
+  },
+  {
+    "prompt": "What is my out-of-pocket maximum?",
+    "chunks": "Your annual out-of-pocket maximum is $3,500 per individual or $7,000 per family. Once you reach this limit, the plan pays 100% of covered services for the remainder of the year.",
+    "output": "",
+    "golden_output": "Your annual out-of-pocket maximum is $3,500 per individual or $7,000 per family. Once you reach this limit, the plan pays 100% of covered services for the remainder of the calendar year.",
+    "llm_eval": "",
+    "llm_reasoning": "",
+    "human_eval": "",
+    "human_reasoning": ""
+  },
+  {
+    "prompt": "What is my coinsurance percentage?",
+    "chunks": "After meeting your deductible, you pay 20% coinsurance for most covered services, and the plan pays 80%. Some services like preventive care have no coinsurance.",
+    "output": "",
+    "golden_output": "After meeting your deductible, you pay 20% coinsurance for most covered services, and the plan pays 80%. Some services like preventive care have no coinsurance and are covered at 100%.",
+    "llm_eval": "",
+    "llm_reasoning": "",
+    "human_eval": "",
+    "human_reasoning": ""
+  },
+  {
+    "prompt": "What are the differences in cost between seeing a primary care doctor versus a specialist?",
+    "chunks": "Primary care physician visits have a copay of $25 per visit---Specialist visits have a copay of $50 per visit---You need a referral from your PCP to see a specialist",
+    "output": "",
+    "golden_output": "Primary care physician visits have a copay of $25 per visit, while specialist visits have a copay of $50 per visit. Additionally, as an HMO plan member, you need a referral from your primary care physician to see a specialist. Without a referral, specialist visits may not be covered.",
+    "llm_eval": "",
+    "llm_reasoning": "",
+    "human_eval": "",
+    "human_reasoning": ""
+  },
+  {
+    "prompt": "What are the copays for different prescription drug tiers?",
+    "chunks": "Prescription drug copays vary by tier: Generic drugs have a copay of $10---Preferred brand drugs have a copay of $40---Non-preferred brand drugs have a copay of $80",
+    "output": "",
+    "golden_output": "Prescription drug copays vary by tier: Generic drugs have a copay of $10 per prescription, preferred brand drugs have a copay of $40 per prescription, and non-preferred brand drugs have a copay of $80 per prescription. These copays apply at participating pharmacies.",
+    "llm_eval": "",
+    "llm_reasoning": "",
+    "human_eval": "",
+    "human_reasoning": ""
+  },
+  {
+    "prompt": "What does my plan cover for mental health services and what will I pay?",
+    "chunks": "Mental health services are covered under your plan---Mental health visits have a copay of $30 per visit---You may need prior authorization for certain mental health services",
+    "output": "",
+    "golden_output": "Mental health services are covered under your plan. Mental health visits have a copay of $30 per visit when seeing in-network providers. You may need prior authorization for certain mental health services or treatments. The deductible applies to mental health services unless they are preventive in nature.",
+    "llm_eval": "",
+    "llm_reasoning": "",
+    "human_eval": "",
+    "human_reasoning": ""
+  },
+  {
+    "prompt": "What should I know about emergency room coverage and costs?",
+    "chunks": "Emergency room visits are covered under your plan---The copay for emergency room visits is $200 per visit---If the visit results in an inpatient admission, the emergency room copay is waived",
+    "output": "",
+    "golden_output": "Emergency room visits are covered under your plan. The copay for emergency room visits is $200 per visit. However, if the visit results in an inpatient admission, the emergency room copay is waived. Emergency services are covered both in-network and out-of-network, though out-of-network costs may be higher.",
+    "llm_eval": "",
+    "llm_reasoning": "",
+    "human_eval": "",
+    "human_reasoning": ""
+  },
+  {
+    "prompt": "What preventive care services are covered and do they have any cost to me?",
+    "chunks": "Preventive care services are covered at 100% with no copay, deductible, or coinsurance---Preventive care includes annual physicals, immunizations, and cancer screenings---These services must be received from in-network providers",
+    "output": "",
+    "golden_output": "Preventive care services are covered at 100% with no copay, deductible, or coinsurance when received from in-network providers. Preventive care includes annual physical exams, immunizations, cancer screenings (mammograms, colonoscopies), and other services recommended by the U.S. Preventive Services Task Force.",
+    "llm_eval": "",
+    "llm_reasoning": "",
+    "human_eval": "",
+    "human_reasoning": ""
+  },
+  {
+    "prompt": "How does the HMO network work and what are the requirements for seeing different types of providers?",
+    "chunks": "As an HMO plan, you must use in-network providers---You need a referral from your PCP to see a specialist---Emergency care is covered in-network and out-of-network",
+    "output": "",
+    "golden_output": "As an HMO plan, you must use in-network providers for most services to receive coverage. You need a referral from your primary care physician (PCP) to see a specialist. Without a referral, specialist visits may not be covered. Emergency care is an exception and is covered both in-network and out-of-network, though out-of-network emergency costs may be higher.",
+    "llm_eval": "",
+    "llm_reasoning": "",
+    "human_eval": "",
+    "human_reasoning": ""
+  },
+  {
+    "prompt": "When do I need prior authorization and what happens if I don't get it?",
+    "chunks": "Certain services require prior authorization before receiving care---Services that typically require authorization include elective surgeries, certain imaging tests, and specialty medications---If you receive a service without required authorization, it may not be covered and you may be responsible for the full cost",
+    "output": "",
+    "golden_output": "Certain services require prior authorization before receiving care. Services that typically require authorization include elective surgeries, certain advanced imaging tests (like MRIs and CT scans), specialty medications, and some specialist procedures. If you receive a service without the required prior authorization, it may not be covered by your plan, and you may be responsible for the full cost of the service. Your provider should handle the authorization process, but it's important to confirm authorization is in place before receiving these services.",
+    "llm_eval": "",
+    "llm_reasoning": "",
+    "human_eval": "",
+    "human_reasoning": ""
+  },
+  {
+    "prompt": "If I've already met my deductible, how does cost-sharing work for a specialist visit?",
+    "chunks": "After meeting your deductible, you pay 20% coinsurance for most covered services---Specialist visits have a copay of $50 per visit---Copays are separate from coinsurance and apply regardless of deductible status",
+    "output": "",
+    "golden_output": "After meeting your deductible, you would pay the $50 specialist copay for the visit. Copays are separate from coinsurance and apply regardless of whether you've met your deductible. However, you still need a referral from your primary care physician to see the specialist, and the visit must be with an in-network provider.",
+    "llm_eval": "",
+    "llm_reasoning": "",
+    "human_eval": "",
+    "human_reasoning": ""
+  },
+  {
+    "prompt": "Are there any services that are covered differently than the standard copay and coinsurance structure?",
+    "chunks": "Preventive care services are covered at 100% with no copay, deductible, or coinsurance---Emergency care has a fixed $200 copay regardless of deductible---Some services may have different cost-sharing based on the type of service",
+    "output": "",
+    "golden_output": "Yes, there are several exceptions to the standard copay and coinsurance structure. Preventive care services (annual physicals, immunizations, screenings) are covered at 100% with no copay, deductible, or coinsurance. Emergency care has a fixed $200 copay regardless of deductible status. Some specialty services, mental health services, and prescription drugs have their own specific cost-sharing structures that differ from the standard 20% coinsurance.",
+    "llm_eval": "",
+    "llm_reasoning": "",
+    "human_eval": "",
+    "human_reasoning": ""
+  },
+  {
+    "prompt": "What happens if I see an out-of-network provider for a non-emergency service?",
+    "chunks": "As an HMO plan, out-of-network services are generally not covered except for emergencies---If you receive non-emergency care from an out-of-network provider, you may be responsible for the full cost---Emergency care is covered out-of-network",
+    "output": "",
+    "golden_output": "As an HMO plan, out-of-network services for non-emergency care are generally not covered. If you receive non-emergency care from an out-of-network provider, you may be responsible for the full cost of the service, and these costs typically do not count toward your deductible or out-of-pocket maximum. The only exception is emergency care, which is covered both in-network and out-of-network, though out-of-network emergency costs may be subject to higher cost-sharing.",
+    "llm_eval": "",
+    "llm_reasoning": "",
+    "human_eval": "",
+    "human_reasoning": ""
+  },
+  {
+    "prompt": "How much will my surgery cost?",
+    "chunks": "Surgical procedures are covered under your plan---You may need prior authorization for elective surgeries---Cost-sharing depends on whether you've met your deductible",
+    "output": "",
+    "golden_output": "The cost of surgery depends on several factors: (1) whether it's an elective surgery requiring prior authorization, (2) whether you've met your annual deductible, (3) whether the surgeon and facility are in-network, and (4) the type of surgery. After meeting your deductible, you typically pay 20% coinsurance for covered surgical procedures, plus any applicable facility fees. Without more specific information about the type of surgery and your current deductible status, I cannot provide an exact cost estimate.",
+    "llm_eval": "",
+    "llm_reasoning": "",
+    "human_eval": "",
+    "human_reasoning": ""
+  },
+  {
+    "prompt": "What is the phone number to call for customer service?",
+    "chunks": "For questions about your coverage, contact your insurance company---Member services can help with coverage questions",
+    "output": "",
+    "golden_output": "The document does not contain a specific customer service phone number. For questions about your coverage, you should contact your insurance company's member services department. Contact information is typically found on your insurance ID card, the insurance company's website, or through your employer's benefits administrator if you have employer-sponsored coverage.",
+    "llm_eval": "",
+    "llm_reasoning": "",
+    "human_eval": "",
+    "human_reasoning": ""
+  }
+]

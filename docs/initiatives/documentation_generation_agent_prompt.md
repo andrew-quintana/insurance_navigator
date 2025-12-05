@@ -33,7 +33,21 @@ Generate these documents **sequentially**, using each as foundational context fo
 - **Core Implementation**: Granular development tasks in logical order
 - **Testing Tasks**: Unit, integration, e2e testing requirements
 - **Documentation Tasks**: Code comments, user docs, deployment guides
+    - **summary.md**: require a document to summarize the implementation and allow for ease of understanding the initiative
+    - **technical_debt.md**: require a document to capture testing gaps and the technical debt that is left after the initiative
 - **Validation Tasks**: Performance testing, security review, stakeholder approval
+
+### 4.  PHASE_X_PROMPT{serial}.md (Prompts for Executing Phases of TODO.md)
+**Purpose**: Map for accessing information relevant for executing phases of TODO.md
+- **References**: Relative filepaths provided with '@' for supporting Cursor agent context
+- **Limited Detail**: Detail will be provided in PRD.md, RFC.md, TODO.md and any other contextual documents
+- **Execution**: Always require the following in execution:
+    - **Checklist Modifications**: Check off any [ ] checkboxes in TODO.md for this initiative as they are completed
+    - **Validation**: Validate all code unless it is explicitly an implementation only effort
+- **Documentation**: Always require the following documents between phases
+    - **phase_X_decisions.md**: document decisions made that weren't captured in the prd or rfc
+    - **phase_X_testing.md**: document any testing that was done during the phase
+    - **phase_X_handoff.md**: what is necessary for the subsequent phase (if another after)
 
 Note: You can deviate from the 4 phase structure if more or less is more ideal for breaking up the effort.
 
