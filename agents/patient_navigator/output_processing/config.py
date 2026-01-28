@@ -22,7 +22,7 @@ class OutputProcessingConfig:
     """Configuration for the output processing workflow."""
     
     # LLM configuration
-    llm_model: str = "claude-3-haiku"
+    llm_model: str = "claude-sonnet-4-5"
     
     # Performance settings
     request_timeout: float = 30.0
@@ -52,7 +52,7 @@ class OutputProcessingConfig:
     def from_environment(cls) -> "OutputProcessingConfig":
         """Create configuration from environment variables."""
         return cls(
-            llm_model=os.getenv("OUTPUT_PROCESSING_LLM_MODEL", "claude-3-haiku"),
+            llm_model=os.getenv("OUTPUT_PROCESSING_LLM_MODEL", "claude-sonnet-4-5"),
             request_timeout=float(os.getenv("OUTPUT_PROCESSING_TIMEOUT", "30.0")),
             max_input_length=int(os.getenv("OUTPUT_PROCESSING_MAX_INPUT_LENGTH", "10000")),
             max_concurrent_requests=int(os.getenv("OUTPUT_PROCESSING_MAX_CONCURRENT", "10")),

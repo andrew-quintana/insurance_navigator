@@ -61,7 +61,7 @@ class LLMIntegration:
     async def generate_completion(
         self,
         prompt: str,
-        model: str = "claude-3-5-haiku-20241022",
+        model: str = "claude-sonnet-4-5",
         max_tokens: int = 1000,
         temperature: float = 0.7
     ) -> str:

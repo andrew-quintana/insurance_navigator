@@ -73,7 +73,7 @@ class InformationRetrievalAgent(BaseAgent):
         if not api_key:
             return None
         
-        model = os.getenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307")
+        model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5")
         rate_limiter = get_anthropic_rate_limiter()
         
         # Store these for use in async call
@@ -111,7 +111,7 @@ class InformationRetrievalAgent(BaseAgent):
             raise RuntimeError("Anthropic API key not configured")
         
         api_key = self._anthropic_api_key
-        model = getattr(self, '_anthropic_model', 'claude-3-haiku-20240307')
+        model = getattr(self, '_anthropic_model', 'claude-sonnet-4-5')
         rate_limiter = getattr(self, '_anthropic_rate_limiter', get_anthropic_rate_limiter())
         
         # Retry configuration

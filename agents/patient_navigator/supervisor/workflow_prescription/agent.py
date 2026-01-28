@@ -30,7 +30,7 @@ def _get_claude_haiku_llm():
             return None
         
         client = Anthropic(api_key=api_key)
-        model = os.getenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307")
+        model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5")
         
         def call_llm(prompt: str) -> str:
             """Call Claude Haiku with the given prompt."""

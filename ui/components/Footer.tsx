@@ -19,7 +19,16 @@ export default function Footer() {
               className="flex items-center text-cream-200 hover:text-white transition-colors"
             >
               <Github className="h-4 w-4 mr-2" />
-              GitHub
+              repo
+            </Link>
+            <Link 
+              href="https://github.com/andrew-quintana"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center text-cream-200 hover:text-white transition-colors"
+            >
+              <Github className="h-4 w-4 mr-2" />
+              about me
             </Link>
           </div>
         </div>
