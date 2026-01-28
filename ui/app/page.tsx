@@ -189,7 +189,7 @@ export default function Home() {
             <Card className="p-6 shadow-lg rounded-xl bg-white">
               <div className="mb-6 p-4 bg-sky-50 rounded-lg">
                 <p className="text-teal-800 font-medium mb-4">
-                  Try the Insurance Navigator with a pre-loaded sample policy document by clicking "Try Demo" above.
+                  Try the Insurance Navigator with a pre-loaded sample policy document by clicking &quot;Try Demo&quot; above.
                 </p>
                 <p className="text-teal-700">
                   <span className="font-medium">View Sample Policy Document:</span>{" "}
