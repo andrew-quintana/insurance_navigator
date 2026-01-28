@@ -173,21 +173,21 @@ class DynamicConfigManager:
             'prompt_security': {
                 'description': 'Agent responsible for ensuring prompt security and content safety',
                 'model': {
-                    'name': 'claude-3-7-sonnet-20250219',
+                    'name': 'claude-sonnet-4-5',
                     'temperature': 0.0
                 }
             },
             'patient_navigator': {
                 'description': 'Agent responsible for guiding patients through insurance processes',
                 'model': {
-                    'name': 'claude-3-7-sonnet-20250219',
+                    'name': 'claude-sonnet-4-5',
                     'temperature': 0.7
                 }
             },
             'task_requirements': {
                 'description': 'Agent responsible for determining required documentation for tasks',
                 'model': {
-                    'name': 'claude-3-7-sonnet-20250219',
+                    'name': 'claude-sonnet-4-5',
                     'temperature': 0.2
                 }
             },
@@ -201,14 +201,14 @@ class DynamicConfigManager:
             'chat_communicator': {
                 'description': 'Agent responsible for communicating with users in conversational language',
                 'model': {
-                    'name': 'claude-3-sonnet-20240229-v1h',
+                    'name': 'claude-sonnet-4-5',
                     'temperature': 0.2
                 }
             },
             'regulatory': {
                 'description': 'Agent responsible for regulatory research and compliance analysis',
                 'model': {
-                    'name': 'claude-3-7-sonnet-20250219',
+                    'name': 'claude-sonnet-4-5',
                     'temperature': 0.1
                 }
             }
@@ -217,7 +217,7 @@ class DynamicConfigManager:
         return agent_info.get(agent_name, {
             'description': f'Agent for {agent_name} functionality',
             'model': {
-                'name': 'claude-3-7-sonnet-20250219',
+                'name': 'claude-sonnet-4-5',
                 'temperature': 0.2
             }
         })

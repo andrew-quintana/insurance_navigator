@@ -18,7 +18,7 @@ agents:
       version: 'v0_1'
       path: agents/prompt_security/tests/data/examples/test_examples_prompt_security_v0_1.json
     model:
-      name: claude-3-7-sonnet-20250219
+      name: claude-sonnet-4-5
       temperature: 0.0
     metrics:
       latest_run: agents/prompt_security/metrics/performance_metrics_20250515_103235.json
@@ -60,7 +60,7 @@ agents:
       version: 'v0_1'
       path: agents/task_requirements/tests/data/examples/test_examples_task_requirements_v0_1.json
     model:
-      name: claude-3-7-sonnet-20250219
+      name: claude-sonnet-4-5
       temperature: 0.2
     metrics:
       latest_run: agents/task_requirements/metrics/performance_metrics_20250515_145819.json
@@ -81,7 +81,7 @@ agents:
       version: 'v0_1'
       path: agents/service_access_strategy/tests/data/examples/test_examples_service_access_strategy_v0_1.json
     model:
-      name: claude-3-7-sonnet-20250219
+      name: claude-sonnet-4-5
       temperature: 0.2
     metrics:
       latest_run: agents/service_access_strategy/metrics/performance_metrics_20250515_153019.json
@@ -117,7 +117,7 @@ agents:
       version: 'v0_1'
       path: agents/regulatory/prompt_examples_regulatory_v0_1.json
     model:
-      name: claude-3-7-sonnet-20250219
+      name: claude-sonnet-4-5
       temperature: 0.1
     metrics:
       latest_run: agents/regulatory/metrics/performance_metrics_latest.json

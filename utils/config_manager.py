@@ -87,7 +87,7 @@ class ConfigManager:
         else:
             logger.warning(f"No model configuration found for agent {agent_name}")
             return {
-                "name": "claude-3-sonnet-20240229-v1h",
+                "name": "claude-sonnet-4-5",
                 "temperature": 0.0
             }
     

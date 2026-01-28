@@ -96,7 +96,7 @@ def get_metadata(
         "git_commit": get_git_commit(),
         "git_branch": get_git_branch(),
         "run_type": run_type,
-        "model": os.getenv("ANTHROPIC_MODEL", "claude-3-sonnet-20240229"),
+        "model": os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5"),
         "temperature": float(os.getenv("ANTHROPIC_TEMPERATURE", "0")),
         "max_tokens": int(os.getenv("ANTHROPIC_MAX_TOKENS", "4096")),
         **get_system_info(),

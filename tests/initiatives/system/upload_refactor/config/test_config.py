@@ -54,7 +54,7 @@ class APITestConfig:
     openai_key: Optional[str] = None
     llamaparse_key: Optional[str] = None
     anthropic_key: Optional[str] = None
-    anthropic_model: str = "claude-3-haiku-20240307"
+    anthropic_model: str = "claude-sonnet-4-5"
 
     @classmethod
     def from_env(cls) -> 'APITestConfig':
@@ -63,7 +63,7 @@ class APITestConfig:
             openai_key=os.getenv('OPENAI_API_KEY'),
             llamaparse_key=os.getenv('LLAMAPARSE_API_KEY'),
             anthropic_key=os.getenv('ANTHROPIC_API_KEY'),
-            anthropic_model=os.getenv('ANTHROPIC_MODEL', "claude-3-haiku-20240307")
+            anthropic_model=os.getenv('ANTHROPIC_MODEL', "claude-sonnet-4-5")
         )
 
 @dataclass

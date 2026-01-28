@@ -13,13 +13,22 @@ export default function Footer() {
           
           <div className="flex items-center space-x-6">
             <Link 
+              href="https://github.com/andrew-quintana"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center text-cream-200 hover:text-white transition-colors"
+            >
+              <Github className="h-4 w-4 mr-2" />
+              About Me
+            </Link>
+            <Link 
               href="https://github.com/andrew-quintana/insurance_navigator"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center text-cream-200 hover:text-white transition-colors"
             >
               <Github className="h-4 w-4 mr-2" />
-              GitHub
+              Repo
             </Link>
           </div>
         </div>
