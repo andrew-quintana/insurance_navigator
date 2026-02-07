@@ -20,9 +20,11 @@ class SafetyLevel(str, Enum):
 
 class ToolType(str, Enum):
     """Available tools for the unified agent."""
-    WEB_SEARCH = "web_search"
-    RAG_SEARCH = "rag_search"
-    COMBINED = "combined"
+    QUICK_INFO = "quick_info"           # Fast policy lookup with BM25/TF-IDF
+    ACCESS_STRATEGY = "access_strategy" # Complex research with Tavily + RAG
+    WEB_SEARCH = "web_search"           # Current events and news
+    RAG_SEARCH = "rag_search"           # Traditional RAG search
+    COMBINED = "combined"               # Multiple tools
 
 
 class InputSafetyResult(BaseModel):
@@ -66,7 +68,7 @@ class ToolExecutionResult(BaseModel):
     """Generic tool execution result."""
     tool_type: ToolType
     success: bool
-    result: Optional[Union[WebSearchResult, RAGSearchResult]] = None
+    result: Optional[Any] = None  # Union of result types - will be properly typed at runtime
     error_message: Optional[str] = None
     processing_time_ms: float
 
@@ -80,6 +82,34 @@ class OutputSanitationResult(BaseModel):
     warnings: List[str] = Field(default_factory=list)
 
 
+class WorkflowStatus(BaseModel):
+    """Real-time workflow status for frontend updates."""
+    step: str  # 'sanitizing', 'thinking', 'determining', 'skimming', 'wording'
+    message: str
+    progress: float  # 0.0 to 1.0
+    timestamp: datetime
+    
+
+class QuickInfoResult(BaseModel):
+    """Result from quick information retrieval tool."""
+    query: str
+    relevant_sections: List[Dict[str, Any]]
+    confidence_score: float
+    processing_time_ms: float
+    source: str = "quick_info"
+    
+
+class AccessStrategyResult(BaseModel):
+    """Result from access strategizing tool."""
+    query: str
+    strategy_hypothesis: str
+    tavily_research: Optional[Dict[str, Any]]
+    rag_validation: Optional[Dict[str, Any]]
+    confidence_score: float
+    processing_time_ms: float
+    source: str = "access_strategy"
+
+
 class UnifiedNavigatorState(TypedDict, total=False):
     """State object for LangGraph workflow using TypedDict for better LangGraph compatibility."""
     # Input (required)
@@ -89,16 +119,21 @@ class UnifiedNavigatorState(TypedDict, total=False):
     # Optional input
     session_id: Optional[str]
     workflow_context: Optional[Dict[str, Any]]
+    workflow_id: Optional[str]
     
     # Processing state
     input_safety: Optional[InputSafetyResult]
     tool_choice: Optional[ToolSelection]
     tool_results: Optional[List[ToolExecutionResult]]
     output_sanitation: Optional[OutputSanitationResult]
+    workflow_status: Optional[WorkflowStatus]
     
     # Final result
     final_response: Optional[str]
     error_message: Optional[str]
+    
+    # Real-time status
+    current_status: Optional[WorkflowStatus]
     
     # Metadata
     processing_start_time: Optional[datetime]

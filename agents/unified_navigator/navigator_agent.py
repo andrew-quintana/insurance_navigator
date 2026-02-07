@@ -25,12 +25,14 @@ from .models import (
     ToolType,
     ToolSelection,
     InputSafetyResult,
-    SafetyLevel
+    SafetyLevel,
+    WorkflowStatus
 )
 from .guardrails.input_sanitizer import input_guardrail_node
 from .guardrails.output_sanitizer import output_guardrail_node
 from .tools.web_search import web_search_node
 from .tools.rag_search import rag_search_node, combined_search_node
+from .logging import get_workflow_logger, LLMInteraction
 
 
 class UnifiedNavigatorAgent(BaseAgent):
@@ -67,14 +69,19 @@ class UnifiedNavigatorAgent(BaseAgent):
             **kwargs
         )
         
+        # Initialize workflow logger
+        self.workflow_logger = get_workflow_logger()
+        
         # Build LangGraph workflow
         self.workflow = self._build_workflow()
         
         # Tool selection weights for heuristic routing
         self.tool_weights = {
-            "web_keywords": ["latest", "recent", "news", "current", "2024", "2025", "new", "update"],
-            "rag_keywords": ["policy", "document", "coverage", "my", "specific", "plan"],
-            "combined_keywords": ["compare", "options", "find", "search", "help"]
+            "quick_info_keywords": ["what", "does", "cover", "my", "policy", "specific", "plan", "benefits", "copay", "deductible"],
+            "access_strategy_keywords": ["how", "maximize", "best", "strategy", "compare", "options", "help me", "find", "most"],
+            "web_keywords": ["latest", "recent", "news", "current", "2024", "2025", "new", "update", "regulation"],
+            "rag_keywords": ["policy", "document", "coverage", "general", "explain", "definition"],
+            "combined_keywords": ["complex", "multiple", "both", "all", "comprehensive"]
         }
     
     def _get_claude_sonnet_llm(self) -> Optional[Callable[[str], str]]:
@@ -194,6 +201,13 @@ class UnifiedNavigatorAgent(BaseAgent):
         start_time = time.time()
         
         try:
+            # Log step start and update workflow status
+            self.workflow_logger.log_workflow_step(
+                step="determining",
+                message="Analyzing query and selecting optimal tool",
+                correlation_id=state.get("workflow_id")
+            )
+            
             # Check if input validation failed
             if state.get("input_safety") and not state["input_safety"].is_safe:
                 state["tool_choice"] = ToolSelection(
@@ -207,6 +221,8 @@ class UnifiedNavigatorAgent(BaseAgent):
             query_lower = state["user_query"].lower()
             
             # Calculate scores for each tool type
+            quick_info_score = sum(1 for keyword in self.tool_weights["quick_info_keywords"] if keyword in query_lower)
+            access_strategy_score = sum(1 for keyword in self.tool_weights["access_strategy_keywords"] if keyword in query_lower)
             web_score = sum(1 for keyword in self.tool_weights["web_keywords"] if keyword in query_lower)
             rag_score = sum(1 for keyword in self.tool_weights["rag_keywords"] if keyword in query_lower)
             combined_score = sum(1 for keyword in self.tool_weights["combined_keywords"] if keyword in query_lower)
@@ -214,24 +230,34 @@ class UnifiedNavigatorAgent(BaseAgent):
             # Query characteristics
             query_length = len(state["user_query"].split())
             has_personal_ref = any(word in query_lower for word in ["my", "i", "me", "personal"])
+            has_strategy_intent = any(word in query_lower for word in ["how", "best", "maximize", "strategy", "approach"])
+            has_specific_info_request = any(word in query_lower for word in ["what", "does", "cover", "specific"])
             
-            # Decision logic
-            if combined_score > 0 or query_length > 15:
+            # Enhanced decision logic
+            if combined_score > 0 or query_length > 20:
                 selected_tool = ToolType.COMBINED
-                reasoning = "Complex query or comparison request - using both tools"
+                reasoning = "Complex multi-faceted query - using combined approach"
                 confidence = 0.8
-            elif rag_score > web_score and has_personal_ref:
-                selected_tool = ToolType.RAG_SEARCH
-                reasoning = "Personal/document-specific query - using RAG"
+            elif access_strategy_score >= 2 or (has_strategy_intent and query_length > 10):
+                selected_tool = ToolType.ACCESS_STRATEGY
+                reasoning = "Strategic analysis request - using access strategy tool"
+                confidence = 0.85
+            elif quick_info_score >= 2 or (has_specific_info_request and has_personal_ref):
+                selected_tool = ToolType.QUICK_INFO
+                reasoning = "Specific policy information request - using quick info tool"
                 confidence = 0.9
             elif web_score > 0:
                 selected_tool = ToolType.WEB_SEARCH
                 reasoning = "Current information request - using web search"
-                confidence = 0.85
-            else:
-                # Default to RAG for insurance questions
+                confidence = 0.8
+            elif rag_score > 0 or has_personal_ref:
                 selected_tool = ToolType.RAG_SEARCH
-                reasoning = "Default insurance query - using RAG"
+                reasoning = "Document-based query - using RAG search"
+                confidence = 0.75
+            else:
+                # Default to quick info for insurance questions
+                selected_tool = ToolType.QUICK_INFO
+                reasoning = "General insurance query - using quick info"
                 confidence = 0.7
             
             state["tool_choice"] = ToolSelection(
@@ -272,6 +298,8 @@ class UnifiedNavigatorAgent(BaseAgent):
             return "error"
         
         tool_mapping = {
+            ToolType.QUICK_INFO: "quick_info",
+            ToolType.ACCESS_STRATEGY: "access_strategy", 
             ToolType.WEB_SEARCH: "web_search",
             ToolType.RAG_SEARCH: "rag_search",
             ToolType.COMBINED: "combined_search"
@@ -292,6 +320,12 @@ class UnifiedNavigatorAgent(BaseAgent):
         start_time = time.time()
         
         try:
+            # Log step start
+            self.workflow_logger.log_workflow_step(
+                step="wording",
+                message="Generating personalized response",
+                correlation_id=state.get("workflow_id")
+            )
             # Check if we have tool results
             if not state["tool_results"] or not any(result.success for result in state["tool_results"]):
                 state["final_response"] = "I apologize, but I wasn't able to find relevant information for your query. Could you please rephrase your question or provide more details?"
@@ -342,6 +376,25 @@ Response:"""
 
             response = await self._call_llm_async(prompt)
             
+            # Log LLM interaction
+            prompt_tokens = len(prompt.split())
+            response_tokens = len(response.split())
+            total_tokens = prompt_tokens + response_tokens
+            
+            llm_interaction = LLMInteraction(
+                model=self._anthropic_model if hasattr(self, '_anthropic_model') else "mock",
+                prompt_tokens=prompt_tokens,
+                completion_tokens=response_tokens,
+                total_tokens=total_tokens,
+                estimated_cost=total_tokens * 0.003 / 1000,  # Rough estimate for Claude
+                processing_time_ms=(time.time() - start_time) * 1000
+            )
+            
+            self.workflow_logger.log_llm_interaction(
+                llm_interaction,
+                context="response_generation"
+            )
+            
             state["final_response"] = response
             
             processing_time = (time.time() - start_time) * 1000
@@ -371,12 +424,25 @@ Response:"""
         try:
             self.logger.info(f"Starting unified navigator for user {input_data.user_id}")
             
+            # Generate workflow ID for correlation
+            import uuid
+            workflow_id = str(uuid.uuid4())[:8]
+            
+            # Log workflow start
+            self.workflow_logger.log_workflow_start(
+                user_id=input_data.user_id,
+                query=input_data.user_query,
+                session_id=input_data.session_id,
+                correlation_id=workflow_id
+            )
+            
             # Initialize workflow state
             state: UnifiedNavigatorState = {
                 "user_query": input_data.user_query,
                 "user_id": input_data.user_id,
                 "session_id": input_data.session_id,
                 "workflow_context": input_data.workflow_context,
+                "workflow_id": workflow_id,
                 "node_timings": {},
                 "processing_start_time": datetime.utcnow(),
                 "tool_results": [],
@@ -388,6 +454,11 @@ Response:"""
             
             # Execute workflow steps directly (bypassing LangGraph due to version issue)
             # Step 1: Input guardrail
+            self.workflow_logger.log_workflow_step(
+                step="sanitizing",
+                message="Validating and sanitizing input",
+                correlation_id=workflow_id
+            )
             from .guardrails.input_sanitizer import input_guardrail_node
             state = await input_guardrail_node(state)
             
@@ -397,13 +468,44 @@ Response:"""
             # Step 3: Route to appropriate tool
             tool_choice = state.get("tool_choice")
             if tool_choice:
-                if tool_choice.selected_tool == ToolType.WEB_SEARCH:
+                if tool_choice.selected_tool == ToolType.QUICK_INFO:
+                    self.workflow_logger.log_workflow_step(
+                        step="skimming",
+                        message="Performing quick policy lookup",
+                        correlation_id=workflow_id
+                    )
+                    from .tools.quick_info_tool import quick_info_node
+                    state = await quick_info_node(state)
+                elif tool_choice.selected_tool == ToolType.ACCESS_STRATEGY:
+                    self.workflow_logger.log_workflow_step(
+                        step="thinking",
+                        message="Developing comprehensive access strategy",
+                        correlation_id=workflow_id
+                    )
+                    from .tools.access_strategy_tool import access_strategy_node
+                    state = await access_strategy_node(state)
+                elif tool_choice.selected_tool == ToolType.WEB_SEARCH:
+                    self.workflow_logger.log_workflow_step(
+                        step="thinking",
+                        message="Searching current information",
+                        correlation_id=workflow_id
+                    )
                     from .tools.web_search import web_search_node
                     state = await web_search_node(state)
                 elif tool_choice.selected_tool == ToolType.RAG_SEARCH:
+                    self.workflow_logger.log_workflow_step(
+                        step="thinking",
+                        message="Searching your policy documents",
+                        correlation_id=workflow_id
+                    )
                     from .tools.rag_search import rag_search_node
                     state = await rag_search_node(state)
                 elif tool_choice.selected_tool == ToolType.COMBINED:
+                    self.workflow_logger.log_workflow_step(
+                        step="thinking",
+                        message="Performing comprehensive analysis",
+                        correlation_id=workflow_id
+                    )
                     from .tools.rag_search import combined_search_node
                     state = await combined_search_node(state)
             
@@ -411,12 +513,30 @@ Response:"""
             state = await self._response_generation_node(state)
             
             # Step 5: Output guardrail
+            self.workflow_logger.log_workflow_step(
+                step="wording",
+                message="Finalizing response",
+                correlation_id=workflow_id
+            )
             from .guardrails.output_sanitizer import output_guardrail_node
             state = await output_guardrail_node(state)
             
             # Calculate total processing time
             total_time = (time.time() - start_time) * 1000
             state["total_processing_time_ms"] = total_time
+            
+            # Log workflow completion
+            self.workflow_logger.log_workflow_completion(
+                user_id=input_data.user_id,
+                success=bool(state["final_response"]),
+                total_time_ms=total_time,
+                correlation_id=workflow_id,
+                context_data={
+                    "tool_used": state["tool_choice"].selected_tool if state["tool_choice"] else "none",
+                    "response_length": len(state["final_response"]) if state["final_response"] else 0,
+                    "node_timings": state["node_timings"]
+                }
+            )
             
             # Create output
             output = self._create_output(state)
