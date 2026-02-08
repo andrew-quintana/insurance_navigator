@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { SendHorizontal, ArrowLeft, Upload, User } from "lucide-react"
 import DocumentUploadModal from "@/components/DocumentUploadModal"
-import WorkflowStatus from "@/components/WorkflowStatus"
 // import { RealtimeChannel } from '@supabase/supabase-js'
 import { useAuth } from "@/components/auth/SessionManager"
 
@@ -43,7 +42,8 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const [currentWorkflowId, setCurrentWorkflowId] = useState<string | null>(null)
-  const [showWorkflowStatus, setShowWorkflowStatus] = useState(false)
+  const [statusMessage, setStatusMessage] = useState("Thinking...")
+  const wsRef = useRef<WebSocket | null>(null)
 
   // Channel reference to prevent multiple subscriptions (currently unused)
   // const channelRef = useRef<RealtimeChannel | null>(null)
@@ -118,19 +118,60 @@ export default function ChatPage() {
 
     setMessages(prev => [...prev, userMessage])
     setIsLoading(true)
-    
-    // Generate a temporary workflow ID for immediate WebSocket connection
+    setStatusMessage("Thinking...")
+
+    // Generate a workflow ID and open WebSocket before the POST
     const tempWorkflowId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     setCurrentWorkflowId(tempWorkflowId);
-    setShowWorkflowStatus(true);
 
     // Get API URL from environment variables (Vercel best practice)
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
     const chatUrl = `${apiBaseUrl}/chat`
     const token = localStorage.getItem("token")
-    
+
     console.log("🌐 API Base URL:", apiBaseUrl)
     console.log("🔗 Chat URL:", chatUrl)
+
+    // Open WebSocket for real-time status updates
+    const wsProtocol = apiBaseUrl.startsWith('https') ? 'wss' : 'ws'
+    const wsHost = apiBaseUrl.replace(/^https?:\/\//, '')
+    const wsUrl = `${wsProtocol}://${wsHost}/ws/workflow/${tempWorkflowId}?user_id=${user?.id}`
+    console.log("🔌 WebSocket URL:", wsUrl)
+
+    try {
+      const ws = new WebSocket(wsUrl)
+      wsRef.current = ws
+
+      ws.onopen = () => {
+        console.log("🔌 WebSocket connected for workflow", tempWorkflowId)
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          console.log("📨 WebSocket message:", data)
+          if (data.type === 'workflow_status' && data.status?.message) {
+            setStatusMessage(data.status.message)
+          } else if (data.type === 'workflow_complete') {
+            ws.close()
+            wsRef.current = null
+          }
+        } catch (e) {
+          console.error("WebSocket message parse error:", e)
+        }
+      }
+
+      ws.onerror = (error) => {
+        console.error("WebSocket error:", error)
+      }
+
+      ws.onclose = () => {
+        console.log("🔌 WebSocket closed for workflow", tempWorkflowId)
+        wsRef.current = null
+      }
+    } catch (wsError) {
+      console.error("WebSocket connection failed:", wsError)
+    }
 
     try {
       const response = await fetch(chatUrl, {
@@ -143,12 +184,13 @@ export default function ChatPage() {
         body: JSON.stringify({
           message: messageText,
           conversation_id: conversationId,
+          workflow_id: tempWorkflowId,
         }),
       })
 
       if (response.ok) {
-        const data: { 
-          text: string; 
+        const data: {
+          text: string;
           workflow_id?: string;
           metadata?: {
             workflow_tracking?: {
@@ -157,20 +199,7 @@ export default function ChatPage() {
             }
           }
         } = await response.json()
-        
-        // Update with real workflow_id if available
-        const workflowId = data.workflow_id || data.metadata?.workflow_tracking?.workflow_id;
-        if (workflowId && workflowId !== currentWorkflowId) {
-          console.log("🔄 Real Workflow ID received:", workflowId);
-          setCurrentWorkflowId(workflowId);
-        }
-        
-        // Hide workflow status after response is received
-        setTimeout(() => {
-          setShowWorkflowStatus(false);
-          setCurrentWorkflowId(null);
-        }, 1000);
-        
+
         const botMessage: Message = {
           id: messages.length + 2,
           text: data.text || "I received your message but couldn't generate a response.",
@@ -188,11 +217,13 @@ export default function ChatPage() {
         sender: "bot",
       }
       setMessages(prev => [...prev, errorMessage])
-      
-      // Hide workflow status on error
-      setShowWorkflowStatus(false);
-      setCurrentWorkflowId(null);
     } finally {
+      // Clean up WebSocket and reset state
+      if (wsRef.current) {
+        wsRef.current.close()
+        wsRef.current = null
+      }
+      setCurrentWorkflowId(null)
       setIsLoading(false)
     }
   }
@@ -387,32 +418,13 @@ export default function ChatPage() {
                   </div>
                 ))}
                 
-                {/* Workflow Status */}
-                {showWorkflowStatus && currentWorkflowId && user && (
-                  <div className="flex justify-center mb-4">
-                    <WorkflowStatus
-                      workflowId={currentWorkflowId}
-                      userId={user.id}
-                      onComplete={() => {
-                        setShowWorkflowStatus(false);
-                        setCurrentWorkflowId(null);
-                      }}
-                      onError={(error) => {
-                        console.error("WorkflowStatus error:", error);
-                        setShowWorkflowStatus(false);
-                        setCurrentWorkflowId(null);
-                      }}
-                    />
-                  </div>
-                )}
-
-                {/* Loading indicator */}
-                {isLoading && !showWorkflowStatus && (
+                {/* Loading indicator with real-time status */}
+                {isLoading && (
                   <div className="flex justify-start">
                     <div className="bg-teal-100 text-teal-800 rounded-xl p-4">
                       <div className="flex items-center space-x-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-teal-700"></div>
-                        <span>Thinking...</span>
+                        <span>{statusMessage}</span>
                       </div>
                     </div>
                   </div>

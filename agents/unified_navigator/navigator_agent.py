@@ -422,9 +422,9 @@ Response:"""
         try:
             self.logger.info(f"Starting unified navigator for user {input_data.user_id}")
             
-            # Generate workflow ID for correlation
+            # Use provided workflow ID or generate one for correlation
             import uuid
-            workflow_id = str(uuid.uuid4())[:8]
+            workflow_id = input_data.workflow_id or str(uuid.uuid4())[:8]
             
             # Log workflow start
             self.workflow_logger.log_workflow_start(

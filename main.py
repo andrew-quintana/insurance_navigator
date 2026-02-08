@@ -968,6 +968,7 @@ async def chat_with_agent(
         conversation_id = data.get("conversation_id", "")
         user_language = data.get("user_language", "auto")
         context = data.get("context", {})
+        workflow_id = data.get("workflow_id")
         
         if not message:
             raise HTTPException(
@@ -1030,7 +1031,8 @@ async def chat_with_agent(
                 "language": user_language if user_language != "auto" else "en",
                 "context": context,
                 "api_request": True
-            }
+            },
+            workflow_id=workflow_id,
         )
         
         # Process message through the unified navigator

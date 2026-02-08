@@ -147,6 +147,7 @@ class UnifiedNavigatorInput(BaseModel):
     user_id: str
     session_id: Optional[str] = None
     workflow_context: Optional[Dict[str, Any]] = None
+    workflow_id: Optional[str] = None
 
 
 class UnifiedNavigatorOutput(BaseModel):
