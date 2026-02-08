@@ -191,16 +191,16 @@ class UnifiedNavigatorAgent(BaseAgent):
     
     async def _tool_selection_node(self, state: UnifiedNavigatorState) -> UnifiedNavigatorState:
         """
-        LangGraph node for tool selection using heuristics.
-        
+        LangGraph node for tool selection using LLM-based routing.
+
         Args:
             state: Current workflow state
-            
+
         Returns:
             Updated state with tool selection
         """
         start_time = time.time()
-        
+
         try:
             # Log step start and update workflow status
             self.workflow_logger.log_workflow_step(
@@ -208,7 +208,7 @@ class UnifiedNavigatorAgent(BaseAgent):
                 message="Analyzing query and selecting optimal tool",
                 correlation_id=state.get("workflow_id")
             )
-            
+
             # Check if input validation failed
             if state.get("input_safety") and not state["input_safety"].is_safe:
                 state["tool_choice"] = ToolSelection(
@@ -217,45 +217,24 @@ class UnifiedNavigatorAgent(BaseAgent):
                     confidence_score=0.3
                 )
                 return state
-            
-            # Agent-driven tool selection using LLM
-            user_query = state["user_query"]
-            
-            # TODO(human): Implement the tool selection prompt
-            # Create a prompt that helps the LLM decide which tool to use based on:
-            # - The user's query
-            # - The tool_selection_examples showing when to use each tool
-            # - Return the tool name (quick_info, web_search, rag_search, access_strategy, or combined)
-            # and reasoning for the selection
-            
+
             try:
-                # Use LLM to determine best tool for the query
-                selected_tool, reasoning, confidence = await self._select_tool_with_llm(user_query)
-                
+                # Primary: LLM-based tool selection
+                selected_tool, reasoning, confidence = await self._select_tool_with_llm(state)
                 self.logger.info(f"Agent selected tool: {selected_tool} with reasoning: {reasoning}")
-                
+
             except Exception as e:
-                self.logger.warning(f"LLM tool selection failed, using fallback logic: {e}")
-                # Fallback to simple heuristic if LLM selection fails
-                query_lower = user_query.lower()
-                
-                if any(word in query_lower for word in ["copay", "deductible", "premium", "what is", "coverage"]):
-                    selected_tool = ToolType.QUICK_INFO
-                    reasoning = "Fallback: Simple factual query"
-                    confidence = 0.7
-                elif any(word in query_lower for word in ["how to", "access", "find", "get"]):
+                self.logger.warning(f"Primary tool selection failed: {e}, trying fallback router")
+                try:
+                    # Fallback: dedicated routing LLM with more context
+                    selected_tool, reasoning, confidence = await self._fallback_routing_llm(state)
+                    self.logger.info(f"Fallback router selected tool: {selected_tool} with reasoning: {reasoning}")
+                except Exception as fallback_err:
+                    self.logger.warning(f"Fallback router also failed: {fallback_err}, defaulting to rag_search")
                     selected_tool = ToolType.RAG_SEARCH
-                    reasoning = "Fallback: Process/procedure query"
-                    confidence = 0.7
-                elif any(word in query_lower for word in ["latest", "2024", "2025", "current", "regulation"]):
-                    selected_tool = ToolType.WEB_SEARCH
-                    reasoning = "Fallback: Current information needed"
-                    confidence = 0.7
-                else:
-                    selected_tool = ToolType.RAG_SEARCH
-                    reasoning = "Fallback: Default to RAG search"
-                    confidence = 0.6
-            
+                    reasoning = "Both routers failed, defaulting to document search"
+                    confidence = 0.5
+
             state["tool_choice"] = ToolSelection(
                 selected_tool=selected_tool,
                 reasoning=reasoning,
@@ -321,21 +300,21 @@ class UnifiedNavigatorAgent(BaseAgent):
             # Log step start
             self.workflow_logger.log_workflow_step(
                 step="wording",
-                message="Generating personalized response",
+                message="Preparing response",
                 correlation_id=state.get("workflow_id")
             )
             # Check if we have tool results
             if not state["tool_results"] or not any(result.success for result in state["tool_results"]):
                 state["final_response"] = "I apologize, but I wasn't able to find relevant information for your query. Could you please rephrase your question or provide more details?"
                 return state
-            
+
             # Build context from tool results
             context_parts = []
-            
+
             for tool_result in state["tool_results"]:
                 if not tool_result.success:
                     continue
-                
+
                 if tool_result.tool_type == ToolType.WEB_SEARCH and tool_result.result:
                     web_result = tool_result.result
                     context_parts.append("=== Web Search Results ===")
@@ -343,7 +322,7 @@ class UnifiedNavigatorAgent(BaseAgent):
                         context_parts.append(f"{i}. {result.get('title', '')}")
                         context_parts.append(f"   {result.get('description', '')[:200]}...")
                         context_parts.append(f"   Source: {result.get('url', '')}")
-                
+
                 elif tool_result.tool_type == ToolType.RAG_SEARCH and tool_result.result:
                     rag_result = tool_result.result
                     if rag_result.chunks:
@@ -352,10 +331,21 @@ class UnifiedNavigatorAgent(BaseAgent):
                             context_parts.append(f"{i}. {chunk.get('content', '')[:300]}...")
                             if chunk.get('section_title'):
                                 context_parts.append(f"   From: {chunk.get('section_title')}")
-            
+
             context = "\n".join(context_parts)
-            
-            # Generate response using LLM
+
+            self.workflow_logger.log_workflow_step(
+                step="wording",
+                message="Generating personalized response",
+                correlation_id=state.get("workflow_id")
+            )
+
+            # Generate response using LLM with time-based status updates
+            # Add user document context to the prompt
+            doc_context = ""
+            if state.get("has_user_documents"):
+                doc_context = "\n- This user has uploaded their insurance policy document(s). When answering, reference information found in their documents rather than suggesting they check their plan separately."
+
             prompt = f"""You are an insurance navigation assistant. Based on the following information, provide a helpful, accurate response to the user's question.
 
 User Question: {state["user_query"]}
@@ -363,16 +353,52 @@ User Question: {state["user_query"]}
 Available Information:
 {context}
 
+User Context:{doc_context if doc_context else " No policy documents uploaded."}
+
 Instructions:
 1. Provide a clear, helpful response focused on insurance and healthcare
 2. Reference specific information from the context when available
-3. If information is limited, acknowledge this and suggest next steps
-4. Stay professional and focused on insurance topics
-5. Keep response concise but comprehensive
+3. If the user has uploaded documents, ground your answer in what was found in their documents
+4. If information is limited, acknowledge this and suggest next steps
+5. Stay professional and focused on insurance topics
+6. Keep response concise but comprehensive
 
 Response:"""
 
-            response = await self._call_llm_async(prompt)
+            # Time-based status messages during LLM generation
+            timed_messages = [
+                (5, "Writing response..."),
+                (12, "Reviewing details..."),
+                (20, "Polishing response..."),
+                (30, "Almost done..."),
+            ]
+            workflow_id = state.get("workflow_id")
+
+            async def _send_timed_updates():
+                elapsed = 0
+                msg_index = 0
+                while msg_index < len(timed_messages):
+                    delay, msg = timed_messages[msg_index]
+                    wait = delay - elapsed
+                    if wait > 0:
+                        await asyncio.sleep(wait)
+                    elapsed = delay
+                    self.workflow_logger.log_workflow_step(
+                        step="wording",
+                        message=msg,
+                        correlation_id=workflow_id
+                    )
+                    msg_index += 1
+
+            timer_task = asyncio.create_task(_send_timed_updates())
+            try:
+                response = await self._call_llm_async(prompt)
+            finally:
+                timer_task.cancel()
+                try:
+                    await timer_task
+                except asyncio.CancelledError:
+                    pass
             
             # Log LLM interaction
             prompt_tokens = len(prompt.split())
@@ -434,6 +460,23 @@ Response:"""
                 correlation_id=workflow_id
             )
             
+            # Check if user has uploaded policy documents
+            has_user_documents = False
+            try:
+                from agents.tooling.rag.database_manager import get_db_connection, release_db_connection
+                conn = await get_db_connection()
+                try:
+                    schema = os.getenv("DATABASE_SCHEMA", "upload_pipeline")
+                    row = await conn.fetchrow(
+                        f"SELECT 1 FROM {schema}.documents WHERE user_id = $1 LIMIT 1",
+                        input_data.user_id
+                    )
+                    has_user_documents = row is not None
+                finally:
+                    await release_db_connection(conn)
+            except Exception as doc_check_err:
+                self.logger.warning(f"Could not check user documents: {doc_check_err}")
+
             # Initialize workflow state
             state: UnifiedNavigatorState = {
                 "user_query": input_data.user_query,
@@ -441,6 +484,7 @@ Response:"""
                 "session_id": input_data.session_id,
                 "workflow_context": input_data.workflow_context,
                 "workflow_id": workflow_id,
+                "has_user_documents": has_user_documents,
                 "node_timings": {},
                 "processing_start_time": datetime.now(timezone.utc),
                 "tool_results": [],
@@ -567,176 +611,175 @@ Response:"""
                 session_id=input_data.session_id
             )
     
-    async def _select_tool_with_llm(self, user_query: str) -> tuple[ToolType, str, float]:
+    def _parse_tool_selection_response(self, llm_response: str) -> tuple[ToolType, str, float]:
         """
-        Use LLM to intelligently select the best tool for the user query.
-        
+        Parse an LLM response into a tool selection result.
+
+        Tries JSON extraction first, then plain-text tool name detection.
+
         Args:
-            user_query: The user's question or request
-            
+            llm_response: Raw text from the LLM
+
         Returns:
             tuple of (selected_tool, reasoning, confidence_score)
         """
-        # Build comprehensive tool selection prompt with examples
-        prompt = f"""You are an AI assistant helping users with insurance questions. You need to select the best tool to answer their query.
+        import json
+        import re
 
-AVAILABLE TOOLS:
+        self.logger.debug(f"Raw LLM response: {llm_response}")
 
-1. quick_info: For straightforward factual questions about insurance terms, definitions, and basic policy information.
-   Examples:
-   - "What is a copay?"
-   - "What is my deductible?"
-   - "Am I covered for ambulances?"
-   - "What does coinsurance mean?"
-   - "What is the difference between HMO and PPO?"
+        response_data = None
 
-2. web_search: For current information, regulations, or medical/procedural details unlikely to be in policy documents.
-   Examples:
-   - "What is a standard vs non-standard imaging procedure?"
-   - "What is the difference between a CT scan and an MRI?"
-   - "What are the latest healthcare regulations for 2024?"
-   - "Current Medicare enrollment deadlines"
+        # Method 1: Extract JSON object from response
+        json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
+        json_matches = re.findall(json_pattern, llm_response)
 
-3. rag_search: For complex questions about accessing care, finding providers, or interpreting plan benefits that require reasoning through plan documents.
-   Examples:
-   - "How would I get access to mental health services?"
-   - "How would I get a physical therapist?"
-   - "What specialists can I see without a referral?"
-   - "How do I appeal a denied claim?"
+        for match in json_matches:
+            try:
+                response_data = json.loads(match)
+                if 'tool' in response_data:
+                    break
+            except json.JSONDecodeError:
+                continue
 
-4. access_strategy: For strategic questions about maximizing benefits, optimizing healthcare costs, or planning care approaches.
-   Examples:
-   - "How can I minimize my out-of-pocket costs for surgery?"
-   - "What's the best way to get coverage for this treatment?"
-   - "How should I plan for ongoing therapy costs?"
+        # Method 2: Try parsing the entire response as JSON
+        if not response_data:
+            try:
+                response_data = json.loads(llm_response.strip())
+            except json.JSONDecodeError:
+                pass
 
-5. combined: For complex, multi-faceted questions that need multiple types of information or analysis.
-   Examples:
-   - "I need surgery - what will it cost and how can I minimize expenses?"
-   - "Compare my options for getting mental health care and find the most cost-effective approach"
+        # Method 3: Look for a tool name mentioned in plain text
+        if not response_data:
+            tool_names = ["quick_info", "web_search", "rag_search", "access_strategy", "combined"]
+            llm_lower = llm_response.lower()
+            for name in tool_names:
+                if name in llm_lower:
+                    response_data = {
+                        "tool": name,
+                        "reasoning": f"Extracted tool name from response text",
+                        "confidence": 0.6
+                    }
+                    break
+
+        if not response_data:
+            raise ValueError(f"Could not extract tool selection from response: {llm_response}")
+
+        tool_name = response_data.get("tool", "").lower()
+        reasoning = response_data.get("reasoning", "LLM selection")
+        confidence = float(response_data.get("confidence", 0.7))
+
+        tool_mapping = {
+            "quick_info": ToolType.QUICK_INFO,
+            "web_search": ToolType.WEB_SEARCH,
+            "rag_search": ToolType.RAG_SEARCH,
+            "access_strategy": ToolType.ACCESS_STRATEGY,
+            "combined": ToolType.COMBINED
+        }
+
+        selected_tool = tool_mapping.get(tool_name, ToolType.RAG_SEARCH)
+
+        self.logger.info(f"LLM selected tool: {tool_name} -> {selected_tool} (confidence: {confidence})")
+        self.logger.info(f"Reasoning: {reasoning}")
+
+        return selected_tool, reasoning, min(max(confidence, 0.0), 1.0)
+
+    async def _select_tool_with_llm(self, state: UnifiedNavigatorState) -> tuple[ToolType, str, float]:
+        """
+        Use LLM to intelligently select the best tool for the user query.
+
+        Args:
+            state: Current workflow state (includes query, user context)
+
+        Returns:
+            tuple of (selected_tool, reasoning, confidence_score)
+        """
+        user_query = state["user_query"]
+        has_docs = state.get("has_user_documents", False)
+
+        # Build document availability context
+        doc_lines = []
+        if has_docs:
+            doc_lines.append("- Insurance policy document(s): AVAILABLE — the user has uploaded their plan documents, which can be searched for plan-specific details like deductibles, copays, covered services, provider networks, and claims procedures.")
+        else:
+            doc_lines.append("- Insurance policy document(s): NOT AVAILABLE — the user has not uploaded any plan documents.")
+        doc_section = "\n".join(doc_lines)
+
+        prompt = f"""You are the context-gathering stage of an insurance navigation agent. Your job is to decide which retrieval strategy will produce the best context for the user's question. You do NOT answer the question yourself — a separate response generation step will synthesize the gathered context into a final answer.
+
+Choose the single retrieval strategy that will surface the most relevant context for this question.
+
+RETRIEVAL STRATEGIES:
+
+1. quick_info — Fast keyword lookup across general insurance reference material. Best for gathering context about generic insurance terminology and concepts (e.g. what a copay is, how deductibles work in general). Does NOT search the user's personal documents.
+
+2. rag_search — Semantic search over the user's uploaded documents. Best for gathering context from the user's actual policy — their specific coverage details, benefit amounts, plan rules, provider requirements, claims processes, or anything that would be written in their plan documents.
+
+3. web_search — Live internet search. Best for gathering context about current events, regulations, medical procedure details, or external factual information that would not appear in any insurance policy document.
+
+4. access_strategy — Deep research combining web search and document retrieval with strategic analysis. Best for gathering context when the user needs help planning an approach across multiple factors — minimizing costs, comparing care options, or navigating a complex situation.
+
+5. combined — Runs multiple retrieval strategies together. Best when the question clearly spans multiple context sources that a single strategy cannot cover alone.
+
+DOCUMENTS AVAILABLE FOR THIS USER:
+{doc_section}
 
 USER QUERY: "{user_query}"
 
-Select the single best tool for this query. Respond with ONLY this JSON format:
-{{"tool": "tool_name", "reasoning": "brief explanation why this tool is best", "confidence": 0.85}}
+Select the single best retrieval strategy. Respond with ONLY this JSON:
+{{"tool": "tool_name", "reasoning": "brief explanation of what context this will gather", "confidence": 0.85}}
 
 Where tool_name is one of: quick_info, web_search, rag_search, access_strategy, combined"""
 
-        try:
-            # Get LLM response
-            llm_response = await self._call_llm_async(prompt)
-            
-            # Parse JSON response
-            import json
-            import re
-            
-            self.logger.debug(f"Raw LLM response: {llm_response}")
-            
-            # Try multiple JSON extraction methods
-            response_data = None
-            
-            # Method 1: Look for JSON in response
-            json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
-            json_matches = re.findall(json_pattern, llm_response)
-            
-            for match in json_matches:
-                try:
-                    response_data = json.loads(match)
-                    if 'tool' in response_data:  # Valid tool selection format
-                        break
-                except json.JSONDecodeError:
-                    continue
-            
-            # Method 2: If no valid JSON found, try parsing the entire response as JSON
-            if not response_data:
-                try:
-                    response_data = json.loads(llm_response.strip())
-                except json.JSONDecodeError:
-                    pass
-            
-            # Method 3: Look for tool name in plain text as fallback
-            if not response_data:
-                tool_keywords = {
-                    'quick_info': ['quick', 'info', 'definition', 'basic'],
-                    'web_search': ['web', 'search', 'current', 'latest'],
-                    'rag_search': ['document', 'policy', 'plan', 'coverage'],
-                    'access_strategy': ['strategy', 'minimize', 'optimize', 'best'],
-                    'combined': ['complex', 'multi', 'multiple', 'both']
-                }
-                
-                llm_response_lower = llm_response.lower()
-                best_tool = None
-                max_matches = 0
-                
-                for tool_name, keywords in tool_keywords.items():
-                    matches = sum(1 for keyword in keywords if keyword in llm_response_lower)
-                    if matches > max_matches:
-                        max_matches = matches
-                        best_tool = tool_name
-                
-                if best_tool:
-                    response_data = {
-                        "tool": best_tool,
-                        "reasoning": f"Extracted from text analysis of: {llm_response[:100]}...",
-                        "confidence": 0.6
-                    }
-                else:
-                    raise ValueError(f"Could not extract tool selection from response: {llm_response}")
-            
-            # Extract values
-            tool_name = response_data.get("tool", "").lower()
-            reasoning = response_data.get("reasoning", "LLM selection")
-            confidence = float(response_data.get("confidence", 0.7))
-            
-            # Convert tool name to ToolType enum
-            tool_mapping = {
-                "quick_info": ToolType.QUICK_INFO,
-                "web_search": ToolType.WEB_SEARCH, 
-                "rag_search": ToolType.RAG_SEARCH,
-                "access_strategy": ToolType.ACCESS_STRATEGY,
-                "combined": ToolType.COMBINED
-            }
-            
-            selected_tool = tool_mapping.get(tool_name, ToolType.RAG_SEARCH)
-            
-            self.logger.info(f"LLM selected tool: {tool_name} -> {selected_tool} (confidence: {confidence})")
-            self.logger.info(f"Reasoning: {reasoning}")
-            
-            return selected_tool, reasoning, min(max(confidence, 0.0), 1.0)
-            
-        except Exception as e:
-            self.logger.warning(f"LLM tool selection failed: {e}, using fallback")
-            
-            # Smart fallback based on query analysis (useful for mock mode)
-            query_lower = user_query.lower()
-            
-            # Combined patterns (check first for complex multi-part queries)
-            if ((any(word in query_lower for word in ["compare", "options", "and find", "both"]) 
-                 and len(query_lower.split()) > 12
-                 and any(word in query_lower for word in ["cost", "minimize", "approach", "care"]))
-                or ("surgery" in query_lower and "cost" in query_lower and "minimize" in query_lower)
-                or ("what will it cost" in query_lower and any(word in query_lower for word in ["minimize", "expenses"]))):
-                return ToolType.COMBINED, f"Fallback: Complex multi-part query detected", 0.6
-                
-            # Web search patterns (current info, comparisons, medical procedures) - check before quick_info
-            elif any(word in query_lower for word in ["difference between", " vs ", "latest", "2024", "2025", "current", "regulation", "ct scan", "mri"]):
-                return ToolType.WEB_SEARCH, f"Fallback: Current info query detected", 0.6
-            
-            # Quick info patterns (basic facts and definitions)
-            elif any(word in query_lower for word in ["what is", "define", "meaning", "copay", "deductible", "premium", "coinsurance", "am i covered"]):
-                return ToolType.QUICK_INFO, f"Fallback: Quick info query detected", 0.6
-                
-            # Access strategy patterns (optimization and strategy)
-            elif any(word in query_lower for word in ["minimize", "maximize", "best way", "optimize", "strategy", "costs", "expenses"]):
-                return ToolType.ACCESS_STRATEGY, f"Fallback: Strategy query detected", 0.6
-                
-            # RAG search patterns (accessing care, procedures, plan details)
-            elif any(word in query_lower for word in ["how would i", "access", "get", "appeal", "specialists", "without referral"]):
-                return ToolType.RAG_SEARCH, f"Fallback: Document/process query detected", 0.6
-                
-            # Default to RAG search
-            else:
-                return ToolType.RAG_SEARCH, f"Fallback: Default to document search", 0.5
+        llm_response = await self._call_llm_async(prompt)
+        return self._parse_tool_selection_response(llm_response)
+
+    async def _fallback_routing_llm(self, state: UnifiedNavigatorState) -> tuple[ToolType, str, float]:
+        """
+        Fallback routing LLM with more context and a more deliberate prompt.
+
+        Called when the primary tool selection fails. Uses a slower, more
+        descriptive prompt to ensure correct routing.
+
+        Args:
+            state: Current workflow state
+
+        Returns:
+            tuple of (selected_tool, reasoning, confidence_score)
+        """
+        user_query = state["user_query"]
+        has_docs = state.get("has_user_documents", False)
+
+        prompt = f"""You are a fallback context-routing agent for an insurance navigation system. The primary router failed, so you must decide which retrieval strategy to use. Think step by step.
+
+A separate response generation step will use whatever context you gather to write the final answer. Your job is only to pick the best source of context.
+
+QUESTION: "{user_query}"
+
+USER HAS UPLOADED POLICY DOCUMENTS: {"Yes" if has_docs else "No"}
+
+STEP 1 — Does answering this question require information from the user's own insurance plan (their coverage, costs, benefits, deductible, copay, providers, or how to access a specific service under their plan)?
+  → If yes: choose "rag_search" to gather context from their policy documents.
+
+STEP 2 — Is this a generic insurance vocabulary or concept question with no reference to the user's personal plan?
+  → If yes: choose "quick_info" to gather definitional context.
+
+STEP 3 — Does this question need current external information (regulations, medical procedures, dates, or facts not found in any policy)?
+  → If yes: choose "web_search" to gather external context.
+
+STEP 4 — Is the user asking for strategic planning across multiple factors (cost optimization, care planning, benefit maximization)?
+  → If yes: choose "access_strategy" to gather multi-source strategic context.
+
+STEP 5 — Does this question clearly need context from multiple different sources combined?
+  → If yes: choose "combined".
+
+DEFAULT — If unclear: choose "rag_search".
+
+Respond with ONLY this JSON:
+{{"tool": "tool_name", "reasoning": "one sentence about what context this gathers", "confidence": 0.7}}"""
+
+        llm_response = await self._call_llm_async(prompt)
+        return self._parse_tool_selection_response(llm_response)
     
     def _create_output(self, state: UnifiedNavigatorState) -> UnifiedNavigatorOutput:
         """

@@ -135,6 +135,9 @@ class UnifiedNavigatorState(TypedDict, total=False):
     # Real-time status
     current_status: Optional[WorkflowStatus]
     
+    # User context
+    has_user_documents: Optional[bool]
+
     # Metadata
     processing_start_time: Optional[datetime]
     total_processing_time_ms: Optional[float]
