@@ -137,6 +137,7 @@ class UnifiedNavigatorState(TypedDict, total=False):
     
     # User context
     has_user_documents: Optional[bool]
+    llm_context: Optional[str]
 
     # Metadata
     processing_start_time: Optional[datetime]

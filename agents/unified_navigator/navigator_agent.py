@@ -99,41 +99,60 @@ class UnifiedNavigatorAgent(BaseAgent):
         
         return call_llm_sync
     
-    async def _call_llm_async(self, prompt: str) -> str:
+    async def _call_llm_async(self, prompt: str, model: Optional[str] = None, max_tokens: int = 1000) -> str:
         """
-        Call Claude Sonnet API using async httpx with rate limiting.
+        Call Claude API using async httpx with rate limiting.
+
+        Args:
+            prompt: The prompt to send
+            model: Model override (defaults to configured model, usually Sonnet)
+            max_tokens: Max response tokens
         """
         if self.mock or not hasattr(self, '_anthropic_api_key'):
             return "Mock response from unified navigator agent."
-        
+
         # Rate limit the API call
         await self._anthropic_rate_limiter.acquire()
-        
+
+        use_model = model or self._anthropic_model
+
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    "https://api.anthropic.com/v1/messages",
-                    json={
-                        "model": self._anthropic_model,
-                        "max_tokens": 1000,
-                        "messages": [{"role": "user", "content": prompt}]
-                    },
+            if not hasattr(self, '_http_client') or self._http_client is None:
+                self._http_client = httpx.AsyncClient(
+                    timeout=60.0,
                     headers={
                         "Content-Type": "application/json",
                         "x-api-key": self._anthropic_api_key,
                         "anthropic-version": "2023-06-01"
                     }
                 )
-                
-                if response.status_code != 200:
-                    raise Exception(f"Anthropic API error: {response.status_code}")
-                
-                result = response.json()
-                return result["content"][0]["text"]
-                    
+
+            response = await self._http_client.post(
+                "https://api.anthropic.com/v1/messages",
+                json={
+                    "model": use_model,
+                    "max_tokens": max_tokens,
+                    "messages": [{"role": "user", "content": prompt}]
+                }
+            )
+
+            if response.status_code != 200:
+                raise Exception(f"Anthropic API error: {response.status_code}")
+
+            result = response.json()
+            return result["content"][0]["text"]
+
         except Exception as e:
             self.logger.error(f"LLM call failed: {e}")
             return f"I apologize, but I'm having trouble processing your request right now. Error: {str(e)}"
+
+    async def _call_haiku(self, prompt: str, max_tokens: int = 500) -> str:
+        """Call Haiku for fast, cheap operations like routing."""
+        return await self._call_llm_async(prompt, model="claude-haiku-4-5-20251001", max_tokens=max_tokens)
+
+    async def _call_sonnet(self, prompt: str, max_tokens: int = 2000) -> str:
+        """Call Sonnet for high-quality response generation."""
+        return await self._call_llm_async(prompt, max_tokens=max_tokens)
     
     def _build_workflow(self) -> StateGraph:
         """
@@ -189,58 +208,63 @@ class UnifiedNavigatorAgent(BaseAgent):
         
         return workflow.compile(debug=False)
     
-    async def _tool_selection_node(self, state: UnifiedNavigatorState) -> UnifiedNavigatorState:
+    async def _context_gathering_agent(self, state: UnifiedNavigatorState, feedback: Optional[str] = None) -> UnifiedNavigatorState:
         """
-        LangGraph node for tool selection using LLM-based routing.
+        Context Gathering Agent (Haiku).
+
+        Decides how to gather context for the user's question:
+        - Select a tool (quick_info, rag_search, web_search, etc.) to retrieve context
+        - Or provide a direct answer from LLM knowledge when no tool is needed
 
         Args:
             state: Current workflow state
+            feedback: Optional feedback from the Response Agent requesting more context
 
         Returns:
-            Updated state with tool selection
+            Updated state with tool selection (or direct LLM context)
         """
         start_time = time.time()
 
         try:
-            # Log step start and update workflow status
             self.workflow_logger.log_workflow_step(
                 step="determining",
-                message="Analyzing query and selecting optimal tool",
+                message="Analyzing query and selecting context strategy",
                 correlation_id=state.get("workflow_id")
             )
 
             # Check if input validation failed
             if state.get("input_safety") and not state["input_safety"].is_safe:
                 state["tool_choice"] = ToolSelection(
-                    selected_tool=ToolType.WEB_SEARCH,  # Default fallback
+                    selected_tool=ToolType.WEB_SEARCH,
                     reasoning="Input validation failed, using fallback",
                     confidence_score=0.3
                 )
                 return state
 
             try:
-                # Primary: LLM-based tool selection
-                selected_tool, reasoning, confidence = await self._select_tool_with_llm(state)
-                self.logger.info(f"Agent selected tool: {selected_tool} with reasoning: {reasoning}")
-
+                selected_tool, reasoning, confidence = await self._context_agent_decide(state, feedback)
+                self.logger.info(f"Context agent selected: {selected_tool} — {reasoning}")
             except Exception as e:
-                self.logger.warning(f"Primary tool selection failed: {e}, trying fallback router")
+                self.logger.warning(f"Context agent primary failed: {e}, trying fallback")
                 try:
-                    # Fallback: dedicated routing LLM with more context
                     selected_tool, reasoning, confidence = await self._fallback_routing_llm(state)
-                    self.logger.info(f"Fallback router selected tool: {selected_tool} with reasoning: {reasoning}")
+                    self.logger.info(f"Fallback router selected: {selected_tool} — {reasoning}")
                 except Exception as fallback_err:
-                    self.logger.warning(f"Fallback router also failed: {fallback_err}, defaulting to rag_search")
-                    selected_tool = ToolType.RAG_SEARCH
-                    reasoning = "Both routers failed, defaulting to document search"
+                    self.logger.warning(f"Fallback also failed: {fallback_err}, defaulting to quick_info")
+                    selected_tool = ToolType.QUICK_INFO
+                    reasoning = "Both routers failed, defaulting to quick_info"
                     confidence = 0.5
 
-            state["tool_choice"] = ToolSelection(
-                selected_tool=selected_tool,
-                reasoning=reasoning,
-                confidence_score=confidence,
-                fallback_tool=ToolType.RAG_SEARCH if selected_tool != ToolType.RAG_SEARCH else ToolType.WEB_SEARCH
-            )
+            if selected_tool is not None:
+                state["tool_choice"] = ToolSelection(
+                    selected_tool=selected_tool,
+                    reasoning=reasoning,
+                    confidence_score=confidence,
+                    fallback_tool=ToolType.RAG_SEARCH if selected_tool != ToolType.RAG_SEARCH else ToolType.WEB_SEARCH
+                )
+            else:
+                # no_tool — clear tool_choice so execute loop knows to skip retrieval
+                state["tool_choice"] = None
             
             processing_time = (time.time() - start_time) * 1000
             state["node_timings"]["tool_selector"] = processing_time
@@ -259,22 +283,50 @@ class UnifiedNavigatorAgent(BaseAgent):
             )
             return state
     
+    async def _execute_tool(self, state: UnifiedNavigatorState, tool_choice: ToolSelection, workflow_id: str):
+        """Execute the selected tool and update state with results."""
+        tool_status_map = {
+            ToolType.QUICK_INFO: ("skimming", "Searching policy documents"),
+            ToolType.RAG_SEARCH: ("thinking", "Deep searching your policy documents"),
+            ToolType.WEB_SEARCH: ("thinking", "Searching current information"),
+            ToolType.ACCESS_STRATEGY: ("thinking", "Developing comprehensive access strategy"),
+            ToolType.COMBINED: ("thinking", "Performing comprehensive analysis"),
+        }
+
+        step, message = tool_status_map.get(
+            tool_choice.selected_tool, ("thinking", "Gathering context")
+        )
+        self.workflow_logger.log_workflow_step(
+            step=step, message=message, correlation_id=workflow_id
+        )
+
+        if tool_choice.selected_tool == ToolType.QUICK_INFO:
+            state = await quick_info_node(state)
+        elif tool_choice.selected_tool == ToolType.ACCESS_STRATEGY:
+            state = await access_strategy_node(state)
+        elif tool_choice.selected_tool == ToolType.WEB_SEARCH:
+            state = await web_search_node(state)
+        elif tool_choice.selected_tool == ToolType.RAG_SEARCH:
+            state = await rag_search_node(state)
+        elif tool_choice.selected_tool == ToolType.COMBINED:
+            state = await combined_search_node(state)
+
     def _route_to_tool(self, state: UnifiedNavigatorState) -> str:
         """
-        Routing function for tool selection.
-        
+        Routing function for tool selection (used by LangGraph workflow).
+
         Args:
             state: Current workflow state
-            
+
         Returns:
             Next node name
         """
         if not state["tool_choice"]:
             return "error"
-        
+
         tool_mapping = {
             ToolType.QUICK_INFO: "quick_info",
-            ToolType.ACCESS_STRATEGY: "access_strategy", 
+            ToolType.ACCESS_STRATEGY: "access_strategy",
             ToolType.WEB_SEARCH: "web_search",
             ToolType.RAG_SEARCH: "rag_search",
             ToolType.COMBINED: "combined_search"
@@ -284,154 +336,183 @@ class UnifiedNavigatorAgent(BaseAgent):
         self.logger.info(f"Routing to: {selected_route} for tool: {state['tool_choice'].selected_tool}")
         return selected_route
     
-    async def _response_generation_node(self, state: UnifiedNavigatorState) -> UnifiedNavigatorState:
+    def _build_context_string(self, state: UnifiedNavigatorState) -> str:
+        """Build a context string from all tool results accumulated in state."""
+        context_parts = []
+
+        for tool_result in (state.get("tool_results") or []):
+            if not tool_result.success:
+                continue
+
+            if tool_result.tool_type == ToolType.QUICK_INFO and tool_result.result:
+                qi_result = tool_result.result
+                if qi_result.relevant_sections:
+                    context_parts.append("=== Policy Document Sections ===")
+                    for i, section in enumerate(qi_result.relevant_sections[:5], 1):
+                        context_parts.append(f"{i}. {section.get('content', '')[:300]}...")
+                        if section.get('title'):
+                            context_parts.append(f"   Section: {section.get('title')}")
+
+            elif tool_result.tool_type == ToolType.WEB_SEARCH and tool_result.result:
+                web_result = tool_result.result
+                context_parts.append("=== Web Search Results ===")
+                for i, result in enumerate(web_result.results[:3], 1):
+                    context_parts.append(f"{i}. {result.get('title', '')}")
+                    context_parts.append(f"   {result.get('description', '')[:200]}...")
+                    context_parts.append(f"   Source: {result.get('url', '')}")
+
+            elif tool_result.tool_type == ToolType.RAG_SEARCH and tool_result.result:
+                rag_result = tool_result.result
+                if rag_result.chunks:
+                    context_parts.append("=== Your Policy Documents (Deep Search) ===")
+                    for i, chunk in enumerate(rag_result.chunks[:3], 1):
+                        context_parts.append(f"{i}. {chunk.get('content', '')[:300]}...")
+                        if chunk.get('section_title'):
+                            context_parts.append(f"   From: {chunk.get('section_title')}")
+
+        # Include any direct LLM context from the context agent
+        if state.get("llm_context"):
+            context_parts.append("=== General Knowledge ===")
+            context_parts.append(state["llm_context"])
+
+        return "\n".join(context_parts)
+
+    async def _response_determination_agent(self, state: UnifiedNavigatorState) -> tuple[bool, str, Optional[str]]:
         """
-        LangGraph node for response generation using LLM.
-        
+        Response Determination Agent (Sonnet).
+
+        Evaluates gathered context and either:
+        - Generates a final response if context is sufficient
+        - Returns feedback requesting more context from the Context Gathering Agent
+
         Args:
-            state: Current workflow state with tool results
-            
+            state: Current workflow state with accumulated tool results
+
         Returns:
-            Updated state with generated response
+            tuple of (is_sufficient, response_or_feedback, None)
+            - If sufficient: (True, final_response, None)
+            - If insufficient: (False, feedback_for_context_agent, None)
         """
         start_time = time.time()
-        
-        try:
-            # Log step start
-            self.workflow_logger.log_workflow_step(
-                step="wording",
-                message="Preparing response",
-                correlation_id=state.get("workflow_id")
-            )
-            # Check if we have tool results
-            if not state["tool_results"] or not any(result.success for result in state["tool_results"]):
-                state["final_response"] = "I apologize, but I wasn't able to find relevant information for your query. Could you please rephrase your question or provide more details?"
-                return state
 
-            # Build context from tool results
-            context_parts = []
+        self.workflow_logger.log_workflow_step(
+            step="wording",
+            message="Evaluating gathered context",
+            correlation_id=state.get("workflow_id")
+        )
 
-            for tool_result in state["tool_results"]:
-                if not tool_result.success:
-                    continue
+        context = self._build_context_string(state)
 
-                if tool_result.tool_type == ToolType.WEB_SEARCH and tool_result.result:
-                    web_result = tool_result.result
-                    context_parts.append("=== Web Search Results ===")
-                    for i, result in enumerate(web_result.results[:3], 1):  # Limit to top 3
-                        context_parts.append(f"{i}. {result.get('title', '')}")
-                        context_parts.append(f"   {result.get('description', '')[:200]}...")
-                        context_parts.append(f"   Source: {result.get('url', '')}")
+        doc_context = ""
+        if state.get("has_user_documents"):
+            doc_context = "\n- This user has uploaded their insurance policy document(s). When answering, reference information found in their documents rather than suggesting they check their plan separately."
 
-                elif tool_result.tool_type == ToolType.RAG_SEARCH and tool_result.result:
-                    rag_result = tool_result.result
-                    if rag_result.chunks:
-                        context_parts.append("=== Your Documents ===")
-                        for i, chunk in enumerate(rag_result.chunks[:3], 1):  # Limit to top 3
-                            context_parts.append(f"{i}. {chunk.get('content', '')[:300]}...")
-                            if chunk.get('section_title'):
-                                context_parts.append(f"   From: {chunk.get('section_title')}")
+        tools_used = [tr.tool_type.value for tr in (state.get("tool_results") or []) if tr.success]
+        tools_summary = ", ".join(tools_used) if tools_used else "none"
+        has_llm_context = bool(state.get("llm_context"))
 
-            context = "\n".join(context_parts)
-
-            self.workflow_logger.log_workflow_step(
-                step="wording",
-                message="Generating personalized response",
-                correlation_id=state.get("workflow_id")
-            )
-
-            # Generate response using LLM with time-based status updates
-            # Add user document context to the prompt
-            doc_context = ""
-            if state.get("has_user_documents"):
-                doc_context = "\n- This user has uploaded their insurance policy document(s). When answering, reference information found in their documents rather than suggesting they check their plan separately."
-
-            prompt = f"""You are an insurance navigation assistant. Based on the following information, provide a helpful, accurate response to the user's question.
+        prompt = f"""You are an insurance navigation assistant. You have been given context gathered from various sources to answer the user's question.
 
 User Question: {state["user_query"]}
 
-Available Information:
-{context}
+Gathered Context:
+{context if context else "(no context gathered)"}
+
+Tools already used: {tools_summary}
+{"Direct LLM knowledge was also provided." if has_llm_context else ""}
 
 User Context:{doc_context if doc_context else " No policy documents uploaded."}
 
-Instructions:
-1. Provide a clear, helpful response focused on insurance and healthcare
+DECISION: First, decide if you have enough context to provide a helpful, accurate answer.
+
+If YES — write your final response directly. Start your response with "RESPONSE:" followed by your answer.
+
+If NO — you may request additional context. Start with "NEED_CONTEXT:" followed by a brief description of what additional information would help (e.g., "Need to search user's policy documents for specific deductible amounts" or "Need web search for current Medicare enrollment deadlines"). Only request more context if the current context is genuinely insufficient — do not request more just to be thorough.
+
+Guidelines for your response:
+1. Provide a clear, helpful response focused on insurance and healthcare navigation
 2. Reference specific information from the context when available
 3. If the user has uploaded documents, ground your answer in what was found in their documents
-4. If information is limited, acknowledge this and suggest next steps
-5. Stay professional and focused on insurance topics
-6. Keep response concise but comprehensive
+4. Stay professional and focused on insurance topics
+5. Keep response concise but comprehensive
+6. Do NOT provide medical diagnoses, treatment recommendations, or healthcare decisions"""
 
-Response:"""
+        # Time-based status messages during Sonnet generation
+        timed_messages = [
+            (5, "Writing response..."),
+            (12, "Reviewing details..."),
+            (20, "Polishing response..."),
+            (30, "Almost done..."),
+        ]
+        workflow_id = state.get("workflow_id")
 
-            # Time-based status messages during LLM generation
-            timed_messages = [
-                (5, "Writing response..."),
-                (12, "Reviewing details..."),
-                (20, "Polishing response..."),
-                (30, "Almost done..."),
-            ]
-            workflow_id = state.get("workflow_id")
+        async def _send_timed_updates():
+            elapsed = 0
+            msg_index = 0
+            while msg_index < len(timed_messages):
+                delay, msg = timed_messages[msg_index]
+                wait = delay - elapsed
+                if wait > 0:
+                    await asyncio.sleep(wait)
+                elapsed = delay
+                self.workflow_logger.log_workflow_step(
+                    step="wording",
+                    message=msg,
+                    correlation_id=workflow_id
+                )
+                msg_index += 1
 
-            async def _send_timed_updates():
-                elapsed = 0
-                msg_index = 0
-                while msg_index < len(timed_messages):
-                    delay, msg = timed_messages[msg_index]
-                    wait = delay - elapsed
-                    if wait > 0:
-                        await asyncio.sleep(wait)
-                    elapsed = delay
-                    self.workflow_logger.log_workflow_step(
-                        step="wording",
-                        message=msg,
-                        correlation_id=workflow_id
-                    )
-                    msg_index += 1
+        self.workflow_logger.log_workflow_step(
+            step="wording",
+            message="Generating personalized response",
+            correlation_id=workflow_id
+        )
 
-            timer_task = asyncio.create_task(_send_timed_updates())
+        timer_task = asyncio.create_task(_send_timed_updates())
+        try:
+            response = await self._call_sonnet(prompt)
+        finally:
+            timer_task.cancel()
             try:
-                response = await self._call_llm_async(prompt)
-            finally:
-                timer_task.cancel()
-                try:
-                    await timer_task
-                except asyncio.CancelledError:
-                    pass
-            
-            # Log LLM interaction
-            prompt_tokens = len(prompt.split())
-            response_tokens = len(response.split())
-            total_tokens = prompt_tokens + response_tokens
-            
-            llm_interaction = LLMInteraction(
-                model=self._anthropic_model if hasattr(self, '_anthropic_model') else "mock",
-                prompt_tokens=prompt_tokens,
-                completion_tokens=response_tokens,
-                total_tokens=total_tokens,
-                estimated_cost=total_tokens * 0.003 / 1000,  # Rough estimate for Claude
-                processing_time_ms=(time.time() - start_time) * 1000
-            )
-            
-            self.workflow_logger.log_llm_interaction(
-                llm_interaction,
-                context="response_generation"
-            )
-            
-            state["final_response"] = response
-            
-            processing_time = (time.time() - start_time) * 1000
-            state["node_timings"]["response_generator"] = processing_time
-            
-            self.logger.info(f"Response generation completed in {processing_time:.1f}ms")
-            
-            return state
-            
-        except Exception as e:
-            self.logger.error(f"Response generation error: {e}")
-            state["final_response"] = "I apologize, but I encountered an error while generating a response. Please try rephrasing your question."
-            return state
+                await timer_task
+            except asyncio.CancelledError:
+                pass
+
+        # Log LLM interaction
+        prompt_tokens = len(prompt.split())
+        response_tokens = len(response.split())
+        total_tokens = prompt_tokens + response_tokens
+
+        llm_interaction = LLMInteraction(
+            model=self._anthropic_model if hasattr(self, '_anthropic_model') else "mock",
+            prompt_tokens=prompt_tokens,
+            completion_tokens=response_tokens,
+            total_tokens=total_tokens,
+            estimated_cost=total_tokens * 0.003 / 1000,
+            processing_time_ms=(time.time() - start_time) * 1000
+        )
+
+        self.workflow_logger.log_llm_interaction(
+            llm_interaction,
+            context="response_determination"
+        )
+
+        processing_time = (time.time() - start_time) * 1000
+        state["node_timings"]["response_agent"] = state.get("node_timings", {}).get("response_agent", 0) + processing_time
+
+        # Parse the response
+        response_stripped = response.strip()
+        if response_stripped.startswith("NEED_CONTEXT:"):
+            feedback = response_stripped[len("NEED_CONTEXT:"):].strip()
+            self.logger.info(f"Response agent requests more context: {feedback}")
+            return False, feedback, None
+        else:
+            # Strip "RESPONSE:" prefix if present
+            final = response_stripped
+            if final.startswith("RESPONSE:"):
+                final = final[len("RESPONSE:"):].strip()
+            self.logger.info(f"Response agent generated final response ({len(final)} chars)")
+            return True, final, None
     
     async def execute(self, input_data: UnifiedNavigatorInput) -> UnifiedNavigatorOutput:
         """
@@ -485,6 +566,7 @@ Response:"""
                 "workflow_context": input_data.workflow_context,
                 "workflow_id": workflow_id,
                 "has_user_documents": has_user_documents,
+                "llm_context": None,
                 "node_timings": {},
                 "processing_start_time": datetime.now(timezone.utc),
                 "tool_results": [],
@@ -493,74 +575,64 @@ Response:"""
                 "final_response": None,
                 "output_sanitation": None
             }
-            
-            # Execute workflow steps directly (bypassing LangGraph due to version issue)
+
             # Step 1: Input guardrail
             self.workflow_logger.log_workflow_step(
                 step="sanitizing",
                 message="Validating and sanitizing input",
                 correlation_id=workflow_id
             )
-            from .guardrails.input_sanitizer import input_guardrail_node
             state = await input_guardrail_node(state)
-            
-            # Step 2: Tool selection
-            state = await self._tool_selection_node(state)
-            
-            # Step 3: Route to appropriate tool
-            tool_choice = state.get("tool_choice")
-            if tool_choice:
-                if tool_choice.selected_tool == ToolType.QUICK_INFO:
-                    self.workflow_logger.log_workflow_step(
-                        step="skimming",
-                        message="Performing quick policy lookup",
-                        correlation_id=workflow_id
-                    )
-                    from .tools.quick_info_tool import quick_info_node
-                    state = await quick_info_node(state)
-                elif tool_choice.selected_tool == ToolType.ACCESS_STRATEGY:
-                    self.workflow_logger.log_workflow_step(
-                        step="thinking",
-                        message="Developing comprehensive access strategy",
-                        correlation_id=workflow_id
-                    )
-                    from .tools.access_strategy_tool import access_strategy_node
-                    state = await access_strategy_node(state)
-                elif tool_choice.selected_tool == ToolType.WEB_SEARCH:
+
+            # Step 2-3: Context Gathering Agent + Response Determination Agent loop
+            max_iterations = 3
+            feedback = None
+
+            for iteration in range(max_iterations):
+                # Context Gathering Agent (Haiku) — picks a tool or no_tool
+                state = await self._context_gathering_agent(state, feedback=feedback)
+
+                tool_choice = state.get("tool_choice")
+
+                if tool_choice and tool_choice.selected_tool is not None:
+                    # Execute the selected tool
+                    await self._execute_tool(state, tool_choice, workflow_id)
+                else:
+                    # no_tool: context agent says LLM knowledge is sufficient
                     self.workflow_logger.log_workflow_step(
                         step="thinking",
-                        message="Searching current information",
+                        message="Answering from general knowledge",
                         correlation_id=workflow_id
                     )
-                    from .tools.web_search import web_search_node
-                    state = await web_search_node(state)
-                elif tool_choice.selected_tool == ToolType.RAG_SEARCH:
+                    self.logger.info("Context agent chose no_tool, skipping retrieval")
+
+                # Response Determination Agent (Sonnet) — evaluate and respond or request more
+                is_sufficient, result, _ = await self._response_determination_agent(state)
+
+                if is_sufficient:
+                    state["final_response"] = result
+                    break
+                else:
+                    # Response agent wants more context — loop back
+                    feedback = result
                     self.workflow_logger.log_workflow_step(
-                        step="thinking",
-                        message="Searching your policy documents",
+                        step="determining",
+                        message="Gathering additional context",
                         correlation_id=workflow_id
                     )
-                    from .tools.rag_search import rag_search_node
-                    state = await rag_search_node(state)
-                elif tool_choice.selected_tool == ToolType.COMBINED:
-                    self.workflow_logger.log_workflow_step(
-                        step="thinking",
-                        message="Performing comprehensive analysis",
-                        correlation_id=workflow_id
-                    )
-                    from .tools.rag_search import combined_search_node
-                    state = await combined_search_node(state)
-            
-            # Step 4: Response generation
-            state = await self._response_generation_node(state)
-            
-            # Step 5: Output guardrail
+                    self.logger.info(f"Response agent iteration {iteration + 1}: requesting more context")
+            else:
+                # Exhausted iterations — use whatever we got on the last pass
+                if not state.get("final_response"):
+                    _, result, _ = await self._response_determination_agent(state)
+                    state["final_response"] = result
+
+            # Step 4: Output guardrail
             self.workflow_logger.log_workflow_step(
                 step="wording",
                 message="Finalizing response",
                 correlation_id=workflow_id
             )
-            from .guardrails.output_sanitizer import output_guardrail_node
             state = await output_guardrail_node(state)
             
             # Calculate total processing time
@@ -669,6 +741,11 @@ Response:"""
         reasoning = response_data.get("reasoning", "LLM selection")
         confidence = float(response_data.get("confidence", 0.7))
 
+        # no_tool is a special sentinel — we map it to None and handle in the caller
+        if tool_name == "no_tool":
+            self.logger.info(f"Context agent chose no_tool: {reasoning}")
+            return None, reasoning, min(max(confidence, 0.0), 1.0)
+
         tool_mapping = {
             "quick_info": ToolType.QUICK_INFO,
             "web_search": ToolType.WEB_SEARCH,
@@ -684,70 +761,67 @@ Response:"""
 
         return selected_tool, reasoning, min(max(confidence, 0.0), 1.0)
 
-    async def _select_tool_with_llm(self, state: UnifiedNavigatorState) -> tuple[ToolType, str, float]:
+    async def _context_agent_decide(self, state: UnifiedNavigatorState, feedback: Optional[str] = None) -> tuple[ToolType, str, float]:
         """
-        Use LLM to intelligently select the best tool for the user query.
+        Context Gathering Agent decision (Haiku).
+
+        Decides which retrieval strategy to use, or whether the response agent
+        can answer directly from its own knowledge without calling a tool.
 
         Args:
-            state: Current workflow state (includes query, user context)
+            state: Current workflow state
+            feedback: Optional feedback from Response Agent requesting specific context
 
         Returns:
             tuple of (selected_tool, reasoning, confidence_score)
+            Returns a special NO_TOOL sentinel when no retrieval is needed.
         """
         user_query = state["user_query"]
         has_docs = state.get("has_user_documents", False)
 
-        # Build document availability context
-        doc_lines = []
-        if has_docs:
-            doc_lines.append("- Insurance policy document(s): AVAILABLE — the user has uploaded their plan documents, which can be searched for plan-specific details like deductibles, copays, covered services, provider networks, and claims procedures.")
-        else:
-            doc_lines.append("- Insurance policy document(s): NOT AVAILABLE — the user has not uploaded any plan documents.")
-        doc_section = "\n".join(doc_lines)
+        doc_section = "- Insurance policy document(s): AVAILABLE" if has_docs else "- Insurance policy document(s): NOT AVAILABLE"
 
-        prompt = f"""You are the context-gathering stage of an insurance navigation agent. Your job is to decide which retrieval strategy will produce the best context for the user's question. You do NOT answer the question yourself — a separate response generation step will synthesize the gathered context into a final answer.
+        feedback_section = ""
+        if feedback:
+            feedback_section = f"\n\nThe response agent reviewed the previously gathered context and determined it was insufficient. Their feedback:\n\"{feedback}\"\n\nSelect a DIFFERENT strategy to gather the missing context."
 
-Choose the single retrieval strategy that will surface the most relevant context for this question.
+        prompt = f"""You are the context-gathering stage of an insurance navigation agent. Your job is to decide the best way to gather context for the user's question. You do NOT answer the question — a separate response agent will use whatever context you provide.
 
 ROUTING POLICY:
-- For general insurance questions (terminology, how insurance works, what a concept means): ALWAYS use quick_info first. If the user has policy documents, their plan will be used as real-world examples in the answer. This is the default for any insurance-related educational question.
-- For questions specifically about the user's own plan (their deductible, their coverage, their benefits, what they personally are covered for): use rag_search to do a deep semantic search of their uploaded documents.
-- For questions about OTHER insurance policies, plans, or carriers that the user does not have uploaded: use web_search.
-- For general healthcare questions (not insurance-specific) that are unlikely to be answered by the user's policy documents: use web_search.
-- For strategic planning questions about optimizing costs or navigating complex care situations: use access_strategy.
-- For complex multi-part questions that clearly require multiple sources: use combined.
+- For general insurance questions (terminology, how insurance works, what a concept means): use quick_info. If the user has policy documents, their plan will be used as real-world examples.
+- For questions specifically about the user's own plan (their deductible, their coverage, their benefits): use rag_search for deep semantic search of their uploaded documents.
+- For questions about other insurance policies, carriers, or external healthcare topics not in the user's docs: use web_search.
+- For strategic cost/benefit optimization questions: use access_strategy.
+- For complex multi-source questions: use combined.
+- If the question is simple enough that general LLM knowledge is sufficient (e.g., a basic greeting, a very simple definition, or a clarifying question), you may choose "no_tool" to skip retrieval entirely.
 
 RETRIEVAL STRATEGIES:
-
-1. quick_info — Fast keyword search over the user's documents. Use this as the default for general insurance questions. Even for generic concepts, this searches the user's own policy so the response can include real examples from their plan.
-
-2. rag_search — Deep semantic search over the user's uploaded documents. Use this when the user is asking about their specific coverage, benefits, costs, or plan rules — questions whose answers live in their policy document.
-
-3. web_search — Live internet search. Use this for questions about external topics: other insurance companies/plans, current regulations, medical procedure details, healthcare news, or factual information not found in any policy document.
-
-4. access_strategy — Deep research combining web search and document retrieval with strategic analysis. Use this when the user needs help planning an approach across multiple factors — minimizing costs, comparing care options, or navigating a complex situation.
-
-5. combined — Runs multiple retrieval strategies together. Use this ONLY when the question clearly requires context from multiple different sources that no single strategy can cover.
+1. quick_info — Fast keyword search over the user's documents.
+2. rag_search — Deep semantic search over the user's uploaded documents.
+3. web_search — Live internet search for external information.
+4. access_strategy — Multi-source strategic analysis.
+5. combined — Runs multiple strategies together.
+6. no_tool — Skip retrieval. The response agent answers from its own knowledge.
 
 DOCUMENTS AVAILABLE FOR THIS USER:
 {doc_section}
+{feedback_section}
 
 USER QUERY: "{user_query}"
 
-Select the single best retrieval strategy. Respond with ONLY this JSON:
-{{"tool": "tool_name", "reasoning": "brief explanation of what context this will gather", "confidence": 0.85}}
+Respond with ONLY this JSON:
+{{"tool": "tool_name", "reasoning": "brief explanation", "confidence": 0.85}}
 
-Where tool_name is one of: quick_info, web_search, rag_search, access_strategy, combined"""
+Where tool_name is one of: quick_info, web_search, rag_search, access_strategy, combined, no_tool"""
 
-        llm_response = await self._call_llm_async(prompt)
+        llm_response = await self._call_haiku(prompt)
         return self._parse_tool_selection_response(llm_response)
 
     async def _fallback_routing_llm(self, state: UnifiedNavigatorState) -> tuple[ToolType, str, float]:
         """
-        Fallback routing LLM with more context and a more deliberate prompt.
+        Fallback routing LLM (Haiku) with step-by-step reasoning.
 
-        Called when the primary tool selection fails. Uses a slower, more
-        descriptive prompt to ensure correct routing.
+        Called when the primary context agent decision fails.
 
         Args:
             state: Current workflow state
@@ -758,35 +832,36 @@ Where tool_name is one of: quick_info, web_search, rag_search, access_strategy, 
         user_query = state["user_query"]
         has_docs = state.get("has_user_documents", False)
 
-        prompt = f"""You are a fallback context-routing agent for an insurance navigation system. The primary router failed, so you must decide which retrieval strategy to use. Think step by step.
-
-A separate response generation step will use whatever context you gather to write the final answer. Your job is only to pick the best source of context.
+        prompt = f"""You are a fallback context-routing agent. The primary router failed. Think step by step.
 
 QUESTION: "{user_query}"
 
 USER HAS UPLOADED POLICY DOCUMENTS: {"Yes" if has_docs else "No"}
 
-STEP 1 — Is this a general question about insurance concepts, terminology, or how insurance works?
-  → If yes: choose "quick_info". This searches the user's own documents so their plan can be used as examples, even for general questions.
+STEP 1 — Is this a general insurance concept/terminology question?
+  → choose "quick_info" (searches user's docs so their plan can be used as examples)
 
-STEP 2 — Is this specifically about the user's OWN plan (their deductible, their coverage, their benefits, how they can access a service under their plan)?
-  → If yes: choose "rag_search" for deep semantic search of their policy documents.
+STEP 2 — Is this about the user's OWN plan specifics?
+  → choose "rag_search"
 
-STEP 3 — Is this about OTHER insurance policies/carriers, current regulations, medical procedures, or healthcare facts not found in any policy document?
-  → If yes: choose "web_search" to gather external context.
+STEP 3 — Is this about external topics (other carriers, regulations, medical facts)?
+  → choose "web_search"
 
-STEP 4 — Is the user asking for strategic planning across multiple factors (cost optimization, care planning, benefit maximization)?
-  → If yes: choose "access_strategy" to gather multi-source strategic context.
+STEP 4 — Strategic cost/benefit planning?
+  → choose "access_strategy"
 
-STEP 5 — Does this question clearly need context from multiple different sources combined?
-  → If yes: choose "combined".
+STEP 5 — Multi-source needed?
+  → choose "combined"
 
-DEFAULT — If unclear: choose "quick_info".
+STEP 6 — Simple enough for LLM knowledge alone (greeting, trivial question)?
+  → choose "no_tool"
+
+DEFAULT — choose "quick_info"
 
 Respond with ONLY this JSON:
-{{"tool": "tool_name", "reasoning": "one sentence about what context this gathers", "confidence": 0.7}}"""
+{{"tool": "tool_name", "reasoning": "one sentence", "confidence": 0.7}}"""
 
-        llm_response = await self._call_llm_async(prompt)
+        llm_response = await self._call_haiku(prompt)
         return self._parse_tool_selection_response(llm_response)
     
     def _create_output(self, state: UnifiedNavigatorState) -> UnifiedNavigatorOutput:
