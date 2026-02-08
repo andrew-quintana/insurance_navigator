@@ -118,6 +118,7 @@ class InputSanitizer:
                     reasoning="Passed fast safety check",
                     processing_time_ms=(time.time() - start_time) * 1000
                 )
+                await self._improve_query_for_context_extraction(state)
                 return state
             
             # Fast rejection: obviously unsafe
@@ -154,6 +155,8 @@ class InputSanitizer:
                 
                 if llm_check.is_unsafe:
                     state["error_message"] = "Query required sanitization for safety"
+                else:
+                    await self._improve_query_for_context_extraction(state)
                 
             else:
                 # No LLM available or needed - default to conservative approach
@@ -165,6 +168,8 @@ class InputSanitizer:
                     reasoning="Rule-based validation only",
                     processing_time_ms=(time.time() - start_time) * 1000
                 )
+                if state["input_safety"].is_safe and self.http_client:
+                    await self._improve_query_for_context_extraction(state)
             
             return state
             
@@ -325,7 +330,64 @@ Respond in JSON format:
                 confidence_score=0.5,
                 processing_time_ms=(time.time() - start_time) * 1000
             )
-    
+
+    async def _improve_query_for_context_extraction(self, state: UnifiedNavigatorState) -> None:
+        """
+        Rewrite the user's question into a better input for the context extraction node:
+        use insurance lingo and, if the question seems confused or illogical in an
+        insurance context, reframe it toward teaching (so the system can explain).
+        Updates state["user_query"] in place when improvement is returned.
+        """
+        if not self.http_client:
+            return
+        query = (state.get("user_query") or "").strip()
+        if not query:
+            return
+        start_time = time.time()
+        try:
+            prompt = f"""You are helping prepare a user's question for an insurance navigation system that will retrieve context and then answer.
+
+User's question: "{query}"
+
+Rewrite this into a single, clear question that is a better input for context retrieval and answering:
+
+1. Use standard insurance terminology (e.g. deductible, copay, coinsurance, EOB, prior authorization, in-network, out-of-network, formulary, coverage) where it fits, so the system can match the right content.
+2. If the question seems confused, vague, or illogical in an insurance context, reframe it so the system can teach the user. Examples:
+   - "why did they charge me" → "How do I read my explanation of benefits (EOB) and what can I do if I disagree with a charge?"
+   - "is this covered" (no context) → "How can I find out if a specific service or medication is covered under my plan?"
+   - "my bill is wrong" → "How do I understand my medical bill and EOB, and what steps can I take to dispute a charge or billing error?"
+3. Keep the rewritten question as one short sentence or two. Preserve the user's intent; do not add unrelated topics.
+4. Output ONLY the rewritten question. No preamble, no "Here is...", no explanation."""
+
+            payload = {
+                "model": self.anthropic_model,
+                "max_tokens": 150,
+                "messages": [{"role": "user", "content": prompt}],
+            }
+            response = await self.http_client.post(
+                "https://api.anthropic.com/v1/messages",
+                json=payload,
+            )
+            if response.status_code != 200:
+                return
+            result = response.json()
+            content = (result.get("content") or [{}])[0].get("text", "").strip()
+            if not content:
+                return
+            # Take first line only in case model added explanation
+            improved = content.split("\n")[0].strip().strip('"')
+            if improved and improved != query:
+                state["user_query"] = improved
+                self.logger.info(
+                    "Improved query for context extraction in %.0fms: %s -> %s",
+                    (time.time() - start_time) * 1000,
+                    query[:50],
+                    improved[:50],
+                )
+        except Exception as e:
+            self.logger.debug("Query improvement skipped: %s", e)
+            return
+
     async def cleanup(self):
         """Clean up resources."""
         if self.http_client:
