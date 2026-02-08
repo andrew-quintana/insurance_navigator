@@ -52,7 +52,8 @@ class InputSanitizer:
             re.compile(r'(?:ignore|forget|disregard).*(?:previous|above|instruction)', re.IGNORECASE),
             re.compile(r'(?:jailbreak|bypass|override).*(?:system|safety|rule)', re.IGNORECASE),
             re.compile(r'\b(?:violence|harm|hurt|kill|death|suicide)\b', re.IGNORECASE),
-            re.compile(r'\b(?:illegal|drug|weapon|bomb|terrorism)\b', re.IGNORECASE),
+            re.compile(r'\b(?:illegal|weapon|bomb|terrorism)\b', re.IGNORECASE),
+            re.compile(r'\b(?:illegal\s+drug|street\s+drug|recreational\s+drug|abuse.*drug|sell.*drug|buy.*drug)\b', re.IGNORECASE),
         ]
         
         # Safe query patterns (common insurance questions)

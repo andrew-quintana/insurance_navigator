@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { SendHorizontal, ArrowLeft, Upload, User } from "lucide-react"
 import DocumentUploadModal from "@/components/DocumentUploadModal"
+import WorkflowStatus from "@/components/WorkflowStatus"
 // import { RealtimeChannel } from '@supabase/supabase-js'
 import { useAuth } from "@/components/auth/SessionManager"
 
@@ -41,6 +42,8 @@ export default function ChatPage() {
   const [conversationId] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
+  const [currentWorkflowId, setCurrentWorkflowId] = useState<string | null>(null)
+  const [showWorkflowStatus, setShowWorkflowStatus] = useState(false)
 
   // Channel reference to prevent multiple subscriptions (currently unused)
   // const channelRef = useRef<RealtimeChannel | null>(null)
@@ -115,6 +118,11 @@ export default function ChatPage() {
 
     setMessages(prev => [...prev, userMessage])
     setIsLoading(true)
+    
+    // Generate a temporary workflow ID for immediate WebSocket connection
+    const tempWorkflowId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    setCurrentWorkflowId(tempWorkflowId);
+    setShowWorkflowStatus(true);
 
     // Get API URL from environment variables (Vercel best practice)
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
@@ -139,7 +147,30 @@ export default function ChatPage() {
       })
 
       if (response.ok) {
-        const data: { text: string } = await response.json()
+        const data: { 
+          text: string; 
+          workflow_id?: string;
+          metadata?: {
+            workflow_tracking?: {
+              workflow_id?: string;
+              websocket_endpoint?: string;
+            }
+          }
+        } = await response.json()
+        
+        // Update with real workflow_id if available
+        const workflowId = data.workflow_id || data.metadata?.workflow_tracking?.workflow_id;
+        if (workflowId && workflowId !== currentWorkflowId) {
+          console.log("🔄 Real Workflow ID received:", workflowId);
+          setCurrentWorkflowId(workflowId);
+        }
+        
+        // Hide workflow status after response is received
+        setTimeout(() => {
+          setShowWorkflowStatus(false);
+          setCurrentWorkflowId(null);
+        }, 1000);
+        
         const botMessage: Message = {
           id: messages.length + 2,
           text: data.text || "I received your message but couldn't generate a response.",
@@ -157,6 +188,10 @@ export default function ChatPage() {
         sender: "bot",
       }
       setMessages(prev => [...prev, errorMessage])
+      
+      // Hide workflow status on error
+      setShowWorkflowStatus(false);
+      setCurrentWorkflowId(null);
     } finally {
       setIsLoading(false)
     }
@@ -352,8 +387,27 @@ export default function ChatPage() {
                   </div>
                 ))}
                 
+                {/* Workflow Status */}
+                {showWorkflowStatus && currentWorkflowId && user && (
+                  <div className="flex justify-center mb-4">
+                    <WorkflowStatus
+                      workflowId={currentWorkflowId}
+                      userId={user.id}
+                      onComplete={() => {
+                        setShowWorkflowStatus(false);
+                        setCurrentWorkflowId(null);
+                      }}
+                      onError={(error) => {
+                        console.error("WorkflowStatus error:", error);
+                        setShowWorkflowStatus(false);
+                        setCurrentWorkflowId(null);
+                      }}
+                    />
+                  </div>
+                )}
+
                 {/* Loading indicator */}
-                {isLoading && (
+                {isLoading && !showWorkflowStatus && (
                   <div className="flex justify-start">
                     <div className="bg-teal-100 text-teal-800 rounded-xl p-4">
                       <div className="flex items-center space-x-2">

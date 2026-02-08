@@ -10,9 +10,13 @@
       "Bash(git commit:*)",
       "Bash(tree:*)",
       "Bash(python:*)",
-      "Bash(pip show:*)"
+      "Bash(pip show:*)",
+      "Bash(env)",
+      "Bash(export:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "outputStyle": "Learning"
 }

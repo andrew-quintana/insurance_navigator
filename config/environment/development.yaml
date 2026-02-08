@@ -7,7 +7,7 @@ testing: true
 
 # Database Configuration
 database:
-  url: postgresql://postgres:postgres@supabase_db_insurance_navigator:5432/postgres?sslmode=disable
+  url: postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable
   schema: upload_pipeline
   pool_size: 5
   max_overflow: 10
@@ -58,12 +58,12 @@ external_services:
 # Storage Configuration
 storage:
   environment: development
-  url: http://supabase_kong_insurance_navigator:8000
+  url: http://127.0.0.1:54321
   supabase:
-    url: http://supabase_kong_insurance_navigator:8000
+    url: http://127.0.0.1:54321
     anon_key: ${SUPABASE_ANON_KEY}
     service_role_key: ${SUPABASE_SERVICE_ROLE_KEY}
-    storage_url: http://supabase_kong_insurance_navigator:8000
+    storage_url: http://127.0.0.1:54321
   
   buckets:
     raw:

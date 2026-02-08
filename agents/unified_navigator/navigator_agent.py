@@ -30,6 +30,8 @@ from .models import (
 )
 from .guardrails.input_sanitizer import input_guardrail_node
 from .guardrails.output_sanitizer import output_guardrail_node
+from .tools.quick_info_tool import quick_info_node
+from .tools.access_strategy_tool import access_strategy_node
 from .tools.web_search import web_search_node
 from .tools.rag_search import rag_search_node, combined_search_node
 from .logging import get_workflow_logger, LLMInteraction
@@ -77,10 +79,10 @@ class UnifiedNavigatorAgent(BaseAgent):
         
         # Tool selection weights for heuristic routing
         self.tool_weights = {
-            "quick_info_keywords": ["what", "does", "cover", "my", "policy", "specific", "plan", "benefits", "copay", "deductible"],
-            "access_strategy_keywords": ["how", "maximize", "best", "strategy", "compare", "options", "help me", "find", "most"],
+            "quick_info_keywords": ["what", "does", "cover", "my", "policy", "specific", "plan", "benefits", "copay", "deductible", "cost", "amount", "price", "fee", "prescription", "drug", "medication"],
+            "access_strategy_keywords": ["how", "maximize", "best", "strategy", "compare", "options", "help me", "find", "most", "approach", "optimize"],
             "web_keywords": ["latest", "recent", "news", "current", "2024", "2025", "new", "update", "regulation"],
-            "rag_keywords": ["policy", "document", "coverage", "general", "explain", "definition"],
+            "rag_keywords": ["document", "coverage", "general", "explain", "definition", "terms"],
             "combined_keywords": ["complex", "multiple", "both", "all", "comprehensive"]
         }
     
@@ -153,6 +155,8 @@ class UnifiedNavigatorAgent(BaseAgent):
         # Add nodes (avoid naming conflicts with state fields)
         workflow.add_node("input_guardrail", input_guardrail_node)
         workflow.add_node("tool_selector", self._tool_selection_node)
+        workflow.add_node("quick_info", quick_info_node)
+        workflow.add_node("access_strategy", access_strategy_node)
         workflow.add_node("web_search", web_search_node)
         workflow.add_node("rag_search", rag_search_node)
         workflow.add_node("combined_search", combined_search_node)
@@ -168,6 +172,8 @@ class UnifiedNavigatorAgent(BaseAgent):
             "tool_selector",
             self._route_to_tool,
             {
+                "quick_info": "quick_info",
+                "access_strategy": "access_strategy",
                 "web_search": "web_search",
                 "rag_search": "rag_search",
                 "combined_search": "combined_search",
@@ -176,6 +182,8 @@ class UnifiedNavigatorAgent(BaseAgent):
         )
         
         # All tools lead to response generation
+        workflow.add_edge("quick_info", "response_generator")
+        workflow.add_edge("access_strategy", "response_generator")
         workflow.add_edge("web_search", "response_generator")
         workflow.add_edge("rag_search", "response_generator")
         workflow.add_edge("combined_search", "response_generator")
@@ -233,20 +241,25 @@ class UnifiedNavigatorAgent(BaseAgent):
             has_strategy_intent = any(word in query_lower for word in ["how", "best", "maximize", "strategy", "approach"])
             has_specific_info_request = any(word in query_lower for word in ["what", "does", "cover", "specific"])
             
-            # Enhanced decision logic
+            # Debug logging
+            self.logger.info(f"Query: {query_lower}")
+            self.logger.info(f"Scores - Quick: {quick_info_score}, Strategy: {access_strategy_score}, Web: {web_score}, RAG: {rag_score}, Combined: {combined_score}")
+            self.logger.info(f"Characteristics - Personal ref: {has_personal_ref}, Strategy intent: {has_strategy_intent}, Specific info: {has_specific_info_request}")
+            
+            # Enhanced decision logic with better prioritization
             if combined_score > 0 or query_length > 20:
                 selected_tool = ToolType.COMBINED
                 reasoning = "Complex multi-faceted query - using combined approach"
                 confidence = 0.8
-            elif access_strategy_score >= 2 or (has_strategy_intent and query_length > 10):
+            elif access_strategy_score >= 2 or (has_strategy_intent and query_length > 8):
                 selected_tool = ToolType.ACCESS_STRATEGY
                 reasoning = "Strategic analysis request - using access strategy tool"
                 confidence = 0.85
-            elif quick_info_score >= 2 or (has_specific_info_request and has_personal_ref):
+            elif quick_info_score >= 2 or (has_specific_info_request and has_personal_ref) or any(word in query_lower for word in ["copay", "deductible", "premium", "cost"]):
                 selected_tool = ToolType.QUICK_INFO
                 reasoning = "Specific policy information request - using quick info tool"
                 confidence = 0.9
-            elif web_score > 0:
+            elif web_score >= 2 or ("2024" in query_lower or "2025" in query_lower or "latest" in query_lower or "regulation" in query_lower):
                 selected_tool = ToolType.WEB_SEARCH
                 reasoning = "Current information request - using web search"
                 confidence = 0.8
@@ -255,10 +268,15 @@ class UnifiedNavigatorAgent(BaseAgent):
                 reasoning = "Document-based query - using RAG search"
                 confidence = 0.75
             else:
-                # Default to quick info for insurance questions
-                selected_tool = ToolType.QUICK_INFO
-                reasoning = "General insurance query - using quick info"
-                confidence = 0.7
+                # For insurance-specific queries, prefer quick info over RAG
+                if any(word in query_lower for word in ["copay", "deductible", "premium", "coverage", "benefit"]):
+                    selected_tool = ToolType.QUICK_INFO
+                    reasoning = "Insurance-specific query - using quick info"
+                    confidence = 0.8
+                else:
+                    selected_tool = ToolType.RAG_SEARCH
+                    reasoning = "General query - using RAG search"
+                    confidence = 0.7
             
             state["tool_choice"] = ToolSelection(
                 selected_tool=selected_tool,
@@ -268,7 +286,7 @@ class UnifiedNavigatorAgent(BaseAgent):
             )
             
             processing_time = (time.time() - start_time) * 1000
-            state.node_timings["tool_selector"] = processing_time
+            state["node_timings"]["tool_selector"] = processing_time
             
             self.logger.info(f"Tool selection: {selected_tool} (confidence: {confidence:.2f}) in {processing_time:.1f}ms")
             
@@ -305,7 +323,9 @@ class UnifiedNavigatorAgent(BaseAgent):
             ToolType.COMBINED: "combined_search"
         }
         
-        return tool_mapping.get(state["tool_choice"].selected_tool, "error")
+        selected_route = tool_mapping.get(state["tool_choice"].selected_tool, "rag_search")  # Fallback to rag_search
+        self.logger.info(f"Routing to: {selected_route} for tool: {state['tool_choice'].selected_tool}")
+        return selected_route
     
     async def _response_generation_node(self, state: UnifiedNavigatorState) -> UnifiedNavigatorState:
         """
@@ -398,7 +418,7 @@ Response:"""
             state["final_response"] = response
             
             processing_time = (time.time() - start_time) * 1000
-            state.node_timings["response_generator"] = processing_time
+            state["node_timings"]["response_generator"] = processing_time
             
             self.logger.info(f"Response generation completed in {processing_time:.1f}ms")
             
@@ -617,5 +637,6 @@ Response:"""
             error_message=state.get("error_message"),
             warnings=state.get("output_sanitation").warnings if state.get("output_sanitation") else [],
             session_id=state.get("session_id"),
-            user_id=state.get("user_id")
+            user_id=state.get("user_id"),
+            workflow_id=state.get("workflow_id")
         )

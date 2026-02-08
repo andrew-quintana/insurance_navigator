@@ -96,6 +96,14 @@ app.include_router(webhook_router, prefix="/api/upload-pipeline")
 from api.upload_pipeline.endpoints.upload import router as upload_router
 app.include_router(upload_router, prefix="/api/upload-pipeline")
 
+# Include the WebSocket router for real-time workflow updates
+try:
+    from api.websocket_routes import router as websocket_router
+    app.include_router(websocket_router)
+    print("WebSocket routes included for real-time workflow updates")
+except ImportError as e:
+    print(f"Warning: WebSocket routes not available: {e}")
+
 # System initialization and shutdown handlers
 @app.on_event("startup")
 async def startup_event():
@@ -984,52 +992,15 @@ async def chat_with_agent(
                 detail="RAG service not available"
             )
         
-        # Import the chat interface using safe imports with detailed error logging
+        # Import the new unified navigator agent
         try:
-            from utils.import_utilities import (
-                safe_import_patient_navigator_chat_interface,
-                safe_import_chat_message
-            )
+            logger.info("Importing UnifiedNavigatorAgent...")
+            from agents.unified_navigator.navigator_agent import UnifiedNavigatorAgent
+            from agents.unified_navigator.models import UnifiedNavigatorInput
+            logger.info("UnifiedNavigatorAgent imported successfully")
             
-            logger.info("Attempting to import chat interface classes...")
-            PatientNavigatorChatInterface = safe_import_patient_navigator_chat_interface()
-            ChatMessage = safe_import_chat_message()
-            
-            logger.info(f"Import results - PatientNavigatorChatInterface: {PatientNavigatorChatInterface is not None}, ChatMessage: {ChatMessage is not None}")
-            
-            if not PatientNavigatorChatInterface or not ChatMessage:
-                logger.error("Failed to import required chat interface classes")
-                logger.error(f"PatientNavigatorChatInterface: {PatientNavigatorChatInterface}")
-                logger.error(f"ChatMessage: {ChatMessage}")
-                
-                # Try direct import to get the actual error
-                try:
-                    logger.info("Attempting direct import...")
-                    from agents.patient_navigator.chat_interface import PatientNavigatorChatInterface as DirectChatInterface
-                    from agents.patient_navigator.chat_interface import ChatMessage as DirectChatMessage
-                    logger.info("Direct import successful - safe import issue")
-                    # Use direct imports if safe imports failed
-                    PatientNavigatorChatInterface = DirectChatInterface
-                    ChatMessage = DirectChatMessage
-                except ImportError as direct_error:
-                    logger.error(f"Direct import failed: {direct_error}")
-                    import traceback
-                    logger.error(f"Direct import traceback: {traceback.format_exc()}")
-                    
-                    # Check if agents directory exists
-                    import os
-                    agents_path = os.path.join(os.getcwd(), 'agents')
-                    logger.error(f"Current working directory: {os.getcwd()}")
-                    logger.error(f"Agents directory exists: {os.path.exists(agents_path)}")
-                    if os.path.exists(agents_path):
-                        logger.error(f"Agents directory contents: {os.listdir(agents_path)}")
-                    
-                    raise HTTPException(
-                        status_code=500, 
-                        detail="Chat service temporarily unavailable - missing required components"
-                    )
         except Exception as import_error:
-            logger.error(f"Error during chat interface import: {import_error}")
+            logger.error(f"Error importing UnifiedNavigatorAgent: {import_error}")
             import traceback
             logger.error(f"Import error traceback: {traceback.format_exc()}")
             raise HTTPException(
@@ -1037,12 +1008,12 @@ async def chat_with_agent(
                 detail="Chat service temporarily unavailable - import error"
             )
         
-        # Create fresh chat interface instance for each request to ensure isolation
-        # This prevents state contamination between different user requests
-        chat_interface = PatientNavigatorChatInterface()
+        # Create unified navigator agent instance
+        # Use mock mode for development unless explicitly using real APIs
+        use_mock = os.getenv("USE_MOCK_NAVIGATOR", "false").lower() == "true"
+        navigator_agent = UnifiedNavigatorAgent(use_mock=use_mock)
         
-        # Create ChatMessage object
-        # Use the authenticated user's ID
+        # Get user ID from authentication
         user_id = current_user.get("id")
         if not user_id:
             raise HTTPException(
@@ -1050,31 +1021,28 @@ async def chat_with_agent(
                 detail="User ID not found in authentication token"
             )
             
-        chat_message = ChatMessage(
-            user_id=user_id,
-            content=message,
-            timestamp=time.time(),
-            message_type="text",
-            language=user_language if user_language != "auto" else "en",
-            metadata={
-                "conversation_id": conversation_id,
+        # Create input for unified navigator
+        navigator_input = UnifiedNavigatorInput(
+            user_query=message,
+            user_id=str(user_id),
+            session_id=conversation_id or f"session_{int(time.time())}",
+            workflow_context={
+                "language": user_language if user_language != "auto" else "en",
                 "context": context,
                 "api_request": True
             }
         )
         
-        # Process message through the complete agentic workflow
-        # Note: Graceful degradation is handled within individual RAG operations,
-        # not at the chat interface level to avoid masking other processing errors
+        # Process message through the unified navigator
         try:
-            logger.info("Starting chat message processing with 120-second timeout - FM-038 coroutine fix deployed")
+            logger.info("Starting unified navigator processing...")
             # Add timeout to prevent indefinite hanging
             response = await asyncio.wait_for(
-                chat_interface.process_message(chat_message),
-                timeout=120.0  # 120 second timeout for entire chat processing
+                navigator_agent.execute(navigator_input),
+                timeout=120.0  # 120 second timeout for entire processing
             )
-            logger.info("Chat message processing completed successfully")
-            logger.info("=== CHAT INTERFACE RETURNED RESPONSE ===")
+            logger.info("Unified navigator processing completed successfully")
+            logger.info(f"Tool used: {response.tool_used}, Success: {response.success}")
         except asyncio.TimeoutError:
             logger.error("Chat processing timed out after 120 seconds")
             return {
@@ -1111,49 +1079,69 @@ async def chat_with_agent(
                 "sources": ["system"]
             }
         
-        # Handle both ChatResponse objects and dictionary responses (for backward compatibility)
-        if isinstance(response, dict):
-            # Handle dictionary response (fallback case)
-            content = response.get("content", "I apologize, but I encountered an error processing your request.")
-            agent_sources = response.get("agent_sources", response.get("sources", ["system"]))
-            confidence = response.get("confidence", 0.0)
-            processing_time = response.get("processing_time", 0.0)
-            metadata = response.get("metadata", {})
+        # Handle UnifiedNavigatorOutput response
+        if response.success:
+            content = response.response
+            processing_time = response.total_processing_time_ms / 1000.0  # Convert to seconds
+            confidence = 1.0 if response.success else 0.0  # Simple confidence based on success
+            agent_sources = [response.tool_used.value]
+            
+            # Extract additional metadata
+            metadata = {
+                "tool_used": response.tool_used.value,
+                "input_safe": response.input_safety_check.is_safe,
+                "safety_level": response.input_safety_check.safety_level.value,
+                "output_sanitized": response.output_sanitized,
+                "processing_time_ms": response.total_processing_time_ms,
+                "warnings": response.warnings
+            }
         else:
-            # Handle ChatResponse object (normal case)
-            content = response.content
-            agent_sources = response.agent_sources
-            confidence = response.confidence
-            processing_time = response.processing_time
-            metadata = response.metadata or {}
+            content = response.response or "I apologize, but I encountered an error processing your request."
+            processing_time = (response.total_processing_time_ms or 0) / 1000.0
+            confidence = 0.0
+            agent_sources = ["system"]
+            metadata = {
+                "error": response.error_message,
+                "tool_used": response.tool_used.value if response.tool_used else "none"
+            }
         
         # Return enhanced response with metadata
         logger.info("=== CREATING FINAL JSON RESPONSE ===")
+        logger.info(f"Tool used: {response.tool_used}, Processing time: {processing_time:.3f}s")
+        
         final_response = {
             "text": content,
             "response": content,  # For backward compatibility
             "conversation_id": conversation_id or f"conv_{int(time.time())}",
+            "workflow_id": response.workflow_id,  # For WebSocket connection
             "timestamp": datetime.now().isoformat(),
             "metadata": {
                 "processing_time": processing_time,
                 "confidence": confidence,
                 "agent_sources": agent_sources,
+                "tool_used": response.tool_used.value,
+                "workflow_tracking": {
+                    "workflow_id": response.workflow_id,
+                    "websocket_endpoint": f"/ws/workflow/{response.workflow_id}" if response.workflow_id else None
+                },
                 "input_processing": {
                     "original_language": user_language,
-                    "translation_applied": user_language != "en" and user_language != "auto"
+                    "translation_applied": user_language != "en" and user_language != "auto",
+                    "input_safe": response.input_safety_check.is_safe,
+                    "safety_level": response.input_safety_check.safety_level.value
                 },
                 "agent_processing": {
-                    "agents_used": agent_sources,
-                    "processing_time_ms": int(processing_time * 1000)
+                    "tool_used": response.tool_used.value,
+                    "processing_time_ms": int(response.total_processing_time_ms),
+                    "success": response.success
                 },
                 "output_formatting": {
-                    "tone_applied": "empathetic",
-                    "readability_level": "8th_grade",
-                    "next_steps_included": "next_steps" in metadata
+                    "sanitized": response.output_sanitized,
+                    "warnings": response.warnings
                 }
             },
-            "next_steps": metadata.get("next_steps", []),
-            "sources": agent_sources
+            "sources": agent_sources,
+            "success": response.success
         }
         logger.info("=== FINAL JSON RESPONSE CREATED SUCCESSFULLY ===")
         return final_response

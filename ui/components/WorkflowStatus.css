@@ -1,0 +1,350 @@
+/**
+ * WorkflowStatus Component Styles
+ * 
+ * Styles for real-time workflow visualization with smooth animations
+ * and responsive design.
+ */
+
+.workflow-status {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin: 16px 0;
+  border: 1px solid #e5e7eb;
+  transition: all 0.3s ease;
+}
+
+.workflow-status:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Error State */
+.workflow-status.error {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.error-icon {
+  font-size: 18px;
+}
+
+/* Connecting State */
+.workflow-status.connecting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 30px 20px;
+  background: #f9fafb;
+}
+
+.connecting-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #e5e7eb;
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.connecting-message {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Current Status */
+.current-status {
+  margin-bottom: 20px;
+}
+
+.status-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.status-icon {
+  font-size: 20px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  border-radius: 8px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.status-text {
+  flex: 1;
+}
+
+.status-message {
+  font-weight: 600;
+  font-size: 16px;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+.status-timestamp {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Progress Bar */
+.progress-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease-in-out;
+  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+}
+
+.progress-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  min-width: 35px;
+  text-align: right;
+}
+
+/* Workflow Steps */
+.workflow-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 20px 0;
+  position: relative;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.step-item.current {
+  background: #f0f9ff;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 0 -12px;
+}
+
+.step-indicator {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  color: white;
+  transition: all 0.3s ease;
+  z-index: 2;
+  position: relative;
+}
+
+.step-item.completed .step-indicator {
+  background-color: #10b981;
+  transform: scale(1.1);
+}
+
+.step-item.current .step-indicator {
+  animation: pulse 2s infinite;
+}
+
+.step-item.upcoming .step-indicator {
+  background-color: #e5e7eb;
+  color: #6b7280;
+}
+
+.step-info {
+  flex: 1;
+}
+
+.step-label {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1f2937;
+  margin-bottom: 2px;
+}
+
+.step-item.upcoming .step-label {
+  color: #6b7280;
+}
+
+.step-description {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.step-item.current .step-description {
+  color: #374151;
+  font-weight: 500;
+}
+
+.step-connector {
+  position: absolute;
+  left: 15px;
+  top: 40px;
+  width: 2px;
+  height: 24px;
+  background-color: #e5e7eb;
+  transition: background-color 0.3s ease;
+}
+
+.step-item:last-child .step-connector {
+  display: none;
+}
+
+/* Connection Status */
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.connection-indicator {
+  font-size: 8px;
+}
+
+.connection-text {
+  font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .workflow-status {
+    margin: 12px 0;
+    padding: 16px;
+  }
+
+  .status-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .status-icon {
+    align-self: flex-start;
+  }
+
+  .progress-container {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .progress-text {
+    text-align: left;
+    min-width: auto;
+  }
+
+  .workflow-steps {
+    gap: 6px;
+  }
+
+  .step-item {
+    padding: 6px 0;
+  }
+
+  .step-item.current {
+    padding: 10px;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .workflow-status {
+    background: #1f2937;
+    border-color: #374151;
+    color: #f9fafb;
+  }
+
+  .workflow-status.connecting {
+    background: #111827;
+  }
+
+  .status-message {
+    color: #f9fafb;
+  }
+
+  .step-label {
+    color: #f9fafb;
+  }
+
+  .step-item.upcoming .step-label {
+    color: #9ca3af;
+  }
+
+  .step-item.current {
+    background: #1e3a8a;
+  }
+
+  .connection-status {
+    border-top-color: #374151;
+    color: #9ca3af;
+  }
+}
+
+/* Animation for step completion */
+@keyframes stepComplete {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1.1); }
+}
+
+.step-item.completed .step-indicator {
+  animation: stepComplete 0.5s ease-out;
+}
+
+/* Loading animation for current step */
+@keyframes currentStepGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+  50% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+}
+
+.step-item.current .step-indicator {
+  animation: currentStepGlow 2s infinite;
+}

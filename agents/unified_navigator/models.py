@@ -171,6 +171,7 @@ class UnifiedNavigatorOutput(BaseModel):
     # Session tracking
     session_id: Optional[str] = None
     user_id: str
+    workflow_id: Optional[str] = None
 
 
 class FastSafetyCheck(BaseModel):
