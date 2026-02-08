@@ -15,10 +15,11 @@
       "Bash(export:*)",
       "Bash(npm run build:*)",
       "Bash(chmod:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []
   },
-  "outputStyle": "Learning"
+  "outputStyle": "Explanatory"
 }
