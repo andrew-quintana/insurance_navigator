@@ -433,33 +433,19 @@ Tools already used: {tools_summary}
 
 User Context:{doc_context if doc_context else " No policy documents uploaded."}
 
-AVAILABLE TOOLS (you can request these by name when asking for more context):
-- quick_info — keyword search over the user's uploaded documents
-- rag_search — deep semantic search over the user's uploaded documents
-- web_search — live internet search (use for general definitions, terminology, industry classifications)
-- access_strategy — multi-source strategic analysis
-- combined — multiple strategies together
-
-When requesting more context, specify which tool to use. For general terminology or definition questions (e.g., "What is standard vs non-standard imaging?"), request web_search to get definitions and classifications from the internet. Only request rag_search or quick_info when the missing information is about the user's own policy or you need examples from their documents.
-
 DECISION: First, decide if you have enough context to provide a helpful, accurate answer.
 
 If YES — write your final response directly. Start your response with "RESPONSE:" followed by your answer.
 
-If NO — request additional context. Start with "NEED_CONTEXT:" then say which tool to use and what to look for. Examples:
-- NEED_CONTEXT: web_search for general definitions of standard vs non-standard imaging procedures and how plans classify them
-- NEED_CONTEXT: rag_search for user's policy coverage of imaging and prior authorization rules
-Only request more context if the current context is genuinely insufficient — do not request more just to be thorough.
+If NO — you may request additional context. Start with "NEED_CONTEXT:" followed by a brief description of what additional information would help (e.g., "Need to search user's policy documents for specific deductible amounts" or "Need web search for current Medicare enrollment deadlines"). Only request more context if the current context is genuinely insufficient — do not request more just to be thorough.
 
 Guidelines for your response:
 1. Provide a clear, helpful response focused on insurance and healthcare navigation
 2. Reference specific information from the context when available
 3. If the user has uploaded documents, ground your answer in what was found in their documents
-4. If you plan to include examples (e.g., sample deductibles, coverage scenarios), ensure you have information from the user's documents in the gathered context. Do not invent or assume examples—only use examples that come from the context provided. If the user has documents but the context has no document excerpts, request more context (NEED_CONTEXT) so the response can be grounded in their policy.
-5. For general definition/terminology questions ("what is X?", "X vs Y?"), prefer requesting web_search so definitions and industry classifications come from the internet; request rag_search or quick_info only when the question is about the user's specific plan or you need examples from their policy.
-6. Stay professional and focused on insurance topics
-7. Keep response concise but comprehensive
-8. Do NOT provide medical diagnoses, treatment recommendations, or healthcare decisions"""
+4. Stay professional and focused on insurance topics
+5. Keep response concise but comprehensive
+6. Do NOT provide medical diagnoses, treatment recommendations, or healthcare decisions"""
 
         # Time-based status messages during Sonnet generation
         timed_messages = [
@@ -807,18 +793,17 @@ Guidelines for your response:
 
         feedback_section = ""
         if feedback:
-            feedback_section = f"\n\nThe response agent reviewed the previously gathered context and determined it was insufficient. Their feedback:\n\"{feedback}\"\n\nSelect a DIFFERENT strategy to gather the missing context. If the feedback suggests a specific tool (e.g., web_search, rag_search, quick_info), prefer that tool — e.g. if they ask for web search or internet definitions, use web_search; if they ask for user's policy or documents, use rag_search or quick_info."
+            feedback_section = f"\n\nThe response agent reviewed the previously gathered context and determined it was insufficient. Their feedback:\n\"{feedback}\"\n\nSelect a DIFFERENT strategy to gather the missing context."
 
         prompt = f"""You are the context-gathering stage of an insurance navigation agent. Your job is to decide the best way to gather context for the user's question. You do NOT answer the question — a separate response agent will use whatever context you provide.
 
 ROUTING POLICY:
-- For general definition or "what is X vs Y?" terminology questions (e.g., "What is standard vs non-standard imaging?"): use web_search to get industry definitions and classifications from the internet. User documents rarely define these terms; web_search is the right source for general terminology.
-- For general insurance questions (how insurance works, what a concept means in context): when the user has uploaded policy documents, prefer quick_info or rag_search so the response agent can include examples from their actual policy. Only use no_tool for general questions when the user has no documents.
+- For general insurance questions (terminology, how insurance works, what a concept means): use quick_info. If the user has policy documents, their plan will be used as real-world examples.
 - For questions specifically about the user's own plan (their deductible, their coverage, their benefits): use rag_search for deep semantic search of their uploaded documents.
 - For questions about other insurance policies, carriers, or external healthcare topics not in the user's docs: use web_search.
 - For strategic cost/benefit optimization questions: use access_strategy.
 - For complex multi-source questions: use combined.
-- If the question is simple enough that general LLM knowledge is sufficient (e.g., a basic greeting, a very simple definition, or a clarifying question) and the user has no documents, you may choose "no_tool". When the user has documents, prefer retrieving from their documents (quick_info) so any examples in the response can come from their plan.
+- If the question is simple enough that general LLM knowledge is sufficient (e.g., a basic greeting, a very simple definition, or a clarifying question), you may choose "no_tool" to skip retrieval entirely.
 
 RETRIEVAL STRATEGIES:
 1. quick_info — Fast keyword search over the user's documents.
@@ -863,28 +848,25 @@ QUESTION: "{user_query}"
 
 USER HAS UPLOADED POLICY DOCUMENTS: {"Yes" if has_docs else "No"}
 
-STEP 1 — Is this a "what is X?" or "X vs Y?" definition/terminology question (e.g., standard vs non-standard imaging)?
-  → choose "web_search" for industry definitions and classifications.
+STEP 1 — Is this a general insurance concept/terminology question?
+  → choose "quick_info" (searches user's docs so their plan can be used as examples)
 
-STEP 2 — Is this a general insurance concept question (not a definition)?
-  → If user has documents: "quick_info" or "rag_search" so the response can use examples from their policy. If no documents: "web_search" or "no_tool" for very simple cases.
-
-STEP 3 — Is this about the user's OWN plan specifics?
+STEP 2 — Is this about the user's OWN plan specifics?
   → choose "rag_search"
 
-STEP 4 — Is this about external topics (other carriers, regulations, medical facts)?
+STEP 3 — Is this about external topics (other carriers, regulations, medical facts)?
   → choose "web_search"
 
-STEP 5 — Strategic cost/benefit planning?
+STEP 4 — Strategic cost/benefit planning?
   → choose "access_strategy"
 
-STEP 6 — Multi-source needed?
+STEP 5 — Multi-source needed?
   → choose "combined"
 
-STEP 7 — Simple enough for LLM knowledge alone (greeting, trivial question)?
+STEP 6 — Simple enough for LLM knowledge alone (greeting, trivial question)?
   → choose "no_tool"
 
-DEFAULT — choose "web_search" for definitions/terminology; otherwise "quick_info" if user has documents, else "web_search"
+DEFAULT — choose "quick_info"
 
 Respond with ONLY this JSON:
 {{"tool": "tool_name", "reasoning": "one sentence", "confidence": 0.7}}"""
