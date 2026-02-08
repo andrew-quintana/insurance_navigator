@@ -73,7 +73,7 @@ class OutputSanitizer:
             self.http_client = httpx.AsyncClient(
                 headers={
                     "Content-Type": "application/json",
-                    "Authorization": f"Bearer {api_key}",
+                    "x-api-key": api_key,
                     "anthropic-version": "2023-06-01"
                 },
                 timeout=5.0  # Short timeout for output sanitization

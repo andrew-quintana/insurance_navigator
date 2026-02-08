@@ -120,7 +120,7 @@ class UnifiedNavigatorAgent(BaseAgent):
                     },
                     headers={
                         "Content-Type": "application/json",
-                        "Authorization": f"Bearer {self._anthropic_api_key}",
+                        "x-api-key": self._anthropic_api_key,
                         "anthropic-version": "2023-06-01"
                     }
                 )
