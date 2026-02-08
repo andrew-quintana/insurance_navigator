@@ -14,11 +14,7 @@ from typing import Dict, List, Optional, Set
 import httpx
 import os
 
-from ..models import (
-    OutputSanitationResult,
-    UnifiedNavigatorState,
-    ToolType,
-)
+from ..models import OutputSanitationResult, UnifiedNavigatorState
 
 
 class OutputSanitizer:
@@ -63,17 +59,8 @@ class OutputSanitizer:
             "off_topic": "I'm focused on helping you with insurance and healthcare questions. Let me redirect you to insurance-related information that might be helpful.",
             "no_information": "I don't have specific information about that in my insurance knowledge base. Let me help you find relevant insurance information instead.",
             "general_help": "I'm here to help you navigate insurance and healthcare options. What specific insurance question can I assist you with?",
-            "insufficient_context": "I'd be happy to help with your insurance question, but I need a bit more context to provide the most accurate information.",
-            "tool_request_leak": "Based on the information we have, here's what I can share about your question.",
+            "insufficient_context": "I'd be happy to help with your insurance question, but I need a bit more context to provide the most accurate information."
         }
-        # Patterns that indicate the response is a tool request leaked as output (must not be shown to user)
-        self.tool_request_prefixes = (
-            "web_search for",
-            "rag_search for",
-            "quick_info for",
-            "combined for",
-            "access_strategy for",
-        )
         
         # Initialize HTTP client for LLM calls (minimal usage)
         self.http_client: Optional[httpx.AsyncClient] = None
@@ -93,53 +80,6 @@ class OutputSanitizer:
             )
             self.anthropic_model = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
     
-    def _looks_like_tool_request(self, response: str) -> bool:
-        """True if response looks like an internal tool request leaked as user output."""
-        r = response.strip().lower()
-        return any(r.startswith(p) for p in self.tool_request_prefixes)
-
-    def _build_brief_context_from_state(self, state: UnifiedNavigatorState, max_chars: int = 500) -> str:
-        """Build a short summary from gathered context in state for use when replacing leaked tool requests."""
-        parts: List[str] = []
-        for tool_result in (state.get("tool_results") or []):
-            try:
-                success = getattr(tool_result, "success", None)
-                if success is False:
-                    continue
-                result = getattr(tool_result, "result", None)
-                tool_type = getattr(tool_result, "tool_type", None)
-                if not result:
-                    continue
-                # Support both Pydantic models and dicts
-                if tool_type in (ToolType.QUICK_INFO, "quick_info"):
-                    sections = result.get("relevant_sections", []) if isinstance(result, dict) else getattr(result, "relevant_sections", None) or []
-                    for s in (sections or [])[:2]:
-                        content = ((s.get("content") if isinstance(s, dict) else getattr(s, "content", None)) or "")[:200]
-                        if content:
-                            parts.append(content)
-                elif tool_type in (ToolType.WEB_SEARCH, "web_search"):
-                    results = result.get("results", []) if isinstance(result, dict) else getattr(result, "results", None) or []
-                    for r in (results or [])[:2]:
-                        desc = (r.get("description") or r.get("title") or "")[:150] if isinstance(r, dict) else (getattr(r, "description", None) or getattr(r, "title", None) or "")[:150]
-                        if desc:
-                            parts.append(desc)
-                elif tool_type in (ToolType.RAG_SEARCH, "rag_search"):
-                    chunks = result.get("chunks", []) if isinstance(result, dict) else getattr(result, "chunks", None) or []
-                    for c in (chunks or [])[:2]:
-                        content = (c.get("content", "") if isinstance(c, dict) else getattr(c, "content", None) or "")[:200]
-                        if content:
-                            parts.append(content)
-            except Exception:
-                continue
-            if len(" ".join(parts)) >= max_chars:
-                break
-        if state.get("llm_context"):
-            parts.append((state["llm_context"] or "")[:200])
-        summary = " ".join(parts).strip()
-        if not summary:
-            return ""
-        return summary if len(summary) <= max_chars else summary[: max_chars - 3] + "..."
-
     async def sanitize_output(self, state: UnifiedNavigatorState, response: str) -> UnifiedNavigatorState:
         """
         Main entry point for output sanitization.
@@ -154,24 +94,6 @@ class OutputSanitizer:
         start_time = time.time()
         
         try:
-            # Stage 0: If response looks like a leaked tool request, replace with context-based answer
-            if self._looks_like_tool_request(response):
-                brief = self._build_brief_context_from_state(state)
-                if brief:
-                    sanitized_response = f"{self.response_templates['tool_request_leak']} {brief}"
-                else:
-                    sanitized_response = self.response_templates["insufficient_context"]
-                state["output_sanitation"] = OutputSanitationResult(
-                    sanitized_response=sanitized_response,
-                    was_modified=True,
-                    confidence_score=0.9,
-                    processing_time_ms=(time.time() - start_time) * 1000,
-                    warnings=["Replaced leaked tool request with context-based response"],
-                )
-                state["final_response"] = sanitized_response
-                self.logger.info("Output sanitization: replaced tool-request leak with context-based response")
-                return state
-
             # Stage 1: Template-based sanitization (fast)
             template_result = self._apply_template_sanitization(response)
             

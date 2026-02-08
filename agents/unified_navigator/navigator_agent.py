@@ -433,17 +433,33 @@ Tools already used: {tools_summary}
 
 User Context:{doc_context if doc_context else " No policy documents uploaded."}
 
-OUTPUT FORMAT — you must use exactly one of these two forms, nothing else:
+AVAILABLE TOOLS (you can request these by name when asking for more context):
+- quick_info — keyword search over the user's uploaded documents
+- rag_search — deep semantic search over the user's uploaded documents
+- web_search — live internet search (use for general definitions, terminology, industry classifications)
+- access_strategy — multi-source strategic analysis
+- combined — multiple strategies together
 
-1. To answer the user: start your message with "RESPONSE:" then write your answer in plain language. This is what the user will see. When you use RESPONSE:, you are connected directly to the user. You must provide an answer using the Gathered Context above—summarize or paraphrase what is in the context; do not output tool names, search requests (e.g. "web_search for...", "rag_search for..."), or any internal instructions. Only output a helpful answer grounded in the context.
-2. To ask for more context (only if current context is genuinely insufficient): start with "NEED_CONTEXT:" then in one line say which source and what to get. Do not add any text before NEED_CONTEXT: or the system may show it to the user.
+When requesting more context, specify which tool to use. For general terminology or definition questions (e.g., "What is standard vs non-standard imaging?"), request web_search to get definitions and classifications from the internet. Only request rag_search or quick_info when the missing information is about the user's own policy or you need examples from their documents.
 
-Guidelines for your answer when you use RESPONSE:
-- You must use the Gathered Context above to form your answer. Never output a line that looks like a search request or tool instruction; the user will see it. If context is thin, still answer from what you have (e.g. a short summary or "Based on what we have...") rather than outputting a request.
-- Provide a clear, helpful response focused on insurance and healthcare navigation. Reference specific information from the context when available.
-- If the user has uploaded documents, ground your answer in what was found in their documents. If you include examples (e.g., deductibles, coverage scenarios), they must come from the gathered context—do not invent examples. If the user has documents but the context has no document excerpts and you need examples, use NEED_CONTEXT to request rag_search or quick_info for their policy.
-- For general definitions (e.g. "what is a copay?"), use the context provided; if definitions are missing, request NEED_CONTEXT: web_search for [topic]. For user-specific details (their plan, their deductible), request NEED_CONTEXT: rag_search or quick_info.
-- Stay professional. Do not provide medical diagnoses or treatment recommendations."""
+DECISION: First, decide if you have enough context to provide a helpful, accurate answer.
+
+If YES — write your final response directly. Start your response with "RESPONSE:" followed by your answer.
+
+If NO — request additional context. Your response must begin with exactly "NEED_CONTEXT:" (no preamble or explanation before it), then which tool and what to look for. Examples:
+- NEED_CONTEXT: web_search for general definitions of standard vs non-standard imaging procedures and how plans classify them
+- NEED_CONTEXT: rag_search for user's policy coverage of imaging and prior authorization rules
+Only request more context if the current context is genuinely insufficient — do not request more just to be thorough. Do not output any text before "NEED_CONTEXT:" or the system will show your request to the user instead of gathering more context.
+
+Guidelines for your response:
+1. Provide a clear, helpful response focused on insurance and healthcare navigation
+2. Reference specific information from the context when available
+3. If the user has uploaded documents, ground your answer in what was found in their documents
+4. If you plan to include examples (e.g., sample deductibles, coverage scenarios), ensure you have information from the user's documents in the gathered context. Do not invent or assume examples—only use examples that come from the context provided. If the user has documents but the context has no document excerpts, request more context (NEED_CONTEXT) so the response can be grounded in their policy.
+5. For general definition/terminology questions ("what is X?", "X vs Y?"), prefer requesting web_search so definitions and industry classifications come from the internet; request rag_search or quick_info only when the question is about the user's specific plan or you need examples from their policy.
+6. Stay professional and focused on insurance topics
+7. Keep response concise but comprehensive
+8. Do NOT provide medical diagnoses, treatment recommendations, or healthcare decisions"""
 
         # Time-based status messages during Sonnet generation
         timed_messages = [
@@ -515,21 +531,18 @@ Guidelines for your answer when you use RESPONSE:
             # Extract feedback from after NEED_CONTEXT: (rest of response or to next newline)
             idx = response_stripped.find(need_context_marker)
             feedback = response_stripped[idx + len(need_context_marker):].strip()
+            # If model added multiple lines, take the first line or full paragraph
             if "\n" in feedback:
                 feedback = feedback.split("\n")[0].strip()
             self.logger.info(f"Response agent requests more context: {feedback}")
             return False, feedback, None
-        # Strip "RESPONSE:" prefix if present
-        final = response_stripped
-        if final.startswith("RESPONSE:"):
-            final = final[len("RESPONSE:"):].strip()
-        # Safeguard: if model output looks like a tool request (no RESPONSE: and tool-name-like start), treat as feedback and loop back
-        tool_request_prefixes = ("web_search for", "rag_search for", "quick_info for", "combined for", "access_strategy for")
-        if not response_stripped.startswith("RESPONSE:") and any(final.lower().startswith(p) for p in tool_request_prefixes):
-            self.logger.warning(f"Response agent output looks like tool request; treating as NEED_CONTEXT: {final[:80]}...")
-            return False, final, None
-        self.logger.info(f"Response agent generated final response ({len(final)} chars)")
-        return True, final, None
+        else:
+            # Strip "RESPONSE:" prefix if present
+            final = response_stripped
+            if final.startswith("RESPONSE:"):
+                final = final[len("RESPONSE:"):].strip()
+            self.logger.info(f"Response agent generated final response ({len(final)} chars)")
+            return True, final, None
     
     async def execute(self, input_data: UnifiedNavigatorInput) -> UnifiedNavigatorOutput:
         """
