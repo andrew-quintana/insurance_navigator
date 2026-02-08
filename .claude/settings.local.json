@@ -14,7 +14,8 @@
       "Bash(env)",
       "Bash(export:*)",
       "Bash(npm run build:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []

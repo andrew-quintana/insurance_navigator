@@ -187,10 +187,10 @@ asyncio.run(test_db())
 "
 ```
 
-### Frontend Build Test
+### Frontend Build & TypeScript Validation
 
 ```bash
-# Test frontend build process
+# Complete frontend build test (includes TypeScript validation)
 cd ui
 npm run build
 ```
@@ -199,7 +199,23 @@ npm run build
 ```
 ✓ Compiled successfully in X.Xs
    Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (X/X) ...
 ```
+
+**TypeScript Validation:**
+```bash
+# Standalone TypeScript check (faster for development)
+cd ui
+npm run type-check
+
+# Lint check only
+npm run lint
+```
+
+**⚠️ Build Warnings to Ignore:**
+- `⚠ You are using a non-standard "NODE_ENV" value` - Safe to ignore in development
+- Minor Html import warnings in Next.js - Don't affect functionality
 
 ### Comprehensive API Integration Test
 
@@ -266,6 +282,39 @@ cd ui && npm run build
 cd ui && npm run type-check
 ```
 
+### 🚀 Vercel Deployment Readiness
+
+Before deploying to Vercel, ensure these checks pass:
+
+```bash
+# 1. Production build test (simulates Vercel build environment)
+cd ui
+NODE_ENV=production npm run build
+
+# 2. TypeScript strict mode compliance
+npm run type-check
+
+# 3. Dependency validation
+npm run validate:deps
+
+# 4. Lint compliance
+npm run lint
+```
+
+**Pre-deployment Checklist:**
+- ✅ `npm run build` completes without errors
+- ✅ No TypeScript strict mode violations
+- ✅ No critical ESLint violations
+- ✅ All environment variables configured
+- ✅ Backend API health check passes
+- ✅ Database migrations applied
+
+**Vercel-specific Notes:**
+- Build warnings about `NODE_ENV` are safe to ignore
+- Minor Next.js Html import warnings don't prevent deployment
+- Ensure all TypeScript `any` types are replaced with proper interfaces
+- React hook dependency warnings should be resolved
+
 ## 🚨 Troubleshooting
 
 ### Common Issues & Solutions
@@ -300,21 +349,43 @@ lsof -ti:8000 | xargs kill -9
 lsof -ti:3000 | xargs kill -9
 ```
 
-#### 3. Frontend Build Failures
+#### 3. TypeScript & Frontend Build Failures
 
-**Error:** TypeScript compilation errors
+**Error:** `Type error: 'X' is possibly 'undefined'`
 
 **Solution:**
 ```bash
 cd ui
-# Check for linting errors
-npm run lint
-
-# Fix auto-fixable issues
-npm run lint:fix
-
-# Check types specifically
+# Check for specific TypeScript errors
 npm run type-check
+
+# Run build to see all compilation issues
+npm run build
+```
+
+**Common TypeScript Issues:**
+
+1. **Undefined Properties:**
+   - Add null checks: `if (!object.property) return;`
+   - Use optional chaining: `object?.property`
+   - Provide defaults: `object.property || 'default'`
+
+2. **React Hook Dependencies:**
+   - Wrap static data in `useMemo(() => [...], [])`
+   - Use refs for circular dependencies: `const ref = useRef(value)`
+
+3. **WebSocket Message Types:**
+   - Define proper interfaces for message structure
+   - Add type guards: `if (message.type === 'expected') { ... }`
+
+**Error:** Build succeeds but warnings about dependency arrays
+
+**Solution:**
+```bash
+# Check ESLint React hooks rules
+npm run lint -- --fix
+
+# Look for circular dependencies in useCallback/useEffect
 ```
 
 #### 4. API Import Errors

@@ -214,6 +214,87 @@ def run_api_integration_test():
         return True
 
 
+def check_typescript_build():
+    """Validate TypeScript build and type checking."""
+    print("🔧 Testing TypeScript Build & Type Validation...")
+    
+    # Check if ui directory exists
+    if not os.path.exists("ui"):
+        print("⚠️  Frontend ui directory not found - skipping TypeScript validation")
+        return True
+    
+    try:
+        # Change to ui directory
+        original_cwd = os.getcwd()
+        os.chdir("ui")
+        
+        print("  ├─ Running TypeScript type check...")
+        # Run type check
+        result = subprocess.run([
+            "npm", "run", "type-check"
+        ], capture_output=True, text=True, timeout=60)
+        
+        if result.returncode == 0:
+            print("  ✅ TypeScript type check passed")
+        else:
+            print(f"  ❌ TypeScript type check failed:")
+            print(f"     {result.stderr[:300]}...")
+            return False
+        
+        print("  ├─ Running ESLint validation...")
+        # Run lint check
+        result = subprocess.run([
+            "npm", "run", "lint"
+        ], capture_output=True, text=True, timeout=60)
+        
+        if result.returncode == 0:
+            print("  ✅ ESLint validation passed")
+        else:
+            # Lint warnings are acceptable, only fail on errors
+            if "error" in result.stdout.lower():
+                print(f"  ❌ ESLint errors found:")
+                print(f"     {result.stdout[:300]}...")
+                return False
+            else:
+                print("  ✅ ESLint validation passed (warnings ignored)")
+        
+        print("  ├─ Testing production build...")
+        # Run build test
+        result = subprocess.run([
+            "npm", "run", "build"
+        ], capture_output=True, text=True, timeout=180, env={
+            **os.environ,
+            "NODE_ENV": "production"
+        })
+        
+        if result.returncode == 0:
+            print("  ✅ Production build successful")
+            # Check for specific success indicators
+            if "✓ Compiled successfully" in result.stdout:
+                print("  ✅ Frontend ready for Vercel deployment")
+                return True
+            else:
+                print("  ⚠️  Build completed with warnings")
+                return True
+        else:
+            print(f"  ❌ Production build failed:")
+            print(f"     {result.stderr[:400]}...")
+            return False
+            
+    except subprocess.TimeoutExpired:
+        print("❌ TypeScript validation timed out")
+        return False
+    except FileNotFoundError:
+        print("⚠️  npm not found - ensure Node.js is installed")
+        return False
+    except Exception as e:
+        print(f"❌ TypeScript validation error: {e}")
+        return False
+    finally:
+        # Return to original directory
+        os.chdir(original_cwd)
+
+
 async def main():
     """Run all validation checks."""
     print("🚀 Insurance Navigator - Local Setup Validation")
@@ -243,6 +324,7 @@ async def main():
         ("Backend API Health", check_api_health),
         ("API Documentation", check_api_docs),
         ("Frontend Application", check_frontend),
+        ("TypeScript Build & Validation", check_typescript_build),
         ("API Integration Tests", run_api_integration_test),
     ]
     

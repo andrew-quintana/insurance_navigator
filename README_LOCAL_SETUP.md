@@ -33,8 +33,14 @@ python validate_local_setup.py
 # Run API integration tests  
 python test_api_endpoint_direct.py
 
-# Test frontend build
+# Test frontend build & TypeScript validation
 cd ui && npm run build
+
+# TypeScript-only validation (faster)
+cd ui && npm run type-check
+
+# Vercel deployment readiness check
+cd ui && NODE_ENV=production npm run build
 ```
 
 ## 🛑 Stop All Services
