@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { buildWebSocketUrl } from '../lib/api-config';
 import './WorkflowStatus.css';
 
 interface WorkflowStatusProps {
@@ -155,8 +156,7 @@ const WorkflowStatus: React.FC<WorkflowStatusProps> = ({
   const connectWebSocket = useCallback(() => {
     if (!workflowId || !userId) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/workflow/${workflowId}?user_id=${userId}`;
+    const wsUrl = buildWebSocketUrl(`/ws/workflow/${workflowId}`, { user_id: userId });
     
     const ws = new WebSocket(wsUrl);
 
