@@ -153,7 +153,17 @@ class UnifiedNavigatorAgent(BaseAgent):
     async def _call_sonnet(self, prompt: str, max_tokens: int = 2000) -> str:
         """Call Sonnet for high-quality response generation."""
         return await self._call_llm_async(prompt, max_tokens=max_tokens)
-    
+
+    async def _tool_selection_node(self, state: UnifiedNavigatorState) -> UnifiedNavigatorState:
+        """LangGraph node: run context gathering to select a tool."""
+        return await self._context_gathering_agent(state, feedback=None)
+
+    async def _response_generation_node(self, state: UnifiedNavigatorState) -> UnifiedNavigatorState:
+        """LangGraph node: generate final response from gathered context."""
+        is_sufficient, result, _ = await self._response_determination_agent(state)
+        state["final_response"] = result
+        return state
+
     def _build_workflow(self) -> StateGraph:
         """
         Build the LangGraph workflow with nodes and routing logic.
