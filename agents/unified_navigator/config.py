@@ -54,7 +54,7 @@ class UnifiedNavigatorConfig:
     """Main configuration for unified navigator agent."""
     
     # Model settings
-    anthropic_model: str = "claude-3-5-sonnet-20241022"
+    anthropic_model: str = "claude-sonnet-4-5-20250929"
     anthropic_api_key: Optional[str] = None
     
     # Tool selection weights
@@ -93,7 +93,7 @@ class UnifiedNavigatorConfig:
         brave_api_key = os.getenv("BRAVE_API_KEY")
         
         # Model selection
-        anthropic_model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
+        anthropic_model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
         
         # Performance settings
         overall_timeout = float(os.getenv("NAVIGATOR_TIMEOUT", "30.0"))

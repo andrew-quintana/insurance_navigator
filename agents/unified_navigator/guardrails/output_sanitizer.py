@@ -78,7 +78,7 @@ class OutputSanitizer:
                 },
                 timeout=5.0  # Short timeout for output sanitization
             )
-            self.anthropic_model = os.getenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307")
+            self.anthropic_model = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
     
     async def sanitize_output(self, state: UnifiedNavigatorState, response: str) -> UnifiedNavigatorState:
         """
