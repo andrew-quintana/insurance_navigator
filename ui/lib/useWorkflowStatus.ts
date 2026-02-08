@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { buildWebSocketUrl } from './api-config';
 
 interface WorkflowStatusUpdate {
   step: string;
@@ -88,8 +89,8 @@ export const useWorkflowStatus = (
     }
 
     try {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws/workflow/${workflowId}?user_id=${userId}`;
+      // Use centralized configuration to build WebSocket URL
+      const wsUrl = buildWebSocketUrl(`/ws/workflow/${workflowId}`, { user_id: userId });
       
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;

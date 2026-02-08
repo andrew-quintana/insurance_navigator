@@ -3,6 +3,9 @@
  * Handles all API communications with error handling and retry logic
  */
 
+// Import centralized API configuration
+import { API_CONFIG } from './api-config';
+
 // Types
 export interface ApiError {
   message: string;
@@ -26,14 +29,7 @@ export interface RequestConfig {
   cache?: RequestCache;
 }
 
-// Configuration
-const API_CONFIG = {
-  baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000',
-  version: process.env.NEXT_PUBLIC_API_VERSION || 'v1',
-  timeout: 30000, // 30 seconds
-  retries: 3,
-  retryDelay: 1000, // 1 second
-} as const;
+// Configuration now handled by centralized api-config module
 
 // Debug logging for production troubleshooting
 if (typeof window !== 'undefined') {
