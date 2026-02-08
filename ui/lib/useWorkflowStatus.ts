@@ -14,6 +14,13 @@ interface WorkflowStatusUpdate {
   timestamp: Date;
 }
 
+interface WebSocketMessage {
+  type: string;
+  status?: WorkflowStatusUpdate;
+  response?: string;
+  success?: boolean;
+}
+
 interface UseWorkflowStatusOptions {
   autoConnect?: boolean;
   reconnectAttempts?: number;
@@ -40,20 +47,37 @@ export const useWorkflowStatus = (
   } = options;
 
   // State management
-  const [status, setStatus] = useState(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [error, setError] = useState(null);
-  const [progress, setProgress] = useState(0);
-  const [currentStep, setCurrentStep] = useState(null);
-  const [completedSteps, setCompletedSteps] = useState(new Set());
+  const [status, setStatus] = useState<WorkflowStatusUpdate | null>(null);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<number>(0);
+  const [currentStep, setCurrentStep] = useState<string | null>(null);
+  const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
 
   // Refs for cleanup and reconnection
-  const wsRef = useRef(null);
-  const reconnectTimeoutRef = useRef(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectCountRef = useRef(0);
+  const connectRef = useRef<(() => void) | null>(null);
+  const handleMessageRef = useRef<((message: WebSocketMessage) => void) | null>(null);
+
+  // Handle reconnection
+  const scheduleReconnect = useCallback(() => {
+    if (reconnectCountRef.current >= reconnectAttempts) {
+      setError(`Failed to reconnect after ${reconnectAttempts} attempts`);
+      return;
+    }
+
+    reconnectCountRef.current++;
+    setError(`Reconnecting... (${reconnectCountRef.current}/${reconnectAttempts})`);
+
+    reconnectTimeoutRef.current = setTimeout(() => {
+      connectRef.current?.();
+    }, reconnectDelay);
+  }, [reconnectAttempts, reconnectDelay]);
 
   // Create WebSocket connection
-  const connect = useCallback(() => {
+  const connect = useCallback((): void => {
     if (!workflowId || !userId) {
       setError('Missing workflowId or userId');
       return;
@@ -80,7 +104,7 @@ export const useWorkflowStatus = (
       ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
-          handleMessage(message);
+          handleMessageRef.current?.(message);
         } catch (err) {
           console.error('Error parsing WebSocket message:', err);
           setError('Message parsing error');
@@ -101,33 +125,21 @@ export const useWorkflowStatus = (
       ws.onerror = (err) => {
         console.error('WorkflowStatus WebSocket error:', err);
         setError('Connection error');
-        onError(err);
+        onError('WebSocket connection error');
       };
 
     } catch (err) {
       console.error('Failed to create WebSocket connection:', err);
       setError('Failed to connect');
-      onError(err);
+      onError(err instanceof Error ? err : 'Failed to create WebSocket connection');
     }
-  }, [workflowId, userId, reconnectAttempts, onError, handleMessage, scheduleReconnect]);
+  }, [workflowId, userId, reconnectAttempts, onError, scheduleReconnect]);
 
-  // Handle reconnection
-  const scheduleReconnect = useCallback(() => {
-    if (reconnectCountRef.current >= reconnectAttempts) {
-      setError(`Failed to reconnect after ${reconnectAttempts} attempts`);
-      return;
-    }
-
-    reconnectCountRef.current++;
-    setError(`Reconnecting... (${reconnectCountRef.current}/${reconnectAttempts})`);
-
-    reconnectTimeoutRef.current = setTimeout(() => {
-      connect();
-    }, reconnectDelay);
-  }, [connect, reconnectAttempts, reconnectDelay]);
+  // Update ref to avoid circular dependency
+  connectRef.current = connect;
 
   // Handle incoming messages
-  const handleMessage = useCallback((message) => {
+  const handleMessage = useCallback((message: WebSocketMessage) => {
     switch (message.type) {
       case 'connection_confirmed':
         setStatus({
@@ -139,6 +151,8 @@ export const useWorkflowStatus = (
         break;
 
       case 'workflow_status':
+        if (!message.status) break;
+        
         const newStatus = {
           step: message.status.step,
           message: message.status.message,
@@ -179,7 +193,7 @@ export const useWorkflowStatus = (
         setCurrentStep('completed');
         setCompletedSteps(new Set(['sanitizing', 'determining', 'thinking', 'skimming', 'wording']));
         
-        onComplete(message.response, message.success);
+        onComplete(message.response || '', message.success || false);
         break;
 
       case 'ping':
@@ -193,6 +207,9 @@ export const useWorkflowStatus = (
         console.log('Unknown WebSocket message type:', message.type, message);
     }
   }, [onStatusUpdate, onComplete]);
+
+  // Update ref to avoid circular dependency
+  handleMessageRef.current = handleMessage;
 
   // Disconnect WebSocket
   const disconnect = useCallback(() => {

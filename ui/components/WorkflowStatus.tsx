@@ -5,7 +5,7 @@
  * with step indicators, progress bar, and status messages.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import './WorkflowStatus.css';
 
 interface WorkflowStatusProps {
@@ -24,6 +24,13 @@ interface WorkflowStatusData {
   timestamp: Date;
 }
 
+interface WebSocketMessage {
+  type: string;
+  status?: WorkflowStatusData;
+  response?: string;
+  success?: boolean;
+}
+
 const WorkflowStatus: React.FC<WorkflowStatusProps> = ({ 
   workflowId, 
   userId, 
@@ -40,8 +47,8 @@ const WorkflowStatus: React.FC<WorkflowStatusProps> = ({
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
   const [currentStep, setCurrentStep] = useState<string | null>(null);
 
-  // Define workflow steps and their display information
-  const workflowSteps = [
+  // Define workflow steps and their display information (memoized to prevent dependency changes)
+  const workflowSteps = useMemo(() => [
     {
       key: 'sanitizing',
       label: 'Input Sanitization',
@@ -77,7 +84,72 @@ const WorkflowStatus: React.FC<WorkflowStatusProps> = ({
       icon: '✍️',
       color: '#f59e0b'
     }
-  ];
+  ], []);
+
+  // Handle incoming WebSocket messages
+  const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
+    switch (message.type) {
+      case 'connection_confirmed':
+        setStatus({
+          step: 'connected',
+          message: 'Connected to workflow',
+          progress: 0,
+          timestamp: new Date()
+        });
+        break;
+
+      case 'workflow_status':
+        if (!message.status) break;
+        
+        const newStatus = {
+          step: message.status.step,
+          message: message.status.message,
+          progress: message.status.progress || 0,
+          timestamp: new Date(message.status.timestamp)
+        };
+        
+        setStatus(newStatus);
+        setProgress(newStatus.progress * 100);
+        setCurrentStep(newStatus.step);
+        
+        // Mark previous steps as completed
+        const stepIndex = workflowSteps.findIndex(s => s.key === newStatus.step);
+        if (stepIndex >= 0) {
+          setCompletedSteps(prev => {
+            const newSet = new Set(prev);
+            for (let i = 0; i < stepIndex; i++) {
+              newSet.add(workflowSteps[i].key);
+            }
+            return newSet;
+          });
+        }
+        break;
+
+      case 'workflow_complete':
+        setStatus({
+          step: 'completed',
+          message: 'Workflow completed successfully',
+          progress: 1,
+          timestamp: new Date()
+        });
+        
+        setProgress(100);
+        setCurrentStep('completed');
+        
+        // Mark all steps as completed
+        setCompletedSteps(new Set(workflowSteps.map(s => s.key)));
+        
+        onComplete(message.response || '', message.success || false);
+        break;
+
+      case 'ping':
+        // Heartbeat - no action needed
+        break;
+
+      default:
+        console.log('Unknown message type:', message.type);
+    }
+  }, [onComplete, workflowSteps]);
 
   // WebSocket connection management
   const connectWebSocket = useCallback(() => {
@@ -119,70 +191,7 @@ const WorkflowStatus: React.FC<WorkflowStatusProps> = ({
     };
 
     return ws;
-  }, [workflowId, userId, currentStep]);
-
-  // Handle incoming WebSocket messages
-  const handleWebSocketMessage = useCallback((message: { type: string; status?: WorkflowStatusData; response?: string; success?: boolean; [key: string]: any }) => {
-    switch (message.type) {
-      case 'connection_confirmed':
-        setStatus({
-          step: 'connected',
-          message: 'Connected to workflow',
-          progress: 0,
-          timestamp: new Date()
-        });
-        break;
-
-      case 'workflow_status':
-        const newStatus = {
-          step: message.status.step,
-          message: message.status.message,
-          progress: message.status.progress || 0,
-          timestamp: new Date(message.status.timestamp)
-        };
-        
-        setStatus(newStatus);
-        setProgress(newStatus.progress * 100);
-        setCurrentStep(newStatus.step);
-        
-        // Mark previous steps as completed
-        const stepIndex = workflowSteps.findIndex(s => s.key === newStatus.step);
-        if (stepIndex >= 0) {
-          setCompletedSteps(prev => {
-            const newSet = new Set(prev);
-            for (let i = 0; i < stepIndex; i++) {
-              newSet.add(workflowSteps[i].key);
-            }
-            return newSet;
-          });
-        }
-        break;
-
-      case 'workflow_complete':
-        setStatus({
-          step: 'completed',
-          message: 'Workflow completed successfully',
-          progress: 1,
-          timestamp: new Date()
-        });
-        
-        setProgress(100);
-        setCurrentStep('completed');
-        
-        // Mark all steps as completed
-        setCompletedSteps(new Set(workflowSteps.map(s => s.key)));
-        
-        onComplete(message.response, message.success);
-        break;
-
-      case 'ping':
-        // Heartbeat - no action needed
-        break;
-
-      default:
-        console.log('Unknown message type:', message.type);
-    }
-  }, [onComplete]);
+  }, [workflowId, userId, currentStep, handleWebSocketMessage]);
 
   // Initialize WebSocket connection
   useEffect(() => {
