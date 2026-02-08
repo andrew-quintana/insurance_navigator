@@ -446,10 +446,10 @@ DECISION: First, decide if you have enough context to provide a helpful, accurat
 
 If YES — write your final response directly. Start your response with "RESPONSE:" followed by your answer.
 
-If NO — request additional context. Your response must begin with exactly "NEED_CONTEXT:" (no preamble or explanation before it), then which tool and what to look for. Examples:
+If NO — request additional context. Start with "NEED_CONTEXT:" then say which tool to use and what to look for. Examples:
 - NEED_CONTEXT: web_search for general definitions of standard vs non-standard imaging procedures and how plans classify them
 - NEED_CONTEXT: rag_search for user's policy coverage of imaging and prior authorization rules
-Only request more context if the current context is genuinely insufficient — do not request more just to be thorough. Do not output any text before "NEED_CONTEXT:" or the system will show your request to the user instead of gathering more context.
+Only request more context if the current context is genuinely insufficient — do not request more just to be thorough.
 
 Guidelines for your response:
 1. Provide a clear, helpful response focused on insurance and healthcare navigation
@@ -524,16 +524,10 @@ Guidelines for your response:
         processing_time = (time.time() - start_time) * 1000
         state["node_timings"]["response_agent"] = state.get("node_timings", {}).get("response_agent", 0) + processing_time
 
-        # Parse the response (NEED_CONTEXT may appear at start or after a preamble)
+        # Parse the response
         response_stripped = response.strip()
-        need_context_marker = "NEED_CONTEXT:"
-        if need_context_marker in response_stripped:
-            # Extract feedback from after NEED_CONTEXT: (rest of response or to next newline)
-            idx = response_stripped.find(need_context_marker)
-            feedback = response_stripped[idx + len(need_context_marker):].strip()
-            # If model added multiple lines, take the first line or full paragraph
-            if "\n" in feedback:
-                feedback = feedback.split("\n")[0].strip()
+        if response_stripped.startswith("NEED_CONTEXT:"):
+            feedback = response_stripped[len("NEED_CONTEXT:"):].strip()
             self.logger.info(f"Response agent requests more context: {feedback}")
             return False, feedback, None
         else:
