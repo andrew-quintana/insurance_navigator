@@ -12,7 +12,7 @@ import os
 import time
 from typing import Any, Dict, List, Optional, Callable
 import httpx
-from datetime import datetime
+from datetime import datetime, timezone
 
 from langgraph.graph import StateGraph, END
 from agents.base_agent import BaseAgent
@@ -442,7 +442,7 @@ Response:"""
                 "workflow_context": input_data.workflow_context,
                 "workflow_id": workflow_id,
                 "node_timings": {},
-                "processing_start_time": datetime.now(datetime.timezone.utc),
+                "processing_start_time": datetime.now(timezone.utc),
                 "tool_results": [],
                 "tool_choice": None,
                 "input_safety": None,
