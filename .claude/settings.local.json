@@ -16,7 +16,8 @@
       "Bash(npm run build:*)",
       "Bash(chmod:*)",
       "Bash(echo:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []
