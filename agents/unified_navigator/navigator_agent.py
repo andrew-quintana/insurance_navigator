@@ -709,17 +709,25 @@ Response:"""
 
 Choose the single retrieval strategy that will surface the most relevant context for this question.
 
+ROUTING POLICY:
+- For general insurance questions (terminology, how insurance works, what a concept means): ALWAYS use quick_info first. If the user has policy documents, their plan will be used as real-world examples in the answer. This is the default for any insurance-related educational question.
+- For questions specifically about the user's own plan (their deductible, their coverage, their benefits, what they personally are covered for): use rag_search to do a deep semantic search of their uploaded documents.
+- For questions about OTHER insurance policies, plans, or carriers that the user does not have uploaded: use web_search.
+- For general healthcare questions (not insurance-specific) that are unlikely to be answered by the user's policy documents: use web_search.
+- For strategic planning questions about optimizing costs or navigating complex care situations: use access_strategy.
+- For complex multi-part questions that clearly require multiple sources: use combined.
+
 RETRIEVAL STRATEGIES:
 
-1. quick_info — Fast keyword lookup across general insurance reference material. Best for gathering context about generic insurance terminology and concepts (e.g. what a copay is, how deductibles work in general). Does NOT search the user's personal documents.
+1. quick_info — Fast keyword search over the user's documents. Use this as the default for general insurance questions. Even for generic concepts, this searches the user's own policy so the response can include real examples from their plan.
 
-2. rag_search — Semantic search over the user's uploaded documents. Best for gathering context from the user's actual policy — their specific coverage details, benefit amounts, plan rules, provider requirements, claims processes, or anything that would be written in their plan documents.
+2. rag_search — Deep semantic search over the user's uploaded documents. Use this when the user is asking about their specific coverage, benefits, costs, or plan rules — questions whose answers live in their policy document.
 
-3. web_search — Live internet search. Best for gathering context about current events, regulations, medical procedure details, or external factual information that would not appear in any insurance policy document.
+3. web_search — Live internet search. Use this for questions about external topics: other insurance companies/plans, current regulations, medical procedure details, healthcare news, or factual information not found in any policy document.
 
-4. access_strategy — Deep research combining web search and document retrieval with strategic analysis. Best for gathering context when the user needs help planning an approach across multiple factors — minimizing costs, comparing care options, or navigating a complex situation.
+4. access_strategy — Deep research combining web search and document retrieval with strategic analysis. Use this when the user needs help planning an approach across multiple factors — minimizing costs, comparing care options, or navigating a complex situation.
 
-5. combined — Runs multiple retrieval strategies together. Best when the question clearly spans multiple context sources that a single strategy cannot cover alone.
+5. combined — Runs multiple retrieval strategies together. Use this ONLY when the question clearly requires context from multiple different sources that no single strategy can cover.
 
 DOCUMENTS AVAILABLE FOR THIS USER:
 {doc_section}
@@ -758,13 +766,13 @@ QUESTION: "{user_query}"
 
 USER HAS UPLOADED POLICY DOCUMENTS: {"Yes" if has_docs else "No"}
 
-STEP 1 — Does answering this question require information from the user's own insurance plan (their coverage, costs, benefits, deductible, copay, providers, or how to access a specific service under their plan)?
-  → If yes: choose "rag_search" to gather context from their policy documents.
+STEP 1 — Is this a general question about insurance concepts, terminology, or how insurance works?
+  → If yes: choose "quick_info". This searches the user's own documents so their plan can be used as examples, even for general questions.
 
-STEP 2 — Is this a generic insurance vocabulary or concept question with no reference to the user's personal plan?
-  → If yes: choose "quick_info" to gather definitional context.
+STEP 2 — Is this specifically about the user's OWN plan (their deductible, their coverage, their benefits, how they can access a service under their plan)?
+  → If yes: choose "rag_search" for deep semantic search of their policy documents.
 
-STEP 3 — Does this question need current external information (regulations, medical procedures, dates, or facts not found in any policy)?
+STEP 3 — Is this about OTHER insurance policies/carriers, current regulations, medical procedures, or healthcare facts not found in any policy document?
   → If yes: choose "web_search" to gather external context.
 
 STEP 4 — Is the user asking for strategic planning across multiple factors (cost optimization, care planning, benefit maximization)?
@@ -773,7 +781,7 @@ STEP 4 — Is the user asking for strategic planning across multiple factors (co
 STEP 5 — Does this question clearly need context from multiple different sources combined?
   → If yes: choose "combined".
 
-DEFAULT — If unclear: choose "rag_search".
+DEFAULT — If unclear: choose "quick_info".
 
 Respond with ONLY this JSON:
 {{"tool": "tool_name", "reasoning": "one sentence about what context this gathers", "confidence": 0.7}}"""
