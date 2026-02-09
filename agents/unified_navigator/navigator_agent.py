@@ -35,6 +35,7 @@ from .tools.access_strategy_tool import access_strategy_node
 from .tools.web_search import web_search_node
 from .tools.rag_search import rag_search_node, combined_search_node
 from .logging import get_workflow_logger, LLMInteraction
+from agents.shared.langfuse_client import create_trace, flush as langfuse_flush
 
 
 class UnifiedNavigatorAgent(BaseAgent):
@@ -99,7 +100,14 @@ class UnifiedNavigatorAgent(BaseAgent):
         
         return call_llm_sync
     
-    async def _call_llm_async(self, prompt: str, model: Optional[str] = None, max_tokens: int = 1000) -> str:
+    async def _call_llm_async(
+        self,
+        prompt: str,
+        model: Optional[str] = None,
+        max_tokens: int = 1000,
+        generation_name: Optional[str] = None,
+        langfuse_parent: Optional[Any] = None,
+    ) -> str:
         """
         Call Claude API using async httpx with rate limiting.
 
@@ -107,6 +115,8 @@ class UnifiedNavigatorAgent(BaseAgent):
             prompt: The prompt to send
             model: Model override (defaults to configured model, usually Sonnet)
             max_tokens: Max response tokens
+            generation_name: Name for the Langfuse generation (e.g. "context_agent_decide")
+            langfuse_parent: A Langfuse trace or span to attach the generation to
         """
         if self.mock or not hasattr(self, '_anthropic_api_key'):
             return "Mock response from unified navigator agent."
@@ -115,6 +125,7 @@ class UnifiedNavigatorAgent(BaseAgent):
         await self._anthropic_rate_limiter.acquire()
 
         use_model = model or self._anthropic_model
+        call_start = datetime.now(timezone.utc)
 
         try:
             if not hasattr(self, '_http_client') or self._http_client is None:
@@ -140,19 +151,64 @@ class UnifiedNavigatorAgent(BaseAgent):
                 raise Exception(f"Anthropic API error: {response.status_code}")
 
             result = response.json()
-            return result["content"][0]["text"]
+            text = result["content"][0]["text"]
+
+            # Record Langfuse generation
+            parent = langfuse_parent or getattr(self, "_current_trace", None)
+            if parent is not None:
+                try:
+                    usage = result.get("usage", {})
+                    parent.generation(
+                        name=generation_name or "llm_call",
+                        model=use_model,
+                        input=[{"role": "user", "content": prompt}],
+                        output=text,
+                        start_time=call_start,
+                        end_time=datetime.now(timezone.utc),
+                        usage={
+                            "input": usage.get("input_tokens", 0),
+                            "output": usage.get("output_tokens", 0),
+                        },
+                    )
+                except Exception as lf_err:
+                    self.logger.debug("Langfuse generation recording failed: %s", lf_err)
+
+            return text
 
         except Exception as e:
             self.logger.error(f"LLM call failed: {e}")
             return f"I apologize, but I'm having trouble processing your request right now. Error: {str(e)}"
 
-    async def _call_haiku(self, prompt: str, max_tokens: int = 500) -> str:
+    async def _call_haiku(
+        self,
+        prompt: str,
+        max_tokens: int = 500,
+        generation_name: Optional[str] = None,
+        langfuse_parent: Optional[Any] = None,
+    ) -> str:
         """Call Haiku for fast, cheap operations like routing."""
-        return await self._call_llm_async(prompt, model="claude-haiku-4-5-20251001", max_tokens=max_tokens)
+        return await self._call_llm_async(
+            prompt,
+            model="claude-haiku-4-5-20251001",
+            max_tokens=max_tokens,
+            generation_name=generation_name,
+            langfuse_parent=langfuse_parent,
+        )
 
-    async def _call_sonnet(self, prompt: str, max_tokens: int = 2000) -> str:
+    async def _call_sonnet(
+        self,
+        prompt: str,
+        max_tokens: int = 2000,
+        generation_name: Optional[str] = None,
+        langfuse_parent: Optional[Any] = None,
+    ) -> str:
         """Call Sonnet for high-quality response generation."""
-        return await self._call_llm_async(prompt, max_tokens=max_tokens)
+        return await self._call_llm_async(
+            prompt,
+            max_tokens=max_tokens,
+            generation_name=generation_name,
+            langfuse_parent=langfuse_parent,
+        )
 
     async def _tool_selection_node(self, state: UnifiedNavigatorState) -> UnifiedNavigatorState:
         """LangGraph node: run context gathering to select a tool."""
@@ -235,6 +291,15 @@ class UnifiedNavigatorAgent(BaseAgent):
         """
         start_time = time.time()
 
+        # Create a Langfuse span for this phase
+        trace = state.get("langfuse_trace")
+        span = None
+        if trace:
+            try:
+                span = trace.span(name="context_gathering", input={"feedback": feedback})
+            except Exception:
+                pass
+
         try:
             self.workflow_logger.log_workflow_step(
                 step="determining",
@@ -252,12 +317,12 @@ class UnifiedNavigatorAgent(BaseAgent):
                 return state
 
             try:
-                selected_tool, reasoning, confidence = await self._context_agent_decide(state, feedback)
+                selected_tool, reasoning, confidence = await self._context_agent_decide(state, feedback, langfuse_parent=span or trace)
                 self.logger.info(f"Context agent selected: {selected_tool} — {reasoning}")
             except Exception as e:
                 self.logger.warning(f"Context agent primary failed: {e}, trying fallback")
                 try:
-                    selected_tool, reasoning, confidence = await self._fallback_routing_llm(state)
+                    selected_tool, reasoning, confidence = await self._fallback_routing_llm(state, langfuse_parent=span or trace)
                     self.logger.info(f"Fallback router selected: {selected_tool} — {reasoning}")
                 except Exception as fallback_err:
                     self.logger.warning(f"Fallback also failed: {fallback_err}, defaulting to quick_info")
@@ -278,13 +343,24 @@ class UnifiedNavigatorAgent(BaseAgent):
             
             processing_time = (time.time() - start_time) * 1000
             state["node_timings"]["tool_selector"] = processing_time
-            
+
             self.logger.info(f"Tool selection: {selected_tool} (confidence: {confidence:.2f}) in {processing_time:.1f}ms")
-            
+
+            if span:
+                try:
+                    span.end(output={"tool": str(selected_tool), "confidence": confidence})
+                except Exception:
+                    pass
+
             return state
-            
+
         except Exception as e:
             self.logger.error(f"Tool selection error: {e}")
+            if span:
+                try:
+                    span.end(output={"error": str(e)})
+                except Exception:
+                    pass
             # Default fallback
             state["tool_choice"] = ToolSelection(
                 selected_tool=ToolType.RAG_SEARCH,
@@ -405,6 +481,15 @@ class UnifiedNavigatorAgent(BaseAgent):
         """
         start_time = time.time()
 
+        # Create a Langfuse span for this phase
+        trace = state.get("langfuse_trace")
+        resp_span = None
+        if trace:
+            try:
+                resp_span = trace.span(name="response_determination")
+            except Exception:
+                pass
+
         self.workflow_logger.log_workflow_step(
             step="wording",
             message="Evaluating gathered context",
@@ -421,7 +506,18 @@ class UnifiedNavigatorAgent(BaseAgent):
         tools_summary = ", ".join(tools_used) if tools_used else "none"
         has_llm_context = bool(state.get("llm_context"))
 
+        # Format conversation history for the prompt
+        history_section = ""
+        history = state.get("conversation_history")
+        if history:
+            history_lines = []
+            for msg in history:
+                role = msg.get("role", "user").capitalize()
+                history_lines.append(f"{role}: {msg.get('content', '')}")
+            history_section = "\n\nConversation History (most recent messages):\n" + "\n".join(history_lines)
+
         prompt = f"""You are an insurance navigation assistant. You have been given context gathered from various sources to answer the user's question.
+{history_section}
 
 User Question: {state["user_query"]}
 
@@ -445,7 +541,12 @@ Guidelines for your response:
 3. If the user has uploaded documents, ground your answer in what was found in their documents
 4. Stay professional and focused on insurance topics
 5. Keep response concise but comprehensive
-6. Do NOT provide medical diagnoses, treatment recommendations, or healthcare decisions"""
+6. Do NOT provide medical diagnoses, treatment recommendations, or healthcare decisions
+7. If conversation history is provided, use it for context (resolve references like "that", "it", etc.) but do NOT repeat information already given
+
+After your response, on a new line, output exactly:
+FOLLOW_UPS:
+Then list 2-3 brief suggested follow-up questions the user might want to ask next, one per line, prefixed with "- ". Make them specific to what was just discussed."""
 
         # Time-based status messages during Sonnet generation
         timed_messages = [
@@ -480,7 +581,11 @@ Guidelines for your response:
 
         timer_task = asyncio.create_task(_send_timed_updates())
         try:
-            response = await self._call_sonnet(prompt)
+            response = await self._call_sonnet(
+                prompt,
+                generation_name="response_determination",
+                langfuse_parent=resp_span or trace,
+            )
         finally:
             timer_task.cancel()
             try:
@@ -515,13 +620,37 @@ Guidelines for your response:
         if response_stripped.startswith("NEED_CONTEXT:"):
             feedback = response_stripped[len("NEED_CONTEXT:"):].strip()
             self.logger.info(f"Response agent requests more context: {feedback}")
+            if resp_span:
+                try:
+                    resp_span.end(output={"decision": "need_context", "feedback": feedback[:200]})
+                except Exception:
+                    pass
             return False, feedback, None
         else:
             # Strip "RESPONSE:" prefix if present
             final = response_stripped
             if final.startswith("RESPONSE:"):
                 final = final[len("RESPONSE:"):].strip()
-            self.logger.info(f"Response agent generated final response ({len(final)} chars)")
+
+            # Extract follow-up suggestions if present
+            followups = []
+            if "FOLLOW_UPS:" in final:
+                parts = final.split("FOLLOW_UPS:", 1)
+                final = parts[0].strip()
+                followup_text = parts[1].strip()
+                for line in followup_text.split("\n"):
+                    line = line.strip().lstrip("- ").strip()
+                    if line:
+                        followups.append(line)
+                followups = followups[:3]  # Cap at 3
+
+            state["suggested_followups"] = followups
+            self.logger.info(f"Response agent generated final response ({len(final)} chars) with {len(followups)} follow-ups")
+            if resp_span:
+                try:
+                    resp_span.end(output={"decision": "sufficient", "response_length": len(final)})
+                except Exception:
+                    pass
             return True, final, None
     
     async def execute(self, input_data: UnifiedNavigatorInput) -> UnifiedNavigatorOutput:
@@ -568,6 +697,17 @@ Guidelines for your response:
             except Exception as doc_check_err:
                 self.logger.warning(f"Could not check user documents: {doc_check_err}")
 
+            # Create Langfuse trace for this request
+            trace = create_trace(
+                name="insurance_navigator",
+                user_id=input_data.user_id,
+                session_id=input_data.session_id,
+                input=input_data.user_query,
+                metadata={"workflow_id": workflow_id},
+            )
+            # Store on self so _call_llm_async can find it as a fallback
+            self._current_trace = trace
+
             # Initialize workflow state
             state: UnifiedNavigatorState = {
                 "user_query": input_data.user_query,
@@ -577,13 +717,16 @@ Guidelines for your response:
                 "workflow_id": workflow_id,
                 "has_user_documents": has_user_documents,
                 "llm_context": None,
+                "conversation_history": input_data.conversation_history,
+                "suggested_followups": None,
                 "node_timings": {},
                 "processing_start_time": datetime.now(timezone.utc),
                 "tool_results": [],
                 "tool_choice": None,
                 "input_safety": None,
                 "final_response": None,
-                "output_sanitation": None
+                "output_sanitation": None,
+                "langfuse_trace": trace,
             }
 
             # Step 1: Input guardrail
@@ -662,18 +805,62 @@ Guidelines for your response:
                 }
             )
             
+            # Finalize Langfuse trace with output and scores
+            if trace:
+                try:
+                    trace.update(output=state.get("final_response", ""))
+
+                    # Score: input safety confidence
+                    if state.get("input_safety"):
+                        trace.score(name="input_safety_confidence", value=state["input_safety"].confidence_score)
+
+                    # Score: tool selection confidence
+                    if state.get("tool_choice"):
+                        trace.score(name="tool_selection_confidence", value=state["tool_choice"].confidence_score)
+
+                    # Score: response success (binary)
+                    trace.score(
+                        name="response_success",
+                        value=1.0 if bool(state.get("final_response") and not state.get("error_message")) else 0.0,
+                    )
+
+                    # Score: output was sanitized (binary)
+                    if state.get("output_sanitation"):
+                        trace.score(
+                            name="output_was_sanitized",
+                            value=1.0 if state["output_sanitation"].was_modified else 0.0,
+                        )
+
+                    # Score: total processing time
+                    trace.score(name="total_processing_time_ms", value=total_time)
+                except Exception as lf_err:
+                    self.logger.debug("Langfuse trace finalization failed: %s", lf_err)
+
+                langfuse_flush()
+            self._current_trace = None
+
             # Create output
             output = self._create_output(state)
-            
+
             self.logger.info(f"Unified navigator completed in {total_time:.1f}ms")
             return output
-            
+
         except Exception as e:
             import traceback
             self.logger.error(f"Unified navigator execution failed: {e}")
             self.logger.error(f"Traceback: {traceback.format_exc()}")
             total_time = (time.time() - start_time) * 1000
-            
+
+            # Finalize Langfuse trace on error
+            if getattr(self, "_current_trace", None):
+                try:
+                    self._current_trace.update(output=f"ERROR: {e}")
+                    self._current_trace.score(name="response_success", value=0.0)
+                except Exception:
+                    pass
+                langfuse_flush()
+            self._current_trace = None
+
             # Create error output
             return UnifiedNavigatorOutput(
                 response="I apologize, but I encountered an error processing your request. Please try again.",
@@ -771,7 +958,17 @@ Guidelines for your response:
 
         return selected_tool, reasoning, min(max(confidence, 0.0), 1.0)
 
-    async def _context_agent_decide(self, state: UnifiedNavigatorState, feedback: Optional[str] = None) -> tuple[ToolType, str, float]:
+    def _format_history_for_routing(self, state: UnifiedNavigatorState) -> str:
+        """Format conversation history as a compact string for the routing prompt."""
+        history = state.get("conversation_history")
+        if not history:
+            return ""
+        # Show last few exchanges to keep the routing prompt small
+        recent = history[-6:]
+        lines = [f"{m.get('role', 'user').capitalize()}: {m.get('content', '')}" for m in recent]
+        return "\nRecent conversation context:\n" + "\n".join(lines) + "\n"
+
+    async def _context_agent_decide(self, state: UnifiedNavigatorState, feedback: Optional[str] = None, langfuse_parent: Optional[Any] = None) -> tuple[ToolType, str, float]:
         """
         Context Gathering Agent decision (Haiku).
 
@@ -818,16 +1015,16 @@ DOCUMENTS AVAILABLE FOR THIS USER:
 {feedback_section}
 
 USER QUERY: "{user_query}"
-
+{self._format_history_for_routing(state)}
 Respond with ONLY this JSON:
 {{"tool": "tool_name", "reasoning": "brief explanation", "confidence": 0.85}}
 
 Where tool_name is one of: quick_info, web_search, rag_search, access_strategy, combined, no_tool"""
 
-        llm_response = await self._call_haiku(prompt)
+        llm_response = await self._call_haiku(prompt, generation_name="context_agent_decide", langfuse_parent=langfuse_parent)
         return self._parse_tool_selection_response(llm_response)
 
-    async def _fallback_routing_llm(self, state: UnifiedNavigatorState) -> tuple[ToolType, str, float]:
+    async def _fallback_routing_llm(self, state: UnifiedNavigatorState, langfuse_parent: Optional[Any] = None) -> tuple[ToolType, str, float]:
         """
         Fallback routing LLM (Haiku) with step-by-step reasoning.
 
@@ -871,9 +1068,9 @@ DEFAULT — choose "quick_info"
 Respond with ONLY this JSON:
 {{"tool": "tool_name", "reasoning": "one sentence", "confidence": 0.7}}"""
 
-        llm_response = await self._call_haiku(prompt)
+        llm_response = await self._call_haiku(prompt, generation_name="fallback_routing", langfuse_parent=langfuse_parent)
         return self._parse_tool_selection_response(llm_response)
-    
+
     def _create_output(self, state: UnifiedNavigatorState) -> UnifiedNavigatorOutput:
         """
         Create output from final workflow state.
@@ -921,6 +1118,7 @@ Respond with ONLY this JSON:
             total_processing_time_ms=state.get("total_processing_time_ms") or 0,
             error_message=state.get("error_message"),
             warnings=state.get("output_sanitation").warnings if state.get("output_sanitation") else [],
+            suggested_followups=state.get("suggested_followups") or [],
             session_id=state.get("session_id"),
             user_id=state.get("user_id"),
             workflow_id=state.get("workflow_id")

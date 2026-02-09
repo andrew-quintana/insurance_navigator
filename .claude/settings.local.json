@@ -16,12 +16,9 @@
       "Bash(npm run build:*)",
       "Bash(chmod:*)",
       "Bash(echo:*)",
-<<<<<<< HEAD
       "Bash(npx tsc:*)",
-      "Bash(node:*)"
-=======
-      "Bash(npx tsc:*)"
->>>>>>> 12fee8c64b6be40ef5a99a965e8bf3dabcb1ba08
+      "Bash(node:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

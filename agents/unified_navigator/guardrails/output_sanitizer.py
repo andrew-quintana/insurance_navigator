@@ -10,7 +10,8 @@ import asyncio
 import logging
 import re
 import time
-from typing import Dict, List, Optional, Set
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Set
 import httpx
 import os
 
@@ -106,7 +107,7 @@ class OutputSanitizer:
                 
             elif template_result["is_problematic"] and self.http_client:
                 # Stage 2: LLM sanitization for edge cases
-                llm_result = await self._llm_sanitize(response)
+                llm_result = await self._llm_sanitize(response, langfuse_trace=state.get("langfuse_trace"))
                 sanitized_response = llm_result.get("sanitized_response", response)
                 was_modified = llm_result.get("was_modified", False)
                 confidence_score = llm_result.get("confidence_score", 0.8)
@@ -132,7 +133,18 @@ class OutputSanitizer:
             
             # Update final response
             state["final_response"] = sanitized_response
-            
+
+            # Record output sanitization score in Langfuse
+            langfuse_trace = state.get("langfuse_trace")
+            if langfuse_trace:
+                try:
+                    langfuse_trace.score(
+                        name="output_was_sanitized",
+                        value=1.0 if was_modified else 0.0,
+                    )
+                except Exception:
+                    pass
+
             self.logger.info(f"Output sanitization completed in {processing_time:.1f}ms, modified: {was_modified}")
             
             return state
@@ -215,13 +227,14 @@ class OutputSanitizer:
             "is_problematic": False
         }
     
-    async def _llm_sanitize(self, response: str) -> Dict[str, any]:
+    async def _llm_sanitize(self, response: str, langfuse_trace: Optional[Any] = None) -> Dict[str, any]:
         """
         LLM-based sanitization for edge cases.
-        
+
         Args:
             response: Response to sanitize
-            
+            langfuse_trace: Optional Langfuse trace to attach a generation to
+
         Returns:
             Dict with sanitization results
         """
@@ -232,7 +245,9 @@ class OutputSanitizer:
                 "confidence_score": 0.5,
                 "warnings": ["No LLM available for sanitization"]
             }
-        
+
+        call_start = datetime.now(timezone.utc)
+
         try:
             prompt = f"""Review this response from an insurance navigation assistant for appropriateness and relevance:
 
@@ -258,31 +273,50 @@ Respond in JSON format:
                 "max_tokens": 300,
                 "messages": [{"role": "user", "content": prompt}]
             }
-            
+
             response_obj = await self.http_client.post(
                 "https://api.anthropic.com/v1/messages",
                 json=payload
             )
-            
+
             if response_obj.status_code != 200:
                 raise Exception(f"Anthropic API error: {response_obj.status_code}")
-            
+
             result = response_obj.json()
             content = result["content"][0]["text"]
-            
+
+            # Record Langfuse generation
+            if langfuse_trace:
+                try:
+                    usage = result.get("usage", {})
+                    langfuse_trace.generation(
+                        name="output_llm_sanitize",
+                        model=self.anthropic_model,
+                        input=[{"role": "user", "content": prompt}],
+                        output=content,
+                        start_time=call_start,
+                        end_time=datetime.now(timezone.utc),
+                        usage={
+                            "input": usage.get("input_tokens", 0),
+                            "output": usage.get("output_tokens", 0),
+                        },
+                    )
+                except Exception:
+                    pass
+
             # Parse JSON response
             import json
             try:
                 llm_result = json.loads(content)
                 was_modified = llm_result.get("sanitized_response", response) != response
-                
+
                 return {
                     "sanitized_response": llm_result.get("sanitized_response", response),
                     "was_modified": was_modified,
                     "confidence_score": llm_result.get("confidence", 0.8),
                     "warnings": [llm_result.get("reasoning", "LLM sanitization applied")] if was_modified else []
                 }
-                
+
             except json.JSONDecodeError:
                 # Fallback - assume response is acceptable
                 return {
@@ -291,7 +325,7 @@ Respond in JSON format:
                     "confidence_score": 0.7,
                     "warnings": ["LLM response parsing failed"]
                 }
-                
+
         except Exception as e:
             self.logger.error(f"LLM sanitization error: {e}")
             return {

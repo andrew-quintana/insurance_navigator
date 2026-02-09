@@ -969,6 +969,7 @@ async def chat_with_agent(
         user_language = data.get("user_language", "auto")
         context = data.get("context", {})
         workflow_id = data.get("workflow_id")
+        conversation_history = data.get("conversation_history")
         
         if not message:
             raise HTTPException(
@@ -1033,6 +1034,7 @@ async def chat_with_agent(
                 "api_request": True
             },
             workflow_id=workflow_id,
+            conversation_history=conversation_history,
         )
         
         # Process message through the unified navigator
@@ -1116,6 +1118,7 @@ async def chat_with_agent(
             "response": content,  # For backward compatibility
             "conversation_id": conversation_id or f"conv_{int(time.time())}",
             "workflow_id": response.workflow_id,  # For WebSocket connection
+            "suggested_followups": response.suggested_followups or [],
             "timestamp": datetime.now().isoformat(),
             "metadata": {
                 "processing_time": processing_time,

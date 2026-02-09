@@ -12,7 +12,8 @@ import asyncio
 import logging
 import re
 import time
-from typing import Dict, List, Optional, Set
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Set
 import httpx
 import os
 
@@ -136,7 +137,7 @@ class InputSanitizer:
             
             # Stage 2: LLM-based validation for uncertain cases
             if self.http_client and fast_check.needs_llm_check:
-                llm_check = await self._llm_safety_check(state["user_query"])
+                llm_check = await self._llm_safety_check(state["user_query"], langfuse_trace=state.get("langfuse_trace"))
                 
                 state["input_safety"] = InputSafetyResult(
                     is_safe=llm_check.is_safe,
@@ -171,8 +172,19 @@ class InputSanitizer:
                 if state["input_safety"].is_safe and self.http_client:
                     await self._improve_query_for_context_extraction(state)
             
+            # Record input safety score in Langfuse
+            langfuse_trace = state.get("langfuse_trace")
+            if langfuse_trace and state.get("input_safety"):
+                try:
+                    langfuse_trace.score(
+                        name="input_safety_confidence",
+                        value=state["input_safety"].confidence_score,
+                    )
+                except Exception:
+                    pass
+
             return state
-            
+
         except Exception as e:
             self.logger.error(f"Input sanitization error: {e}")
             # Fail safely - allow query but mark as uncertain
@@ -236,18 +248,20 @@ class InputSanitizer:
             processing_time_ms=(time.time() - start_time) * 1000
         )
     
-    async def _llm_safety_check(self, query: str) -> LLMSafetyCheck:
+    async def _llm_safety_check(self, query: str, langfuse_trace: Optional[Any] = None) -> LLMSafetyCheck:
         """
         LLM-based safety assessment for edge cases.
-        
+
         Args:
             query: User input query
-            
+            langfuse_trace: Optional Langfuse trace to attach a generation to
+
         Returns:
             LLMSafetyCheck result
         """
         start_time = time.time()
-        
+        call_start = datetime.now(timezone.utc)
+
         if not self.http_client:
             return LLMSafetyCheck(
                 is_safe=True,
@@ -256,7 +270,7 @@ class InputSanitizer:
                 confidence_score=0.5,
                 processing_time_ms=(time.time() - start_time) * 1000
             )
-        
+
         try:
             prompt = f"""Analyze this user query for safety and appropriateness for an insurance navigation assistant.
 
@@ -285,18 +299,37 @@ Respond in JSON format:
                 "max_tokens": 200,
                 "messages": [{"role": "user", "content": prompt}]
             }
-            
+
             response = await self.http_client.post(
                 "https://api.anthropic.com/v1/messages",
                 json=payload
             )
-            
+
             if response.status_code != 200:
                 raise Exception(f"Anthropic API error: {response.status_code}")
-            
+
             result = response.json()
             content = result["content"][0]["text"]
-            
+
+            # Record Langfuse generation
+            if langfuse_trace:
+                try:
+                    usage = result.get("usage", {})
+                    langfuse_trace.generation(
+                        name="input_llm_safety_check",
+                        model=self.anthropic_model,
+                        input=[{"role": "user", "content": prompt}],
+                        output=content,
+                        start_time=call_start,
+                        end_time=datetime.now(timezone.utc),
+                        usage={
+                            "input": usage.get("input_tokens", 0),
+                            "output": usage.get("output_tokens", 0),
+                        },
+                    )
+                except Exception:
+                    pass
+
             # Parse JSON response
             import json
             try:
@@ -319,7 +352,7 @@ Respond in JSON format:
                     confidence_score=0.7,
                     processing_time_ms=(time.time() - start_time) * 1000
                 )
-                
+
         except Exception as e:
             self.logger.error(f"LLM safety check error: {e}")
             # Fail safely - assume safe but low confidence
@@ -344,6 +377,8 @@ Respond in JSON format:
         if not query:
             return
         start_time = time.time()
+        call_start = datetime.now(timezone.utc)
+        langfuse_trace = state.get("langfuse_trace")
         try:
             prompt = f"""You are helping prepare a user's question for an insurance navigation system that will retrieve context and then answer.
 
@@ -372,6 +407,26 @@ Rewrite this into a single, clear question that is a better input for context re
                 return
             result = response.json()
             content = (result.get("content") or [{}])[0].get("text", "").strip()
+
+            # Record Langfuse generation
+            if langfuse_trace:
+                try:
+                    usage = result.get("usage", {})
+                    langfuse_trace.generation(
+                        name="input_improve_query",
+                        model=self.anthropic_model,
+                        input=[{"role": "user", "content": prompt}],
+                        output=content,
+                        start_time=call_start,
+                        end_time=datetime.now(timezone.utc),
+                        usage={
+                            "input": usage.get("input_tokens", 0),
+                            "output": usage.get("output_tokens", 0),
+                        },
+                    )
+                except Exception:
+                    pass
+
             if not content:
                 return
             # Take first line only in case model added explanation

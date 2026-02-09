@@ -139,6 +139,15 @@ class UnifiedNavigatorState(TypedDict, total=False):
     has_user_documents: Optional[bool]
     llm_context: Optional[str]
 
+    # Conversation memory
+    conversation_history: Optional[List[Dict[str, str]]]
+
+    # Suggested follow-ups
+    suggested_followups: Optional[List[str]]
+
+    # Observability
+    langfuse_trace: Optional[Any]
+
     # Metadata
     processing_start_time: Optional[datetime]
     total_processing_time_ms: Optional[float]
@@ -152,6 +161,7 @@ class UnifiedNavigatorInput(BaseModel):
     session_id: Optional[str] = None
     workflow_context: Optional[Dict[str, Any]] = None
     workflow_id: Optional[str] = None
+    conversation_history: Optional[List[Dict[str, str]]] = None
 
 
 class UnifiedNavigatorOutput(BaseModel):
@@ -173,6 +183,9 @@ class UnifiedNavigatorOutput(BaseModel):
     error_message: Optional[str] = None
     warnings: List[str] = Field(default_factory=list)
     
+    # Suggested follow-ups
+    suggested_followups: List[str] = Field(default_factory=list)
+
     # Session tracking
     session_id: Optional[str] = None
     user_id: str

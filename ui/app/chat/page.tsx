@@ -15,6 +15,7 @@ type Message = {
   sender: "bot" | "user"
   text: string
   options?: string[]
+  followups?: string[]
   metadata?: Record<string, unknown>
   workflow_type?: string
 }
@@ -173,6 +174,14 @@ export default function ChatPage() {
       console.error("WebSocket connection failed:", wsError)
     }
 
+    // Build conversation history from existing messages (skip the initial greeting)
+    const conversation_history = messages
+      .filter((_, idx) => idx > 0) // skip initial bot greeting
+      .map(m => ({
+        role: m.sender === "bot" ? "assistant" as const : "user" as const,
+        content: m.text,
+      }))
+
     try {
       const response = await fetch(chatUrl, {
         method: 'POST',
@@ -185,6 +194,7 @@ export default function ChatPage() {
           message: messageText,
           conversation_id: conversationId,
           workflow_id: tempWorkflowId,
+          conversation_history,
         }),
       })
 
@@ -192,6 +202,7 @@ export default function ChatPage() {
         const data: {
           text: string;
           workflow_id?: string;
+          suggested_followups?: string[];
           metadata?: {
             workflow_tracking?: {
               workflow_id?: string;
@@ -204,6 +215,7 @@ export default function ChatPage() {
           id: messages.length + 2,
           text: data.text || "I received your message but couldn't generate a response.",
           sender: "bot",
+          followups: data.suggested_followups?.length ? data.suggested_followups : undefined,
         }
         setMessages(prev => [...prev, botMessage])
       } else {
@@ -410,6 +422,22 @@ export default function ChatPage() {
                               disabled={isLoading}
                             >
                               {option}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+
+                      {message.followups && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {message.followups.map((followup, index) => (
+                            <Button
+                              key={index}
+                              variant="outline"
+                              className="bg-white text-teal-700 border-teal-300 hover:bg-teal-50 hover:text-teal-800 mt-1"
+                              onClick={() => handleOptionClick(followup)}
+                              disabled={isLoading}
+                            >
+                              {followup}
                             </Button>
                           ))}
                         </div>
