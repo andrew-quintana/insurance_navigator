@@ -376,15 +376,15 @@ class UnifiedNavigatorAgent(BaseAgent):
     async def _execute_tool(self, state: UnifiedNavigatorState, tool_choice: ToolSelection, workflow_id: str):
         """Execute the selected tool and update state with results."""
         tool_status_map = {
-            ToolType.QUICK_INFO: ("skimming", "Searching policy documents"),
-            ToolType.RAG_SEARCH: ("thinking", "Deep searching your policy documents"),
-            ToolType.WEB_SEARCH: ("thinking", "Searching current information"),
-            ToolType.ACCESS_STRATEGY: ("thinking", "Developing comprehensive access strategy"),
-            ToolType.COMBINED: ("thinking", "Performing comprehensive analysis"),
+            ToolType.QUICK_INFO: ("skimming", "skimming"),
+            ToolType.RAG_SEARCH: ("thinking", "thinking"),
+            ToolType.WEB_SEARCH: ("thinking", "browsing"),
+            ToolType.ACCESS_STRATEGY: ("thinking", "strategizing"),
+            ToolType.COMBINED: ("thinking", "thonking"),
         }
 
         step, message = tool_status_map.get(
-            tool_choice.selected_tool, ("thinking", "Gathering context")
+            tool_choice.selected_tool, ("thinking", "looking")
         )
         self.workflow_logger.log_workflow_step(
             step=step, message=message, correlation_id=workflow_id
@@ -1047,21 +1047,20 @@ Acknowledge any gaps honestly. You MUST start your response with "RESPONSE:"."""
 
         prompt = f"""You are the context-gathering stage of an insurance navigation agent. Your job is to decide the best way to gather context for the user's question. You do NOT answer the question — a separate response agent will use whatever context you provide.
 
-ROUTING POLICY:
-- For general insurance questions (terminology, how insurance works, what a concept means): use quick_info. If the user has policy documents, their plan will be used as real-world examples.
-- For questions specifically about the user's own plan (their deductible, their coverage, their benefits): use rag_search for deep semantic search of their uploaded documents.
-- For questions about other insurance policies, carriers, or external healthcare topics not in the user's docs: use web_search.
-- For strategic cost/benefit optimization questions: use access_strategy.
-- For complex multi-source questions: use combined.
-- If the question is simple enough that general LLM knowledge is sufficient (e.g., a basic greeting, a very simple definition, or a clarifying question), you may choose "no_tool" to skip retrieval entirely.
+AVAILABLE INFORMATION SOURCES:
+1. quick_info — Fast keyword search over the user's policy documents. Good for surfacing specific terms, definitions, and plan details quickly. If the user has documents, their plan is used as a real-world reference.
+2. rag_search — Deep semantic search over the user's uploaded policy documents. Finds nuanced, contextual information even when exact keywords don't match. Best for policy-specific details like coverage amounts, exclusions, and benefit structures.
+3. web_search — Live internet search. Provides general insurance knowledge, industry-wide information, regulatory details, carrier comparisons, and any external information not found in the user's own documents.
+4. access_strategy — Multi-source strategic analysis combining document and external data. Useful when the answer requires synthesizing plan-specific details with broader market or cost context.
+5. combined — Runs multiple retrieval strategies together for comprehensive coverage.
+6. no_tool — Skip retrieval entirely. The response agent answers from its own knowledge. Suitable for greetings, simple definitions, or clarifying questions.
 
-RETRIEVAL STRATEGIES:
-1. quick_info — Fast keyword search over the user's documents.
-2. rag_search — Deep semantic search over the user's uploaded documents.
-3. web_search — Live internet search for external information.
-4. access_strategy — Multi-source strategic analysis.
-5. combined — Runs multiple strategies together.
-6. no_tool — Skip retrieval. The response agent answers from its own knowledge.
+ROUTING GUIDANCE:
+- Choose the source that best matches WHERE the needed information lives.
+- Policy-specific information (the user's own deductible, copays, covered services) → quick_info or rag_search depending on depth needed.
+- General or cross-plan information (how insurance works, what terms mean, regulations, other carriers) → web_search.
+- Questions needing both plan-specific and broader context → access_strategy or combined.
+- Trivial or conversational queries → no_tool.
 
 DOCUMENTS AVAILABLE FOR THIS USER:
 {doc_section}
@@ -1098,23 +1097,21 @@ QUESTION: "{user_query}"
 
 USER HAS UPLOADED POLICY DOCUMENTS: {"Yes" if has_docs else "No"}
 
-STEP 1 — Is this a general insurance concept/terminology question?
-  → choose "quick_info" (searches user's docs so their plan can be used as examples)
+STEP 1 — Where does the needed information live?
+  User's policy documents (plan-specific details like deductibles, copays, covered services)
+    → Shallow/keyword match needed? choose "quick_info"
+    → Deeper semantic understanding needed? choose "rag_search"
 
-STEP 2 — Is this about the user's OWN plan specifics?
-  → choose "rag_search"
+STEP 2 — Is the information general or external to the user's plan?
+  Industry-wide knowledge, regulations, other carriers, general insurance concepts
+    → choose "web_search"
 
-STEP 3 — Is this about external topics (other carriers, regulations, medical facts)?
-  → choose "web_search"
+STEP 3 — Does the answer require both plan-specific and broader context?
+  Strategic cost/benefit analysis → choose "access_strategy"
+  Multiple sources needed → choose "combined"
 
-STEP 4 — Strategic cost/benefit planning?
-  → choose "access_strategy"
-
-STEP 5 — Multi-source needed?
-  → choose "combined"
-
-STEP 6 — Simple enough for LLM knowledge alone (greeting, trivial question)?
-  → choose "no_tool"
+STEP 4 — Is this conversational or trivially answerable without any lookup?
+  Greetings, simple definitions, clarifying questions → choose "no_tool"
 
 DEFAULT — choose "quick_info"
 
