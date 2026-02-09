@@ -307,7 +307,7 @@ class UnifiedNavigatorAgent(BaseAgent):
         try:
             self.workflow_logger.log_workflow_step(
                 step="determining",
-                message="Analyzing query and selecting context strategy",
+                message="pondering",
                 correlation_id=state.get("workflow_id")
             )
 
@@ -533,7 +533,7 @@ class UnifiedNavigatorAgent(BaseAgent):
 
         self.workflow_logger.log_workflow_step(
             step="wording",
-            message="Evaluating gathered context",
+            message="evaluating",
             correlation_id=state.get("workflow_id")
         )
 
@@ -598,10 +598,10 @@ Acknowledge any gaps honestly. You MUST start your response with "RESPONSE:"."""
 
         # Time-based status messages during Sonnet generation
         timed_messages = [
-            (5, "Writing response..."),
-            (12, "Reviewing details..."),
-            (20, "Polishing response..."),
-            (30, "Almost done..."),
+            (5, "scribbling"),
+            (12, "polishing"),
+            (20, "refining"),
+            (30, "wrapping"),
         ]
         workflow_id = state.get("workflow_id")
 
@@ -623,7 +623,7 @@ Acknowledge any gaps honestly. You MUST start your response with "RESPONSE:"."""
 
         self.workflow_logger.log_workflow_step(
             step="wording",
-            message="Generating personalized response",
+            message="crafting",
             correlation_id=workflow_id
         )
 
@@ -780,7 +780,7 @@ Acknowledge any gaps honestly. You MUST start your response with "RESPONSE:"."""
             # Step 1: Input guardrail
             self.workflow_logger.log_workflow_step(
                 step="sanitizing",
-                message="Validating and sanitizing input",
+                message="tidying",
                 correlation_id=workflow_id
             )
             state = await input_guardrail_node(state)
@@ -802,7 +802,7 @@ Acknowledge any gaps honestly. You MUST start your response with "RESPONSE:"."""
                     # no_tool: context agent says LLM knowledge is sufficient
                     self.workflow_logger.log_workflow_step(
                         step="thinking",
-                        message="Answering from general knowledge",
+                        message="recalling",
                         correlation_id=workflow_id
                     )
                     self.logger.info("Context agent chose no_tool, skipping retrieval")
@@ -819,7 +819,7 @@ Acknowledge any gaps honestly. You MUST start your response with "RESPONSE:"."""
                     feedback = result
                     self.workflow_logger.log_workflow_step(
                         step="determining",
-                        message="Gathering additional context",
+                        message="rethinking",
                         correlation_id=workflow_id
                     )
                     self.logger.info(f"Response agent iteration {iteration + 1}: requesting more context")
@@ -836,7 +836,7 @@ Acknowledge any gaps honestly. You MUST start your response with "RESPONSE:"."""
             # Step 4: Output guardrail
             self.workflow_logger.log_workflow_step(
                 step="wording",
-                message="Finalizing response",
+                message="finishing",
                 correlation_id=workflow_id
             )
             state = await output_guardrail_node(state)
