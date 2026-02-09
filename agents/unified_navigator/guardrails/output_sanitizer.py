@@ -177,7 +177,23 @@ class OutputSanitizer:
             Dict with sanitization decision and replacement if needed
         """
         response_lower = response.lower()
-        
+
+        # Check for internal agent feedback leaking to user
+        internal_feedback_patterns = [
+            "need to search user's policy documents",
+            "need to search user's policy",
+            "need web search for",
+            "need to look up",
+            "need_context:",
+        ]
+        if any(pattern in response_lower for pattern in internal_feedback_patterns):
+            return {
+                "needs_replacement": True,
+                "replacement": self.response_templates["insufficient_context"],
+                "reason": "internal_feedback_leak",
+                "is_problematic": False
+            }
+
         # Check for off-topic content
         off_topic_matches = sum(1 for pattern in self.off_topic_patterns if pattern.search(response))
         insurance_matches = sum(1 for term in self.insurance_terms if term in response_lower)

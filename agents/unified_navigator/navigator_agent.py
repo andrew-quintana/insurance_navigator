@@ -216,8 +216,12 @@ class UnifiedNavigatorAgent(BaseAgent):
 
     async def _response_generation_node(self, state: UnifiedNavigatorState) -> UnifiedNavigatorState:
         """LangGraph node: generate final response from gathered context."""
-        is_sufficient, result, _ = await self._response_determination_agent(state)
-        state["final_response"] = result
+        is_sufficient, result, _ = await self._response_determination_agent(state, is_final_attempt=True)
+        if is_sufficient:
+            state["final_response"] = result
+        else:
+            self.logger.warning("Response agent returned NEED_CONTEXT in LangGraph node. Forcing best-effort response.")
+            state["final_response"] = self._generate_best_effort_response(state)
         return state
 
     def _build_workflow(self) -> StateGraph:
@@ -463,7 +467,42 @@ class UnifiedNavigatorAgent(BaseAgent):
 
         return "\n".join(context_parts)
 
-    async def _response_determination_agent(self, state: UnifiedNavigatorState) -> tuple[bool, str, Optional[str]]:
+    def _generate_best_effort_response(self, state: UnifiedNavigatorState) -> str:
+        """
+        Generate a safe, user-appropriate fallback when the response determination
+        agent fails to produce a final response after all iterations.
+
+        Args:
+            state: Current workflow state
+
+        Returns:
+            A user-facing fallback response (never internal feedback)
+        """
+        context = self._build_context_string(state)
+        user_query = state.get("user_query", "your question")
+
+        if context.strip():
+            return (
+                f"Based on the information I was able to gather regarding \"{user_query}\", "
+                "here's what I found:\n\n"
+                f"{context[:1500]}\n\n"
+                "Please note that I wasn't able to find all the details needed for a "
+                "complete answer. I'd recommend checking your plan documents directly "
+                "or contacting your insurance company's member services for the most "
+                "accurate and complete information."
+            )
+        else:
+            return (
+                "I wasn't able to find enough information to fully answer your question. "
+                "For the most accurate details, I'd recommend:\n\n"
+                "1. Checking your insurance plan documents directly\n"
+                "2. Contacting your insurance company's member services\n"
+                "3. Trying again with a more specific question\n\n"
+                "I'm here to help if you'd like to rephrase your question or "
+                "ask about something else."
+            )
+
+    async def _response_determination_agent(self, state: UnifiedNavigatorState, is_final_attempt: bool = False) -> tuple[bool, str, Optional[str]]:
         """
         Response Determination Agent (Sonnet).
 
@@ -473,6 +512,8 @@ class UnifiedNavigatorAgent(BaseAgent):
 
         Args:
             state: Current workflow state with accumulated tool results
+            is_final_attempt: If True, forces the agent to produce a final response
+                instead of requesting more context
 
         Returns:
             tuple of (is_sufficient, response_or_feedback, None)
@@ -547,6 +588,13 @@ Guidelines for your response:
 After your response, on a new line, output exactly:
 FOLLOW_UPS:
 Then list 2-3 brief suggested follow-up questions the user might want to ask next, one per line, prefixed with "- ". Make them specific to what was just discussed."""
+
+        if is_final_attempt:
+            prompt += """
+
+IMPORTANT: This is your FINAL attempt. You MUST provide a RESPONSE — do NOT request more context.
+If the gathered context is incomplete, provide the best answer you can with what you have.
+Acknowledge any gaps honestly. You MUST start your response with "RESPONSE:"."""
 
         # Time-based status messages during Sonnet generation
         timed_messages = [
@@ -760,7 +808,8 @@ Then list 2-3 brief suggested follow-up questions the user might want to ask nex
                     self.logger.info("Context agent chose no_tool, skipping retrieval")
 
                 # Response Determination Agent (Sonnet) — evaluate and respond or request more
-                is_sufficient, result, _ = await self._response_determination_agent(state)
+                is_final_iteration = (iteration == max_iterations - 1)
+                is_sufficient, result, _ = await self._response_determination_agent(state, is_final_attempt=is_final_iteration)
 
                 if is_sufficient:
                     state["final_response"] = result
@@ -775,10 +824,14 @@ Then list 2-3 brief suggested follow-up questions the user might want to ask nex
                     )
                     self.logger.info(f"Response agent iteration {iteration + 1}: requesting more context")
             else:
-                # Exhausted iterations — use whatever we got on the last pass
+                # Exhausted iterations — generate a safe fallback if needed
                 if not state.get("final_response"):
-                    _, result, _ = await self._response_determination_agent(state)
-                    state["final_response"] = result
+                    is_sufficient, result, _ = await self._response_determination_agent(state, is_final_attempt=True)
+                    if is_sufficient:
+                        state["final_response"] = result
+                    else:
+                        self.logger.warning("Response agent returned NEED_CONTEXT on final attempt. Forcing best-effort response.")
+                        state["final_response"] = self._generate_best_effort_response(state)
 
             # Step 4: Output guardrail
             self.workflow_logger.log_workflow_step(

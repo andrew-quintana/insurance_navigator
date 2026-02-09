@@ -316,6 +316,141 @@ class TestIntegration:
         await web_search.cleanup()
 
 
+class TestNeedContextLeakFix:
+    """Tests for the NEED_CONTEXT feedback leak fix."""
+
+    @pytest.fixture
+    def mock_config(self):
+        config = UnifiedNavigatorConfig()
+        config.anthropic_api_key = "test_key"
+        config.web_search_config.api_key = "test_brave_key"
+        return config
+
+    @pytest.fixture
+    def navigator_agent(self, mock_config):
+        with patch('agents.unified_navigator.config.get_config', return_value=mock_config):
+            agent = UnifiedNavigatorAgent(use_mock=True)
+            return agent
+
+    @pytest.mark.asyncio
+    async def test_final_attempt_injects_prompt_language(self, navigator_agent):
+        """Test that is_final_attempt=True injects FINAL attempt language into the prompt."""
+        state = {
+            "user_query": "What are my cost-sharing tiers?",
+            "has_user_documents": False,
+            "tool_results": [],
+            "llm_context": None,
+            "conversation_history": None,
+            "langfuse_trace": None,
+            "workflow_id": "test",
+            "node_timings": {},
+            "suggested_followups": None,
+        }
+
+        # Capture the prompt sent to the LLM
+        captured_prompts = []
+        original_call = navigator_agent._call_sonnet
+
+        async def mock_call_sonnet(prompt, **kwargs):
+            captured_prompts.append(prompt)
+            return "RESPONSE: Here is your answer about cost-sharing tiers."
+
+        navigator_agent._call_sonnet = mock_call_sonnet
+
+        # Call with is_final_attempt=True
+        is_sufficient, result, _ = await navigator_agent._response_determination_agent(
+            state, is_final_attempt=True
+        )
+
+        assert len(captured_prompts) == 1
+        assert "FINAL attempt" in captured_prompts[0]
+        assert "MUST provide a RESPONSE" in captured_prompts[0]
+        assert is_sufficient is True
+
+    @pytest.mark.asyncio
+    async def test_final_attempt_false_does_not_inject_prompt(self, navigator_agent):
+        """Test that is_final_attempt=False does NOT inject FINAL attempt language."""
+        state = {
+            "user_query": "What are my cost-sharing tiers?",
+            "has_user_documents": False,
+            "tool_results": [],
+            "llm_context": None,
+            "conversation_history": None,
+            "langfuse_trace": None,
+            "workflow_id": "test",
+            "node_timings": {},
+            "suggested_followups": None,
+        }
+
+        captured_prompts = []
+
+        async def mock_call_sonnet(prompt, **kwargs):
+            captured_prompts.append(prompt)
+            return "RESPONSE: Here is your answer."
+
+        navigator_agent._call_sonnet = mock_call_sonnet
+
+        await navigator_agent._response_determination_agent(state, is_final_attempt=False)
+
+        assert len(captured_prompts) == 1
+        assert "FINAL attempt" not in captured_prompts[0]
+
+    def test_generate_best_effort_response_with_context(self, navigator_agent):
+        """Test _generate_best_effort_response when context was gathered."""
+        state = {
+            "user_query": "What is my deductible?",
+            "tool_results": [],
+            "llm_context": "Your deductible is $500 for in-network providers.",
+        }
+
+        response = navigator_agent._generate_best_effort_response(state)
+
+        assert "deductible" in response.lower()
+        assert "wasn't able to find all the details" in response
+        assert "NEED_CONTEXT" not in response
+
+    def test_generate_best_effort_response_without_context(self, navigator_agent):
+        """Test _generate_best_effort_response when no context was gathered."""
+        state = {
+            "user_query": "What is my deductible?",
+            "tool_results": [],
+            "llm_context": None,
+        }
+
+        response = navigator_agent._generate_best_effort_response(state)
+
+        assert "wasn't able to find enough information" in response
+        assert "member services" in response
+        assert "NEED_CONTEXT" not in response
+
+    @pytest.mark.asyncio
+    async def test_output_sanitizer_catches_leaked_feedback(self):
+        """Test that the output sanitizer catches internal feedback patterns."""
+        from ..guardrails.output_sanitizer import OutputSanitizer
+
+        sanitizer = OutputSanitizer()
+
+        leaked_responses = [
+            "Need to search user's policy documents for the specific dollar amounts.",
+            "NEED_CONTEXT: search for deductible information in uploaded documents",
+            "Need web search for current Medicare enrollment deadlines.",
+            "Need to look up the coverage details in the plan documents.",
+        ]
+
+        for leaked in leaked_responses:
+            result = sanitizer._apply_template_sanitization(leaked)
+            assert result["needs_replacement"], f"Should catch: {leaked}"
+            assert result["reason"] == "internal_feedback_leak"
+            assert "happy to help" in result["replacement"].lower()
+
+        # Verify normal responses are NOT flagged
+        normal = "Your insurance plan has a $500 deductible for in-network providers."
+        normal_result = sanitizer._apply_template_sanitization(normal)
+        assert not normal_result["needs_replacement"]
+
+        await sanitizer.cleanup()
+
+
 if __name__ == "__main__":
     # Run tests
     pytest.main([__file__, "-v"])
